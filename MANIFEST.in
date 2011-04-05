@@ -1,0 +1,4 @@
+include AUTHORS ChangeLog LICENSE NEWS
+recursive-include tests *.py
+recursive-include docs *
+prune docs/_build

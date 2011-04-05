@@ -1,0 +1,6 @@
+*.pyc
+*~
+MANIFEST
+dist
+docs/_build
+Pyrseas.egg-info

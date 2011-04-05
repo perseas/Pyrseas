@@ -1,0 +1,15 @@
+=======
+Pyrseas
+=======
+
+Pyrseas provides a framework and utilities to upgrade and maintain a
+relational database.  Its purpose is to enhance and follow through on
+the concepts of the `Andromeda Project
+<http://www.andromeda-project.org/>`_.
+
+Pyrseas currently includes the dbtoyaml utility to create a `YAML
+<http://yaml.org/>`_ description of a PostgreSQL database's tables,
+and the yamltodb utility to generate SQL statements to modify a
+database to match an input YAML specification.
+
+Pyrseas is distributed under the BSD license.

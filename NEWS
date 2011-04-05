@@ -1,0 +1,7 @@
+0.1.0 (5-Apr-2011)
+
+  * Initial release
+
+    - dbtoyaml and yamltodb support PostgreSQL schemas, tables,
+      sequences, check constraints, primary keys, foreign keys, unique
+      constraints and indexes.
