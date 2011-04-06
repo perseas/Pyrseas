@@ -1,7 +1,7 @@
 Constraints
 ===========
 
-.. module:: pyrseas.constraint
+.. module:: pyrseas.dbobject.constraint
 
 The :mod:`constraint` module defines six classes: :class:`Constraint`
 derived from :class:`DbSchemaObject`, classes

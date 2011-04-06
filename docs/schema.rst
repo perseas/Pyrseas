@@ -1,7 +1,7 @@
 Schemas
 =======
 
-.. module:: pyrseas.schema
+.. module:: pyrseas.dbobject.schema
 
 The :mod:`schema` module defines two classes, :class:`Schema` and
 :class:`SchemaDict`, derived from :class:`DbObject` and

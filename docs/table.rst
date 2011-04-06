@@ -1,7 +1,7 @@
 Tables, Views and Sequences
 ===========================
 
-.. module:: pyrseas.table
+.. module:: pyrseas.dbobject.table
 
 The :mod:`table` module defines four classes, :class:`DbClass` derived
 from :class:`DbSchemaObject`, classes :class:`Sequence` and

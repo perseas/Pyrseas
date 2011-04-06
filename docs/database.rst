@@ -12,12 +12,12 @@ A :class:`Database` is initialized with a
 :class:`~pyrseas.dbconn.DbConnection` object.  It consists of one or
 two :class:`Dicts`. A :class:`Dicts` object holds various dictionary
 objects derived from :class:`~pyrseas.dbobject.DbObjectDict`, e.g.,
-:class:`~pyrseas.schema.SchemaDict`,
-:class:`~pyrseas.table.ClassDict`, and
-:class:`~pyrseas.column.ColumnDict`. The key for each dictionary is a
+:class:`~pyrseas.dbobject.schema.SchemaDict`,
+:class:`~pyrseas.dbobject.table.ClassDict`, and
+:class:`~pyrseas.dbobject.column.ColumnDict`. The key for each dictionary is a
 Python tuple (or a single value in the case of
 :class:`SchemaDict`). For example, the
-:class:`~pyrseas.table.ClassDict` dictionary is indexed by (`schema
+:class:`~pyrseas.dbobject.table.ClassDict` dictionary is indexed by (`schema
 name`, `table name`). In addition, object instances in each dictionary
 are linked to related objects in other dictionaries, e.g., columns are
 linked to the tables where they belong.

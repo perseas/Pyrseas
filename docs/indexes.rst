@@ -1,7 +1,7 @@
 Indexes
 =======
 
-.. module:: pyrseas.index
+.. module:: pyrseas.dbobject.index
 
 The :mod:`index` module defines two classes, :class:`Index` and
 :class:`IndexDict`, derived from :class:`DbSchemaObject` and

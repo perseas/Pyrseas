@@ -1,7 +1,7 @@
 Columns
 =======
 
-.. module:: pyrseas.column
+.. module:: pyrseas.dbobject.column
 
 The :mod:`column` module defines two classes, :class:`Column` derived
 from :class:`DbSchemaObject` and :class:`ColumnDict`, derived from
