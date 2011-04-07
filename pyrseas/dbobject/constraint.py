@@ -250,14 +250,17 @@ class ConstraintDict(DbObjectDict):
                 del constr.ref_table
                 self[(sch, tbl, cns)] = PrimaryKey(**constr.__dict__)
             elif constr_type == 'f':
-                # normalize reference schema/table
+                # normalize reference schema/table:
+                # if reftbl is qualified, split the schema out,
+                # otherwise it's in the 'public' schema (set as default
+                # when connecting)
                 reftbl = constr.ref_table
                 if '.' in reftbl:
                     dot = reftbl.index('.')
                     constr.ref_table = reftbl[dot + 1:]
                     constr.ref_schema = reftbl[:dot]
                 else:
-                    constr.ref_schema = constr.schema
+                    constr.ref_schema = 'public'
                 self[(sch, tbl, cns)] = ForeignKey(**constr.__dict__)
             elif constr_type == 'u':
                 del constr.ref_table
