@@ -17,6 +17,11 @@ def fix_indent(stmt):
     return stmt.replace('\n    ', ' ').replace('( ', '(')
 
 
+def new_std_map():
+    "Return a standard public schema map with its description"
+    return {'schema public': {'description': 'standard public schema'}}
+
+
 def pgconnect(dbname, user=None, host='localhost', port=5432):
     "Connect to a Postgres database using psycopg2"
     return connect("host=%s port=%d dbname=%s user=%s" % (

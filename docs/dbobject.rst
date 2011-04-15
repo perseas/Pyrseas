@@ -54,6 +54,8 @@ certain common methods. This is different from the
 
 .. automethod:: DbSchemaObject.unqualify
 
+.. automethod:: DbSchemaObject.comment
+
 .. automethod:: DbSchemaObject.drop
 
 .. automethod:: DbSchemaObject.rename

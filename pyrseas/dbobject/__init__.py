@@ -17,10 +17,10 @@ class DbObject(object):
 
         :param attrs: the dictionary of attributes
 
-        Attributes without a value are discarded.
+        Non-key attributes without a value are discarded.
         """
         for key, val in attrs.items():
-            if val:
+            if val or key in self.keylist:
                 setattr(self, key, val)
 
     def key(self):
@@ -59,6 +59,18 @@ class DbSchemaObject(DbObject):
             dot = tbl.index('.')
             if self.schema == tbl[:dot]:
                 self.table = tbl[dot + 1:]
+
+    def comment(self):
+        """Return a SQL COMMENT statement for the object
+
+        :return: SQL statement
+        """
+        if hasattr(self, 'description'):
+            descr = "'%s'" % self.description
+        else:
+            descr = 'NULL'
+        return "COMMENT ON %s %s IS %s" % (self.objtype, self.qualname(),
+                                           descr)
 
     def drop(self):
         """Return a SQL DROP statement for the object

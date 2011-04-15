@@ -3,7 +3,7 @@
 
 import unittest
 
-from utils import PyrseasTestCase, fix_indent
+from utils import PyrseasTestCase, fix_indent, new_std_map
 
 DROP_STMT = "DROP SEQUENCE IF EXISTS seq1"
 
@@ -27,9 +27,10 @@ class SequenceToSqlTestCase(PyrseasTestCase):
     def test_create_sequence(self):
         "Create a sequence"
         self.db.execute_commit(DROP_STMT)
-        inmap = {'schema public': {'sequence seq1': {
+        inmap = new_std_map()
+        inmap['schema public'].update({'sequence seq1': {
                     'start_value': 1, 'increment_by': 1, 'max_value': None,
-                    'min_value': None, 'cache_value': 1}}}
+                    'min_value': None, 'cache_value': 1}})
         dbsql = self.db.process_map(inmap)
         self.assertEqual(fix_indent(dbsql[0]),
                          "CREATE SEQUENCE seq1 START WITH 1 "
@@ -39,9 +40,10 @@ class SequenceToSqlTestCase(PyrseasTestCase):
         "Create a sequence within a non-public schema"
         self.db.execute("CREATE SCHEMA s1")
         self.db.execute_commit(DROP_STMT)
-        inmap = {'schema s1': {'sequence seq1': {
+        inmap = new_std_map()
+        inmap.update({'schema s1': {'sequence seq1': {
                     'start_value': 1, 'increment_by': 1, 'max_value': None,
-                    'min_value': None, 'cache_value': 1}}}
+                    'min_value': None, 'cache_value': 1}}})
         dbsql = self.db.process_map(inmap)
         self.assertEqual(fix_indent(dbsql[0]),
                          "CREATE SEQUENCE s1.seq1 START WITH 1 "
@@ -50,26 +52,28 @@ class SequenceToSqlTestCase(PyrseasTestCase):
 
     def test_bad_sequence_map(self):
         "Error creating a sequence with a bad map"
-        inmap = {'schema public': {'seq1': {
+        inmap = new_std_map()
+        inmap['schema public'].update({'seq1': {
                     'start_value': 1, 'increment_by': 1, 'max_value': None,
-                    'min_value': None, 'cache_value': 1}}}
+                    'min_value': None, 'cache_value': 1}})
         self.assertRaises(KeyError, self.db.process_map, inmap)
 
     def test_drop_sequence(self):
         "Drop an existing sequence"
         self.db.execute(DROP_STMT)
         self.db.execute_commit("CREATE SEQUENCE seq1")
-        dbsql = self.db.process_map({'schema public': {}})
+        dbsql = self.db.process_map(new_std_map())
         self.assertEqual(dbsql, ["DROP SEQUENCE seq1"])
 
     def test_rename_sequence(self):
         "Rename an existing sequence"
         self.db.execute(DROP_STMT)
         self.db.execute_commit("CREATE SEQUENCE seq1")
-        inmap = {'schema public': {'sequence seq2': {
+        inmap = new_std_map()
+        inmap['schema public'].update({'sequence seq2': {
                     'oldname': 'seq1',
                     'start_value': 1, 'increment_by': 1, 'max_value': None,
-                    'min_value': None, 'cache_value': 1}}}
+                    'min_value': None, 'cache_value': 1}})
         dbsql = self.db.process_map(inmap)
         self.assertEqual(dbsql, ["ALTER SEQUENCE seq1 RENAME TO seq2"])
 
@@ -77,19 +81,21 @@ class SequenceToSqlTestCase(PyrseasTestCase):
         "Error renaming a non-existing sequence"
         self.db.execute(DROP_STMT)
         self.db.execute_commit("CREATE SEQUENCE seq1")
-        inmap = {'schema public': {'sequence seq2': {
+        inmap = new_std_map()
+        inmap['schema public'].update({'sequence seq2': {
                     'oldname': 'seq3',
                     'start_value': 1, 'increment_by': 1, 'max_value': None,
-                    'min_value': None, 'cache_value': 1}}}
+                    'min_value': None, 'cache_value': 1}})
         self.assertRaises(KeyError, self.db.process_map, inmap)
 
     def test_change_sequence(self):
         "Change sequence attributes"
         self.db.execute(DROP_STMT)
         self.db.execute_commit("CREATE SEQUENCE seq1")
-        inmap = {'schema public': {'sequence seq1': {
+        inmap = new_std_map()
+        inmap['schema public'].update({'sequence seq1': {
                     'start_value': 5, 'increment_by': 10, 'max_value': None,
-                    'min_value': None, 'cache_value': 30}}}
+                    'min_value': None, 'cache_value': 30}})
         dbsql = self.db.process_map(inmap)
         self.assertEqual(fix_indent(dbsql[0]),
                          "ALTER SEQUENCE seq1 START WITH 5 INCREMENT BY 10 "

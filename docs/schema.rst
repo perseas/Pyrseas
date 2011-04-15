@@ -26,11 +26,15 @@ course the identifying attribute in the :class:`Schema`
 
 .. automethod:: Schema.to_map
 
+.. automethod:: Schema.comment
+
 .. automethod:: Schema.create
 
 .. automethod:: Schema.drop
 
 .. automethod:: Schema.rename
+
+.. automethod:: Schema.diff_map
 
 Schema Dictionary
 -----------------

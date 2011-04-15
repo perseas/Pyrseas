@@ -43,14 +43,30 @@ class Schema(DbObject):
             for tbl in self.tables.keys():
                 tbls.update(self.tables[tbl].to_map(dbschemas))
             schema[key].update(tbls)
+        if hasattr(self, 'description'):
+            schema[key].update(description=self.description)
         return schema
 
-    def create(self):
-        """Return SQL statement to CREATE the schema
+    def comment(self):
+        """Return SQL statement to create COMMENT on schema
 
         :return: SQL statement
         """
-        return "CREATE SCHEMA %s" % self.name
+        if hasattr(self, 'description'):
+            descr = "'%s'" % self.description
+        else:
+            descr = 'NULL'
+        return "COMMENT ON SCHEMA %s IS %s" % (self.name, descr)
+
+    def create(self):
+        """Return SQL statements to CREATE the schema
+
+        :return: SQL statements
+        """
+        stmts = ["CREATE SCHEMA %s" % self.name]
+        if hasattr(self, 'description'):
+            stmts.append(self.comment())
+        return stmts
 
     def drop(self):
         """Return SQL statement to DROP the schema
@@ -67,14 +83,41 @@ class Schema(DbObject):
         """
         return "ALTER SCHEMA %s RENAME TO %s" % (self.name, newname)
 
+    def diff_map(self, inschema):
+        """Generate SQL to transform an existing schema
+
+        :param inschema: a YAML map defining the new schema
+        :return: list of SQL statements
+
+        Compares the schema to an input schema and generates SQL
+        statements to transform it into the one represented by the
+        input.
+        """
+        stmts = []
+        if hasattr(self, 'description'):
+            if hasattr(inschema, 'description'):
+                if self.description != inschema.description:
+                    self.description = inschema.description
+                    stmts.append(self.comment())
+            else:
+                del self.description
+                stmts.append(self.comment())
+        else:
+            if hasattr(inschema, 'description'):
+                self.description = inschema.description
+                stmts.append(self.comment())
+        return stmts
+
 
 class SchemaDict(DbObjectDict):
     "The collection of schemas in a database.  Minimally, the 'public' schema."
 
     cls = Schema
     query = \
-        """SELECT nspname AS name
-           FROM pg_namespace JOIN pg_roles ON (nspowner = pg_roles.oid)
+        """SELECT nspname AS name, description
+           FROM pg_namespace n JOIN pg_roles ON (nspowner = pg_roles.oid)
+                LEFT JOIN pg_description d
+                     ON (n.oid = d.objoid AND d.objsubid = 0)
            WHERE nspname = 'public' OR rolname <> 'postgres'
            ORDER BY nspname"""
 
@@ -98,6 +141,8 @@ class SchemaDict(DbObjectDict):
                 if 'oldname' in inschema:
                     schema.oldname = inschema['oldname']
                     del inschema['oldname']
+                if 'description' in inschema:
+                    schema.description = inschema['description']
                 newdb.tables.from_map(schema, inschema, newdb)
 
     def link_refs(self, dbtables):
@@ -150,7 +195,9 @@ class SchemaDict(DbObjectDict):
         for sch in inschemas.keys():
             insch = inschemas[sch]
             # does it exist in the database?
-            if sch not in self:
+            if sch in self:
+                stmts.append(self[sch].diff_map(insch))
+            else:
                 # check for possible RENAME
                 if hasattr(insch, 'oldname'):
                     oldname = insch.oldname

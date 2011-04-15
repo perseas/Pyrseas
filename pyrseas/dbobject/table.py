@@ -208,14 +208,22 @@ class Table(DbClass):
         return {self.extern_key(): tbl}
 
     def create(self):
-        """Return a SQL statement to CREATE the table
+        """Return SQL statements to CREATE the table
 
-        :return: SQL statement
+        :return: SQL statements
         """
+        stmts = []
         cols = []
         for col in self.columns:
             cols.append("    " + col.add())
-        return "CREATE TABLE %s (\n%s)" % (self.qualname(), ",\n".join(cols))
+        stmts.append("CREATE TABLE %s (\n%s)" % (self.qualname(),
+                                                 ",\n".join(cols)))
+        if hasattr(self, 'description'):
+            stmts.append(self.comment())
+        for col in self.columns:
+            if hasattr(col, 'description'):
+                stmts.append(col.comment(self))
+        return stmts
 
     def diff_map(self, intable):
         """Generate SQL to transform an existing table
@@ -245,6 +253,19 @@ class Table(DbClass):
                 if stmt:
                     stmts.append(base + stmt)
 
+        if hasattr(self, 'description'):
+            if hasattr(intable, 'description'):
+                if self.description != intable.description:
+                    self.description = intable.description
+                    stmts.append(self.comment())
+            else:
+                del self.description
+                stmts.append(self.comment())
+        else:
+            if hasattr(intable, 'description'):
+                self.description = intable.description
+                stmts.append(self.comment())
+
         return stmts
 
 
@@ -253,12 +274,15 @@ class ClassDict(DbObjectDict):
 
     cls = DbClass
     query = \
-        """SELECT nspname AS schema, relname AS name, relkind AS kind
+        """SELECT nspname AS schema, relname AS name, relkind AS kind,
+                  description
            FROM pg_class
                 JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
                 JOIN pg_roles ON (nspowner = pg_roles.oid)
+                LEFT JOIN pg_description d
+                     ON (pg_class.oid = d.objoid AND d.objsubid = 0)
            WHERE relkind in ('r', 'S')
-                 AND (nspname = 'public' OR rolname <> 'postgres')
+                 AND nspname = 'public' OR rolname <> 'postgres'
            ORDER BY nspname, relname"""
 
     def _from_catalog(self):
@@ -282,6 +306,8 @@ class ClassDict(DbObjectDict):
         :param newdb: collection of dictionaries defining the database
         """
         for k in inobjs.keys():
+            if k == 'description':
+                continue
             spc = k.find(' ')
             if spc == -1:
                 raise KeyError("Unrecognized object type: %s" % k)
@@ -303,6 +329,8 @@ class ClassDict(DbObjectDict):
                 newdb.constraints.from_map(table, intable)
                 if 'indexes' in intable:
                     newdb.indexes.from_map(table, intable['indexes'])
+                if 'description' in intable:
+                    table.description = intable['description']
             elif objtype == 'sequence':
                 self[(schema.name, key)] = seq = Sequence(
                     schema=schema.name, name=key)

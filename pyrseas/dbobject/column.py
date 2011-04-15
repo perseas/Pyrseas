@@ -38,6 +38,20 @@ class Column(DbSchemaObject):
                 stmt += ' DEFAULT ' + self.default
         return stmt
 
+    def comment(self, tbl):
+        """Return a SQL COMMENT statement for the column
+
+        :param tbl: owner table
+
+        :return: SQL statement
+        """
+        if hasattr(self, 'description'):
+            descr = "'%s'" % self.description
+        else:
+            descr = 'NULL'
+        return "COMMENT ON COLUMN %s.%s IS %s" % (tbl.qualname(), self.name,
+                                           descr)
+
     def drop(self):
         """Return string to drop the column via ALTER TABLE
 
@@ -98,12 +112,14 @@ class ColumnDict(DbObjectDict):
     query = \
         """SELECT nspname AS schema, relname AS table, attname AS name,
                   attnum AS number, format_type(atttypid, atttypmod) AS type,
-                  attnotnull AS not_null, adsrc AS default
+                  attnotnull AS not_null, adsrc AS default, description
            FROM pg_attribute JOIN pg_class ON (attrelid =  pg_class.oid)
                 JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
                 JOIN pg_roles ON (nspowner = pg_roles.oid)
                 LEFT JOIN pg_attrdef ON (attrelid = pg_attrdef.adrelid
                      AND attnum = pg_attrdef.adnum)
+                LEFT JOIN pg_description d
+                     ON (pg_class.oid = d.objoid AND d.objsubid = attnum)
            WHERE relkind = 'r'
                  AND (nspname = 'public' OR rolname <> 'postgres')
                  AND attnum > 0

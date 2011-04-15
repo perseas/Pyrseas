@@ -3,7 +3,7 @@
 
 import unittest
 
-from utils import PyrseasTestCase, fix_indent
+from utils import PyrseasTestCase, fix_indent, new_std_map
 
 
 class IndexToMapTestCase(PyrseasTestCase):
@@ -57,12 +57,13 @@ class IndexToSqlTestCase(PyrseasTestCase):
     def test_create_table_with_index(self):
         "Create new table with a single column index"
         self.db.execute_commit("DROP TABLE IF EXISTS t1")
-        inmap = {'schema public': {'table t1': {
+        inmap = new_std_map()
+        inmap['schema public'].update({'table t1': {
                     'columns': [{'c1': {'type': 'integer'}},
                                 {'c2': {'type': 'text'}}],
                     'indexes': {'t1_idx': {
                             'columns': ['c1'],
-                            'access_method': 'btree'}}}}}
+                            'access_method': 'btree'}}}})
         dbsql = self.db.process_map(inmap)
         self.assertEqual(fix_indent(dbsql[0]),
                          "CREATE TABLE t1 (c1 integer, c2 text)")
@@ -74,14 +75,15 @@ class IndexToSqlTestCase(PyrseasTestCase):
         self.db.execute("DROP TABLE IF EXISTS t1")
         self.db.execute_commit("CREATE TABLE t1 (c1 INTEGER NOT NULL, "
                         "c2 INTEGER NOT NULL, c3 TEXT)")
-        inmap = {'schema public': {'table t1': {
+        inmap = new_std_map()
+        inmap['schema public'].update({'table t1': {
                     'columns': [
                         {'c1': {'type': 'integer', 'not_null': True}},
                         {'c2': {'type': 'integer', 'not_null': True}},
                         {'c3': {'type': 'text'}}],
                     'indexes': {'t1_idx': {
                             'columns': ['c2', 'c1'],
-                            'unique': True}}}}}
+                            'unique': True}}}})
         dbsql = self.db.process_map(inmap)
         self.assertEqual(dbsql,
                          ["CREATE UNIQUE INDEX t1_idx ON t1 (c2, c1)"])

@@ -25,6 +25,8 @@ attribute is also present but is not made visible externally.
 
 .. automethod:: Column.add
 
+.. automethod:: Column.comment
+
 .. automethod:: Column.drop
 
 .. automethod:: Column.set_sequence_default
