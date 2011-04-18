@@ -55,6 +55,20 @@ Foreign Key
 :class:`ForeignKey` is derived from :class:`Constraint` and represents
 a foreign key constraint.
 
+The following shows a foreign key segment of a map returned by
+:meth:`to_map` and expected as argument by
+:meth:`ConstraintDict.diff_map` exemplifying various possibilities::
+
+ {'t1_fgn_key1':
+     {
+     'columns': ['c2', 'c3'],
+     'on_delete': 'restrict',
+     'on_update': 'set null',
+     'references':
+         {'columns': ['pc2', 'pc1'], 'schema': 's1', 'table': 't2'}
+     }
+ }
+
 .. autoclass:: ForeignKey
 
 .. automethod:: ForeignKey.ref_columns

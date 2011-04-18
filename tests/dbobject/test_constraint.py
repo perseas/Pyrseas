@@ -282,6 +282,24 @@ class ForeignKeyToMapTestCase(PyrseasTestCase):
         dbmap = self.db.execute_and_map(ddlstmt)
         self.assertEqual(dbmap['schema public']['table t1'], self.map_fkey4)
 
+    def test_foreign_key_actions(self):
+        "Map a table with foreign key ON UPDATE/ON DELETE actions"
+        self.db.execute("CREATE TABLE t2 (pc1 INTEGER PRIMARY KEY, pc2 TEXT)")
+        ddlstmt = """CREATE TABLE t1 (c1 INTEGER, c2 INTEGER, c3 TEXT,
+                            FOREIGN KEY (c2) REFERENCES t2 (pc1)
+                                ON UPDATE RESTRICT ON DELETE SET NULL)"""
+        expmap = {'columns': [{'c1': {'type': 'integer'}},
+                              {'c2': {'type': 'integer'}},
+                              {'c3': {'type': 'text'}}],
+                  'foreign_keys': {'t1_c2_fkey': {
+                    'columns': ['c2'],
+                    'on_update': 'restrict',
+                    'on_delete': 'set null',
+                    'references': {'schema': 'public', 'table': 't2',
+                                   'columns': ['pc1']}}}}
+        dbmap = self.db.execute_and_map(ddlstmt)
+        self.assertEqual(dbmap['schema public']['table t1'], expmap)
+
     def test_cross_schema_foreign_key(self):
         "Map a table with a foreign key on a table in another schema"
         self.db.execute("DROP SCHEMA IF EXISTS s1 CASCADE")
@@ -401,6 +419,30 @@ class ForeignKeyToSqlTestCase(PyrseasTestCase):
                     'primary_key': {'t2_pkey': {'columns': ['c21']}}}})
         dbsql = self.db.process_map(inmap)
         self.assertEqual(dbsql, ["ALTER TABLE t2 DROP CONSTRAINT t2_c22_fkey"])
+
+    def test_create_foreign_key_actions(self):
+        "Create a table with foreign key ON UPDATE/ON DELETE actions"
+        self.db.execute_commit(DROP_STMT + ", t2")
+        inmap = new_std_map()
+        inmap['schema public'].update({'table t1': {
+                    'columns': [{'c11': {'type': 'integer'}},
+                                {'c12': {'type': 'text'}}]},
+                                   'table t2': {
+                    'columns': [{'c21': {'type': 'integer'}},
+                                {'c22': {'type': 'text'}},
+                                {'c23': {'type': 'integer'}}],
+                    'foreign_keys': {'t2_c23_fkey': {
+                            'columns': ['c23'],
+                            'on_update': 'cascade',
+                            'on_delete': 'set default',
+                            'references': {'columns': ['c11'],
+                                           'table': 't1'}}}}})
+        dbsql = self.db.process_map(inmap)
+        # won't check CREATE TABLEs explicitly here (see first test instead)
+        self.assertEqual(fix_indent(dbsql[2]),
+                         "ALTER TABLE t2 ADD CONSTRAINT t2_c23_fkey "
+                         "FOREIGN KEY (c23) REFERENCES t1 (c11) "
+                         "ON UPDATE CASCADE ON DELETE SET DEFAULT")
 
 
 class UniqueConstraintToMapTestCase(PyrseasTestCase):

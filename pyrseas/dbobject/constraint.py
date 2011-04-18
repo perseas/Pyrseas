@@ -10,6 +10,9 @@
 """
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
 
+ACTIONS = {'r': 'restrict', 'c': 'cascade', 'n': 'set null',
+           'd': 'set default'}
+
 
 class Constraint(DbSchemaObject):
     """A constraint definition, such as a primary key, foreign key or
@@ -164,10 +167,15 @@ class ForeignKey(Constraint):
 
         :return: SQL statement
         """
+        actions = ''
+        if hasattr(self, 'on_update'):
+            actions = " ON UPDATE %s" % self.on_update.upper()
+        if hasattr(self, 'on_delete'):
+            actions += " ON DELETE %s" % self.on_delete.upper()
         return "ALTER TABLE %s ADD CONSTRAINT %s FOREIGN KEY (%s) " \
-            "REFERENCES %s (%s)" % (
+            "REFERENCES %s (%s)%s" % (
             self._qualtable(), self.name, self.key_columns(),
-            self.references.qualname(), self.ref_columns())
+            self.references.qualname(), self.ref_columns(), actions)
 
     def diff_map(self, infk):
         """Generate SQL to transform an existing foreign key
@@ -227,7 +235,8 @@ class ConstraintDict(DbObjectDict):
         """SELECT nspname AS schema, conrelid::regclass AS table,
                   conname AS name, contype AS type, conkey AS keycols,
                   confrelid::regclass AS ref_table, confkey AS ref_cols,
-                  consrc AS expression, amname AS access_method
+                  consrc AS expression, confupdtype AS on_update,
+                  confdeltype AS on_delete, amname AS access_method
            FROM pg_constraint
                 JOIN pg_namespace ON (connamespace = pg_namespace.oid)
                 JOIN pg_roles ON (nspowner = pg_roles.oid)
@@ -243,17 +252,27 @@ class ConstraintDict(DbObjectDict):
             sch, tbl, cns = constr.key()
             constr_type = constr.type
             del constr.type
-            if constr_type == 'c':
+            if constr_type != 'f':
                 del constr.ref_table
+                del constr.on_update
+                del constr.on_delete
+            if constr_type == 'c':
                 self[(sch, tbl, cns)] = CheckConstraint(**constr.__dict__)
             elif constr_type == 'p':
-                del constr.ref_table
                 self[(sch, tbl, cns)] = PrimaryKey(**constr.__dict__)
             elif constr_type == 'f':
                 # normalize reference schema/table:
                 # if reftbl is qualified, split the schema out,
                 # otherwise it's in the 'public' schema (set as default
                 # when connecting)
+                if constr.on_update == 'a':
+                    del constr.on_update
+                else:
+                    constr.on_update = ACTIONS[constr.on_update]
+                if constr.on_delete == 'a':
+                    del constr.on_delete
+                else:
+                    constr.on_delete = ACTIONS[constr.on_delete]
                 reftbl = constr.ref_table
                 if '.' in reftbl:
                     dot = reftbl.index('.')
@@ -263,7 +282,6 @@ class ConstraintDict(DbObjectDict):
                     constr.ref_schema = 'public'
                 self[(sch, tbl, cns)] = ForeignKey(**constr.__dict__)
             elif constr_type == 'u':
-                del constr.ref_table
                 self[(sch, tbl, cns)] = UniqueConstraint(**constr.__dict__)
 
     def from_map(self, table, inconstrs):
@@ -308,6 +326,18 @@ class ConstraintDict(DbObjectDict):
                 fkey = ForeignKey(table=table.name, schema=table.schema,
                                       name=cns)
                 val = fkeys[cns]
+                if 'on_update' in val:
+                    act = val['on_update']
+                    if act.lower() not in ACTIONS.values():
+                        raise ValueError("Invalid action '%s' for constraint "
+                                         "'%s'" % (act, cns))
+                    fkey.on_update = act
+                if 'on_delete' in val:
+                    act = val['on_delete']
+                    if act.lower() not in ACTIONS.values():
+                        raise ValueError("Invalid action '%s' for constraint "
+                                         "'%s'" % (act, cns))
+                    fkey.on_delete = act
                 try:
                     fkey.keycols = val['columns']
                 except KeyError, exc:
