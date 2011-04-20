@@ -22,7 +22,7 @@ class Column(DbSchemaObject):
         dct = self.__dict__.copy()
         for k in self.keylist:
             del dct[k]
-        del dct['number'], dct['name']
+        del dct['number'], dct['name'], dct['_table']
         return {self.name: dct}
 
     def add(self):
@@ -38,10 +38,8 @@ class Column(DbSchemaObject):
                 stmt += ' DEFAULT ' + self.default
         return stmt
 
-    def comment(self, tbl):
+    def comment(self):
         """Return a SQL COMMENT statement for the column
-
-        :param tbl: owner table
 
         :return: SQL statement
         """
@@ -49,8 +47,8 @@ class Column(DbSchemaObject):
             descr = "'%s'" % self.description
         else:
             descr = 'NULL'
-        return "COMMENT ON COLUMN %s.%s IS %s" % (tbl.qualname(), self.name,
-                                           descr)
+        return "COMMENT ON COLUMN %s.%s IS %s" % (self._table.qualname(),
+                                                  self.name, descr)
 
     def drop(self):
         """Return string to drop the column via ALTER TABLE
@@ -58,6 +56,17 @@ class Column(DbSchemaObject):
         :return: SQL statement
         """
         return "ALTER TABLE %s DROP COLUMN %s" % (self.table, self.name)
+
+    def rename(self, newname):
+        """Return SQL statement to RENAME the column
+
+        :param newname: the new name of the object
+        :return: SQL statement
+        """
+        stmt = "ALTER TABLE %s RENAME COLUMN %s TO %s" % (
+            self._table.qualname(), self.name, newname)
+        self.name = newname
+        return stmt
 
     def set_sequence_default(self):
         """Return SQL statements to set a nextval() DEFAULT
@@ -166,9 +175,11 @@ class ColumnDict(DbObjectDict):
         stmts = []
         if not incols or not self:
             return stmts
-        incolnames = [n.name for n in incols.values()[0]]
-        for col in self.values()[0]:
-            if col.name not in incolnames:
-                stmts.append(col.drop())
+
+        for (sch, tbl) in incols.keys():
+            if (sch, tbl) in self.keys():
+                for col in self[(sch, tbl)]:
+                    if col.name not in [c.name for c in incols[(sch, tbl)]]:
+                        stmts.append(col.drop())
 
         return stmts

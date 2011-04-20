@@ -409,13 +409,13 @@ class ForeignKeyToSqlTestCase(PyrseasTestCase):
                                "REFERENCES t1 (c11), c23 TEXT)")
         inmap = new_std_map()
         inmap['schema public'].update({'table t1': {
-                    'columns': [{'c11': {'type': 'integer', 'not_null': True},
-                                 'c12': {'type': 'text'}}],
+                    'columns': [{'c11': {'type': 'integer', 'not_null': True}},
+                                {'c12': {'type': 'text'}}],
                     'primary_key': {'t1_pkey': {'columns': ['c11']}}},
-                                   'table t2': {
-                    'columns': [{'c21': {'type': 'integer', 'not_null': True},
-                                 'c22': {'type': 'integer', 'not_null': True},
-                                 'c23': {'type': 'text'}}],
+                                       'table t2': {
+                    'columns': [{'c21': {'type': 'integer', 'not_null': True}},
+                                {'c22': {'type': 'integer', 'not_null': True}},
+                                {'c23': {'type': 'text'}}],
                     'primary_key': {'t2_pkey': {'columns': ['c21']}}}})
         dbsql = self.db.process_map(inmap)
         self.assertEqual(dbsql, ["ALTER TABLE t2 DROP CONSTRAINT t2_c22_fkey"])

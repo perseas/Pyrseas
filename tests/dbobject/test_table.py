@@ -305,6 +305,17 @@ class TableToSqlTestCase(PyrseasTestCase):
         dbsql = self.db.process_map(inmap)
         self.assertEqual(fix_indent(dbsql[0]), "ALTER TABLE t1 DROP COLUMN c3")
 
+    def test_rename_column(self):
+        "Rename a table column"
+        self.db.execute(DROP_STMT)
+        self.db.execute_commit(CREATE_STMT)
+        inmap = new_std_map()
+        inmap['schema public'].update({'table t1': {
+                    'columns': [{'c1': {'type': 'integer'}},
+                                {'c3': {'type': 'text', 'oldname': 'c2'}}]}})
+        dbsql = self.db.process_map(inmap)
+        self.assertEqual(dbsql[0], "ALTER TABLE t1 RENAME COLUMN c2 TO c3")
+
 
 class TableCommentToSqlTestCase(PyrseasTestCase):
     """Test SQL generation of table and column COMMENT statements"""

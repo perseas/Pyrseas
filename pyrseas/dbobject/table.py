@@ -222,7 +222,7 @@ class Table(DbClass):
             stmts.append(self.comment())
         for col in self.columns:
             if hasattr(col, 'description'):
-                stmts.append(col.comment(self))
+                stmts.append(col.comment())
         return stmts
 
     def diff_map(self, intable):
@@ -243,6 +243,9 @@ class Table(DbClass):
         base = "ALTER TABLE %s\n    " % self.qualname()
         # check input columns
         for (num, incol) in enumerate(intable.columns):
+            if hasattr(incol, 'oldname'):
+                assert(self.columns[num].name == incol.oldname)
+                stmts.append(self.columns[num].rename(incol.name))
             # add new columns
             if num >= dbcols:
                 stmts.append(base + "ADD COLUMN %s" % incol.add())
@@ -360,6 +363,8 @@ class ClassDict(DbObjectDict):
         for (sch, tbl) in dbcolumns.keys():
             assert self[(sch, tbl)]
             self[(sch, tbl)].columns = dbcolumns[(sch, tbl)]
+            for col in dbcolumns[(sch, tbl)]:
+                col._table = self[(sch, tbl)]
         for (sch, tbl) in self.keys():
             if isinstance(self[(sch, tbl)], Sequence):
                 seq = self[(sch, tbl)]
@@ -404,6 +409,7 @@ class ClassDict(DbObjectDict):
         oldname = obj.oldname
         try:
             stmt = self[(obj.schema, oldname)].rename(obj.name)
+            self[(obj.schema, obj.name)] = self[(obj.schema, oldname)]
             del self[(obj.schema, oldname)]
         except KeyError, exc:
             exc.args = ("Previous name '%s' for %s '%s' not found" % (

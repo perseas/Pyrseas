@@ -85,6 +85,7 @@ class DbSchemaObject(DbObject):
     def rename(self, newname):
         """Return a SQL ALTER statement to RENAME the object
 
+        :param newname: the new name of the object
         :return: SQL statement
         """
         return "ALTER %s %s RENAME TO %s" % (self.objtype, self.qualname(),

@@ -29,6 +29,8 @@ attribute is also present but is not made visible externally.
 
 .. automethod:: Column.drop
 
+.. automethod:: Column.rename
+
 .. automethod:: Column.set_sequence_default
 
 .. automethod:: Column.diff_map
