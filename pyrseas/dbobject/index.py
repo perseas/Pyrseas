@@ -40,14 +40,19 @@ class Index(DbSchemaObject):
     def create(self):
         """Return a SQL statement to CREATE the index
 
-        :return: SQL statement
+        :return: SQL statements
         """
+        stmts = []
+        pth = self.set_search_path()
+        if pth:
+            stmts.append(pth)
         unq = hasattr(self, 'unique') and self.unique
         acc = hasattr(self, 'access_method') \
             and 'USING %s ' % self.access_method or ''
-        return "CREATE %sINDEX %s ON %s %s(%s)" % (
+        stmts.append("CREATE %sINDEX %s ON %s %s(%s)" % (
             unq and 'UNIQUE ' or '', self.name, self.table, acc,
-            self.key_columns())
+            self.key_columns()))
+        return stmts
 
     def diff_map(self, inindex):
         """Generate SQL to transform an existing index
