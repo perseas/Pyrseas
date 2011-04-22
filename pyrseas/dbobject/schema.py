@@ -73,7 +73,7 @@ class Schema(DbObject):
 
         :return: SQL statement
         """
-        return "DROP SCHEMA %s CASCADE" % self.name
+        return "DROP SCHEMA %s" % self.name
 
     def rename(self, newname):
         """Return SQL statement to RENAME the schema
@@ -215,5 +215,16 @@ class SchemaDict(DbObjectDict):
         for sch in self.keys():
             # if missing and not 'public', drop it
             if sch != 'public' and sch not in inschemas:
+                self[sch].dropped = True
+        return stmts
+
+    def _drop(self):
+        """Actually drop the schemas
+
+        :return: SQL statements
+        """
+        stmts = []
+        for sch in self.keys():
+            if sch != 'public' and hasattr(self[sch], 'dropped'):
                 stmts.append(self[sch].drop())
         return stmts

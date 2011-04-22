@@ -111,4 +111,5 @@ class Database(object):
         stmts.append(self.db.constraints.diff_map(self.ndb.constraints))
         stmts.append(self.db.indexes.diff_map(self.ndb.indexes))
         stmts.append(self.db.columns.diff_map(self.ndb.columns))
+        stmts.append(self.db.schemas._drop())
         return [s for s in flatten(stmts)]
