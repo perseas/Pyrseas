@@ -52,7 +52,7 @@ class Constraint(DbSchemaObject):
         if not hasattr(self, 'dropped') or not self.dropped:
             self.dropped = True
             return "ALTER TABLE %s DROP CONSTRAINT %s" % (
-                self._qualtable(), self.qualname())
+                self._qualtable(), self.name)
         return []
 
 
