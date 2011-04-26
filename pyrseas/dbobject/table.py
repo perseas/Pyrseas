@@ -485,7 +485,17 @@ class ClassDict(DbObjectDict):
             if isinstance(table, Sequence) and hasattr(table, 'owner_table'):
                 continue
             if hasattr(table, 'dropped') and not table.dropped:
-                # drop subordinate objects first
+                # first, drop all foreign keys
+                if hasattr(table, 'foreign_keys'):
+                    for fgn in table.foreign_keys:
+                        stmts.append(table.foreign_keys[fgn].drop())
+
+        for (sch, tbl) in self.keys():
+            table = self[(sch, tbl)]
+            if isinstance(table, Sequence) and hasattr(table, 'owner_table'):
+                continue
+            if hasattr(table, 'dropped') and not table.dropped:
+                # next, drop other subordinate objects
                 if hasattr(table, 'check_constraints'):
                     for chk in table.check_constraints:
                         stmts.append(table.check_constraints[chk].drop())
@@ -495,14 +505,12 @@ class ClassDict(DbObjectDict):
                 if hasattr(table, 'indexes'):
                     for idx in table.indexes:
                         stmts.append(table.indexes[idx].drop())
-                if hasattr(table, 'foreign_keys'):
-                    for fgn in table.foreign_keys:
-                        stmts.append(table.foreign_keys[fgn].drop())
                 if hasattr(table, 'primary_key'):
                     # TODO there can be more than one referred_by
                     if hasattr(table, 'referred_by'):
                         stmts.append(table.referred_by.drop())
                     stmts.append(table.primary_key.drop())
+                # finally, drop the table itself
                 stmts.append(table.drop())
 
         # last pass to deal with nextval DEFAULTs
