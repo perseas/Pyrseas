@@ -7,7 +7,7 @@
     DbObject and DbObjectDict, respectively.
 """
 from pyrseas.dbobject import DbObjectDict, DbObject
-from table import Table, Sequence
+from table import Table, Sequence, View
 
 KEY_PREFIX = 'schema '
 
@@ -43,6 +43,11 @@ class Schema(DbObject):
             for tbl in self.tables.keys():
                 tbls.update(self.tables[tbl].to_map(dbschemas))
             schema[key].update(tbls)
+        if hasattr(self, 'views'):
+            views = {}
+            for view in self.views.keys():
+                views.update(self.views[view].to_map())
+            schema[key].update(views)
         if hasattr(self, 'description'):
             schema[key].update(description=self.description)
         return schema
@@ -166,6 +171,10 @@ class SchemaDict(DbObjectDict):
                 if not hasattr(schema, 'sequences'):
                     schema.sequences = {}
                 schema.sequences.update({tbl: table})
+            elif isinstance(table, View):
+                if not hasattr(schema, 'views'):
+                    schema.views = {}
+                schema.views.update({tbl: table})
 
     def to_map(self):
         """Convert the schema dictionary to a regular dictionary

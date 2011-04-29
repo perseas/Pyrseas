@@ -77,7 +77,7 @@ class SchemaToSqlTestCase(PyrseasTestCase):
         self.db.execute(DROP_STMT)
         self.db.execute_commit(CREATE_STMT)
         dbsql = self.db.process_map({})
-        self.assertEqual(dbsql, ["DROP SCHEMA s1 CASCADE"])
+        self.assertEqual(dbsql, ["DROP SCHEMA s1"])
 
     def test_rename_schema(self):
         "Rename an existing schema"

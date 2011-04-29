@@ -39,14 +39,16 @@ each 'schema `schema_name`' is another dictionary using 'sequences',
        'sequence seq2': { ... },
        'table t1': { ... },
        'table t2': { ... },
-       'table t3': { ... }
+       'table t3': { ... },
+       'view v1': { ... }
       },
    'schema s1': { ... },
    'schema s2': { ... }
   }
 
-Refer to :class:`~pyrseas.table.Sequence` and
-:class:`~pyrseas.table.Table` for details on the lower level
+Refer to :class:`~pyrseas.dbobject.table.Sequence`,
+:class:`~pyrseas.dbobject.table.Table` and
+:class:`~pyrseas.dbobject.table.View` for details on the lower level
 dictionaries.
 
 .. autoclass:: Database

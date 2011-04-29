@@ -14,7 +14,8 @@ from pyrseas.database import Database
 
 def fix_indent(stmt):
     "Fix specifications which are in a new line with indentation"
-    return stmt.replace('\n    ', ' ').replace('( ', '(')
+    return stmt.replace('   ', ' ').replace('  ', ' ').replace('\n ', ' '). \
+        replace('( ', '(')
 
 
 def new_std_map():
@@ -102,8 +103,9 @@ class PostgresDb(object):
             """SELECT nspname, relname, relkind FROM pg_class
                       JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
                       JOIN pg_roles ON (nspowner = pg_roles.oid)
-               WHERE relkind in ('r', 'S')
-                     AND (nspname = 'public' OR rolname <> 'postgres')"""
+               WHERE relkind in ('r', 'S', 'v')
+                     AND (nspname = 'public' OR rolname <> 'postgres')
+               ORDER BY relkind DESC"""
         curs = pgexecute(self.conn, query)
         objs = curs.fetchall()
         curs.close()
@@ -113,6 +115,8 @@ class PostgresDb(object):
                 self.execute("DROP TABLE %s.%s CASCADE" % (obj[0], obj[1]))
             elif obj['relkind'] == 'S':
                 self.execute("DROP SEQUENCE %s.%s CASCADE" % (obj[0], obj[1]))
+            elif obj['relkind'] == 'v':
+                self.execute("DROP VIEW %s.%s CASCADE" % (obj[0], obj[1]))
         self.conn.commit()
 
     def drop(self):
@@ -124,7 +128,6 @@ class PostgresDb(object):
 
     def execute(self, stmt):
         "Execute a DDL statement"
-        #print "execute:", stmt
         curs = pgexecute(self.conn, stmt)
         curs.close()
 

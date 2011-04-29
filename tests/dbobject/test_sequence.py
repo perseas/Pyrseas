@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Test schemas"""
+"""Test sequences"""
 
 import unittest
 

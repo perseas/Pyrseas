@@ -3,10 +3,10 @@ Tables, Views and Sequences
 
 .. module:: pyrseas.dbobject.table
 
-The :mod:`table` module defines four classes, :class:`DbClass` derived
-from :class:`DbSchemaObject`, classes :class:`Sequence` and
-:class:`Table` derived from :class:`DbClass`, and :class:`ClassDict`,
-derived from :class:`DbObjectDict`.
+The :mod:`table` module defines five classes, :class:`DbClass` derived
+from :class:`DbSchemaObject`, classes :class:`Sequence`,
+:class:`Table` and :class:`View` derived from :class:`DbClass`, and
+:class:`ClassDict`, derived from :class:`DbObjectDict`.
 
 Database Class
 --------------
@@ -15,6 +15,10 @@ Class :class:`DbClass` is derived from
 :class:`~pyrseas.dbobject.DbSchemaObject` and represents a table, view
 or sequence as defined in the PostgreSQL `pg_class` catalog. Note:
 Views are not implemented yet.
+
+.. autoclass:: DbClass
+
+.. automethod:: DbClass.diff_description
 
 Sequence
 --------
@@ -67,17 +71,17 @@ The map returned by :meth:`to_map` and expected as argument by
  {'table t1':
      {'columns':
          [
-	 {'c1': {'type': 'integer', 'not_null': True}},
+         {'c1': {'type': 'integer', 'not_null': True}},
          {'c2': {'type': 'text'}},
-         {'c3': {'type': 'smallint'},
+         {'c3': {'type': 'smallint'}},
          {'c4': {'type': 'date', 'default': 'now()'}}
-	 ]
-     },
-     'primary_key':
+         ],
+      'description': "this is the comment for table t1",
+      'primary_key':
          {'t1_prim_key':
              {'columns': ['c1', 'c2'], 'access_method': 'btree'}
-     },
-     'foreign_keys':
+         },
+      'foreign_keys':
          {'t1_fgn_key1':
              {'columns': ['c2', 'c3'],
                'references':
@@ -87,9 +91,9 @@ The map returned by :meth:`to_map` and expected as argument by
              {'columns': ['c2'],
               'references': {'table': 't3', 'columns': ['qc1']}
              }
-         }
-     'unique_constraints': {...},
-     'indexes': {...}
+         },
+      'unique_constraints': {...},
+      'indexes': {...}
      }
  }
 
@@ -106,6 +110,32 @@ such specification.
 .. automethod:: Table.create
 
 .. automethod:: Table.diff_map
+
+View
+----
+
+Class :class:`View` is derived from :class:`DbClass` and represents a
+database view. Its :attr:`keylist` attributes are the schema name and
+the view name.
+
+The map returned by :meth:`to_map` and expected as argument by
+:meth:`diff_map` has a structure similar to the following::
+
+  {'view v1':
+      {'definition': " SELECT ...;",
+       'description': "this is the comment for view v1"
+      }
+  }
+
+
+.. autoclass:: View
+
+.. automethod:: View.to_map
+
+.. automethod:: View.create
+
+.. automethod:: View.diff_map
+
 
 Class Dictionary
 ----------------

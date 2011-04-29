@@ -21,6 +21,27 @@ class DbClass(DbSchemaObject):
 
     keylist = ['schema', 'name']
 
+    def diff_description(self, indbclass):
+        """Generate SQL statements to add or change COMMENTs
+
+        :param indbclass: a YAML map defining the table/sequence/view
+        :return: list of SQL statements
+        """
+        stmts = []
+        if hasattr(self, 'description'):
+            if hasattr(indbclass, 'description'):
+                if self.description != indbclass.description:
+                    self.description = indbclass.description
+                    stmts.append(self.comment())
+            else:
+                del self.description
+                stmts.append(self.comment())
+        else:
+            if hasattr(indbclass, 'description'):
+                self.description = indbclass.description
+                stmts.append(self.comment())
+        return stmts
+
 
 class Sequence(DbClass):
     "A sequence generator definition"
@@ -256,19 +277,55 @@ class Table(DbClass):
                 if stmt:
                     stmts.append(base + stmt)
 
-        if hasattr(self, 'description'):
-            if hasattr(intable, 'description'):
-                if self.description != intable.description:
-                    self.description = intable.description
-                    stmts.append(self.comment())
-            else:
-                del self.description
-                stmts.append(self.comment())
-        else:
-            if hasattr(intable, 'description'):
-                self.description = intable.description
-                stmts.append(self.comment())
+        stmts.append(self.diff_description(intable))
 
+        return stmts
+
+
+class View(DbClass):
+    """A database view definition
+
+    A view is identified by its schema name and view name.
+    """
+
+    objtype = "VIEW"
+
+    def to_map(self):
+        """Convert a view to a YAML-suitable format
+
+        :return: dictionary
+        """
+        return {self.extern_key(): {'definition': self.definition}}
+
+    def create(self, newdefn=None):
+        """Return SQL statements to CREATE the table
+
+        :return: SQL statements
+        """
+        stmts = []
+        defn = newdefn or self.definition
+        if defn[-1:] == ';':
+            defn = defn[:-1]
+        stmts.append("CREATE%s VIEW %s AS\n   %s" % (
+                newdefn and " OR REPLACE" or '', self.qualname(), defn))
+        if hasattr(self, 'description'):
+            stmts.append(self.comment())
+        return stmts
+
+    def diff_map(self, inview):
+        """Generate SQL to transform an existing view
+
+        :param inview: a YAML map defining the new view
+        :return: list of SQL statements
+
+        Compares the view to an input view and generates SQL
+        statements to transform it into the one represented by the
+        input.
+        """
+        stmts = []
+        if self.definition != inview.definition:
+            stmts.append(self.create(inview.definition))
+        stmts.append(self.diff_description(inview))
         return stmts
 
 
@@ -278,14 +335,16 @@ class ClassDict(DbObjectDict):
     cls = DbClass
     query = \
         """SELECT nspname AS schema, relname AS name, relkind AS kind,
+                  CASE WHEN relkind = 'v' THEN pg_get_viewdef(c.oid, TRUE)
+                       ELSE '' END AS definition,
                   description
-           FROM pg_class
+           FROM pg_class c
                 JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
                 JOIN pg_roles ON (nspowner = pg_roles.oid)
                 LEFT JOIN pg_description d
-                     ON (pg_class.oid = d.objoid AND d.objsubid = 0)
-           WHERE relkind in ('r', 'S')
-                 AND nspname = 'public' OR rolname <> 'postgres'
+                     ON (c.oid = d.objoid AND d.objsubid = 0)
+           WHERE relkind in ('r', 'S', 'v')
+                 AND (nspname = 'public' OR rolname <> 'postgres')
            ORDER BY nspname, relname"""
 
     def _from_catalog(self):
@@ -300,6 +359,8 @@ class ClassDict(DbObjectDict):
                 self[(sch, tbl)] = inst = Sequence(**table.__dict__)
                 inst.get_attrs(self.dbconn)
                 inst.get_owner(self.dbconn)
+            elif kind == 'v':
+                self[(sch, tbl)] = View(**table.__dict__)
 
     def from_map(self, schema, inobjs, newdb):
         """Initalize the dictionary of tables by converting the input map
@@ -344,6 +405,16 @@ class ClassDict(DbObjectDict):
                     setattr(seq, attr, val)
                 if 'oldname' in inseq:
                     seq.oldname = inseq['oldname']
+            elif objtype == 'view':
+                self[(schema.name, key)] = view = View(
+                    schema=schema.name, name=key)
+                inview = inobjs[k]
+                if not inview:
+                    raise ValueError("View '%s' has no specification" % k)
+                for attr, val in inview.items():
+                    setattr(view, attr, val)
+                if 'oldname' in inview:
+                    view.oldname = inview['oldname']
             else:
                 raise KeyError("Unrecognized object type: %s" % k)
 
@@ -454,6 +525,19 @@ class ClassDict(DbObjectDict):
                     # create new table
                     stmts.append(intable.create())
 
+        # check input views
+        for (sch, tbl) in intables.keys():
+            intable = intables[(sch, tbl)]
+            if not isinstance(intable, View):
+                continue
+            # does it exist in the database?
+            if (sch, tbl) not in self:
+                if hasattr(intable, 'oldname'):
+                    stmts.append(self._rename(intable, "view"))
+                else:
+                    # create new view
+                    stmts.append(intable.create())
+
         # second pass: input sequences not owned by tables
         for (sch, seq) in intables.keys():
             inseq = intables[(sch, seq)]
@@ -469,14 +553,14 @@ class ClassDict(DbObjectDict):
                     # create new sequence
                     stmts.append(inseq.create())
 
-        # check database tables and sequences
+        # check database tables, sequences and views
         for (sch, tbl) in self.keys():
             table = self[(sch, tbl)]
             # if missing, mark it for dropping
             if (sch, tbl) not in intables:
                 table.dropped = False
             else:
-                # check table/sequence objects
+                # check table/sequence/view objects
                 stmts.append(table.diff_map(intables[(sch, tbl)]))
 
         # now drop the marked tables
@@ -489,10 +573,14 @@ class ClassDict(DbObjectDict):
                 if hasattr(table, 'foreign_keys'):
                     for fgn in table.foreign_keys:
                         stmts.append(table.foreign_keys[fgn].drop())
+                # drop views
+                if isinstance(table, View):
+                    stmts.append(table.drop())
 
         for (sch, tbl) in self.keys():
             table = self[(sch, tbl)]
-            if isinstance(table, Sequence) and hasattr(table, 'owner_table'):
+            if isinstance(table, Sequence) and hasattr(table, 'owner_table') \
+                    or isinstance(table, View):
                 continue
             if hasattr(table, 'dropped') and not table.dropped:
                 # next, drop other subordinate objects
