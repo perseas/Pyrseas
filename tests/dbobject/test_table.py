@@ -172,6 +172,19 @@ class TableToMapTestCase(PyrseasTestCase):
         dbmap = self.db.execute_and_map(ddlstmt)
         self.assertEqual(dbmap['schema public']['table t1'], expmap)
 
+    def test_map_inherit(self):
+        "Map a table that inherits from two other tables"
+        self.db.execute(CREATE_STMT)
+        self.db.execute("CREATE TABLE t2 (c3 integer)")
+        ddlstmt = "CREATE TABLE t3 (c4 text) INHERITS (t1, t2)"
+        expmap = {'columns': [{'c1': {'type': 'integer', 'inherited': True}},
+                              {'c2': {'type': 'text', 'inherited': True}},
+                              {'c3': {'type': 'integer', 'inherited': True}},
+                              {'c4': {'type': 'text'}}],
+                  'inherits': ['t1', 't2']}
+        dbmap = self.db.execute_and_map(ddlstmt)
+        self.assertEqual(dbmap['schema public']['table t3'], expmap)
+
 
 class TableToSqlTestCase(PyrseasTestCase):
     """Test SQL generation of table statements from input schemas"""
@@ -381,12 +394,46 @@ class TableCommentToSqlTestCase(PyrseasTestCase):
                          "COMMENT ON COLUMN t1.c2 IS 'Test column c2'")
 
 
+class TableInheritToSqlTestCase(PyrseasTestCase):
+    """Test SQL generation of table inheritance statements"""
+
+    def test_table_inheritance(self):
+        "Create a table that inherits from another"
+        self.db.execute_commit(DROP_STMT)
+        inmap = new_std_map()
+        inmap['schema public'].update({'table t1': {
+                    'columns': [{'c1': {'type': 'integer'}},
+                               {'c2': {'type': 'text'}}]}})
+        inmap['schema public'].update({'table t2': {
+                    'columns': [{'c1': {'type': 'integer', 'inherited': True}},
+                                {'c2': {'type': 'text', 'inherited': True}},
+                                {'c3': {'type': 'numeric'}}],
+                    'inherits': ['t1']}})
+        dbsql = self.db.process_map(inmap)
+        self.assertEqual(fix_indent(dbsql[0]), CREATE_STMT)
+        self.assertEqual(fix_indent(dbsql[1]), "CREATE TABLE t2 (c3 numeric) "
+                         "INHERITS (t1)")
+
+    def test_drop_inherited(self):
+        "Drop tables that inherit from others"
+        self.db.execute(DROP_STMT)
+        self.db.execute(CREATE_STMT)
+        self.db.execute("CREATE TABLE t2 (c3 numeric) INHERITS (t1)")
+        self.db.execute_commit("CREATE TABLE t3 (c4 date) INHERITS (t2)")
+        inmap = new_std_map()
+        dbsql = self.db.process_map(inmap)
+        self.assertEqual(dbsql, ["DROP TABLE t3", "DROP TABLE t2",
+                                 "DROP TABLE t1"])
+
+
 def suite():
     tests = unittest.TestLoader().loadTestsFromTestCase(TableToMapTestCase)
     tests.addTest(unittest.TestLoader().loadTestsFromTestCase(
             TableToSqlTestCase))
     tests.addTest(unittest.TestLoader().loadTestsFromTestCase(
             TableCommentToSqlTestCase))
+    tests.addTest(unittest.TestLoader().loadTestsFromTestCase(
+            TableInheritToSqlTestCase))
     return tests
 
 if __name__ == '__main__':

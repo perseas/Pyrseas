@@ -8,7 +8,7 @@
     UniqueConstraint derived from Constraint, and ConstraintDict
     derived from DbObjectDict.
 """
-from pyrseas.dbobject import DbObjectDict, DbSchemaObject
+from pyrseas.dbobject import DbObjectDict, DbSchemaObject, split_schema_table
 
 ACTIONS = {'r': 'restrict', 'c': 'cascade', 'n': 'set null',
            'd': 'set default'}
@@ -274,12 +274,8 @@ class ConstraintDict(DbObjectDict):
                 else:
                     constr.on_delete = ACTIONS[constr.on_delete]
                 reftbl = constr.ref_table
-                if '.' in reftbl:
-                    dot = reftbl.index('.')
-                    constr.ref_table = reftbl[dot + 1:]
-                    constr.ref_schema = reftbl[:dot]
-                else:
-                    constr.ref_schema = 'public'
+                (constr.ref_schema, constr.ref_table) = split_schema_table(
+                    reftbl)
                 self[(sch, tbl, cns)] = ForeignKey(**constr.__dict__)
             elif constr_type == 'u':
                 self[(sch, tbl, cns)] = UniqueConstraint(**constr.__dict__)

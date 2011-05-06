@@ -23,6 +23,8 @@ class Column(DbSchemaObject):
         for k in self.keylist:
             del dct[k]
         del dct['number'], dct['name'], dct['_table']
+        if hasattr(self, 'inherited'):
+            dct['inherited'] = (self.inherited != 0)
         return {self.name: dct}
 
     def add(self):
@@ -121,7 +123,8 @@ class ColumnDict(DbObjectDict):
     query = \
         """SELECT nspname AS schema, relname AS table, attname AS name,
                   attnum AS number, format_type(atttypid, atttypmod) AS type,
-                  attnotnull AS not_null, adsrc AS default, description
+                  attnotnull AS not_null, attinhcount AS inherited,
+                  adsrc AS default, description
            FROM pg_attribute JOIN pg_class ON (attrelid =  pg_class.oid)
                 JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
                 JOIN pg_roles ON (nspowner = pg_roles.oid)

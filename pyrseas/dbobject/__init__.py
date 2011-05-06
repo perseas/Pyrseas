@@ -9,6 +9,22 @@
 """
 
 
+def split_schema_table(tbl, sch=None):
+    """Return a (schema, table) tuple given a possibly schema-qualified name
+
+    :param tbl: table name or schema.table
+    :return: tuple
+    """
+    qualsch = sch
+    if sch == None:
+        qualsch = 'public'
+    if '.' in tbl:
+        (qualsch, tbl) = tbl.split('.')
+    if sch != qualsch:
+        sch = qualsch
+    return (sch, tbl)
+
+
 class DbObject(object):
     "A single object in a database catalog, e.g., a schema, a table, a column"
 
@@ -55,10 +71,7 @@ class DbSchemaObject(DbObject):
     def unqualify(self):
         """Adjust the schema and table name if the latter is qualified"""
         if hasattr(self, 'table') and '.' in self.table:
-            tbl = self.table
-            dot = tbl.index('.')
-            if self.schema == tbl[:dot]:
-                self.table = tbl[dot + 1:]
+            (sch, self.table) = split_schema_table(self.table, self.schema)
 
     def comment(self):
         """Return a SQL COMMENT statement for the object

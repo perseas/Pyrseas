@@ -112,7 +112,8 @@ class PostgresDb(object):
         self.conn.rollback()
         for obj in objs:
             if obj['relkind'] == 'r':
-                self.execute("DROP TABLE %s.%s CASCADE" % (obj[0], obj[1]))
+                self.execute("DROP TABLE IF EXISTS %s.%s CASCADE" % (
+                        obj[0], obj[1]))
             elif obj['relkind'] == 'S':
                 self.execute("DROP SEQUENCE %s.%s CASCADE" % (obj[0], obj[1]))
             elif obj['relkind'] == 'v':

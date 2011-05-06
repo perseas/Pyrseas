@@ -9,7 +9,7 @@
 """
 import sys
 
-from pyrseas.dbobject import DbObjectDict, DbSchemaObject
+from pyrseas.dbobject import DbObjectDict, DbSchemaObject, split_schema_table
 from constraint import CheckConstraint, PrimaryKey, ForeignKey, \
     UniqueConstraint
 
@@ -72,12 +72,8 @@ class Sequence(DbClass):
                WHERE objid = '%s'::regclass
                  AND refclassid = 'pg_class'::regclass""" % self.qualname())
         if data:
-            self.owner_table = tbl = data[0]
+            (sch, self.owner_table) = split_schema_table(data[0], self.schema)
             self.owner_column = data[1]
-            if '.' in tbl:
-                dot = tbl.index('.')
-                if self.schema == tbl[:dot]:
-                    self.owner_table = tbl[dot + 1:]
 
     def to_map(self):
         """Convert a sequence definition to a YAML-suitable format
@@ -225,6 +221,9 @@ class Table(DbClass):
             for k in self.indexes.values():
                 tbl['indexes'].update(self.indexes[k.name].to_map(
                         self.column_names()))
+        if hasattr(self, 'inherits'):
+            if not 'inherits' in tbl:
+                tbl['inherits'] = self.inherits
 
         return {self.extern_key(): tbl}
 
@@ -236,9 +235,13 @@ class Table(DbClass):
         stmts = []
         cols = []
         for col in self.columns:
-            cols.append("    " + col.add())
-        stmts.append("CREATE TABLE %s (\n%s)" % (self.qualname(),
-                                                 ",\n".join(cols)))
+            if not (hasattr(col, 'inherited') and col.inherited):
+                cols.append("    " + col.add())
+        inhclause = ''
+        if hasattr(self, 'inherits'):
+            inhclause = " INHERITS (%s)" % ", ".join(t for t in self.inherits)
+        stmts.append("CREATE TABLE %s (\n%s)%s" % (
+                self.qualname(), ",\n".join(cols), inhclause))
         if hasattr(self, 'description'):
             stmts.append(self.comment())
         for col in self.columns:
@@ -347,6 +350,12 @@ class ClassDict(DbObjectDict):
                  AND (nspname = 'public' OR rolname <> 'postgres')
            ORDER BY nspname, relname"""
 
+    inhquery = \
+        """SELECT inhrelid::regclass AS sub, inhparent::regclass AS parent,
+                  inhseqno
+           FROM pg_inherits
+           ORDER BY 1, 3"""
+
     def _from_catalog(self):
         """Initialize the dictionary of tables by querying the catalogs"""
         for table in self.fetch():
@@ -361,6 +370,12 @@ class ClassDict(DbObjectDict):
                 inst.get_owner(self.dbconn)
             elif kind == 'v':
                 self[(sch, tbl)] = View(**table.__dict__)
+        for (tbl, partbl, num) in self.dbconn.fetchall(self.inhquery):
+            (sch, tbl) = split_schema_table(tbl)
+            table = self[(sch, tbl)]
+            if not hasattr(table, 'inherits'):
+                table.inherits = []
+            table.inherits.append(partbl)
 
     def from_map(self, schema, inobjs, newdb):
         """Initalize the dictionary of tables by converting the input map
@@ -388,6 +403,8 @@ class ClassDict(DbObjectDict):
                 except KeyError, exc:
                     exc.args = ("Table '%s' has no columns" % key, )
                     raise
+                if 'inherits' in intable:
+                    table.inherits = intable['inherits']
                 if 'oldname' in intable:
                     table.oldname = intable['oldname']
                 newdb.constraints.from_map(table, intable)
@@ -437,12 +454,19 @@ class ClassDict(DbObjectDict):
             for col in dbcolumns[(sch, tbl)]:
                 col._table = self[(sch, tbl)]
         for (sch, tbl) in self.keys():
-            if isinstance(self[(sch, tbl)], Sequence):
-                seq = self[(sch, tbl)]
-                if hasattr(seq, 'owner_table'):
-                    if isinstance(seq.owner_column, int):
-                        seq.owner_column = self[(sch, seq.owner_table)]. \
-                            column_names()[seq.owner_column - 1]
+            table = self[(sch, tbl)]
+            if isinstance(table, Sequence) and hasattr(table, 'owner_table'):
+                if isinstance(table.owner_column, int):
+                    table.owner_column = self[(sch, table.owner_table)]. \
+                        column_names()[table.owner_column - 1]
+            elif isinstance(table, Table) and hasattr(table, 'inherits'):
+                for partbl in table.inherits:
+                    (parsch, partbl) = split_schema_table(partbl)
+                    assert self[(parsch, partbl)]
+                    parent = self[(parsch, partbl)]
+                    if not hasattr(parent, 'descendants'):
+                        parent.descendants = []
+                    parent.descendants.append(table)
         for (sch, tbl, cns) in dbconstrs.keys():
             constr = dbconstrs[(sch, tbl, cns)]
             if (sch, tbl) not in self:  # check constraints on domains
@@ -513,17 +537,31 @@ class ClassDict(DbObjectDict):
                     stmts.append(inseq.create())
 
         # check input tables
+        inhstack = []
         for (sch, tbl) in intables.keys():
             intable = intables[(sch, tbl)]
             if not isinstance(intable, Table):
                 continue
             # does it exist in the database?
             if (sch, tbl) not in self:
-                if hasattr(intable, 'oldname'):
-                    stmts.append(self._rename(intable, "table"))
-                else:
+                if not hasattr(intable, 'oldname'):
                     # create new table
-                    stmts.append(intable.create())
+                    if hasattr(intable, 'inherits'):
+                        inhstack.append(intable)
+                    else:
+                        stmts.append(intable.create())
+                else:
+                    stmts.append(self._rename(intable, "table"))
+        while len(inhstack):
+            intable = inhstack.pop()
+            createit = True
+            for partbl in intable.inherits:
+                if intables[split_schema_table(partbl)] in inhstack:
+                    createit = False
+            if createit:
+                stmts.append(intable.create())
+            else:
+                inhstack.insert(0, intable)
 
         # check input views
         for (sch, tbl) in intables.keys():
@@ -577,6 +615,7 @@ class ClassDict(DbObjectDict):
                 if isinstance(table, View):
                     stmts.append(table.drop())
 
+        inhstack = []
         for (sch, tbl) in self.keys():
             table = self[(sch, tbl)]
             if isinstance(table, Sequence) and hasattr(table, 'owner_table') \
@@ -599,7 +638,20 @@ class ClassDict(DbObjectDict):
                         stmts.append(table.referred_by.drop())
                     stmts.append(table.primary_key.drop())
                 # finally, drop the table itself
+                if hasattr(table, 'descendants'):
+                    inhstack.append(table)
+                else:
+                    stmts.append(table.drop())
+        while len(inhstack):
+            table = inhstack.pop()
+            dropit = True
+            for childtbl in table.descendants:
+                if self[(childtbl.schema, childtbl.name)] in inhstack:
+                    dropit = False
+            if dropit:
                 stmts.append(table.drop())
+            else:
+                inhstack.insert(0, table)
 
         # last pass to deal with nextval DEFAULTs
         for (sch, tbl) in intables.keys():
