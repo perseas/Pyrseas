@@ -28,6 +28,9 @@ def split_schema_table(tbl, sch=None):
 class DbObject(object):
     "A single object in a database catalog, e.g., a schema, a table, a column"
 
+    keylist = []
+    objtype = ''
+
     def __init__(self, **attrs):
         """Initialize the catalog object from a dictionary of attributes
 
@@ -39,6 +42,13 @@ class DbObject(object):
             if val or key in self.keylist:
                 setattr(self, key, val)
 
+    def extern_key(self):
+        """Return the key to be used in external maps for this object
+
+        :return: string
+        """
+        return '%s %s' % (self.objtype.lower(), self.name)
+
     def key(self):
         """Return a tuple that identifies the database object
 
@@ -47,16 +57,35 @@ class DbObject(object):
         lst = [getattr(self, k) for k in self.keylist]
         return len(lst) == 1 and lst[0] or tuple(lst)
 
+    def comment(self):
+        """Return SQL statement to create COMMENT on object
+
+        :return: SQL statement
+        """
+        if hasattr(self, 'description'):
+            descr = "'%s'" % self.description
+        else:
+            descr = 'NULL'
+        return "COMMENT ON %s %s IS %s" % (self.objtype, self.name, descr)
+
+    def drop(self):
+        """Return SQL statement to DROP the object
+
+        :return: SQL statement
+        """
+        return "DROP %s %s" % (self.objtype, self.name)
+
+    def rename(self, newname):
+        """Return SQL statement to RENAME the object
+
+        :param newname: the new name for the object
+        :return: SQL statement
+        """
+        return "ALTER %s %s RENAME TO %s" % (self.objtype, self.name, newname)
+
 
 class DbSchemaObject(DbObject):
     "A database object that is owned by a certain schema"
-
-    def extern_key(self):
-        """Return the key to be used in external maps for this object
-
-        :return: string
-        """
-        return '%s %s' % (self.objtype.lower(), self.name)
 
     def qualname(self):
         """Return the schema-qualified name of the object
@@ -74,7 +103,7 @@ class DbSchemaObject(DbObject):
             (sch, self.table) = split_schema_table(self.table, self.schema)
 
     def comment(self):
-        """Return a SQL COMMENT statement for the object
+        """Return a SQL COMMENT statement for the schema object
 
         :return: SQL statement
         """
@@ -86,7 +115,7 @@ class DbSchemaObject(DbObject):
                                            descr)
 
     def drop(self):
-        """Return a SQL DROP statement for the object
+        """Return a SQL DROP statement for the schema object
 
         :return: SQL statement
         """
@@ -96,7 +125,7 @@ class DbSchemaObject(DbObject):
         return []
 
     def rename(self, newname):
-        """Return a SQL ALTER statement to RENAME the object
+        """Return a SQL ALTER statement to RENAME the schema object
 
         :param newname: the new name of the object
         :return: SQL statement

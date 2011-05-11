@@ -43,6 +43,7 @@ classes and methods are documented mainly for developer use.
    dbobject
    dbconn
    database
+   language
    schema
    table
    column

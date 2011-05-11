@@ -9,21 +9,13 @@
 from pyrseas.dbobject import DbObjectDict, DbObject
 from table import Table, Sequence, View
 
-KEY_PREFIX = 'schema '
-
 
 class Schema(DbObject):
     """A database schema definition, i.e., a named collection of tables,
     views, triggers and other schema objects."""
 
     keylist = ['name']
-
-    def extern_key(self):
-        """Return the key to be used in external maps for this schema
-
-        :return: string
-        """
-        return KEY_PREFIX + self.name
+    objtype = 'SCHEMA'
 
     def to_map(self, dbschemas):
         """Convert tables, etc., dictionaries to a YAML-suitable format
@@ -52,17 +44,6 @@ class Schema(DbObject):
             schema[key].update(description=self.description)
         return schema
 
-    def comment(self):
-        """Return SQL statement to create COMMENT on schema
-
-        :return: SQL statement
-        """
-        if hasattr(self, 'description'):
-            descr = "'%s'" % self.description
-        else:
-            descr = 'NULL'
-        return "COMMENT ON SCHEMA %s IS %s" % (self.name, descr)
-
     def create(self):
         """Return SQL statements to CREATE the schema
 
@@ -72,21 +53,6 @@ class Schema(DbObject):
         if hasattr(self, 'description'):
             stmts.append(self.comment())
         return stmts
-
-    def drop(self):
-        """Return SQL statement to DROP the schema
-
-        :return: SQL statement
-        """
-        return "DROP SCHEMA %s" % self.name
-
-    def rename(self, newname):
-        """Return SQL statement to RENAME the schema
-
-        :param newname: the new name for the schema
-        :return: SQL statement
-        """
-        return "ALTER SCHEMA %s RENAME TO %s" % (self.name, newname)
 
     def diff_map(self, inschema):
         """Generate SQL to transform an existing schema
@@ -137,8 +103,6 @@ class SchemaDict(DbObjectDict):
         describing the database objects.
         """
         for sch in inmap.keys():
-            if not sch.startswith(KEY_PREFIX):
-                raise KeyError("Expected named schema, found '%s'" % sch)
             key = sch.split()[1]
             schema = self[key] = Schema(name=key)
             inschema = inmap[sch]

@@ -18,7 +18,16 @@ uniquely identify each object instance within the database.
 
 .. autoclass:: DbObject
 
+.. automethod:: DbObject.extern_key
+
 .. automethod:: DbObject.key
+
+.. automethod:: DbObject.comment
+
+.. automethod:: DbObject.drop
+
+.. automethod:: DbObject.rename
+
 
 Database Object Dictionary
 --------------------------
@@ -38,6 +47,7 @@ e.g., :class:`~pyrseas.schema.SchemaDict` sets :attr:`cls` to
 
 .. automethod:: DbObjectDict.fetch
 
+
 Schema Object
 -------------
 
@@ -47,8 +57,6 @@ certain common methods. This is different from the
 :class:`~pyrseas.schema.Schema` that represents the schema itself.
 
 .. autoclass:: DbSchemaObject
-
-.. automethod:: DbSchemaObject.extern_key
 
 .. automethod:: DbSchemaObject.qualname
 

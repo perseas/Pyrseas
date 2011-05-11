@@ -10,6 +10,7 @@
     system catalogs.  The `ndb` Dicts object defines the schemas based
     on the `input_map` supplied to the `from_map` method.
 """
+from pyrseas.dbobject.language import LanguageDict
 from pyrseas.dbobject.schema import SchemaDict
 from pyrseas.dbobject.table import ClassDict
 from pyrseas.dbobject.column import ColumnDict
@@ -38,6 +39,7 @@ class Database(object):
 
             :param dbconn: a DbConnection object
             """
+            self.languages = LanguageDict(dbconn)
             self.schemas = SchemaDict(dbconn)
             self.tables = ClassDict(dbconn)
             self.columns = ColumnDict(dbconn)
@@ -78,7 +80,17 @@ class Database(object):
         are linked to the tables they belong.
         """
         self.ndb = self.Dicts()
-        self.ndb.schemas.from_map(input_map, self.ndb)
+        input_schemas = {}
+        input_langs = {}
+        for key in input_map.keys():
+            if key.startswith('schema '):
+                input_schemas.update({key: input_map[key]})
+            elif key.startswith('language '):
+                input_langs.update({key: input_map[key]})
+            else:
+                raise KeyError("Expected typed object, found '%s'" % key)
+        self.ndb.languages.from_map(input_langs)
+        self.ndb.schemas.from_map(input_schemas, self.ndb)
         self.ndb.tables.link_refs(self.ndb.columns, self.ndb.constraints,
                                   self.ndb.indexes)
         self.ndb.schemas.link_refs(self.ndb.tables)
@@ -90,7 +102,9 @@ class Database(object):
         """
         if not self.db:
             self.from_catalog()
-        return self.db.schemas.to_map()
+        dbmap = self.db.languages.to_map()
+        dbmap.update(self.db.schemas.to_map())
+        return dbmap
 
     def diff_map(self, input_map):
         """Generate SQL to transform an existing database
@@ -106,10 +120,12 @@ class Database(object):
         if not self.db:
             self.from_catalog()
         self.from_map(input_map)
-        stmts = self.db.schemas.diff_map(self.ndb.schemas)
+        stmts = self.db.languages.diff_map(self.ndb.languages)
+        stmts.append(self.db.schemas.diff_map(self.ndb.schemas))
         stmts.append(self.db.tables.diff_map(self.ndb.tables))
         stmts.append(self.db.constraints.diff_map(self.ndb.constraints))
         stmts.append(self.db.indexes.diff_map(self.ndb.indexes))
         stmts.append(self.db.columns.diff_map(self.ndb.columns))
         stmts.append(self.db.schemas._drop())
+        stmts.append(self.db.languages._drop())
         return [s for s in flatten(stmts)]
