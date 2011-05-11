@@ -83,16 +83,16 @@ class IndexDict(DbObjectDict):
     cls = Index
     query = \
         """SELECT nspname AS schema, indrelid::regclass AS table,
-                  pg_class.relname AS name, amname AS access_method,
+                  c.relname AS name, amname AS access_method,
                   indisunique AS unique, indkey AS keycols
-           FROM pg_index JOIN pg_class ON (indexrelid = pg_class.oid)
+           FROM pg_index JOIN pg_class c ON (indexrelid = c.oid)
                 JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
                 JOIN pg_roles ON (nspowner = pg_roles.oid)
                 JOIN pg_am ON (relam = pg_am.oid)
            WHERE NOT indisprimary
                  AND (nspname = 'public' OR rolname <> 'postgres')
-                 AND indrelid NOT IN (
-                     SELECT conrelid FROM pg_constraint
+                 AND c.relname NOT IN (
+                     SELECT conname FROM pg_constraint
                      WHERE contype = 'u')
            ORDER BY schema, 2, name"""
 
