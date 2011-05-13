@@ -57,6 +57,13 @@ class DbObject(object):
         lst = [getattr(self, k) for k in self.keylist]
         return len(lst) == 1 and lst[0] or tuple(lst)
 
+    def identifier(self):
+        """Returns a full identifier for the database object
+
+        :return: string
+        """
+        return self.name
+
     def comment(self):
         """Return SQL statement to create COMMENT on object
 
@@ -66,14 +73,15 @@ class DbObject(object):
             descr = "'%s'" % self.description
         else:
             descr = 'NULL'
-        return "COMMENT ON %s %s IS %s" % (self.objtype, self.name, descr)
+        return "COMMENT ON %s %s IS %s" % (
+            self.objtype, self.identifier(), descr)
 
     def drop(self):
         """Return SQL statement to DROP the object
 
         :return: SQL statement
         """
-        return "DROP %s %s" % (self.objtype, self.name)
+        return "DROP %s %s" % (self.objtype, self.identifier())
 
     def rename(self, newname):
         """Return SQL statement to RENAME the object
@@ -83,9 +91,37 @@ class DbObject(object):
         """
         return "ALTER %s %s RENAME TO %s" % (self.objtype, self.name, newname)
 
+    def diff_description(self, inobj):
+        """Generate SQL statements to add or change COMMENTs
+
+        :param inobj: a YAML map defining the input object
+        :return: list of SQL statements
+        """
+        stmts = []
+        if hasattr(self, 'description'):
+            if hasattr(inobj, 'description'):
+                if self.description != inobj.description:
+                    self.description = inobj.description
+                    stmts.append(self.comment())
+            else:
+                del self.description
+                stmts.append(self.comment())
+        else:
+            if hasattr(inobj, 'description'):
+                self.description = inobj.description
+                stmts.append(self.comment())
+        return stmts
+
 
 class DbSchemaObject(DbObject):
     "A database object that is owned by a certain schema"
+
+    def identifier(self):
+        """Return a full identifier for a schema object
+
+        :return: string
+        """
+        return self.qualname()
 
     def qualname(self):
         """Return the schema-qualified name of the object
@@ -102,18 +138,6 @@ class DbSchemaObject(DbObject):
         if hasattr(self, 'table') and '.' in self.table:
             (sch, self.table) = split_schema_table(self.table, self.schema)
 
-    def comment(self):
-        """Return a SQL COMMENT statement for the schema object
-
-        :return: SQL statement
-        """
-        if hasattr(self, 'description'):
-            descr = "'%s'" % self.description
-        else:
-            descr = 'NULL'
-        return "COMMENT ON %s %s IS %s" % (self.objtype, self.qualname(),
-                                           descr)
-
     def drop(self):
         """Return a SQL DROP statement for the schema object
 
@@ -121,7 +145,7 @@ class DbSchemaObject(DbObject):
         """
         if not hasattr(self, 'dropped') or not self.dropped:
             self.dropped = True
-            return "DROP %s %s" % (self.objtype, self.qualname())
+            return "DROP %s %s" % (self.objtype, self.identifier())
         return []
 
     def rename(self, newname):

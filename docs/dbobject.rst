@@ -22,11 +22,15 @@ uniquely identify each object instance within the database.
 
 .. automethod:: DbObject.key
 
+.. automethod:: DbObject.identifier
+
 .. automethod:: DbObject.comment
 
 .. automethod:: DbObject.drop
 
 .. automethod:: DbObject.rename
+
+.. automethod:: DbObject.diff_description
 
 
 Database Object Dictionary
@@ -58,11 +62,11 @@ certain common methods. This is different from the
 
 .. autoclass:: DbSchemaObject
 
+.. automethod:: DbSchemaObject.identifier
+
 .. automethod:: DbSchemaObject.qualname
 
 .. automethod:: DbSchemaObject.unqualify
-
-.. automethod:: DbSchemaObject.comment
 
 .. automethod:: DbSchemaObject.drop
 

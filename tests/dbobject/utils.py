@@ -99,14 +99,14 @@ class PostgresDb(object):
 
     def clear(self):
         "Drop tables and other objects"
-        query = \
+        curs = pgexecute(
+            self.conn,
             """SELECT nspname, relname, relkind FROM pg_class
                       JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
                       JOIN pg_roles ON (nspowner = pg_roles.oid)
                WHERE relkind in ('r', 'S', 'v')
                      AND (nspname = 'public' OR rolname <> 'postgres')
-               ORDER BY relkind DESC"""
-        curs = pgexecute(self.conn, query)
+               ORDER BY relkind DESC""")
         objs = curs.fetchall()
         curs.close()
         self.conn.rollback()
@@ -118,6 +118,20 @@ class PostgresDb(object):
                 self.execute("DROP SEQUENCE %s.%s CASCADE" % (obj[0], obj[1]))
             elif obj['relkind'] == 'v':
                 self.execute("DROP VIEW %s.%s CASCADE" % (obj[0], obj[1]))
+        self.conn.commit()
+        curs = pgexecute(
+            self.conn,
+            """SELECT nspname, proname, pg_get_function_arguments(p.oid) AS
+                      args
+               FROM pg_proc p JOIN pg_namespace n ON (pronamespace = n.oid)
+               WHERE (nspname != 'pg_catalog'
+                     AND nspname != 'information_schema')""")
+        funcs = curs.fetchall()
+        curs.close()
+        self.conn.rollback()
+        for func in funcs:
+            self.execute("DROP FUNCTION IF EXISTS %s.%s (%s) CASCADE" % (
+                    func[0], func[1], func[2]))
         self.conn.commit()
 
     def drop(self):

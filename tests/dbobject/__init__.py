@@ -10,6 +10,7 @@ import test_table
 import test_constraint
 import test_index
 import test_view
+import test_function
 
 
 def suite():
@@ -21,6 +22,7 @@ def suite():
     tests.addTest(test_constraint.suite())
     tests.addTest(test_index.suite())
     tests.addTest(test_view.suite())
+    tests.addTest(test_function.suite())
     return tests
 
 if __name__ == '__main__':

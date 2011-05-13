@@ -21,27 +21,6 @@ class DbClass(DbSchemaObject):
 
     keylist = ['schema', 'name']
 
-    def diff_description(self, indbclass):
-        """Generate SQL statements to add or change COMMENTs
-
-        :param indbclass: a YAML map defining the table/sequence/view
-        :return: list of SQL statements
-        """
-        stmts = []
-        if hasattr(self, 'description'):
-            if hasattr(indbclass, 'description'):
-                if self.description != indbclass.description:
-                    self.description = indbclass.description
-                    stmts.append(self.comment())
-            else:
-                del self.description
-                stmts.append(self.comment())
-        else:
-            if hasattr(indbclass, 'description'):
-                self.description = indbclass.description
-                stmts.append(self.comment())
-        return stmts
-
 
 class Sequence(DbClass):
     "A sequence generator definition"
@@ -385,8 +364,6 @@ class ClassDict(DbObjectDict):
         :param newdb: collection of dictionaries defining the database
         """
         for k in inobjs.keys():
-            if k == 'description':
-                continue
             spc = k.find(' ')
             if spc == -1:
                 raise KeyError("Unrecognized object type: %s" % k)

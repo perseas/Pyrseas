@@ -49,6 +49,7 @@ classes and methods are documented mainly for developer use.
    column
    constraint
    indexes
+   function
 
 Indices and tables
 ==================

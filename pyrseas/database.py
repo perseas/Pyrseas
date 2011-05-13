@@ -16,6 +16,7 @@ from pyrseas.dbobject.table import ClassDict
 from pyrseas.dbobject.column import ColumnDict
 from pyrseas.dbobject.constraint import ConstraintDict
 from pyrseas.dbobject.index import IndexDict
+from pyrseas.dbobject.function import FunctionDict
 
 
 def flatten(lst):
@@ -45,6 +46,7 @@ class Database(object):
             self.columns = ColumnDict(dbconn)
             self.constraints = ConstraintDict(dbconn)
             self.indexes = IndexDict(dbconn)
+            self.functions = FunctionDict(dbconn)
 
     def __init__(self, dbconn):
         """Initialize the database
@@ -53,6 +55,11 @@ class Database(object):
         """
         self.dbconn = dbconn
         self.db = None
+
+    def _link_refs(self, db):
+        """Link related objects"""
+        db.tables.link_refs(db.columns, db.constraints, db.indexes)
+        db.schemas.link_refs(db.tables, db.functions)
 
     def from_catalog(self):
         """Populate the database objects by querying the catalogs
@@ -65,9 +72,7 @@ class Database(object):
         self.db = self.Dicts(self.dbconn)
         if self.dbconn.conn:
             self.dbconn.conn.close()
-        self.db.tables.link_refs(self.db.columns, self.db.constraints,
-                                 self.db.indexes)
-        self.db.schemas.link_refs(self.db.tables)
+        self._link_refs(self.db)
 
     def from_map(self, input_map):
         """Populate the new database objects from the input map
@@ -91,9 +96,7 @@ class Database(object):
                 raise KeyError("Expected typed object, found '%s'" % key)
         self.ndb.languages.from_map(input_langs)
         self.ndb.schemas.from_map(input_schemas, self.ndb)
-        self.ndb.tables.link_refs(self.ndb.columns, self.ndb.constraints,
-                                  self.ndb.indexes)
-        self.ndb.schemas.link_refs(self.ndb.tables)
+        self._link_refs(self.ndb)
 
     def to_map(self):
         """Convert the db maps to a single hierarchy suitable for YAML
@@ -126,6 +129,7 @@ class Database(object):
         stmts.append(self.db.constraints.diff_map(self.ndb.constraints))
         stmts.append(self.db.indexes.diff_map(self.ndb.indexes))
         stmts.append(self.db.columns.diff_map(self.ndb.columns))
+        stmts.append(self.db.functions.diff_map(self.ndb.functions))
         stmts.append(self.db.schemas._drop())
         stmts.append(self.db.languages._drop())
         return [s for s in flatten(stmts)]

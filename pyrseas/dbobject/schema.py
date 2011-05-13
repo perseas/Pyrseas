@@ -40,6 +40,11 @@ class Schema(DbObject):
             for view in self.views.keys():
                 views.update(self.views[view].to_map())
             schema[key].update(views)
+        if hasattr(self, 'functions'):
+            functions = {}
+            for func in self.functions.keys():
+                functions.update(self.functions[func].to_map())
+            schema[key].update(functions)
         if hasattr(self, 'description'):
             schema[key].update(description=self.description)
         return schema
@@ -106,22 +111,34 @@ class SchemaDict(DbObjectDict):
             key = sch.split()[1]
             schema = self[key] = Schema(name=key)
             inschema = inmap[sch]
-            if inschema:
-                if 'oldname' in inschema:
-                    schema.oldname = inschema['oldname']
+            intables = {}
+            infuncs = {}
+            for key in inschema.keys():
+                if key.startswith('table ') or key.startswith('view ') \
+                        or key.startswith('sequence '):
+                    intables.update({key: inschema[key]})
+                elif key.startswith('function '):
+                    infuncs.update({key: inschema[key]})
+                elif key == 'oldname':
+                    schema.oldname = inschema[key]
                     del inschema['oldname']
-                if 'description' in inschema:
-                    schema.description = inschema['description']
-                newdb.tables.from_map(schema, inschema, newdb)
+                elif key == 'description':
+                    schema.description = inschema[key]
+                else:
+                    raise KeyError("Expected typed object, found '%s'" % key)
+            newdb.tables.from_map(schema, intables, newdb)
+            newdb.functions.from_map(schema, infuncs)
 
-    def link_refs(self, dbtables):
+    def link_refs(self, dbtables, dbfunctions):
         """Connect tables and sequences to their respective schemas
 
-        :param dbtables: dictionary of tables and sequences
+        :param dbtables: dictionary of tables, sequences and views
+        :param dbfunctions: dictionary of functions
 
-        Fills in the `tables` and `sequences` dictionaries for each
-        schema by traversing the `dbtables` dictionary, which is keyed
-        by schema and table name.
+        Fills in the `tables`, `sequences`, `views` dictionaries for
+        each schema by traversing the `dbtables` dictionary, which is
+        keyed by schema and table name. Fills in the `functions`
+        dictionary by traversing the `dbfunctions` dictionary.
         """
         for (sch, tbl) in dbtables.keys():
             table = dbtables[(sch, tbl)]
@@ -139,6 +156,12 @@ class SchemaDict(DbObjectDict):
                 if not hasattr(schema, 'views'):
                     schema.views = {}
                 schema.views.update({tbl: table})
+        for (sch, fnc, arg) in dbfunctions.keys():
+            assert self[sch]
+            schema = self[sch]
+            if not hasattr(schema, 'functions'):
+                schema.functions = {}
+            schema.functions.update({(fnc, arg): dbfunctions[(sch, fnc, arg)]})
 
     def to_map(self):
         """Convert the schema dictionary to a regular dictionary
