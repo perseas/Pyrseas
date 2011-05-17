@@ -123,7 +123,8 @@ class Database(object):
         if not self.db:
             self.from_catalog()
         self.from_map(input_map)
-        stmts = self.db.languages.diff_map(self.ndb.languages)
+        stmts = self.db.languages.diff_map(self.ndb.languages,
+                                           self.dbconn.version)
         stmts.append(self.db.schemas.diff_map(self.ndb.schemas))
         stmts.append(self.db.tables.diff_map(self.ndb.tables))
         stmts.append(self.db.constraints.diff_map(self.ndb.constraints))

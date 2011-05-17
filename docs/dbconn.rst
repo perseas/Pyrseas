@@ -25,3 +25,5 @@ invoked. It is normally disconnected just before the
 .. automethod:: DbConnection.fetchone
 
 .. automethod:: DbConnection.fetchall
+
+.. autoattribute:: DbConnection.version

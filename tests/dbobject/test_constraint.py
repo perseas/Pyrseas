@@ -309,14 +309,11 @@ class ForeignKeyToMapTestCase(PyrseasTestCase):
                           c2 INTEGER REFERENCES t2 (pc1), c3 TEXT)"""
         dbmap = self.db.execute_and_map(ddlstmt)
         self.db.execute_commit("DROP SCHEMA s1 CASCADE")
-        expmap = new_std_map()
-        expmap['schema public'].update({'table t2': {
-                    'columns': [{'pc1': {'type': 'integer', 'not_null': True}},
-                                {'pc2': {'type': 'text'}}],
-                    'primary_key': {'t2_pkey': {
-                            'columns': ['pc1'],
-                            'access_method': 'btree'}}}})
-        expmap['schema s1'] = {'table t1': {
+        t2map = {'columns': [{'pc1': {'type': 'integer', 'not_null': True}},
+                             {'pc2': {'type': 'text'}}],
+                 'primary_key': {'t2_pkey': {
+                    'columns': ['pc1'], 'access_method': 'btree'}}}
+        t1map = {'table t1': {
                 'columns': [{'c1': {'type': 'integer', 'not_null': True}},
                             {'c2': {'type': 'integer'}},
                             {'c3': {'type': 'text'}}],
@@ -327,7 +324,8 @@ class ForeignKeyToMapTestCase(PyrseasTestCase):
                         'columns': ['c2'],
                         'references': {'schema': 'public', 'table': 't2',
                                        'columns': ['pc1']}}}}}
-        self.assertEqual(dbmap, expmap)
+        self.assertEqual(dbmap['schema public']['table t2'], t2map)
+        self.assertEqual(dbmap['schema s1'], t1map)
 
 
 class ForeignKeyToSqlTestCase(PyrseasTestCase):
@@ -456,7 +454,7 @@ class UniqueConstraintToMapTestCase(PyrseasTestCase):
     map_unique2 = {'columns': [{'c1': {'type': 'integer'}},
                                {'c2': {'type': 'character(5)'}},
                                {'c3': {'type': 'text'}}],
-                   'unique_constraints': {'t1_c1_key': {
+                   'unique_constraints': {'t1_c1_c2_key': {
                 'columns': ['c1', 'c2'], 'access_method': 'btree'}}}
 
     map_unique3 = {'columns': [{'c1': {'type': 'integer'}},
@@ -481,6 +479,9 @@ class UniqueConstraintToMapTestCase(PyrseasTestCase):
         ddlstmt = """CREATE TABLE t1 (c1 INTEGER, c2 CHAR(5), c3 TEXT,
                                     UNIQUE (c1, c2))"""
         dbmap = self.db.execute_and_map(ddlstmt)
+        if self.db.version < 90000:
+            self.map_unique2.update({'unique_constraints': {'t1_c1_key': {
+                'columns': ['c1', 'c2'], 'access_method': 'btree'}}})
         self.assertEqual(dbmap['schema public']['table t1'], self.map_unique2)
 
     def test_unique_4(self):

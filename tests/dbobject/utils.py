@@ -23,11 +23,10 @@ def new_std_map():
     return {'schema public': {'description': 'standard public schema'}}
 
 
-def pgconnect(dbname, user=None, host='localhost', port=5432):
+def pgconnect(dbname, user, host, port):
     "Connect to a Postgres database using psycopg2"
     return connect("host=%s port=%d dbname=%s user=%s" % (
-            host, port, dbname, user or os.getenv("USER")),
-                     connection_factory=DictConnection)
+            host, port, dbname, user), connection_factory=DictConnection)
 
 
 def pgexecute(dbconn, query):
@@ -50,8 +49,12 @@ def pgexecute_auto(dbconn, query):
     dbconn.set_isolation_level(isolation_level)
     return curs
 
-DBNAME = 'pyrseas_testdb'
 
+TEST_DBNAME = os.environ.get("PYRSEAS_TEST_DB", 'pyrseas_testdb')
+TEST_USER = os.environ.get("PYRSEAS_TEST_USER", os.getenv("USER"))
+TEST_HOST = os.environ.get("PYRSEAS_TEST_HOST", 'localhost')
+TEST_PORT = os.environ.get("PYRSEAS_TEST_PORT", 5432)
+ADMIN_DB = os.environ.get("PYRSEAS_ADMIN_DB", 'postgres')
 CREATE_DDL = "CREATE DATABASE %s TEMPLATE = template0"
 
 
@@ -62,16 +65,23 @@ class PostgresDb(object):
     tests need to create and drop databases and other objects,
     independently.
     """
-    def __init__(self, name):
+    def __init__(self, name, user, host, port):
         self.name = name
         self.conn = None
+        self.user = user
+        self.host = host
+        self.port = int(port)
+        self._version = 0
 
     def connect(self):
-        """Connect to the database.  If we're not already connected we
-        first connect to 'postgres' and see if the given database exists.
-        If it doesn't, we create and then connect to it."""
+        """Connect to the database
+
+        If we're not already connected we first connect to the admin
+        database and see if the given database exists.  If it doesn't,
+        we create and then connect to it.
+        """
         if not self.conn:
-            conn = pgconnect('postgres')
+            conn = pgconnect(ADMIN_DB, self.user, self.host, self.port)
             curs = pgexecute(conn,
                              "SELECT 1 FROM pg_database WHERE datname = '%s'" %
                              self.name)
@@ -80,8 +90,10 @@ class PostgresDb(object):
                 curs.close()
                 curs = pgexecute_auto(conn, CREATE_DDL % self.name)
                 curs.close()
-                conn.close()
-            self.conn = pgconnect(self.name)
+            conn.close()
+            self.conn = pgconnect(self.name, self.user, self.host, self.port)
+            curs = pgexecute(self.conn, "SHOW server_version_num")
+            self._version = int(curs.fetchone()[0])
 
     def close(self):
         "Close the connection if still open"
@@ -89,9 +101,13 @@ class PostgresDb(object):
             return ValueError
         self.conn.close()
 
+    @property
+    def version(self):
+        return self._version
+
     def create(self):
         "Drop the database if it exists and re-create it"
-        conn = pgconnect('postgres')
+        conn = pgconnect(ADMIN_DB, self.user, self.host, self.port)
         curs = pgexecute_auto(conn, "DROP DATABASE IF EXISTS %s" % self.name)
         curs = pgexecute_auto(conn, CREATE_DDL % self.name)
         curs.close()
@@ -136,7 +152,7 @@ class PostgresDb(object):
 
     def drop(self):
         "Drop the database"
-        conn = pgconnect('postgres')
+        conn = pgconnect(ADMIN_DB, self.user, self.host, self.port)
         curs = pgexecute_auto(conn, "DROP DATABASE %s" % self.name)
         curs.close()
         conn.close()
@@ -155,13 +171,13 @@ class PostgresDb(object):
         "Execute a DDL statement, commit, and return a map of the database"
         self.execute(ddlstmt)
         self.conn.commit()
-        db = Database(DbConnection(self.name))
+        db = Database(DbConnection(self.name, self.user, self.host, self.port))
         return db.to_map()
 
     def process_map(self, input_map):
         """Process an input map and return the SQL statements necessary to
         convert the database to match the map."""
-        db = Database(DbConnection(self.name))
+        db = Database(DbConnection(self.name, self.user, self.host, self.port))
         stmts = db.diff_map(input_map)
         return stmts
 
@@ -170,7 +186,7 @@ class PyrseasTestCase(TestCase):
     """Base class for most test cases"""
 
     def setUp(self):
-        self.db = PostgresDb(DBNAME)
+        self.db = PostgresDb(TEST_DBNAME, TEST_USER, TEST_HOST, TEST_PORT)
         self.db.connect()
         self.db.clear()
 

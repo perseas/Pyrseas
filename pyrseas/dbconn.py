@@ -29,6 +29,7 @@ class DbConnection(object):
         self.host = host
         self.port = port
         self.conn = None
+        self._version = 0
 
     def connect(self):
         """Connect to the database
@@ -42,6 +43,7 @@ class DbConnection(object):
                 self.user or os.getenv("USER")),
                             connection_factory=DictConnection)
         self._execute("set search_path to public, pg_catalog")
+        self._version = self.fetchone("SHOW server_version_num")[0]
 
     def _execute(self, query):
         """Create a cursor, execute a query and return the cursor"""
@@ -80,3 +82,8 @@ class DbConnection(object):
         curs.close()
         self.conn.rollback()
         return data
+
+    @property
+    def version(self):
+        "The server's version number"
+        return self._version
