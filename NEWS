@@ -1,3 +1,21 @@
+0.2.0 (19-May-2011)
+
+  * Added support for:
+
+    - COMMENTs on schemas, tables, columns and functions
+    - FOREIGN KEY ON UPDATE and ON DELETE actions
+    - ALTER TABLE RENAME COLUMN and enhanced support for other ALTER
+      object RENAME statements.
+    - VIEWs
+    - INHERITed tables, and by extension, partitioned tables.
+    - PROCEDURAL LANGUAGEs
+    - FUNCTIONs.
+
+  * Added files for release via PGXN.
+  * Added support for testing against multiple PostgreSQL versions.
+  * Fixed cross-schema REFERENCES failure in dbtoyaml (issue #1).
+
+
 0.1.0 (5-Apr-2011)
 
   * Initial release
