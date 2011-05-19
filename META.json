@@ -1,0 +1,51 @@
+{
+   "name": "Pyrseas",
+   "abstract": "Framework and utilities to upgrade and maintain databases",
+   "description": "Pyrseas provides a framework and utilities to upgrade and maintain a PostgreSQL database.  Its utilities output a database schema in YAML format suitable for committing to a version control system and read this format to generate SQL to sync to another database.",
+   "version": "0.2.0",
+   "maintainer": "Joe Abbate <jma@freedomcircle.com>",
+   "license": "bsd",
+   "prereqs": {
+      "runtime": {
+         "requires": {
+            "PostgreSQL": "8.4.0"
+         }
+      }
+   },
+   "provides": {
+     "dbtoyaml": {
+       "file": "pyrseas/dbtoyaml.py",
+       "docfile": "docs/dbtoyaml.rst",
+       "version": "0.2.0",
+       "abstract": "Output PostgreSQL schemas in YAML format"
+     },
+     "yamltodb": {
+       "file": "pyrseas/yamltodb.py",
+       "docfile": "docs/yamltodb.rst",
+       "version": "0.2.0",
+       "abstract": "Generate SQL to sync a database with a YAML schema spec"
+     }
+   },
+   "resources": {
+      "homepage": "http://pyrseas.org/",
+      "bugtracker": {
+         "web": "https://github.com/jmafc/Pyrseas/issues"
+      },
+      "repository": {
+        "url":  "git://github.com/jmafc/Pyrseas.git",
+        "web":  "https://github.com/jmafc/Pyrseas",
+        "type": "git"
+      }
+   },
+   "generated_by": "Joe Abbate",
+   "meta-spec": {
+      "version": "1.0.0",
+      "url": "http://pgxn.org/meta/spec.txt"
+   },
+   "tags": [
+      "version control",
+      "yaml",
+      "database version control",
+      "schema versioning"
+   ]
+}

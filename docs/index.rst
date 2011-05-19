@@ -21,6 +21,7 @@ Contents:
    :maxdepth: 2
 
    overview
+   install
 .. toctree::
    :maxdepth: 1
 

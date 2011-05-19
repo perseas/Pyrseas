@@ -1,4 +1,4 @@
-include AUTHORS ChangeLog LICENSE NEWS
+include AUTHORS ChangeLog LICENSE Makefile META.json NEWS
 recursive-include tests *.py
 recursive-include docs *
 prune docs/_build
