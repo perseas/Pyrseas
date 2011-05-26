@@ -149,6 +149,9 @@ class PostgresDb(object):
             self.execute("DROP FUNCTION IF EXISTS %s.%s (%s) CASCADE" % (
                     func[0], func[1], func[2]))
         self.conn.commit()
+        if self.version < 90000:
+            if self.is_plpgsql_installed():
+                self.execute_commit("DROP LANGUAGE plpgsql")
 
     def drop(self):
         "Drop the database"
@@ -166,6 +169,14 @@ class PostgresDb(object):
         "Execute a DDL statement and commit"
         self.execute(stmt)
         self.conn.commit()
+
+    def is_plpgsql_installed(self):
+        "Is PL/pgSQL installed?"
+        curs = pgexecute(self.conn,
+                         "SELECT 1 FROM pg_language WHERE lanname = 'plpgsql'")
+        row = curs.fetchone()
+        curs.close()
+        return row and True
 
     def execute_and_map(self, ddlstmt):
         "Execute a DDL statement, commit, and return a map of the database"

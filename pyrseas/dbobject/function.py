@@ -6,8 +6,6 @@
     This module defines two classes: Function derived from
     DbSchemaObject, and FunctionDict derived from DbObjectDict.
 """
-import sys
-
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
 
 
@@ -40,10 +38,8 @@ class Function(DbSchemaObject):
         :return: dictionary
         """
         dct = self.__dict__.copy()
-        for k in self.keylist[:-1]:
+        for k in self.keylist:
             del dct[k]
-        if not self.arguments:
-            del dct['arguments']
         if self.volatility == 'v':
             del dct['volatility']
         else:
@@ -51,8 +47,9 @@ class Function(DbSchemaObject):
         return {self.extern_key(): dct}
 
     def create(self, newsrc=None):
-        """Return SQL statements to CREATE the function
+        """Return SQL statements to CREATE or REPLACE the function
 
+        :param newsrc: new source for a changed function
         :return: SQL statements
         """
         stmts = []
@@ -164,9 +161,9 @@ class FunctionDict(DbObjectDict):
 
         # check existing functions
         for (sch, fnc, arg) in self.keys():
-            table = self[(sch, fnc, arg)]
+            func = self[(sch, fnc, arg)]
             # if missing, drop them
             if (sch, fnc, arg) not in infuncs:
-                    stmts.append(table.drop())
+                    stmts.append(func.drop())
 
         return stmts

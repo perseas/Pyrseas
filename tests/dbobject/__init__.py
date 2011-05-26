@@ -11,6 +11,7 @@ import test_constraint
 import test_index
 import test_view
 import test_function
+import test_trigger
 
 
 def suite():
@@ -23,6 +24,7 @@ def suite():
     tests.addTest(test_index.suite())
     tests.addTest(test_view.suite())
     tests.addTest(test_function.suite())
+    tests.addTest(test_trigger.suite())
     return tests
 
 if __name__ == '__main__':

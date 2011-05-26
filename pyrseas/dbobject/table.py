@@ -203,6 +203,11 @@ class Table(DbClass):
         if hasattr(self, 'inherits'):
             if not 'inherits' in tbl:
                 tbl['inherits'] = self.inherits
+        if hasattr(self, 'triggers'):
+            if not 'triggers' in tbl:
+                tbl['triggers'] = {}
+            for k in self.triggers.values():
+                tbl['triggers'].update(self.triggers[k.name].to_map())
 
         return {self.extern_key(): tbl}
 
@@ -387,6 +392,8 @@ class ClassDict(DbObjectDict):
                 newdb.constraints.from_map(table, intable)
                 if 'indexes' in intable:
                     newdb.indexes.from_map(table, intable['indexes'])
+                if 'triggers' in intable:
+                    newdb.triggers.from_map(table, intable['triggers'])
                 if 'description' in intable:
                     table.description = intable['description']
             elif objtype == 'sequence':
@@ -412,18 +419,20 @@ class ClassDict(DbObjectDict):
             else:
                 raise KeyError("Unrecognized object type: %s" % k)
 
-    def link_refs(self, dbcolumns, dbconstrs, dbindexes):
+    def link_refs(self, dbcolumns, dbconstrs, dbindexes, dbtriggers):
         """Connect columns, constraints, etc. to their respective tables
 
         :param dbcolumns: dictionary of columns
         :param dbconstrs: dictionary of constraints
         :param dbindexes: dictionary of indexes
+        :param dbtriggers: dictionary of triggers
 
         Links each list of table columns in `dbcolumns` to the
         corresponding table. Fills the `foreign_keys`,
-        `unique_constraints` and `indexes` dictionaries for each table
-        by traversing the `dbconstrs` and `dbindexes` dictionaries,
-        which are keyed by schema, table and constraint or index.
+        `unique_constraints`, `indexes` and `triggers` dictionaries
+        for each table by traversing the `dbconstrs`, `dbindexes` and
+        `dbtriggers` dictionaries, which are keyed by schema, table
+        and constraint, index or trigger name.
         """
         for (sch, tbl) in dbcolumns.keys():
             assert self[(sch, tbl)]
@@ -474,6 +483,13 @@ class ClassDict(DbObjectDict):
             if not hasattr(table, 'indexes'):
                 table.indexes = {}
             table.indexes.update({idx: dbindexes[(sch, tbl, idx)]})
+        for (sch, tbl, trg) in dbtriggers.keys():
+            assert self[(sch, tbl)]
+            table = self[(sch, tbl)]
+            if not hasattr(table, 'triggers'):
+                table.triggers = {}
+            table.triggers.update({trg: dbtriggers[(sch, tbl, trg)]})
+            dbtriggers[(sch, tbl, trg)]._table = self[(sch, tbl)]
 
     def _rename(self, obj, objtype):
         """Process a RENAME"""
@@ -588,6 +604,10 @@ class ClassDict(DbObjectDict):
                 if hasattr(table, 'foreign_keys'):
                     for fgn in table.foreign_keys:
                         stmts.append(table.foreign_keys[fgn].drop())
+                # and drop the triggers
+                if hasattr(table, 'triggers'):
+                    for trg in table.triggers:
+                        stmts.append(table.triggers[trg].drop())
                 # drop views
                 if isinstance(table, View):
                     stmts.append(table.drop())

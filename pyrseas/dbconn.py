@@ -43,7 +43,7 @@ class DbConnection(object):
                 self.user or os.getenv("USER")),
                             connection_factory=DictConnection)
         self._execute("set search_path to public, pg_catalog")
-        self._version = self.fetchone("SHOW server_version_num")[0]
+        self._version = int(self.fetchone("SHOW server_version_num")[0])
 
     def _execute(self, query):
         """Create a cursor, execute a query and return the cursor"""

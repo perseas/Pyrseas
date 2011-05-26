@@ -27,7 +27,6 @@ class FunctionToMapTestCase(PyrseasTestCase):
     def test_map_function_with_args(self):
         "Map a function with two arguments"
         expmap = {'language': 'sql', 'returns': 'integer',
-                  'arguments': 'integer, integer',
                   'source': "SELECT $1 + $2"}
         dbmap = self.db.execute_and_map(CREATE_STMT2)
         self.assertEqual(dbmap['schema public'] \

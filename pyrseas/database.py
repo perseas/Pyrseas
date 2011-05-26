@@ -17,6 +17,7 @@ from pyrseas.dbobject.column import ColumnDict
 from pyrseas.dbobject.constraint import ConstraintDict
 from pyrseas.dbobject.index import IndexDict
 from pyrseas.dbobject.function import FunctionDict
+from pyrseas.dbobject.trigger import TriggerDict
 
 
 def flatten(lst):
@@ -47,6 +48,7 @@ class Database(object):
             self.constraints = ConstraintDict(dbconn)
             self.indexes = IndexDict(dbconn)
             self.functions = FunctionDict(dbconn)
+            self.triggers = TriggerDict(dbconn)
 
     def __init__(self, dbconn):
         """Initialize the database
@@ -58,7 +60,8 @@ class Database(object):
 
     def _link_refs(self, db):
         """Link related objects"""
-        db.tables.link_refs(db.columns, db.constraints, db.indexes)
+        db.tables.link_refs(db.columns, db.constraints, db.indexes,
+                            db.triggers)
         db.schemas.link_refs(db.tables, db.functions)
 
     def from_catalog(self):
@@ -131,6 +134,7 @@ class Database(object):
         stmts.append(self.db.indexes.diff_map(self.ndb.indexes))
         stmts.append(self.db.columns.diff_map(self.ndb.columns))
         stmts.append(self.db.functions.diff_map(self.ndb.functions))
+        stmts.append(self.db.triggers.diff_map(self.ndb.triggers))
         stmts.append(self.db.schemas._drop())
         stmts.append(self.db.languages._drop())
         return [s for s in flatten(stmts)]
