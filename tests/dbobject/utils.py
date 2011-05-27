@@ -25,7 +25,15 @@ def new_std_map():
 
 def pgconnect(dbname, user, host, port):
     "Connect to a Postgres database using psycopg2"
-    return connect("host=%s port=%d dbname=%s user=%s" % (
+    if host is None or host == '127.0.0.1' or host == 'localhost':
+        host = ''
+    else:
+        host = 'host=%s ' % host
+    if port is None or port == 5432:
+        port = ''
+    else:
+        port = "port=%d " % port
+    return connect("%s%sdbname=%s user=%s" % (
             host, port, dbname, user), connection_factory=DictConnection)
 
 
@@ -52,8 +60,8 @@ def pgexecute_auto(dbconn, query):
 
 TEST_DBNAME = os.environ.get("PYRSEAS_TEST_DB", 'pyrseas_testdb')
 TEST_USER = os.environ.get("PYRSEAS_TEST_USER", os.getenv("USER"))
-TEST_HOST = os.environ.get("PYRSEAS_TEST_HOST", 'localhost')
-TEST_PORT = os.environ.get("PYRSEAS_TEST_PORT", 5432)
+TEST_HOST = os.environ.get("PYRSEAS_TEST_HOST", None)
+TEST_PORT = os.environ.get("PYRSEAS_TEST_PORT", None)
 ADMIN_DB = os.environ.get("PYRSEAS_ADMIN_DB", 'postgres')
 CREATE_DDL = "CREATE DATABASE %s TEMPLATE = template0"
 
@@ -70,7 +78,7 @@ class PostgresDb(object):
         self.conn = None
         self.user = user
         self.host = host
-        self.port = int(port)
+        self.port = port and int(port)
         self._version = 0
 
     def connect(self):

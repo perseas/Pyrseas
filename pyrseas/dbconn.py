@@ -16,7 +16,7 @@ from psycopg2.extras import DictConnection
 class DbConnection(object):
     """A database connection, possibly disconnected"""
 
-    def __init__(self, dbname, user=None, host='localhost', port=5432):
+    def __init__(self, dbname, user=None, host=None, port=None):
         """Initialize the connection information
 
         :param dbname: database name
@@ -26,8 +26,14 @@ class DbConnection(object):
         """
         self.dbname = dbname
         self.user = user
-        self.host = host
-        self.port = port
+        if host is None or host == '127.0.0.1' or host == 'localhost':
+            self.host = ''
+        else:
+            self.host = "host=%s " % host
+        if port is None or port == 5432:
+            self.port = ''
+        else:
+            self.port = "port=%d " % port
         self.conn = None
         self._version = 0
 
@@ -38,7 +44,7 @@ class DbConnection(object):
         instead. The password is either not required or supplied by
         other means, e.g., a $HOME/.pgpass file.
         """
-        self.conn = connect("host=%s port=%d dbname=%s user=%s" % (
+        self.conn = connect("%s%sdbname=%s user=%s" % (
                 self.host, self.port, self.dbname,
                 self.user or os.getenv("USER")),
                             connection_factory=DictConnection)
