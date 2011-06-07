@@ -19,6 +19,8 @@ class Column(DbSchemaObject):
 
         :return: dictionary
         """
+        if hasattr(self, 'dropped'):
+            return None
         dct = self.__dict__.copy()
         for k in self.keylist:
             del dct[k]
@@ -57,6 +59,8 @@ class Column(DbSchemaObject):
 
         :return: SQL statement
         """
+        if hasattr(self, 'dropped'):
+            return ""
         return "ALTER TABLE %s DROP COLUMN %s" % (self.table, self.name)
 
     def rename(self, newname):
@@ -124,7 +128,7 @@ class ColumnDict(DbObjectDict):
         """SELECT nspname AS schema, relname AS table, attname AS name,
                   attnum AS number, format_type(atttypid, atttypmod) AS type,
                   attnotnull AS not_null, attinhcount AS inherited,
-                  adsrc AS default, description
+                  adsrc AS default, description, attisdropped AS dropped
            FROM pg_attribute JOIN pg_class ON (attrelid =  pg_class.oid)
                 JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
                 JOIN pg_roles ON (nspowner = pg_roles.oid)
@@ -135,7 +139,6 @@ class ColumnDict(DbObjectDict):
            WHERE relkind = 'r'
                  AND (nspname = 'public' OR rolname <> 'postgres')
                  AND attnum > 0
-                 AND NOT attisdropped
            ORDER BY nspname, relname, attnum"""
 
     def _from_catalog(self):

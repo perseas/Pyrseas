@@ -165,7 +165,9 @@ class Table(DbClass):
             return
         cols = []
         for i in range(len(self.columns)):
-            cols.append(self.columns[i].to_map())
+            col = self.columns[i].to_map()
+            if col:
+                cols.append(col)
         tbl = {'columns': cols}
         if hasattr(self, 'description'):
             tbl.update(description=self.description)
