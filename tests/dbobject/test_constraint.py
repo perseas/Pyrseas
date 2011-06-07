@@ -327,6 +327,48 @@ class ForeignKeyToMapTestCase(PyrseasTestCase):
         self.assertEqual(dbmap['schema public']['table t2'], t2map)
         self.assertEqual(dbmap['schema s1'], t1map)
 
+    def test_multiple_foreign_key(self):
+        "Map a table with its primary key referenced by two others"
+        self.db.execute("CREATE TABLE t1 (pc1 integer PRIMARY KEY, pc2 text)")
+        ddlstmt = """CREATE TABLE t2 (c1 integer,
+                          c2 integer REFERENCES t1 (pc1), c3 text,
+                          c4 integer REFERENCES t1 (pc1))"""
+        dbmap = self.db.execute_and_map(ddlstmt)
+        t1map = {'columns': [{'pc1': {'type': 'integer', 'not_null': True}},
+                             {'pc2': {'type': 'text'}}],
+                 'primary_key': {'t1_pkey': {
+                    'columns': ['pc1'], 'access_method': 'btree'}}}
+        t2map = {'columns': [{'c1': {'type': 'integer'}},
+                             {'c2': {'type': 'integer'}},
+                             {'c3': {'type': 'text'}},
+                             {'c4': {'type': 'integer'}}],
+                 'foreign_keys': {'t2_c2_fkey': {
+                    'columns': ['c2'],
+                    'references': {'schema': 'public', 'table': 't1',
+                                   'columns': ['pc1']}},
+                                  't2_c4_fkey': {
+                    'columns': ['c4'],
+                    'references': {'schema': 'public', 'table': 't1',
+                                   'columns': ['pc1']}}}}
+        self.assertEqual(dbmap['schema public']['table t1'], t1map)
+        self.assertEqual(dbmap['schema public']['table t2'], t2map)
+
+    def test_foreign_key_dropped_column(self):
+        "Map a table with a foreign key after a column has been dropped"
+        self.db.execute("CREATE TABLE t1 (pc1 integer PRIMARY KEY, pc2 text)")
+        self.db.execute("CREATE TABLE t2 (c1 integer, c2 text, c3 smallint, "
+                       "c4 integer REFERENCES t1 (pc1))")
+        ddlstmt = "ALTER TABLE t2 DROP COLUMN c3"
+        dbmap = self.db.execute_and_map(ddlstmt)
+        t2map = {'columns': [{'c1': {'type': 'integer'}},
+                             {'c2': {'type': 'text'}},
+                             {'c4': {'type': 'integer'}}],
+                 'foreign_keys': {'t2_c4_fkey': {
+                    'columns': ['c4'],
+                    'references': {'schema': 'public', 'table': 't1',
+                                   'columns': ['pc1']}}}}
+        self.assertEqual(dbmap['schema public']['table t2'], t2map)
+
 
 class ForeignKeyToSqlTestCase(PyrseasTestCase):
     """Test SQL generation from input FOREIGN KEYs"""
