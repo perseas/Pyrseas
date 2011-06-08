@@ -46,6 +46,7 @@ classes and methods are documented mainly for developer use.
    database
    language
    schema
+   type
    table
    column
    constraint

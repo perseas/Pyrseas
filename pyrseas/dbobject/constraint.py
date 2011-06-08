@@ -10,6 +10,7 @@
 """
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject, split_schema_table
 
+
 ACTIONS = {'r': 'restrict', 'c': 'cascade', 'n': 'set null',
            'd': 'set default'}
 
@@ -70,8 +71,11 @@ class CheckConstraint(Constraint):
         dct = self.__dict__.copy()
         for k in self.keylist:
             del dct[k]
-        dct['columns'] = [dbcols[k - 1] for k in self.keycols]
-        del dct['keycols']
+        if 'target' in dct:
+            del dct['target']
+        if dbcols:
+            dct['columns'] = [dbcols[k - 1] for k in self.keycols]
+            del dct['keycols']
         return {self.name: dct}
 
     def add(self):
@@ -232,8 +236,12 @@ class ConstraintDict(DbObjectDict):
 
     cls = Constraint
     query = \
-        """SELECT nspname AS schema, conrelid::regclass AS table,
-                  conname AS name, contype AS type, conkey AS keycols,
+        """SELECT nspname AS schema,
+                  CASE WHEN contypid = 0 THEN conrelid::regclass::name
+                       ELSE contypid::regtype::name END AS table,
+                  conname AS name,
+                  CASE WHEN contypid != 0 THEN 'd' ELSE '' END AS target,
+                  contype AS type, conkey AS keycols,
                   confrelid::regclass AS ref_table, confkey AS ref_cols,
                   consrc AS expression, confupdtype AS on_update,
                   confdeltype AS on_delete, amname AS access_method
@@ -280,7 +288,7 @@ class ConstraintDict(DbObjectDict):
             elif constr_type == 'u':
                 self[(sch, tbl, cns)] = UniqueConstraint(**constr.__dict__)
 
-    def from_map(self, table, inconstrs):
+    def from_map(self, table, inconstrs, target=''):
         """Initialize the dictionary of constraints by converting the input map
 
         :param table: table affected by the constraints
@@ -302,6 +310,8 @@ class ConstraintDict(DbObjectDict):
                     check.expression = check.expression[1:-1]
                 if 'columns' in val:
                     check.keycols = val['columns']
+                if target:
+                    check.target = target
                 self[(table.schema, table.name, cns)] = check
         if 'primary_key' in inconstrs:
             cns = inconstrs['primary_key'].keys()[0]

@@ -12,6 +12,7 @@
 """
 from pyrseas.dbobject.language import LanguageDict
 from pyrseas.dbobject.schema import SchemaDict
+from pyrseas.dbobject.dbtype import TypeDict
 from pyrseas.dbobject.table import ClassDict
 from pyrseas.dbobject.column import ColumnDict
 from pyrseas.dbobject.constraint import ConstraintDict
@@ -43,6 +44,7 @@ class Database(object):
             """
             self.languages = LanguageDict(dbconn)
             self.schemas = SchemaDict(dbconn)
+            self.types = TypeDict(dbconn)
             self.tables = ClassDict(dbconn)
             self.columns = ColumnDict(dbconn)
             self.constraints = ConstraintDict(dbconn)
@@ -60,9 +62,10 @@ class Database(object):
 
     def _link_refs(self, db):
         """Link related objects"""
+        db.schemas.link_refs(db.types, db.tables, db.functions)
         db.tables.link_refs(db.columns, db.constraints, db.indexes,
                             db.triggers)
-        db.schemas.link_refs(db.tables, db.functions)
+        db.types.link_refs(db.constraints)
 
     def from_catalog(self):
         """Populate the database objects by querying the catalogs
@@ -129,6 +132,7 @@ class Database(object):
         stmts = self.db.languages.diff_map(self.ndb.languages,
                                            self.dbconn.version)
         stmts.append(self.db.schemas.diff_map(self.ndb.schemas))
+        stmts.append(self.db.types.diff_map(self.ndb.types))
         stmts.append(self.db.tables.diff_map(self.ndb.tables))
         stmts.append(self.db.constraints.diff_map(self.ndb.constraints))
         stmts.append(self.db.indexes.diff_map(self.ndb.indexes))

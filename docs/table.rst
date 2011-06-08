@@ -13,8 +13,7 @@ Database Class
 
 Class :class:`DbClass` is derived from
 :class:`~pyrseas.dbobject.DbSchemaObject` and represents a table, view
-or sequence as defined in the PostgreSQL `pg_class` catalog. Note:
-Views are not implemented yet.
+or sequence as defined in the PostgreSQL `pg_class` catalog.
 
 .. autoclass:: DbClass
 

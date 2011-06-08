@@ -457,8 +457,9 @@ class ClassDict(DbObjectDict):
                     parent.descendants.append(table)
         for (sch, tbl, cns) in dbconstrs.keys():
             constr = dbconstrs[(sch, tbl, cns)]
-            if (sch, tbl) not in self:  # check constraints on domains
+            if hasattr(constr, 'target'):
                 continue
+            assert self[(sch, tbl)]
             table = self[(sch, tbl)]
             if isinstance(constr, CheckConstraint):
                 if not hasattr(table, 'check_constraints'):

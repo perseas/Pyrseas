@@ -160,6 +160,20 @@ class PostgresDb(object):
         if self.version < 90000:
             if self.is_plpgsql_installed():
                 self.execute_commit("DROP LANGUAGE plpgsql")
+        curs = pgexecute(
+            self.conn,
+            """SELECT nspname, typname, typtype FROM pg_type t
+                      JOIN pg_namespace n ON (typnamespace = n.oid)
+               WHERE (nspname != 'pg_catalog'
+                     AND nspname != 'information_schema')""")
+        types = curs.fetchall()
+        curs.close()
+        self.conn.rollback()
+        for typ in types:
+            if typ['typtype'] == 'd':
+                self.execute("DROP DOMAIN IF EXISTS %s.%s CASCADE" % (
+                        typ[0], typ[1]))
+        self.conn.commit()
 
     def drop(self):
         "Drop the database"

@@ -7,6 +7,7 @@
     DbObject and DbObjectDict, respectively.
 """
 from pyrseas.dbobject import DbObjectDict, DbObject
+from dbtype import Domain
 from table import Table, Sequence, View
 
 
@@ -25,6 +26,11 @@ class Schema(DbObject):
         """
         key = self.extern_key()
         schema = {key: {}}
+        if hasattr(self, 'domains'):
+            doms = {}
+            for dom in self.domains.keys():
+                doms.update(self.domains[dom].to_map())
+            schema[key].update(doms)
         if hasattr(self, 'sequences'):
             seqs = {}
             for seq in self.sequences.keys():
@@ -111,10 +117,13 @@ class SchemaDict(DbObjectDict):
             key = sch.split()[1]
             schema = self[key] = Schema(name=key)
             inschema = inmap[sch]
+            intypes = {}
             intables = {}
             infuncs = {}
             for key in inschema.keys():
-                if key.startswith('table ') or key.startswith('view ') \
+                if key.startswith('domain '):
+                    intypes.update({key: inschema[key]})
+                elif key.startswith('table ') or key.startswith('view ') \
                         or key.startswith('sequence '):
                     intables.update({key: inschema[key]})
                 elif key.startswith('function '):
@@ -126,20 +135,31 @@ class SchemaDict(DbObjectDict):
                     schema.description = inschema[key]
                 else:
                     raise KeyError("Expected typed object, found '%s'" % key)
+            newdb.types.from_map(schema, intypes, newdb)
             newdb.tables.from_map(schema, intables, newdb)
             newdb.functions.from_map(schema, infuncs)
 
-    def link_refs(self, dbtables, dbfunctions):
-        """Connect tables and sequences to their respective schemas
+    def link_refs(self, dbtypes, dbtables, dbfunctions):
+        """Connect types, tables and functions to their respective schemas
 
+        :param dbtypes: dictionary of types and domains
         :param dbtables: dictionary of tables, sequences and views
         :param dbfunctions: dictionary of functions
 
-        Fills in the `tables`, `sequences`, `views` dictionaries for
-        each schema by traversing the `dbtables` dictionary, which is
-        keyed by schema and table name. Fills in the `functions`
+        Fills in the `domains` dictionary for each schema by
+        traversing the `dbtypes` dictionary.  Fills in the `tables`,
+        `sequences`, `views` dictionaries for each schema by
+        traversing the `dbtables` dictionary. Fills in the `functions`
         dictionary by traversing the `dbfunctions` dictionary.
         """
+        for (sch, typ) in dbtypes.keys():
+            dbtype = dbtypes[(sch, typ)]
+            assert self[sch]
+            schema = self[sch]
+            if isinstance(dbtype, Domain):
+                if not hasattr(schema, 'domains'):
+                    schema.domains = {}
+            schema.domains.update({typ: dbtypes[(sch, typ)]})
         for (sch, tbl) in dbtables.keys():
             table = dbtables[(sch, tbl)]
             assert self[sch]
