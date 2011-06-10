@@ -17,6 +17,35 @@ class DbType(DbSchemaObject):
     keylist = ['schema', 'name']
 
 
+class Enum(DbType):
+    "An enumerated type definition"
+
+    objtype = "TYPE"
+
+    def to_map(self):
+        """Convert an enum to a YAML-suitable format
+
+        :return: dictionary
+        """
+        dct = self.__dict__.copy()
+        for k in self.keylist:
+            del dct[k]
+        return {self.extern_key(): dct}
+
+    def create(self):
+        """Return SQL statements to CREATE the enum
+
+        :return: SQL statements
+        """
+        stmts = []
+        lbls = ["'%s'" % lbl for lbl in self.labels]
+        stmts.append("CREATE TYPE %s AS ENUM (%s)" % (
+                self.qualname(), ",\n    ".join(lbls)))
+        if hasattr(self, 'description'):
+            stmts.append(self.comment())
+        return stmts
+
+
 class Domain(DbType):
     "A domain definition"
 
@@ -83,7 +112,10 @@ class TypeDict(DbObjectDict):
     query = \
         """SELECT nspname AS schema, typname AS name, typtype AS kind,
                   format_type(typbasetype, typtypmod) AS type,
-                  typnotnull AS not_null, typdefault AS default, description
+                  typnotnull AS not_null, typdefault AS default,
+                  ARRAY(SELECT enumlabel FROM pg_enum e WHERE t.oid = enumtypid
+                  ORDER BY e.oid) AS labels,
+                  description
            FROM pg_type t
                 JOIN pg_namespace n ON (typnamespace = n.oid)
                 LEFT JOIN pg_description d
@@ -100,6 +132,9 @@ class TypeDict(DbObjectDict):
             del dbtype.kind
             if kind == 'd':
                 self[(sch, typ)] = Domain(**dbtype.__dict__)
+            elif kind == 'e':
+                del dbtype.type
+                self[(sch, typ)] = Enum(**dbtype.__dict__)
 
     def from_map(self, schema, inobjs, newdb):
         """Initalize the dictionary of types by converting the input map
@@ -127,6 +162,16 @@ class TypeDict(DbObjectDict):
                 newdb.constraints.from_map(domain, indomain, 'd')
                 if 'description' in indomain:
                     domain.description = indomain['description']
+            elif objtype == 'type':
+                if 'labels' in inobjs[k]:
+                    self[(schema.name, key)] = enum = Enum(
+                        schema=schema.name, name=key)
+                    inenum = inobjs[k]
+                    enum.labels = inenum['labels']
+                    if 'oldname' in inenum:
+                        enum.oldname = inenum['oldname']
+                    if 'description' in inenum:
+                        enum.description = inenum['description']
             else:
                 raise KeyError("Unrecognized object type: %s" % k)
 
@@ -163,8 +208,6 @@ class TypeDict(DbObjectDict):
         # check input types
         for (sch, typ) in intypes.keys():
             intype = intypes[(sch, typ)]
-            if not isinstance(intype, Domain):
-                continue
             # does it exist in the database?
             if (sch, typ) not in self:
                 if not hasattr(intype, 'oldname'):

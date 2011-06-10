@@ -3,9 +3,9 @@ Types and Domains
 
 .. module:: pyrseas.dbobject.dbtype
 
-The :mod:`dbtype` module defines three classes, :class:`DbType`
-derived from :class:`DbSchemaObject`, :class:`Domain` derived from
-:class:`DbType`, and :class:`TypeDict` derived from and
+The :mod:`dbtype` module defines four classes, :class:`DbType` derived
+from :class:`DbSchemaObject`, :class:`Enum` and :class:`Domain`
+derived from :class:`DbType`, and :class:`TypeDict` derived from and
 :class:`DbObjectDict`.
 
 Database Type
@@ -13,10 +13,23 @@ Database Type
 
 Class :class:`DbType` is derived from
 :class:`~pyrseas.dbobject.DbSchemaObject` and represents a SQL type or
-domain as defined in the PostgreSQL `pg_type` catalog. Note: Types are
-not implemented yet.
+domain as defined in the PostgreSQL `pg_type` catalog. Note: Only
+enumerated types are implemented currently.
 
 .. autoclass:: DbType
+
+Enum
+----
+
+:class:`Enum` is derived from :class:`~pyrseas.dbobject.DbType` and
+represents an `enumerated type
+<http://www.postgresql.org/docs/current/static/datatype-enum.html>`_.
+
+.. autoclass:: Enum
+
+.. automethod:: Enum.to_map
+
+.. automethod:: Enum.create
 
 Domain
 ------

@@ -173,6 +173,9 @@ class PostgresDb(object):
             if typ['typtype'] == 'd':
                 self.execute("DROP DOMAIN IF EXISTS %s.%s CASCADE" % (
                         typ[0], typ[1]))
+            elif typ['typtype'] == 'e':
+                self.execute("DROP TYPE IF EXISTS %s.%s CASCADE" % (
+                        typ[0], typ[1]))
         self.conn.commit()
 
     def drop(self):

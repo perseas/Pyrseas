@@ -5,6 +5,7 @@ import unittest
 
 import test_language
 import test_schema
+import test_type
 import test_domain
 import test_sequence
 import test_table
@@ -19,6 +20,7 @@ def suite():
     tests = unittest.TestSuite()
     tests.addTest(test_language.suite())
     tests.addTest(test_schema.suite())
+    tests.addTest(test_type.suite())
     tests.addTest(test_domain.suite())
     tests.addTest(test_sequence.suite())
     tests.addTest(test_table.suite())

@@ -7,7 +7,7 @@
     DbObject and DbObjectDict, respectively.
 """
 from pyrseas.dbobject import DbObjectDict, DbObject
-from dbtype import Domain
+from dbtype import Domain, Enum
 from table import Table, Sequence, View
 
 
@@ -31,6 +31,11 @@ class Schema(DbObject):
             for dom in self.domains.keys():
                 doms.update(self.domains[dom].to_map())
             schema[key].update(doms)
+        if hasattr(self, 'types'):
+            typs = {}
+            for typ in self.types.keys():
+                typs.update(self.types[typ].to_map())
+            schema[key].update(typs)
         if hasattr(self, 'sequences'):
             seqs = {}
             for seq in self.sequences.keys():
@@ -123,6 +128,8 @@ class SchemaDict(DbObjectDict):
             for key in inschema.keys():
                 if key.startswith('domain '):
                     intypes.update({key: inschema[key]})
+                elif key.startswith('type '):
+                    intypes.update({key: inschema[key]})
                 elif key.startswith('table ') or key.startswith('view ') \
                         or key.startswith('sequence '):
                     intables.update({key: inschema[key]})
@@ -159,7 +166,11 @@ class SchemaDict(DbObjectDict):
             if isinstance(dbtype, Domain):
                 if not hasattr(schema, 'domains'):
                     schema.domains = {}
-            schema.domains.update({typ: dbtypes[(sch, typ)]})
+                schema.domains.update({typ: dbtypes[(sch, typ)]})
+            elif isinstance(dbtype, Enum):
+                if not hasattr(schema, 'types'):
+                    schema.types = {}
+                schema.types.update({typ: dbtypes[(sch, typ)]})
         for (sch, tbl) in dbtables.keys():
             table = dbtables[(sch, tbl)]
             assert self[sch]
