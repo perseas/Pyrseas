@@ -17,7 +17,7 @@ from pyrseas.dbobject.table import ClassDict
 from pyrseas.dbobject.column import ColumnDict
 from pyrseas.dbobject.constraint import ConstraintDict
 from pyrseas.dbobject.index import IndexDict
-from pyrseas.dbobject.function import FunctionDict
+from pyrseas.dbobject.function import ProcDict
 from pyrseas.dbobject.trigger import TriggerDict
 
 
@@ -49,7 +49,7 @@ class Database(object):
             self.columns = ColumnDict(dbconn)
             self.constraints = ConstraintDict(dbconn)
             self.indexes = IndexDict(dbconn)
-            self.functions = FunctionDict(dbconn)
+            self.functions = ProcDict(dbconn)
             self.triggers = TriggerDict(dbconn)
 
     def __init__(self, dbconn):
@@ -62,6 +62,7 @@ class Database(object):
 
     def _link_refs(self, db):
         """Link related objects"""
+        db.languages.link_refs(db.functions)
         db.schemas.link_refs(db.types, db.tables, db.functions)
         db.tables.link_refs(db.columns, db.constraints, db.indexes,
                             db.triggers)
@@ -133,11 +134,11 @@ class Database(object):
                                            self.dbconn.version)
         stmts.append(self.db.schemas.diff_map(self.ndb.schemas))
         stmts.append(self.db.types.diff_map(self.ndb.types))
+        stmts.append(self.db.functions.diff_map(self.ndb.functions))
         stmts.append(self.db.tables.diff_map(self.ndb.tables))
         stmts.append(self.db.constraints.diff_map(self.ndb.constraints))
         stmts.append(self.db.indexes.diff_map(self.ndb.indexes))
         stmts.append(self.db.columns.diff_map(self.ndb.columns))
-        stmts.append(self.db.functions.diff_map(self.ndb.functions))
         stmts.append(self.db.triggers.diff_map(self.ndb.triggers))
         stmts.append(self.db.schemas._drop())
         stmts.append(self.db.languages._drop())

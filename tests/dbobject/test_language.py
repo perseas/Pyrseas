@@ -43,6 +43,15 @@ class LanguageToSqlTestCase(PyrseasTestCase):
         dbsql = self.db.process_map({})
         self.assertEqual(dbsql, ["DROP LANGUAGE plperl"])
 
+    def test_drop_language_function(self):
+        "Drop an existing function and the language it uses"
+        self.db.execute(DROP_STMT)
+        self.db.execute(CREATE_STMT)
+        self.db.execute_commit("CREATE FUNCTION f1() RETURNS text "
+                               "LANGUAGE plperl AS $_$return \"dummy\";$_$")
+        dbsql = self.db.process_map({})
+        self.assertEqual(dbsql, ["DROP FUNCTION f1()", "DROP LANGUAGE plperl"])
+
 
 def suite():
     tests = unittest.TestLoader().loadTestsFromTestCase(LanguageToMapTestCase)

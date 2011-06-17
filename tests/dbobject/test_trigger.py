@@ -112,9 +112,9 @@ class TriggerToSqlTestCase(PyrseasTestCase):
                             'timing': 'before', 'events': ['insert', 'update'],
                             'level': 'row', 'procedure': 'f1()'}}}})
         dbsql = self.db.process_map(inmap)
-        self.assertEqual(fix_indent(dbsql[0]), CREATE_TABLE_STMT)
         self.assertEqual(fix_indent(dbsql[1]), CREATE_FUNC_STMT)
-        self.assertEqual(fix_indent(dbsql[2]), CREATE_STMT)
+        self.assertEqual(fix_indent(dbsql[2]), CREATE_TABLE_STMT)
+        self.assertEqual(fix_indent(dbsql[3]), CREATE_STMT)
 
     def test_create_trigger2(self):
         "Create another simple trigger with"
@@ -131,9 +131,9 @@ class TriggerToSqlTestCase(PyrseasTestCase):
                                          'events': ['delete', 'truncate'],
                                          'procedure': 'f1()'}}}})
         dbsql = self.db.process_map(inmap)
-        self.assertEqual(fix_indent(dbsql[0]), CREATE_TABLE_STMT)
         self.assertEqual(fix_indent(dbsql[1]), CREATE_FUNC_STMT)
-        self.assertEqual(fix_indent(dbsql[2]),
+        self.assertEqual(fix_indent(dbsql[2]), CREATE_TABLE_STMT)
+        self.assertEqual(fix_indent(dbsql[3]),
                          "CREATE TRIGGER tr1 AFTER DELETE OR TRUNCATE ON t1 "
                          "FOR EACH STATEMENT EXECUTE PROCEDURE f1()")
 
@@ -155,9 +155,9 @@ class TriggerToSqlTestCase(PyrseasTestCase):
                             'columns': ['c1', 'c2'],
                             'level': 'row', 'procedure': 'f1()'}}}})
         dbsql = self.db.process_map(inmap)
-        self.assertEqual(fix_indent(dbsql[0]), CREATE_TABLE_STMT)
         self.assertEqual(fix_indent(dbsql[1]), CREATE_FUNC_STMT)
-        self.assertEqual(fix_indent(dbsql[2]), "CREATE TRIGGER tr1 "
+        self.assertEqual(fix_indent(dbsql[2]), CREATE_TABLE_STMT)
+        self.assertEqual(fix_indent(dbsql[3]), "CREATE TRIGGER tr1 "
                          "BEFORE INSERT OR UPDATE OF c1, c2 "
                          "ON t1 FOR EACH ROW EXECUTE PROCEDURE f1()")
 
@@ -180,9 +180,9 @@ class TriggerToSqlTestCase(PyrseasTestCase):
                             'condition':
                                 '(old.c2 IS DISTINCT FROM new.c2)'}}}})
         dbsql = self.db.process_map(inmap)
-        self.assertEqual(fix_indent(dbsql[0]), CREATE_TABLE_STMT)
         self.assertEqual(fix_indent(dbsql[1]), CREATE_FUNC_STMT)
-        self.assertEqual(fix_indent(dbsql[2]), "CREATE TRIGGER tr1 "
+        self.assertEqual(fix_indent(dbsql[2]), CREATE_TABLE_STMT)
+        self.assertEqual(fix_indent(dbsql[3]), "CREATE TRIGGER tr1 "
                          "BEFORE UPDATE ON t1 FOR EACH ROW "
                          "WHEN ((old.c2 IS DISTINCT FROM new.c2)) "
                          "EXECUTE PROCEDURE f1()")
@@ -204,7 +204,7 @@ class TriggerToSqlTestCase(PyrseasTestCase):
                             'timing': 'before', 'events': ['insert', 'update'],
                             'level': 'row', 'procedure': 'f1()'}}}}})
         dbsql = self.db.process_map(inmap)
-        self.assertEqual(fix_indent(dbsql[2]), "CREATE TRIGGER tr1 "
+        self.assertEqual(fix_indent(dbsql[3]), "CREATE TRIGGER tr1 "
                          "BEFORE INSERT OR UPDATE ON s1.t1 FOR EACH ROW "
                          "EXECUTE PROCEDURE f1()")
         self.db.execute_commit("DROP SCHEMA s1 CASCADE")
@@ -257,10 +257,10 @@ class TriggerToSqlTestCase(PyrseasTestCase):
                             'timing': 'before', 'events': ['insert', 'update'],
                             'level': 'row', 'procedure': 'f1()'}}}})
         dbsql = self.db.process_map(inmap)
-        self.assertEqual(fix_indent(dbsql[0]), CREATE_TABLE_STMT)
         self.assertEqual(fix_indent(dbsql[1]), CREATE_FUNC_STMT)
-        self.assertEqual(fix_indent(dbsql[2]), CREATE_STMT)
-        self.assertEqual(dbsql[3], COMMENT_STMT)
+        self.assertEqual(fix_indent(dbsql[2]), CREATE_TABLE_STMT)
+        self.assertEqual(fix_indent(dbsql[3]), CREATE_STMT)
+        self.assertEqual(dbsql[4], COMMENT_STMT)
 
     def test_comment_on_trigger(self):
         "Create a comment on an existing trigger"

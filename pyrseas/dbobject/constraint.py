@@ -414,6 +414,9 @@ class ConstraintDict(DbObjectDict):
             # check input constraints
             for (sch, tbl, cns) in inconstrs.keys():
                 inconstr = inconstrs[(sch, tbl, cns)]
+                # skip DOMAIN constraints
+                if hasattr(inconstr, 'target'):
+                    continue
                 if isinstance(inconstr, ForeignKey):
                     if turn == 1:
                         continue

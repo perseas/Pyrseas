@@ -7,6 +7,7 @@
     DbObject and DbObjectDict, respectively.
 """
 from pyrseas.dbobject import DbObjectDict, DbObject
+from pyrseas.dbobject.function import Function
 
 
 class Language(DbObject):
@@ -23,6 +24,8 @@ class Language(DbObject):
         dct = self.__dict__.copy()
         for k in self.keylist:
             del dct[k]
+        if 'functions' in dct:
+            del dct['functions']
         key = self.extern_key()
         language = {key: dct}
         if hasattr(self, 'description'):
@@ -102,9 +105,12 @@ class LanguageDict(DbObjectDict):
         traversing the `dbfunctions` dictionary, which is keyed by
         schema and function name.
         """
-        for (sch, fnc) in dbfunctions.keys():
-            func = dbfunctions[(sch, fnc)]
-            language = ''  # TODO: get language for function
+        for (sch, fnc, arg) in dbfunctions.keys():
+            func = dbfunctions[(sch, fnc, arg)]
+            if func.language == 'sql' or func.language == 'internal':
+                continue
+            assert self[(func.language)]
+            language = self[(func.language)]
             if isinstance(func, Function):
                 if not hasattr(language, 'functions'):
                     language.functions = {}

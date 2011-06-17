@@ -25,7 +25,6 @@ class DbClass(DbSchemaObject):
 class Sequence(DbClass):
     "A sequence generator definition"
 
-    keylist = ['schema', 'name']
     objtype = "SEQUENCE"
 
     def get_attrs(self, dbconn):

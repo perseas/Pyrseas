@@ -3,8 +3,9 @@
     pyrseas.function
     ~~~~~~~~~~~~~~~~
 
-    This module defines two classes: Function derived from
-    DbSchemaObject, and FunctionDict derived from DbObjectDict.
+    This module defines four classes: Proc derived from
+    DbSchemaObject, Function and Aggregate derived from Proc, and
+    FunctionDict derived from DbObjectDict.
 """
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
 
@@ -12,18 +13,17 @@ from pyrseas.dbobject import DbObjectDict, DbSchemaObject
 VOLATILITY_TYPES = {'i': 'immutable', 's': 'stable', 'v': 'volatile'}
 
 
-class Function(DbSchemaObject):
-    """A procedural language function"""
+class Proc(DbSchemaObject):
+    """A procedure such as a FUNCTION or an AGGREGATE"""
 
     keylist = ['schema', 'name', 'arguments']
-    objtype = "FUNCTION"
 
     def extern_key(self):
         """Return the key to be used in external maps for this function
 
         :return: string
         """
-        return 'function %s(%s)' % (self.name, self.arguments)
+        return '%s %s(%s)' % (self.objtype.lower(), self.name, self.arguments)
 
     def identifier(self):
         """Return a full identifier for a function object
@@ -31,6 +31,12 @@ class Function(DbSchemaObject):
         :return: string
         """
         return "%s(%s)" % (self.qualname(), self.arguments)
+
+
+class Function(Proc):
+    """A procedural language function"""
+
+    objtype = "FUNCTION"
 
     def to_map(self):
         """Convert a function to a YAML-suitable format
@@ -54,14 +60,16 @@ class Function(DbSchemaObject):
         """
         stmts = []
         src = newsrc or self.source
-        volat = ''
+        volat = strict = ''
         if hasattr(self, 'volatility'):
             volat = ' ' + VOLATILITY_TYPES[self.volatility].upper()
+        if hasattr(self, 'strict') and self.strict:
+            strict = ' STRICT'
         stmts.append("CREATE%s FUNCTION %s(%s) RETURNS %s\n    LANGUAGE %s"
-                     "\n    AS $_$%s$_$%s" % (
+                     "\n    AS $_$%s$_$%s%s" % (
                 newsrc and " OR REPLACE" or '', self.qualname(),
                 self.arguments, self.returns, self.language, src,
-                volat))
+                volat, strict))
         if hasattr(self, 'description'):
             stmts.append(self.comment())
         return stmts
@@ -83,23 +91,81 @@ class Function(DbSchemaObject):
         return stmts
 
 
-class FunctionDict(DbObjectDict):
-    "The collection of procedural language functions in a database"
+class Aggregate(Proc):
+    """An aggregate function"""
 
-    cls = Function
+    objtype = "AGGREGATE"
+
+    def to_map(self):
+        """Convert an agggregate to a YAML-suitable format
+
+        :return: dictionary
+        """
+        dct = self.__dict__.copy()
+        for k in self.keylist:
+            del dct[k]
+        del dct['language']
+        return {self.extern_key(): dct}
+
+    def create(self):
+        """Return SQL statements to CREATE the aggregate
+
+        :return: SQL statements
+        """
+        stmts = []
+        ffunc = cond = ''
+        if hasattr(self, 'finalfunc'):
+            ffname = self.finalfunc[:self.finalfunc.index('(')]
+            ffunc = ",\n    FINALFUNC = %s" % (ffname)
+        if hasattr(self, 'initcond'):
+            cond = ",\n    INITCOND = '%s'" % (self.initcond)
+        stmts.append("CREATE AGGREGATE %s(%s) (\n    SFUNC = %s,"
+                     "\n    STYPE = %s%s%s)" % (
+                self.qualname(),
+                self.arguments, self.sfunc, self.stype, ffunc, cond))
+        if hasattr(self, 'description'):
+            stmts.append(self.comment())
+        return stmts
+
+
+class ProcDict(DbObjectDict):
+    "The collection of regular and aggregate functions in a database"
+
+    cls = Proc
     query = \
         """SELECT nspname AS schema, proname AS name,
                   pg_get_function_arguments(p.oid) AS arguments,
                   pg_get_function_result(p.oid) AS returns,
                   l.lanname AS language, provolatile AS volatility,
-                  prosrc AS source, description
+                  proisstrict AS strict, proisagg, prosrc AS source,
+                  aggtransfn::regprocedure AS sfunc,
+                  aggtranstype::regtype AS stype,
+                  aggfinalfn::regprocedure AS finalfunc,
+                  agginitval AS initcond,
+                  description
            FROM pg_proc p
                 JOIN pg_namespace n ON (pronamespace = n.oid)
                 JOIN pg_language l ON (prolang = l.oid)
+                LEFT JOIN pg_aggregate a ON (p.oid = aggfnoid)
                 LEFT JOIN pg_description d
                      ON (p.oid = d.objoid AND d.objsubid = 0)
            WHERE (nspname != 'pg_catalog' AND nspname != 'information_schema')
            ORDER BY nspname, proname"""
+
+    def _from_catalog(self):
+        """Initialize the dictionary of procedures by querying the catalogs"""
+        for proc in self.fetch():
+            sch, prc, arg = proc.key()
+            if hasattr(proc, 'proisagg'):
+                del proc.proisagg
+                del proc.source
+                del proc.volatility
+                del proc.returns
+                if proc.finalfunc == '-':
+                    del proc.finalfunc
+                self[(sch, prc, arg)] = Aggregate(**proc.__dict__)
+            else:
+                self[(sch, prc, arg)] = Function(**proc.__dict__)
 
     def from_map(self, schema, infuncs):
         """Initalize the dictionary of functions by converting the input map
@@ -112,7 +178,7 @@ class FunctionDict(DbObjectDict):
             if spc == -1:
                 raise KeyError("Unrecognized object type: %s" % key)
             objtype = key[:spc]
-            if objtype != 'function':
+            if objtype not in ['function', 'aggregate']:
                 raise KeyError("Unrecognized object type: %s" % key)
             fnc = key[spc + 1:]
             paren = fnc.find('(')
@@ -121,8 +187,13 @@ class FunctionDict(DbObjectDict):
             arguments = fnc[paren + 1:-1]
             infunc = infuncs[key]
             fnc = fnc[:paren]
-            self[(schema.name, fnc, arguments)] = func = Function(
-                schema=schema.name, name=fnc, arguments=arguments)
+            if objtype == 'function':
+                self[(schema.name, fnc, arguments)] = func = Function(
+                    schema=schema.name, name=fnc, arguments=arguments)
+            else:
+                self[(schema.name, fnc, arguments)] = func = Aggregate(
+                    schema=schema.name, name=fnc, arguments=arguments)
+                func.language = 'internal'
             if not infunc:
                 raise ValueError("Function '%s' has no specification" % fnc)
             for attr, val in infunc.items():
@@ -145,9 +216,37 @@ class FunctionDict(DbObjectDict):
         transform the functions accordingly.
         """
         stmts = []
+        created = False
         # check input functions
         for (sch, fnc, arg) in infuncs.keys():
             infunc = infuncs[(sch, fnc, arg)]
+            if isinstance(infunc, Aggregate):
+                continue
+            # does it exist in the database?
+            if (sch, fnc, arg) not in self:
+                if not hasattr(infunc, 'oldname'):
+                    # create new function
+                    stmts.append(infunc.create())
+                    created = True
+                else:
+                    stmts.append(self[(sch, fnc, arg)].rename(infunc))
+            else:
+                # check function objects
+                diff_stmts = self[(sch, fnc, arg)].diff_map(infunc)
+                for stmt in diff_stmts:
+                    if isinstance(stmt, list) and stmt:
+                        stmt = stmt[0]
+                    if isinstance(stmt, basestring) and \
+                            stmt.startswith("CREATE "):
+                        created = True
+                        break
+                stmts.append(diff_stmts)
+
+        # check input aggregates
+        for (sch, fnc, arg) in infuncs.keys():
+            infunc = infuncs[(sch, fnc, arg)]
+            if not isinstance(infunc, Aggregate):
+                continue
             # does it exist in the database?
             if (sch, fnc, arg) not in self:
                 if not hasattr(infunc, 'oldname'):
@@ -166,4 +265,6 @@ class FunctionDict(DbObjectDict):
             if (sch, fnc, arg) not in infuncs:
                     stmts.append(func.drop())
 
+        if created:
+            stmts.insert(0, "SET check_function_bodies = false")
         return stmts

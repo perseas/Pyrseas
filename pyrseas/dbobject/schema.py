@@ -133,7 +133,8 @@ class SchemaDict(DbObjectDict):
                 elif key.startswith('table ') or key.startswith('view ') \
                         or key.startswith('sequence '):
                     intables.update({key: inschema[key]})
-                elif key.startswith('function '):
+                elif key.startswith('function ') \
+                        or key.startswith('aggregate '):
                     infuncs.update({key: inschema[key]})
                 elif key == 'oldname':
                     schema.oldname = inschema[key]
