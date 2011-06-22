@@ -261,10 +261,22 @@ class ProcDict(DbObjectDict):
         # check existing functions
         for (sch, fnc, arg) in self.keys():
             func = self[(sch, fnc, arg)]
-            # if missing, drop them
+            # if missing, mark it for dropping
             if (sch, fnc, arg) not in infuncs:
-                    stmts.append(func.drop())
+                func.dropped = False
 
         if created:
             stmts.insert(0, "SET check_function_bodies = false")
+        return stmts
+
+    def _drop(self):
+        """Actually drop the functions
+
+        :return: SQL statements
+        """
+        stmts = []
+        for (sch, fnc, arg) in self.keys():
+            func = self[(sch, fnc, arg)]
+            if hasattr(func, 'dropped'):
+                stmts.append(func.drop())
         return stmts
