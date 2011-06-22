@@ -5,13 +5,15 @@ import unittest
 
 from utils import PyrseasTestCase, fix_indent, new_std_map
 
+CREATE_TABLE_STMT = "CREATE TABLE t1 (c1 integer, c2 text)"
+
 
 class IndexToMapTestCase(PyrseasTestCase):
     """Test mapping of created indexes"""
 
     def test_index_1(self):
         "Map a single-column index"
-        self.db.execute("CREATE TABLE t1 (c1 INTEGER, c2 TEXT)")
+        self.db.execute(CREATE_TABLE_STMT)
         ddlstmt = "CREATE INDEX t1_idx ON t1 (c1)"
         expmap = {'columns': [{'c1': {'type': 'integer'}},
                               {'c2': {'type': 'text'}}],
@@ -47,6 +49,17 @@ class IndexToMapTestCase(PyrseasTestCase):
                                             'access_method': 'btree'},
                               't1_idx_2': {'columns': ['c3'],
                                             'access_method': 'gin'}}}
+        dbmap = self.db.execute_and_map(ddlstmt)
+        self.assertEqual(dbmap['schema public']['table t1'], expmap)
+
+    def test_index_function(self):
+        "Map an index using a function"
+        self.db.execute(CREATE_TABLE_STMT)
+        ddlstmt = "CREATE INDEX t1_idx ON t1 ((lower(c2)))"
+        expmap = {'columns': [{'c1': {'type': 'integer'}},
+                              {'c2': {'type': 'text'}}],
+                  'indexes': {'t1_idx': {'expression': 'lower(c2)',
+                                          'access_method': 'btree'}}}
         dbmap = self.db.execute_and_map(ddlstmt)
         self.assertEqual(dbmap['schema public']['table t1'], expmap)
 

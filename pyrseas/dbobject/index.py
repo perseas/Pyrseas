@@ -33,8 +33,9 @@ class Index(DbSchemaObject):
         dct = self.__dict__.copy()
         for k in self.keylist:
             del dct[k]
-        dct['columns'] = [dbcols[int(k) - 1] for k in self.keycols.split()]
-        del dct['keycols']
+        if hasattr(self, 'keycols'):
+            dct['columns'] = [dbcols[int(k) - 1] for k in self.keycols.split()]
+            del dct['keycols']
         return {self.name: dct}
 
     def create(self):
@@ -84,7 +85,8 @@ class IndexDict(DbObjectDict):
     query = \
         """SELECT nspname AS schema, indrelid::regclass AS table,
                   c.relname AS name, amname AS access_method,
-                  indisunique AS unique, indkey AS keycols
+                  indisunique AS unique, indkey AS keycols,
+                  pg_get_expr(indexprs, indrelid) AS expression
            FROM pg_index JOIN pg_class c ON (indexrelid = c.oid)
                 JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
                 JOIN pg_roles ON (nspowner = pg_roles.oid)
@@ -101,6 +103,8 @@ class IndexDict(DbObjectDict):
         for index in self.fetch():
             index.unqualify()
             sch, tbl, idx = index.key()
+            if index.keycols == '0':
+                del index.keycols
             self[(sch, tbl, idx)] = index
 
     def from_map(self, table, inindexes):
