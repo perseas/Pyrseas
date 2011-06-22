@@ -14,6 +14,7 @@ import test_index
 import test_view
 import test_function
 import test_trigger
+import test_rule
 
 
 def suite():
@@ -29,6 +30,7 @@ def suite():
     tests.addTest(test_view.suite())
     tests.addTest(test_function.suite())
     tests.addTest(test_trigger.suite())
+    tests.addTest(test_rule.suite())
     return tests
 
 if __name__ == '__main__':

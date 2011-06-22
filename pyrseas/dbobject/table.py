@@ -204,6 +204,11 @@ class Table(DbClass):
         if hasattr(self, 'inherits'):
             if not 'inherits' in tbl:
                 tbl['inherits'] = self.inherits
+        if hasattr(self, 'rules'):
+            if not 'rules' in tbl:
+                tbl['rules'] = {}
+            for k in self.rules.values():
+                tbl['rules'].update(self.rules[k.name].to_map())
         if hasattr(self, 'triggers'):
             if not 'triggers' in tbl:
                 tbl['triggers'] = {}
@@ -393,6 +398,8 @@ class ClassDict(DbObjectDict):
                 newdb.constraints.from_map(table, intable)
                 if 'indexes' in intable:
                     newdb.indexes.from_map(table, intable['indexes'])
+                if 'rules' in intable:
+                    newdb.rules.from_map(table, intable['rules'])
                 if 'triggers' in intable:
                     newdb.triggers.from_map(table, intable['triggers'])
                 if 'description' in intable:
@@ -420,12 +427,13 @@ class ClassDict(DbObjectDict):
             else:
                 raise KeyError("Unrecognized object type: %s" % k)
 
-    def link_refs(self, dbcolumns, dbconstrs, dbindexes, dbtriggers):
+    def link_refs(self, dbcolumns, dbconstrs, dbindexes, dbrules, dbtriggers):
         """Connect columns, constraints, etc. to their respective tables
 
         :param dbcolumns: dictionary of columns
         :param dbconstrs: dictionary of constraints
         :param dbindexes: dictionary of indexes
+        :param dbrules: dictionary of rules
         :param dbtriggers: dictionary of triggers
 
         Links each list of table columns in `dbcolumns` to the
@@ -485,6 +493,13 @@ class ClassDict(DbObjectDict):
             if not hasattr(table, 'indexes'):
                 table.indexes = {}
             table.indexes.update({idx: dbindexes[(sch, tbl, idx)]})
+        for (sch, tbl, rul) in dbrules.keys():
+            assert self[(sch, tbl)]
+            table = self[(sch, tbl)]
+            if not hasattr(table, 'rules'):
+                table.rules = {}
+            table.rules.update({rul: dbrules[(sch, tbl, rul)]})
+            dbrules[(sch, tbl, rul)]._table = self[(sch, tbl)]
         for (sch, tbl, trg) in dbtriggers.keys():
             assert self[(sch, tbl)]
             table = self[(sch, tbl)]
@@ -631,6 +646,9 @@ class ClassDict(DbObjectDict):
                 if hasattr(table, 'indexes'):
                     for idx in table.indexes:
                         stmts.append(table.indexes[idx].drop())
+                if hasattr(table, 'rules'):
+                    for rul in table.rules:
+                        stmts.append(table.rules[rul].drop())
                 if hasattr(table, 'primary_key'):
                     # TODO there can be more than one referred_by
                     if hasattr(table, 'referred_by'):
