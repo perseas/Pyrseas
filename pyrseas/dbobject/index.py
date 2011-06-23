@@ -52,7 +52,8 @@ class Index(DbSchemaObject):
             and 'USING %s ' % self.access_method or ''
         stmts.append("CREATE %sINDEX %s ON %s %s(%s)" % (
             unq and 'UNIQUE ' or '', self.name, self.table, acc,
-            self.key_columns()))
+            hasattr(self, 'keycols') and self.key_columns() or
+            self.expression))
         return stmts
 
     def diff_map(self, inindex):
@@ -116,11 +117,13 @@ class IndexDict(DbObjectDict):
         for i in inindexes.keys():
             idx = Index(schema=table.schema, table=table.name, name=i)
             val = inindexes[i]
-            try:
+            if 'columns' in val:
                 idx.keycols = val['columns']
-            except KeyError, exc:
-                exc.args = ("Index '%s' is missing columns" % i, )
-                raise
+            elif 'expression' in val:
+                idx.expression = val['expression']
+            else:
+                raise KeyError("Index '%s' is missing columns or expression"
+                               % i)
             for attr in ['access_method', 'unique']:
                 if attr in val:
                     setattr(idx, attr, val[attr])

@@ -101,6 +101,30 @@ class IndexToSqlTestCase(PyrseasTestCase):
         self.assertEqual(dbsql,
                          ["CREATE UNIQUE INDEX t1_idx ON t1 (c2, c1)"])
 
+    def test_bad_index(self):
+        "Fail on creating an index without columns or expression"
+        self.db.execute_commit("DROP TABLE IF EXISTS t1")
+        inmap = new_std_map()
+        inmap['schema public'].update({'table t1': {
+                    'columns': [{'c1': {'type': 'integer'}},
+                                {'c2': {'type': 'text'}}],
+                    'indexes': {'t1_idx': {'access_method': 'btree'}}}})
+        self.assertRaises(KeyError, self.db.process_map, inmap)
+
+    def test_create_index_function(self):
+        "Create an index which uses a function"
+        self.db.execute_commit("DROP TABLE IF EXISTS t1")
+        inmap = new_std_map()
+        inmap['schema public'].update({'table t1': {
+                    'columns': [{'c1': {'type': 'integer'}},
+                                {'c2': {'type': 'text'}}],
+                    'indexes': {'t1_idx': {
+                            'expression': 'lower(c2)',
+                            'access_method': 'btree'}}}})
+        dbsql = self.db.process_map(inmap)
+        self.assertEqual(dbsql[1],
+                         "CREATE INDEX t1_idx ON t1 USING btree (lower(c2))")
+
 
 def suite():
     tests = unittest.TestLoader().loadTestsFromTestCase(IndexToMapTestCase)
