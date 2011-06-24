@@ -128,7 +128,8 @@ class ColumnDict(DbObjectDict):
         """SELECT nspname AS schema, relname AS table, attname AS name,
                   attnum AS number, format_type(atttypid, atttypmod) AS type,
                   attnotnull AS not_null, attinhcount AS inherited,
-                  adsrc AS default, description, attisdropped AS dropped
+                  pg_get_expr(adbin, adrelid) AS default, description,
+                  attisdropped AS dropped
            FROM pg_attribute JOIN pg_class ON (attrelid =  pg_class.oid)
                 JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
                 JOIN pg_roles ON (nspowner = pg_roles.oid)

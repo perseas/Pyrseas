@@ -143,7 +143,8 @@ class Database(object):
         stmts.append(self.db.columns.diff_map(self.ndb.columns))
         stmts.append(self.db.triggers.diff_map(self.ndb.triggers))
         stmts.append(self.db.rules.diff_map(self.ndb.rules))
-        stmts.append(self.db.schemas._drop())
         stmts.append(self.db.functions._drop())
+        stmts.append(self.db.types._drop())
+        stmts.append(self.db.schemas._drop())
         stmts.append(self.db.languages._drop())
         return [s for s in flatten(stmts)]

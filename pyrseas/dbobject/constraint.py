@@ -409,7 +409,8 @@ class ConstraintDict(DbObjectDict):
                 elif turn == 2:
                     continue
                 # if missing, drop it
-                if (sch, tbl, cns) not in inconstrs:
+                if (sch, tbl, cns) not in inconstrs \
+                        and not hasattr(constr, 'target'):
                     stmts.append(constr.drop())
             # check input constraints
             for (sch, tbl, cns) in inconstrs.keys():

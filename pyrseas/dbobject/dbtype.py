@@ -227,15 +227,16 @@ class TypeDict(DbObjectDict):
                 # check type/sequence/view objects
                 stmts.append(dbtype.diff_map(intypes[(sch, typ)]))
 
-        # now drop the marked types
+        return stmts
+
+    def _drop(self):
+        """Actually drop the types
+
+        :return: SQL statements
+        """
+        stmts = []
         for (sch, typ) in self.keys():
             dbtype = self[(sch, typ)]
-            if hasattr(dbtype, 'dropped') and not dbtype.dropped:
-                # next, drop other subordinate objects
-                if hasattr(dbtype, 'check_constraints'):
-                    for chk in dbtype.check_constraints:
-                        stmts.append(dbtype.check_constraints[chk].drop())
-                # finally, drop the type itself
+            if hasattr(dbtype, 'dropped'):
                 stmts.append(dbtype.drop())
-
         return stmts

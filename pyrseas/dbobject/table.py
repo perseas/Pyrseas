@@ -39,8 +39,8 @@ class Sequence(DbClass):
         for key, val in data.items():
             setattr(self, key, val)
 
-    def get_owner(self, dbconn):
-        """Get the table and column name that owns the sequence
+    def get_dependent_table(self, dbconn):
+        """Get the table and column name that uses or owns the sequence
 
         :param dbconn: a DbConnection object
         """
@@ -52,6 +52,15 @@ class Sequence(DbClass):
         if data:
             (sch, self.owner_table) = split_schema_table(data[0], self.schema)
             self.owner_column = data[1]
+            return
+        data = dbconn.fetchone(
+            """SELECT adrelid::regclass
+               FROM pg_attrdef a JOIN pg_depend ON (a.oid = objid)
+               WHERE refobjid = '%s'::regclass
+               AND classid = 'pg_attrdef'::regclass""" % self.qualname())
+        if data:
+            (sch, self.dependent_table) = split_schema_table(
+                data[0], self.schema)
 
     def to_map(self):
         """Convert a sequence definition to a YAML-suitable format
@@ -60,7 +69,7 @@ class Sequence(DbClass):
         """
         seq = {}
         for key, val in self.__dict__.items():
-            if key in self.keylist:
+            if key in self.keylist or key == 'dependent_table':
                 continue
             if key == 'max_value' and val == MAX_BIGINT:
                 seq[key] = None
@@ -357,7 +366,7 @@ class ClassDict(DbObjectDict):
             elif kind == 'S':
                 self[(sch, tbl)] = inst = Sequence(**table.__dict__)
                 inst.get_attrs(self.dbconn)
-                inst.get_owner(self.dbconn)
+                inst.get_dependent_table(self.dbconn)
             elif kind == 'v':
                 self[(sch, tbl)] = View(**table.__dict__)
         for (tbl, partbl, num) in self.dbconn.fetchall(self.inhquery):
@@ -625,6 +634,9 @@ class ClassDict(DbObjectDict):
                 if hasattr(table, 'triggers'):
                     for trg in table.triggers:
                         stmts.append(table.triggers[trg].drop())
+                if hasattr(table, 'rules'):
+                    for rul in table.rules:
+                        stmts.append(table.rules[rul].drop())
                 # drop views
                 if isinstance(table, View):
                     stmts.append(table.drop())
@@ -632,8 +644,10 @@ class ClassDict(DbObjectDict):
         inhstack = []
         for (sch, tbl) in self.keys():
             table = self[(sch, tbl)]
-            if isinstance(table, Sequence) and hasattr(table, 'owner_table') \
-                    or isinstance(table, View):
+            if (isinstance(table, Sequence) \
+                    and (hasattr(table, 'owner_table') \
+                             or hasattr(table, 'dependent_table'))) \
+                             or isinstance(table, View):
                 continue
             if hasattr(table, 'dropped') and not table.dropped:
                 # next, drop other subordinate objects
@@ -669,6 +683,12 @@ class ClassDict(DbObjectDict):
                 stmts.append(table.drop())
             else:
                 inhstack.insert(0, table)
+        for (sch, tbl) in self.keys():
+            table = self[(sch, tbl)]
+            if isinstance(table, Sequence) \
+                    and hasattr(table, 'dependent_table') \
+                    and hasattr(table, 'dropped') and not table.dropped:
+                stmts.append(table.drop())
 
         # last pass to deal with nextval DEFAULTs
         for (sch, tbl) in intables.keys():
