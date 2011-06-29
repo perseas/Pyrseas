@@ -6,7 +6,7 @@
     This defines two classes, Schema and SchemaDict, derived from
     DbObject and DbObjectDict, respectively.
 """
-from pyrseas.dbobject import DbObjectDict, DbObject
+from pyrseas.dbobject import DbObjectDict, DbObject, split_schema_table
 from dbtype import Domain, Enum
 from table import Table, Sequence, View
 
@@ -189,11 +189,24 @@ class SchemaDict(DbObjectDict):
                     schema.views = {}
                 schema.views.update({tbl: table})
         for (sch, fnc, arg) in dbfunctions.keys():
+            func = dbfunctions[(sch, fnc, arg)]
             assert self[sch]
             schema = self[sch]
             if not hasattr(schema, 'functions'):
                 schema.functions = {}
-            schema.functions.update({(fnc, arg): dbfunctions[(sch, fnc, arg)]})
+            schema.functions.update({(fnc, arg): func})
+            if hasattr(func, 'returns'):
+                rettype = func.returns
+                if rettype.upper().startswith("SETOF "):
+                    rettype = rettype[6:]
+                (retsch, rettyp) = split_schema_table(rettype, sch)
+                if (retsch, rettyp) in dbtables.keys():
+                    deptbl = dbtables[(retsch, rettyp)]
+                    if not hasattr(func, 'dependent_table'):
+                        func.dependent_table = deptbl
+                    if not hasattr(deptbl, 'dependent_funcs'):
+                        deptbl.dependent_funcs = []
+                    deptbl.dependent_funcs.append(func)
 
     def to_map(self):
         """Convert the schema dictionary to a regular dictionary

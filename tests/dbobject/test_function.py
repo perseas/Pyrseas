@@ -33,9 +33,28 @@ class FunctionToMapTestCase(PyrseasTestCase):
         self.assertEqual(dbmap['schema public'] \
                              ['function f1(integer, integer)'], expmap)
 
+    def test_map_void_function(self):
+        "Map a function returning void"
+        self.db.execute("CREATE TABLE t1 (c1 integer, c2 text)")
+        expmap = {'language': 'sql', 'returns': 'void',
+                  'source': "INSERT INTO t1 VALUES (1, 'dummy')"}
+        dbmap = self.db.execute_and_map(
+            "CREATE FUNCTION f1() RETURNS void LANGUAGE sql AS "
+            "$_$INSERT INTO t1 VALUES (1, 'dummy')$_$")
+        self.assertEqual(dbmap['schema public']['function f1()'], expmap)
+
+    def test_map_setof_row_function(self):
+        "Map a function returning a set of rows"
+        self.db.execute("CREATE TABLE t1 (c1 integer, c2 text)")
+        expmap = {'language': 'sql', 'returns': 'SETOF t1',
+                  'source': "SELECT * FROM t1"}
+        dbmap = self.db.execute_and_map(
+            "CREATE FUNCTION f1() RETURNS SETOF t1 LANGUAGE sql AS "
+            "$_$SELECT * FROM t1$_$")
+        self.assertEqual(dbmap['schema public']['function f1()'], expmap)
+
     def test_map_function_comment(self):
         "Map a function comment"
-        self.db.execute(DROP_STMT2)
         self.db.execute(CREATE_STMT2)
         dbmap = self.db.execute_and_map(COMMENT_STMT)
         self.assertEqual(dbmap['schema public'] \
@@ -66,6 +85,22 @@ class FunctionToSqlTestCase(PyrseasTestCase):
                     'source': SOURCE2}})
         dbsql = self.db.process_map(inmap)
         self.assertEqual(fix_indent(dbsql[1]), CREATE_STMT2)
+
+    def test_create_setof_row_function(self):
+        "Create a function returning a set of rows"
+        self.db.execute_commit(DROP_STMT1)
+        inmap = new_std_map()
+        inmap['schema public'].update({'table t1': {
+                    'columns': [{'c1': {'type': 'integer'}},
+                                {'c2': {'type': 'text'}}]}})
+        inmap['schema public'].update({
+                'function f1()': {
+                    'language': 'sql', 'returns': 'SETOF t1',
+                    'source': "SELECT * FROM t1"}})
+        dbsql = self.db.process_map(inmap)
+        self.assertEqual(fix_indent(dbsql[2]),
+                         "CREATE FUNCTION f1() RETURNS SETOF t1 LANGUAGE sql "
+                         "AS $_$SELECT * FROM t1$_$")
 
     def test_create_function_in_schema(self):
         "Create a function within a non-public schema"

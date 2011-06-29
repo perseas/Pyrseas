@@ -108,6 +108,8 @@ such specification.
 
 .. automethod:: Table.create
 
+.. automethod:: Table.drop
+
 .. automethod:: Table.diff_map
 
 View

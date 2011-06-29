@@ -232,6 +232,8 @@ class Table(DbClass):
         :return: SQL statements
         """
         stmts = []
+        if hasattr(self, 'created'):
+            return stmts
         cols = []
         for col in self.columns:
             if not (hasattr(col, 'inherited') and col.inherited):
@@ -246,6 +248,21 @@ class Table(DbClass):
         for col in self.columns:
             if hasattr(col, 'description'):
                 stmts.append(col.comment())
+        self.created = True
+        return stmts
+
+    def drop(self):
+        """Return a SQL DROP statement for the table
+
+        :return: SQL statement
+        """
+        stmts = []
+        if not hasattr(self, 'dropped') or not self.dropped:
+            if hasattr(self, 'dependent_funcs'):
+                for fnc in self.dependent_funcs:
+                    stmts.append(fnc.drop())
+            self.dropped = True
+            stmts.append("DROP TABLE %s" % self.identifier())
         return stmts
 
     def diff_map(self, intable):

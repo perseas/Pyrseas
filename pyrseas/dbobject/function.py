@@ -50,6 +50,8 @@ class Function(Proc):
             del dct['volatility']
         else:
             dct['volatility'] = VOLATILITY_TYPES[self.volatility]
+        if hasattr(self, 'dependent_table'):
+            del dct['dependent_table']
         return {self.extern_key(): dct}
 
     def create(self, newsrc=None):
@@ -59,6 +61,8 @@ class Function(Proc):
         :return: SQL statements
         """
         stmts = []
+        if hasattr(self, 'dependent_table'):
+            stmts.append(self.dependent_table.create())
         src = newsrc or self.source
         volat = strict = ''
         if hasattr(self, 'volatility'):
