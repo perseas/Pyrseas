@@ -1,3 +1,20 @@
+0.3.0 (30-Jun-2011)
+
+  * Added support for:
+
+    - AGGREGATE functions
+    - DOMAINs
+    - ENUMerated TYPEs
+    - Functions returning table row types
+    - INDEXes on expressions (issue #3)
+    - Rewrite RULEs
+    - SECURITY DEFINER functions
+    - TRIGGERs
+
+ * Enhanced host/port defaults to use sockets, resulting in noticeable
+   performance improvement.
+
+
 0.2.1 (7-Jun-2011)
 
   * Fixed problem with mapping a FOREIGN KEY in a table with a dropped
