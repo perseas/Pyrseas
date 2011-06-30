@@ -53,6 +53,15 @@ class FunctionToMapTestCase(PyrseasTestCase):
             "$_$SELECT * FROM t1$_$")
         self.assertEqual(dbmap['schema public']['function f1()'], expmap)
 
+    def test_map_security_definer_function(self):
+        "Map a function that is SECURITY DEFINER"
+        expmap = {'language': 'sql', 'returns': 'text',
+                  'source': SOURCE1, 'security_definer': True}
+        dbmap = self.db.execute_and_map("CREATE FUNCTION f1() RETURNS text "
+                                        "LANGUAGE sql SECURITY DEFINER AS "
+                                        "$_$%s$_$" % SOURCE1)
+        self.assertEqual(dbmap['schema public']['function f1()'], expmap)
+
     def test_map_function_comment(self):
         "Map a function comment"
         self.db.execute(CREATE_STMT2)
@@ -101,6 +110,18 @@ class FunctionToSqlTestCase(PyrseasTestCase):
         self.assertEqual(fix_indent(dbsql[2]),
                          "CREATE FUNCTION f1() RETURNS SETOF t1 LANGUAGE sql "
                          "AS $_$SELECT * FROM t1$_$")
+
+    def test_create_security_definer_function(self):
+        "Create a SECURITY DEFINER function"
+        self.db.execute_commit(DROP_STMT1)
+        inmap = new_std_map()
+        inmap['schema public'].update({'function f1()': {
+                    'language': 'sql', 'returns': 'text',
+                    'source': SOURCE1, 'security_definer': True}})
+        dbsql = self.db.process_map(inmap)
+        self.assertEqual(fix_indent(dbsql[1]),
+                         "CREATE FUNCTION f1() RETURNS text LANGUAGE sql "
+                         "AS $_$%s$_$ SECURITY DEFINER" % SOURCE1)
 
     def test_create_function_in_schema(self):
         "Create a function within a non-public schema"

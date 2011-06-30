@@ -64,16 +64,18 @@ class Function(Proc):
         if hasattr(self, 'dependent_table'):
             stmts.append(self.dependent_table.create())
         src = newsrc or self.source
-        volat = strict = ''
+        volat = strict = secdef = ''
         if hasattr(self, 'volatility'):
             volat = ' ' + VOLATILITY_TYPES[self.volatility].upper()
         if hasattr(self, 'strict') and self.strict:
             strict = ' STRICT'
+        if hasattr(self, 'security_definer') and self.security_definer:
+            secdef = ' SECURITY DEFINER'
         stmts.append("CREATE%s FUNCTION %s(%s) RETURNS %s\n    LANGUAGE %s"
-                     "\n    AS $_$%s$_$%s%s" % (
+                     "\n    AS $_$%s$_$%s%s%s" % (
                 newsrc and " OR REPLACE" or '', self.qualname(),
                 self.arguments, self.returns, self.language, src,
-                volat, strict))
+                volat, strict, secdef))
         if hasattr(self, 'description'):
             stmts.append(self.comment())
         return stmts
@@ -142,6 +144,7 @@ class ProcDict(DbObjectDict):
                   pg_get_function_result(p.oid) AS returns,
                   l.lanname AS language, provolatile AS volatility,
                   proisstrict AS strict, proisagg, prosrc AS source,
+                  prosecdef AS security_definer,
                   aggtransfn::regprocedure AS sfunc,
                   aggtranstype::regtype AS stype,
                   aggfinalfn::regprocedure AS finalfunc,
