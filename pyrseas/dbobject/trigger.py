@@ -46,6 +46,15 @@ class Trigger(DbSchemaObject):
         :return: SQL statements
         """
         stmts = []
+        constr = defer = ''
+        if hasattr(self, 'constraint') and self.constraint:
+            constr = "CONSTRAINT "
+            if hasattr(self, 'deferrable') and self.deferrable:
+                defer = "DEFERRABLE "
+            if hasattr(self, 'initially_deferred') and self.initially_deferred:
+                defer += "INITIALLY DEFERRED"
+            if defer:
+                defer = '\n    ' + defer
         evts = " OR ".join(self.events).upper()
         if hasattr(self, 'columns') and 'update' in self.events:
             evts = evts.replace("UPDATE", "UPDATE OF %s" % (
@@ -53,9 +62,10 @@ class Trigger(DbSchemaObject):
         cond = ''
         if hasattr(self, 'condition'):
             cond = "\n    WHEN (%s)" % self.condition
-        stmts.append("CREATE TRIGGER %s\n    %s %s ON %s\n    FOR EACH %s"
+        stmts.append("CREATE %sTRIGGER %s\n    %s %s ON %s%s\n    FOR EACH %s"
                      "%s\n    EXECUTE PROCEDURE %s" % (
-                self.name, self.timing.upper(), evts, self._table.qualname(),
+                constr, self.name, self.timing.upper(), evts,
+                self._table.qualname(), defer,
                 self.level.upper(), cond, self.procedure))
         if hasattr(self, 'description'):
             stmts.append(self.comment())
@@ -78,15 +88,19 @@ class Trigger(DbSchemaObject):
 
 QUERY_PRE90 = \
         """SELECT nspname AS schema, relname AS table,
-                  tgname AS name, pg_get_triggerdef(t.oid) AS definition,
+                  tgname AS name, tgisconstraint AS constraint,
+                  tgdeferrable AS deferrable,
+                  tginitdeferred AS initially_deferred,
+                  pg_get_triggerdef(t.oid) AS definition,
                   NULL AS columns, description
            FROM pg_trigger t
                 JOIN pg_class c ON (t.tgrelid = c.oid)
                 JOIN pg_namespace n ON (c.relnamespace = n.oid)
                 JOIN pg_roles ON (n.nspowner = pg_roles.oid)
+                LEFT JOIN pg_constraint cn ON (tgconstraint = cn.oid)
                 LEFT JOIN pg_description d
                      ON (t.oid = d.objoid AND d.objsubid = 0)
-           WHERE NOT tgisconstraint
+           WHERE contype != 'f' OR contype IS NULL
              AND (nspname != 'pg_catalog' AND nspname != 'information_schema')
            ORDER BY 1, 2, 3"""
 
@@ -98,11 +112,16 @@ class TriggerDict(DbObjectDict):
     query = \
         """SELECT nspname AS schema, relname AS table,
                   tgname AS name, pg_get_triggerdef(t.oid) AS definition,
+                  CASE WHEN contype = 't' THEN true ELSE false END AS
+                       constraint,
+                  tgdeferrable AS deferrable,
+                  tginitdeferred AS initially_deferred,
                   tgattr AS columns, description
            FROM pg_trigger t
                 JOIN pg_class c ON (t.tgrelid = c.oid)
                 JOIN pg_namespace n ON (c.relnamespace = n.oid)
                 JOIN pg_roles ON (n.nspowner = pg_roles.oid)
+                LEFT JOIN pg_constraint cn ON (tgconstraint = cn.oid)
                 LEFT JOIN pg_description d
                      ON (t.oid = d.objoid AND d.objsubid = 0)
            WHERE NOT tgisinternal

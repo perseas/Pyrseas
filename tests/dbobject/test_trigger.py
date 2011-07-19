@@ -88,6 +88,44 @@ class TriggerToMapTestCase(PyrseasTestCase):
                          ['tr1']['description'], 'Test trigger tr1')
 
 
+class ConstraintTriggerToMapTestCase(PyrseasTestCase):
+    """Test mapping of existing constraint triggers"""
+
+    def setUp(self):
+        super(self.__class__, self).setUp()
+        if self.db.version < 90000:
+            if not self.db.is_plpgsql_installed():
+                self.db.execute_commit("CREATE LANGUAGE plpgsql")
+
+    def test_map_trigger(self):
+        "Map a simple constraint trigger"
+        self.db.execute(CREATE_TABLE_STMT)
+        self.db.execute(CREATE_FUNC_STMT)
+        expmap = {'tr1': {'constraint': True, 'timing': 'after',
+                          'events': ['insert', 'update'],
+                          'level': 'row', 'procedure': 'f1()'}}
+        dbmap = self.db.execute_and_map(
+            "CREATE CONSTRAINT TRIGGER tr1 AFTER INSERT OR UPDATE ON t1 "
+            "FOR EACH ROW EXECUTE PROCEDURE f1()")
+        self.assertEqual(dbmap['schema public']['table t1']['triggers'],
+                         expmap)
+
+    def test_map_trigger_deferrable(self):
+        "Map a deferrable, initially deferred constraint trigger"
+        self.db.execute(CREATE_TABLE_STMT)
+        self.db.execute(CREATE_FUNC_STMT)
+        expmap = {'tr1': {'constraint': True, 'deferrable': True,
+                          'initially_deferred': True, 'timing': 'after',
+                          'events': ['insert', 'update'],
+                          'level': 'row', 'procedure': 'f1()'}}
+        dbmap = self.db.execute_and_map(
+            "CREATE CONSTRAINT TRIGGER tr1 AFTER INSERT OR UPDATE ON t1 "
+            "DEFERRABLE INITIALLY DEFERRED "
+            "FOR EACH ROW EXECUTE PROCEDURE f1()")
+        self.assertEqual(dbmap['schema public']['table t1']['triggers'],
+                         expmap)
+
+
 class TriggerToSqlTestCase(PyrseasTestCase):
     """Test SQL generation from input triggers"""
 
@@ -329,10 +367,69 @@ class TriggerToSqlTestCase(PyrseasTestCase):
                 "COMMENT ON TRIGGER tr1 ON t1 IS 'Changed trigger tr1'"])
 
 
+class ConstraintTriggerToSqlTestCase(PyrseasTestCase):
+    """Test SQL generation from input triggers"""
+
+    def setUp(self):
+        super(self.__class__, self).setUp()
+        if self.db.version < 90000:
+            if not self.db.is_plpgsql_installed():
+                self.db.execute_commit("CREATE LANGUAGE plpgsql")
+
+    def test_create_trigger(self):
+        "Create a constraint trigger"
+        inmap = new_std_map()
+        inmap.update({'language plpgsql': {'trusted': True}})
+        inmap['schema public'].update({'function f1()': {
+                    'language': 'plpgsql', 'returns': 'trigger',
+                    'source': FUNC_SRC}})
+        inmap['schema public'].update({'table t1': {
+                    'columns': [{'c1': {'type': 'integer'}},
+                                {'c2': {'type': 'text'}},
+                                {'c3': {'type': 'timestamp with time zone'}}],
+                    'triggers': {'tr1': {
+                            'constraint': True, 'timing': 'after',
+                            'events': ['insert', 'update'],
+                            'level': 'row', 'procedure': 'f1()'}}}})
+        dbsql = self.db.process_map(inmap)
+        self.assertEqual(fix_indent(dbsql[1]), CREATE_FUNC_STMT)
+        self.assertEqual(fix_indent(dbsql[2]), CREATE_TABLE_STMT)
+        self.assertEqual(fix_indent(dbsql[3]), "CREATE CONSTRAINT TRIGGER tr1 "
+                         "AFTER INSERT OR UPDATE ON t1 "
+                         "FOR EACH ROW EXECUTE PROCEDURE f1()")
+
+    def test_create_trigger_deferrable(self):
+        "Create a deferrable constraint trigger"
+        inmap = new_std_map()
+        inmap.update({'language plpgsql': {'trusted': True}})
+        inmap['schema public'].update({'function f1()': {
+                    'language': 'plpgsql', 'returns': 'trigger',
+                    'source': FUNC_SRC}})
+        inmap['schema public'].update({'table t1': {
+                    'columns': [{'c1': {'type': 'integer'}},
+                                {'c2': {'type': 'text'}},
+                                {'c3': {'type': 'timestamp with time zone'}}],
+                    'triggers': {'tr1': {
+                            'constraint': True, 'deferrable': True,
+                            'initially_deferred': True, 'timing': 'after',
+                            'events': ['insert', 'update'],
+                            'level': 'row', 'procedure': 'f1()'}}}})
+        dbsql = self.db.process_map(inmap)
+        self.assertEqual(fix_indent(dbsql[1]), CREATE_FUNC_STMT)
+        self.assertEqual(fix_indent(dbsql[2]), CREATE_TABLE_STMT)
+        self.assertEqual(fix_indent(dbsql[3]), "CREATE CONSTRAINT TRIGGER tr1 "
+                         "AFTER INSERT OR UPDATE ON t1 DEFERRABLE INITIALLY "
+                         "DEFERRED FOR EACH ROW EXECUTE PROCEDURE f1()")
+
+
 def suite():
     tests = unittest.TestLoader().loadTestsFromTestCase(TriggerToMapTestCase)
     tests.addTest(unittest.TestLoader().loadTestsFromTestCase(
             TriggerToSqlTestCase))
+    tests.addTest(unittest.TestLoader().loadTestsFromTestCase(
+            ConstraintTriggerToMapTestCase))
+    tests.addTest(unittest.TestLoader().loadTestsFromTestCase(
+            ConstraintTriggerToSqlTestCase))
     return tests
 
 if __name__ == '__main__':
