@@ -52,6 +52,7 @@ classes and methods are documented mainly for developer use.
    constraint
    indexes
    function
+   operator
    trigger
    rule
 

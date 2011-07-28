@@ -13,6 +13,7 @@ import test_constraint
 import test_index
 import test_view
 import test_function
+import test_operator
 import test_trigger
 import test_rule
 
@@ -29,6 +30,7 @@ def suite():
     tests.addTest(test_index.suite())
     tests.addTest(test_view.suite())
     tests.addTest(test_function.suite())
+    tests.addTest(test_operator.suite())
     tests.addTest(test_trigger.suite())
     tests.addTest(test_rule.suite())
     return tests

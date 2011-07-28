@@ -145,8 +145,7 @@ class PostgresDb(object):
         self.conn.commit()
         curs = pgexecute(
             self.conn,
-            """SELECT nspname, proname, pg_get_function_arguments(p.oid) AS
-                      args
+            """SELECT nspname, p.oid::regprocedure
                FROM pg_proc p JOIN pg_namespace n ON (pronamespace = n.oid)
                WHERE (nspname != 'pg_catalog'
                      AND nspname != 'information_schema')""")
@@ -154,8 +153,21 @@ class PostgresDb(object):
         curs.close()
         self.conn.rollback()
         for func in funcs:
-            self.execute("DROP FUNCTION IF EXISTS %s.%s (%s) CASCADE" % (
-                    func[0], func[1], func[2]))
+            self.execute("DROP FUNCTION IF EXISTS %s.%s CASCADE" % (
+                    func[0], func[1]))
+        self.conn.commit()
+        curs = pgexecute(
+            self.conn,
+            """SELECT nspname, o.oid::regoperator
+               FROM pg_operator o JOIN pg_namespace n ON (oprnamespace = n.oid)
+               WHERE (nspname != 'pg_catalog'
+                     AND nspname != 'information_schema')""")
+        opers = curs.fetchall()
+        curs.close()
+        self.conn.rollback()
+        for oper in opers:
+            self.execute("DROP OPERATOR IF EXISTS %s.%s CASCADE" % (
+                    oper[0], oper[1]))
         self.conn.commit()
         if self.version < 90000:
             if self.is_plpgsql_installed():

@@ -56,6 +56,11 @@ class Schema(DbObject):
             for func in self.functions.keys():
                 functions.update(self.functions[func].to_map())
             schema[key].update(functions)
+        if hasattr(self, 'operators'):
+            operators = {}
+            for func in self.operators.keys():
+                operators.update(self.operators[func].to_map())
+            schema[key].update(operators)
         if hasattr(self, 'description'):
             schema[key].update(description=self.description)
         return schema
@@ -125,6 +130,7 @@ class SchemaDict(DbObjectDict):
             intypes = {}
             intables = {}
             infuncs = {}
+            inopers = {}
             for key in inschema.keys():
                 if key.startswith('domain '):
                     intypes.update({key: inschema[key]})
@@ -136,6 +142,8 @@ class SchemaDict(DbObjectDict):
                 elif key.startswith('function ') \
                         or key.startswith('aggregate '):
                     infuncs.update({key: inschema[key]})
+                elif key.startswith('operator '):
+                    inopers.update({key: inschema[key]})
                 elif key == 'oldname':
                     schema.oldname = inschema[key]
                     del inschema['oldname']
@@ -146,13 +154,15 @@ class SchemaDict(DbObjectDict):
             newdb.types.from_map(schema, intypes, newdb)
             newdb.tables.from_map(schema, intables, newdb)
             newdb.functions.from_map(schema, infuncs)
+            newdb.operators.from_map(schema, inopers)
 
-    def link_refs(self, dbtypes, dbtables, dbfunctions):
+    def link_refs(self, dbtypes, dbtables, dbfunctions, dbopers):
         """Connect types, tables and functions to their respective schemas
 
         :param dbtypes: dictionary of types and domains
         :param dbtables: dictionary of tables, sequences and views
         :param dbfunctions: dictionary of functions
+        :param dbopers: dictionary of operators
 
         Fills in the `domains` dictionary for each schema by
         traversing the `dbtypes` dictionary.  Fills in the `tables`,
@@ -207,6 +217,13 @@ class SchemaDict(DbObjectDict):
                     if not hasattr(deptbl, 'dependent_funcs'):
                         deptbl.dependent_funcs = []
                     deptbl.dependent_funcs.append(func)
+        for (sch, opr, lft, rgt) in dbopers.keys():
+            oper = dbopers[(sch, opr, lft, rgt)]
+            assert self[sch]
+            schema = self[sch]
+            if not hasattr(schema, 'operators'):
+                schema.operators = {}
+            schema.operators.update({(opr, lft, rgt): oper})
 
     def to_map(self):
         """Convert the schema dictionary to a regular dictionary
