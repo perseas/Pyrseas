@@ -107,7 +107,7 @@ class LanguageDict(DbObjectDict):
         """
         for (sch, fnc, arg) in dbfunctions.keys():
             func = dbfunctions[(sch, fnc, arg)]
-            if func.language == 'sql' or func.language == 'internal':
+            if func.language in ['sql', 'c', 'internal']:
                 continue
             assert self[(func.language)]
             language = self[(func.language)]

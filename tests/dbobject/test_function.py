@@ -6,12 +6,12 @@ import unittest
 from utils import PyrseasTestCase, fix_indent, new_std_map
 
 SOURCE1 = "SELECT 'dummy'::text"
-CREATE_STMT1 = "CREATE FUNCTION f1() RETURNS text LANGUAGE sql AS " \
-    "$_$%s$_$ IMMUTABLE" % SOURCE1
+CREATE_STMT1 = "CREATE FUNCTION f1() RETURNS text LANGUAGE sql IMMUTABLE AS " \
+    "$_$%s$_$" % SOURCE1
 DROP_STMT1 = "DROP FUNCTION IF EXISTS f1()"
 SOURCE2 = "SELECT GREATEST($1, $2)"
 CREATE_STMT2 = "CREATE FUNCTION f1(integer, integer) RETURNS integer " \
-    "LANGUAGE sql AS $_$%s$_$" % SOURCE2
+    "LANGUAGE sql IMMUTABLE AS $_$%s$_$" % SOURCE2
 DROP_STMT2 = "DROP FUNCTION IF EXISTS f1(integer, integer)"
 COMMENT_STMT = "COMMENT ON FUNCTION f1(integer, integer) IS 'Test function f1'"
 
@@ -29,7 +29,9 @@ class FunctionToMapTestCase(PyrseasTestCase):
     def test_map_function_with_args(self):
         "Map a function with two arguments"
         expmap = {'language': 'sql', 'returns': 'integer', 'source': SOURCE2}
-        dbmap = self.db.execute_and_map(CREATE_STMT2)
+        dbmap = self.db.execute_and_map(
+            "CREATE FUNCTION f1(integer, integer) RETURNS integer "
+            "LANGUAGE sql AS $_$%s$_$" % SOURCE2)
         self.assertEqual(dbmap['schema public'] \
                              ['function f1(integer, integer)'], expmap)
 
@@ -62,6 +64,17 @@ class FunctionToMapTestCase(PyrseasTestCase):
                                         "$_$%s$_$" % SOURCE1)
         self.assertEqual(dbmap['schema public']['function f1()'], expmap)
 
+    def test_map_c_lang_function(self):
+        "Map a dynamically loaded C language function"
+        # NOTE 1: Needs contrib/spi module to be available
+        # NOTE 2: Needs superuser privilege
+        expmap = {'language': 'c', 'obj_file': '$libdir/autoinc',
+                  'link_symbol': 'autoinc', 'returns': 'trigger'}
+        dbmap = self.db.execute_and_map("CREATE FUNCTION autoinc() RETURNS "
+                                        "trigger AS '$libdir/autoinc' "
+                                        "LANGUAGE c")
+        self.assertEqual(dbmap['schema public']['function autoinc()'], expmap)
+
     def test_map_function_comment(self):
         "Map a function comment"
         self.db.execute(CREATE_STMT2)
@@ -93,7 +106,9 @@ class FunctionToSqlTestCase(PyrseasTestCase):
                     'language': 'sql', 'returns': 'integer',
                     'source': SOURCE2}})
         dbsql = self.db.process_map(inmap)
-        self.assertEqual(fix_indent(dbsql[1]), CREATE_STMT2)
+        self.assertEqual(fix_indent(dbsql[1]),
+                         "CREATE FUNCTION f1(integer, integer) RETURNS "
+                         "integer LANGUAGE sql AS $_$%s$_$" % SOURCE2)
 
     def test_create_setof_row_function(self):
         "Create a function returning a set of rows"
@@ -121,7 +136,21 @@ class FunctionToSqlTestCase(PyrseasTestCase):
         dbsql = self.db.process_map(inmap)
         self.assertEqual(fix_indent(dbsql[1]),
                          "CREATE FUNCTION f1() RETURNS text LANGUAGE sql "
-                         "AS $_$%s$_$ SECURITY DEFINER" % SOURCE1)
+                         "SECURITY DEFINER AS $_$%s$_$" % SOURCE1)
+
+    def test_create_c_lang_function(self):
+        "Create a dynamically loaded C language function"
+        # NOTE 1: Needs contrib/spi module to be available
+        # NOTE 2: Needs superuser privilege
+        self.db.execute_commit("DROP FUNCTION IF EXISTS autoinc()")
+        inmap = new_std_map()
+        inmap['schema public'].update({'function autoinc()': {
+                    'language': 'c', 'returns': 'trigger',
+                    'obj_file': '$libdir/autoinc'}})
+        dbsql = self.db.process_map(inmap)
+        self.assertEqual(fix_indent(dbsql[1]), "CREATE FUNCTION autoinc() "
+                         "RETURNS trigger LANGUAGE c AS '$libdir/autoinc', "
+                         "'autoinc'")
 
     def test_create_function_in_schema(self):
         "Create a function within a non-public schema"
@@ -133,8 +162,8 @@ class FunctionToSqlTestCase(PyrseasTestCase):
                     'source': SOURCE1, 'volatility': 'immutable'}}})
         dbsql = self.db.process_map(inmap)
         self.assertEqual(fix_indent(dbsql[1]), "CREATE FUNCTION s1.f1() "
-                         "RETURNS text LANGUAGE sql "
-                         "AS $_$%s$_$ IMMUTABLE" % SOURCE1)
+                         "RETURNS text LANGUAGE sql IMMUTABLE "
+                         "AS $_$%s$_$" % SOURCE1)
         self.db.execute_commit("DROP SCHEMA s1 CASCADE")
 
     def test_bad_function_map(self):
@@ -170,8 +199,8 @@ class FunctionToSqlTestCase(PyrseasTestCase):
                     'volatility': 'immutable'}})
         dbsql = self.db.process_map(inmap)
         self.assertEqual(fix_indent(dbsql[1]), "CREATE OR REPLACE "
-                         "FUNCTION f1() RETURNS text LANGUAGE sql "
-                         "AS $_$SELECT 'example'::text$_$ IMMUTABLE")
+                         "FUNCTION f1() RETURNS text LANGUAGE sql IMMUTABLE "
+                         "AS $_$SELECT 'example'::text$_$")
 
     def test_function_with_comment(self):
         "Create a function with a comment"
@@ -183,7 +212,9 @@ class FunctionToSqlTestCase(PyrseasTestCase):
                     'language': 'sql', 'returns': 'integer',
                     'source': SOURCE2}})
         dbsql = self.db.process_map(inmap)
-        self.assertEqual(fix_indent(dbsql[1]), CREATE_STMT2)
+        self.assertEqual(fix_indent(dbsql[1]),
+                         "CREATE FUNCTION f1(integer, integer) RETURNS "
+                         "integer LANGUAGE sql AS $_$%s$_$" % SOURCE2)
         self.assertEqual(dbsql[2], COMMENT_STMT)
 
     def test_comment_on_function(self):
@@ -235,7 +266,7 @@ class AggregateToMapTestCase(PyrseasTestCase):
 
     def test_map_aggregate(self):
         "Map a simple aggregate"
-        self.db.execute(CREATE_STMT2 + " IMMUTABLE")
+        self.db.execute(CREATE_STMT2)
         expmap = {'sfunc': 'f1(integer,integer)', 'stype': 'integer'}
         dbmap = self.db.execute_and_map("CREATE AGGREGATE a1 (integer) ("
                                         "SFUNC = f1, STYPE = integer)")
@@ -249,7 +280,7 @@ class AggregateToMapTestCase(PyrseasTestCase):
 
     def test_map_aggregate_init_final(self):
         "Map an aggregate with an INITCOND and a FINALFUNC"
-        self.db.execute(CREATE_STMT2 + " IMMUTABLE")
+        self.db.execute(CREATE_STMT2)
         self.db.execute("CREATE FUNCTION f2(integer) RETURNS float "
                         "LANGUAGE sql AS $_$SELECT $1::float$_$ IMMUTABLE")
         expmap = {'sfunc': 'f1(integer,integer)', 'stype': 'integer',
@@ -285,7 +316,7 @@ class AggregateToSqlTestCase(PyrseasTestCase):
         inmap['schema public'].update({'aggregate a1(integer)': {
                     'sfunc': 'f1', 'stype': 'integer'}})
         dbsql = self.db.process_map(inmap)
-        self.assertEqual(fix_indent(dbsql[1]), CREATE_STMT2 + " IMMUTABLE")
+        self.assertEqual(fix_indent(dbsql[1]), CREATE_STMT2)
         self.assertEqual(fix_indent(dbsql[2]),
                          "CREATE AGGREGATE a1(integer) "
                          "(SFUNC = f1, STYPE = integer)")
@@ -308,11 +339,11 @@ class AggregateToSqlTestCase(PyrseasTestCase):
                     'sfunc': 'f1', 'stype': 'integer', 'initcond': '-1',
                     'finalfunc': 'f2(integer)'}})
         dbsql = self.db.process_map(inmap)
-        self.assertEqual(fix_indent(dbsql[1]), CREATE_STMT2 + " IMMUTABLE")
+        self.assertEqual(fix_indent(dbsql[1]), CREATE_STMT2)
         self.assertEqual(fix_indent(dbsql[2]),
                          "CREATE FUNCTION f2(integer) "
-                         "RETURNS double precision LANGUAGE sql "
-                         "AS $_$SELECT $1::float$_$ IMMUTABLE")
+                         "RETURNS double precision LANGUAGE sql IMMUTABLE "
+                         "AS $_$SELECT $1::float$_$")
         self.assertEqual(fix_indent(dbsql[3]),
                          "CREATE AGGREGATE a1(integer) "
                          "(SFUNC = f1, STYPE = integer, FINALFUNC = f2, "

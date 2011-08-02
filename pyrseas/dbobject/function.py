@@ -52,6 +52,9 @@ class Function(Proc):
             dct['volatility'] = VOLATILITY_TYPES[self.volatility]
         if hasattr(self, 'dependent_table'):
             del dct['dependent_table']
+        if hasattr(self, 'obj_file'):
+            dct['link_symbol'] = self.source
+            del dct['source']
         return {self.extern_key(): dct}
 
     def create(self, newsrc=None):
@@ -63,7 +66,12 @@ class Function(Proc):
         stmts = []
         if hasattr(self, 'dependent_table'):
             stmts.append(self.dependent_table.create())
-        src = newsrc or self.source
+        if hasattr(self, 'obj_file'):
+            src = "'%s', '%s'" % (self.obj_file,
+                                  hasattr(self, 'link_symbol')
+                                  and self.link_symbol or self.name)
+        else:
+            src = "$_$%s$_$" % (newsrc or self.source)
         volat = strict = secdef = ''
         if hasattr(self, 'volatility'):
             volat = ' ' + VOLATILITY_TYPES[self.volatility].upper()
@@ -72,10 +80,10 @@ class Function(Proc):
         if hasattr(self, 'security_definer') and self.security_definer:
             secdef = ' SECURITY DEFINER'
         stmts.append("CREATE%s FUNCTION %s(%s) RETURNS %s\n    LANGUAGE %s"
-                     "\n    AS $_$%s$_$%s%s%s" % (
+                     "%s%s%s\n    AS %s" % (
                 newsrc and " OR REPLACE" or '', self.qualname(),
-                self.arguments, self.returns, self.language, src,
-                volat, strict, secdef))
+                self.arguments, self.returns, self.language, volat, strict,
+                secdef, src))
         if hasattr(self, 'description'):
             stmts.append(self.comment())
         return stmts
@@ -144,6 +152,7 @@ class ProcDict(DbObjectDict):
                   pg_get_function_result(p.oid) AS returns,
                   l.lanname AS language, provolatile AS volatility,
                   proisstrict AS strict, proisagg, prosrc AS source,
+                  probin::text AS obj_file,
                   prosecdef AS security_definer,
                   aggtransfn::regprocedure AS sfunc,
                   aggtranstype::regtype AS stype,
@@ -207,6 +216,12 @@ class ProcDict(DbObjectDict):
                 setattr(func, attr, val)
             if hasattr(func, 'volatility'):
                 func.volatility = func.volatility[:1].lower()
+            if isinstance(func, Function):
+                src = hasattr(func, 'source')
+                obj = hasattr(func, 'obj_file')
+                if (src and obj) or not (src or obj):
+                    raise ValueError("Function '%s': either source or "
+                                     "obj_file must be specified" % fnc)
             if 'oldname' in infunc:
                 func.oldname = infunc['oldname']
             if 'description' in infunc:
