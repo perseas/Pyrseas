@@ -7,7 +7,7 @@
     DbObject and DbObjectDict, respectively.
 """
 from pyrseas.dbobject import DbObjectDict, DbObject, split_schema_table
-from dbtype import Domain, Enum
+from dbtype import Domain, Enum, Composite
 from table import Table, Sequence, View
 
 
@@ -178,7 +178,7 @@ class SchemaDict(DbObjectDict):
                 if not hasattr(schema, 'domains'):
                     schema.domains = {}
                 schema.domains.update({typ: dbtypes[(sch, typ)]})
-            elif isinstance(dbtype, Enum):
+            elif isinstance(dbtype, Enum) or isinstance(dbtype, Composite):
                 if not hasattr(schema, 'types'):
                     schema.types = {}
                 schema.types.update({typ: dbtypes[(sch, typ)]})

@@ -470,10 +470,11 @@ class ClassDict(DbObjectDict):
         and constraint, index or trigger name.
         """
         for (sch, tbl) in dbcolumns.keys():
-            assert self[(sch, tbl)]
-            self[(sch, tbl)].columns = dbcolumns[(sch, tbl)]
-            for col in dbcolumns[(sch, tbl)]:
-                col._table = self[(sch, tbl)]
+            if (sch, tbl) in self:
+                assert isinstance(self[(sch, tbl)], Table)
+                self[(sch, tbl)].columns = dbcolumns[(sch, tbl)]
+                for col in dbcolumns[(sch, tbl)]:
+                    col._table = self[(sch, tbl)]
         for (sch, tbl) in self.keys():
             table = self[(sch, tbl)]
             if isinstance(table, Sequence) and hasattr(table, 'owner_table'):

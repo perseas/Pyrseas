@@ -137,7 +137,7 @@ class ColumnDict(DbObjectDict):
                      AND attnum = pg_attrdef.adnum)
                 LEFT JOIN pg_description d
                      ON (pg_class.oid = d.objoid AND d.objsubid = attnum)
-           WHERE relkind = 'r'
+           WHERE relkind in ('c', 'r')
                  AND (nspname = 'public' OR rolname <> 'postgres')
                  AND attnum > 0
            ORDER BY nspname, relname, attnum"""
@@ -153,7 +153,7 @@ class ColumnDict(DbObjectDict):
     def from_map(self, table, incols):
         """Initialize the dictionary of columns by converting the input list
 
-        :param table: table owning the columns
+        :param table: table or type owning the columns/attributes
         :param incols: YAML list defining the columns
         """
         if not incols:
@@ -162,8 +162,12 @@ class ColumnDict(DbObjectDict):
 
         for col in incols:
             for key in col.keys():
+                if isinstance(col[key], dict):
+                    arg = col[key]
+                else:
+                    arg = {'type': col[key]}
                 cols.append(Column(schema=table.schema, table=table.name,
-                                   name=key, **col[key]))
+                                   name=key, **arg))
 
     def diff_map(self, incols):
         """Generate SQL to transform existing columns

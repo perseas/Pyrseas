@@ -70,7 +70,7 @@ class Database(object):
         db.schemas.link_refs(db.types, db.tables, db.functions, db.operators)
         db.tables.link_refs(db.columns, db.constraints, db.indexes,
                             db.rules, db.triggers)
-        db.types.link_refs(db.constraints)
+        db.types.link_refs(db.columns, db.constraints)
 
     def from_catalog(self):
         """Populate the database objects by querying the catalogs

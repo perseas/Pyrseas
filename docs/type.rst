@@ -3,10 +3,10 @@ Types and Domains
 
 .. module:: pyrseas.dbobject.dbtype
 
-The :mod:`dbtype` module defines four classes, :class:`DbType` derived
-from :class:`DbSchemaObject`, :class:`Enum` and :class:`Domain`
-derived from :class:`DbType`, and :class:`TypeDict` derived from and
-:class:`DbObjectDict`.
+The :mod:`dbtype` module defines five classes, :class:`DbType` derived
+from :class:`DbSchemaObject`, :class:`Composite`, :class:`Enum` and
+:class:`Domain` derived from :class:`DbType`, and :class:`TypeDict`
+derived from and :class:`DbObjectDict`.
 
 Database Type
 -------------
@@ -17,6 +17,19 @@ domain as defined in the PostgreSQL `pg_type` catalog. Note: Only
 enumerated types are implemented currently.
 
 .. autoclass:: DbType
+
+Composite
+---------
+
+:class:`Composite` is derived from :class:`~pyrseas.dbobject.DbType`
+and represents a standalone `composite type
+<http://www.postgresql.org/docs/current/static/rowtypes.html>`_.
+
+.. autoclass:: Composite
+
+.. automethod:: Composite.to_map
+
+.. automethod:: Composite.create
 
 Enum
 ----

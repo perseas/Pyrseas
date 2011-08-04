@@ -3,18 +3,47 @@
     pyrseas.table
     ~~~~~~~~~~~~~
 
-    This module defines three classes: DbType derived from
-    DbSchemaObject, Domain derived from DbType, and DbTypeDict derived
-    from DbObjectDict.
+    This module defines five classes: DbType derived from
+    DbSchemaObject, Composite, Domain and Enum derived from DbType,
+    and DbTypeDict derived from DbObjectDict.
 """
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
 from pyrseas.dbobject.constraint import CheckConstraint
 
 
 class DbType(DbSchemaObject):
-    """A domain or enum type"""
+    """A composite, domain or enum type"""
 
     keylist = ['schema', 'name']
+
+
+class Composite(DbType):
+    """A composite type"""
+
+    objtype = "TYPE"
+
+    def to_map(self):
+        """Convert a type to a YAML-suitable format
+
+        :return: dictionary
+        """
+        if not hasattr(self, 'attributes'):
+            return
+        attrs = [{att.name: att.type} for att in self.attributes]
+        return {self.extern_key(): {'attributes': attrs}}
+
+    def create(self):
+        """Return SQL statements to CREATE the composite type
+
+        :return: SQL statements
+        """
+        stmts = []
+        attrs = ["%s %s" % (att.name, att.type) for att in self.attributes]
+        stmts.append("CREATE TYPE %s AS (%s)" % (
+                self.qualname(), ",\n    ".join(attrs)))
+        if hasattr(self, 'description'):
+            stmts.append(self.comment())
+        return stmts
 
 
 class Enum(DbType):
@@ -23,7 +52,7 @@ class Enum(DbType):
     objtype = "TYPE"
 
     def to_map(self):
-        """Convert an enum to a YAML-suitable format
+        """Convert a type to a YAML-suitable format
 
         :return: dictionary
         """
@@ -118,10 +147,13 @@ class TypeDict(DbObjectDict):
                   description
            FROM pg_type t
                 JOIN pg_namespace n ON (typnamespace = n.oid)
+                LEFT JOIN pg_class c ON (typrelid = c.oid)
                 LEFT JOIN pg_description d
                      ON (t.oid = d.objoid AND d.objsubid = 0)
-           WHERE typtype in ('d', 'e')
-             AND (nspname != 'pg_catalog' AND nspname != 'information_schema')
+           WHERE (typtype in ('d', 'e')
+                 OR (typtype = 'c' AND relkind = 'c'))
+             AND nspname NOT IN ('pg_catalog', 'pg_toast',
+                                 'information_schema')
            ORDER BY nspname, typname"""
 
     def _from_catalog(self):
@@ -135,6 +167,9 @@ class TypeDict(DbObjectDict):
             elif kind == 'e':
                 del dbtype.type
                 self[(sch, typ)] = Enum(**dbtype.__dict__)
+            elif kind == 'c':
+                del dbtype.type
+                self[(sch, typ)] = Composite(**dbtype.__dict__)
 
     def from_map(self, schema, inobjs, newdb):
         """Initalize the dictionary of types by converting the input map
@@ -172,17 +207,35 @@ class TypeDict(DbObjectDict):
                         enum.oldname = inenum['oldname']
                     if 'description' in inenum:
                         enum.description = inenum['description']
+                if 'attributes' in inobjs[k]:
+                    self[(schema.name, key)] = comp = Composite(
+                        schema=schema.name, name=key)
+                    incomp = inobjs[k]
+                    try:
+                        newdb.columns.from_map(comp, incomp['attributes'])
+                    except KeyError as exc:
+                        exc.args = ("Type '%s' has no attributes" % key, )
+                        raise
+                    if 'oldname' in incomp:
+                        comp.oldname = incomp['oldname']
+                    if 'description' in incomp:
+                        comp.description = incomp['description']
             else:
                 raise KeyError("Unrecognized object type: %s" % k)
 
-    def link_refs(self, dbconstrs):
+    def link_refs(self, dbcolumns, dbconstrs):
         """Connect constraints to their respective domains
 
+        :param dbcolumns: dictionary of columns
         :param dbconstrs: dictionary of constraints
 
         Fills the `check_constraints` dictionaries for each domain by
         traversing the `dbconstrs` dictionary.
         """
+        for (sch, typ) in dbcolumns.keys():
+            if (sch, typ) in self:
+                assert isinstance(self[(sch, typ)], Composite)
+                self[(sch, typ)].attributes = dbcolumns[(sch, typ)]
         for (sch, typ, cns) in dbconstrs.keys():
             constr = dbconstrs[(sch, typ, cns)]
             if not hasattr(constr, 'target') or constr.target != 'd':
