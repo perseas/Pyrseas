@@ -45,6 +45,7 @@ classes and methods are documented mainly for developer use.
    dbconn
    database
    language
+   cast
    schema
    type
    table

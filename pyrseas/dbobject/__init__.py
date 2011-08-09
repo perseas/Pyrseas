@@ -28,7 +28,7 @@ def split_schema_table(tbl, sch=None):
 class DbObject(object):
     "A single object in a database catalog, e.g., a schema, a table, a column"
 
-    keylist = []
+    keylist = ['name']
     objtype = ''
 
     def __init__(self, **attrs):
@@ -62,7 +62,7 @@ class DbObject(object):
 
         :return: string
         """
-        return self.name
+        return self.__dict__[self.keylist[0]]
 
     def comment(self):
         """Return SQL statement to create COMMENT on object

@@ -11,6 +11,7 @@
     on the `input_map` supplied to the `from_map` method.
 """
 from pyrseas.dbobject.language import LanguageDict
+from pyrseas.dbobject.cast import CastDict
 from pyrseas.dbobject.schema import SchemaDict
 from pyrseas.dbobject.dbtype import TypeDict
 from pyrseas.dbobject.table import ClassDict
@@ -45,6 +46,7 @@ class Database(object):
             :param dbconn: a DbConnection object
             """
             self.languages = LanguageDict(dbconn)
+            self.casts = CastDict(dbconn)
             self.schemas = SchemaDict(dbconn)
             self.types = TypeDict(dbconn)
             self.tables = ClassDict(dbconn)
@@ -98,15 +100,19 @@ class Database(object):
         self.ndb = self.Dicts()
         input_schemas = {}
         input_langs = {}
+        input_casts = {}
         for key in input_map.keys():
             if key.startswith('schema '):
                 input_schemas.update({key: input_map[key]})
             elif key.startswith('language '):
                 input_langs.update({key: input_map[key]})
+            elif key.startswith('cast '):
+                input_casts.update({key: input_map[key]})
             else:
                 raise KeyError("Expected typed object, found '%s'" % key)
         self.ndb.languages.from_map(input_langs)
         self.ndb.schemas.from_map(input_schemas, self.ndb)
+        self.ndb.casts.from_map(input_casts, self.ndb)
         self._link_refs(self.ndb)
 
     def to_map(self):
@@ -117,6 +123,7 @@ class Database(object):
         if not self.db:
             self.from_catalog()
         dbmap = self.db.languages.to_map()
+        dbmap.update(self.db.casts.to_map())
         dbmap.update(self.db.schemas.to_map())
         return dbmap
 
@@ -146,6 +153,7 @@ class Database(object):
         stmts.append(self.db.columns.diff_map(self.ndb.columns))
         stmts.append(self.db.triggers.diff_map(self.ndb.triggers))
         stmts.append(self.db.rules.diff_map(self.ndb.rules))
+        stmts.append(self.db.casts.diff_map(self.ndb.casts))
         stmts.append(self.db.operators._drop())
         stmts.append(self.db.functions._drop())
         stmts.append(self.db.types._drop())
