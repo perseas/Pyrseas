@@ -17,6 +17,7 @@ import test_function
 import test_operator
 import test_trigger
 import test_rule
+import test_conversion
 
 
 def suite():
@@ -35,6 +36,7 @@ def suite():
     tests.addTest(test_operator.suite())
     tests.addTest(test_trigger.suite())
     tests.addTest(test_rule.suite())
+    tests.addTest(test_conversion.suite())
     return tests
 
 if __name__ == '__main__':

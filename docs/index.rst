@@ -44,18 +44,20 @@ classes and methods are documented mainly for developer use.
    dbobject
    dbconn
    database
-   language
    cast
+   language
    schema
+   conversion
+   function
+   operator
    type
    table
    column
    constraint
    indexes
-   function
-   operator
-   trigger
    rule
+   trigger
+
 
 Indices and tables
 ==================

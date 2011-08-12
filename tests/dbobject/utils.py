@@ -189,6 +189,19 @@ class PostgresDb(object):
                 self.execute("DROP TYPE IF EXISTS %s.%s CASCADE" % (
                         typ[0], typ[1]))
         self.conn.commit()
+        curs = pgexecute(
+            self.conn,
+            """SELECT nspname, conname FROM pg_conversion c
+                      JOIN pg_namespace n ON (connamespace = n.oid)
+               WHERE (nspname != 'pg_catalog'
+                     AND nspname != 'information_schema')""")
+        convs = curs.fetchall()
+        curs.close()
+        self.conn.rollback()
+        for cnv in convs:
+            self.execute("DROP CONVERSION IF EXISTS %s.%s CASCADE" % (
+                    cnv[0], cnv[1]))
+        self.conn.commit()
 
     def drop(self):
         "Drop the database"

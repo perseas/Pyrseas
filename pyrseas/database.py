@@ -22,6 +22,7 @@ from pyrseas.dbobject.function import ProcDict
 from pyrseas.dbobject.operator import OperatorDict
 from pyrseas.dbobject.rule import RuleDict
 from pyrseas.dbobject.trigger import TriggerDict
+from pyrseas.dbobject.conversion import ConversionDict
 
 
 def flatten(lst):
@@ -57,6 +58,7 @@ class Database(object):
             self.operators = OperatorDict(dbconn)
             self.rules = RuleDict(dbconn)
             self.triggers = TriggerDict(dbconn)
+            self.conversions = ConversionDict(dbconn)
 
     def __init__(self, dbconn):
         """Initialize the database
@@ -69,7 +71,8 @@ class Database(object):
     def _link_refs(self, db):
         """Link related objects"""
         db.languages.link_refs(db.functions)
-        db.schemas.link_refs(db.types, db.tables, db.functions, db.operators)
+        db.schemas.link_refs(db.types, db.tables, db.functions, db.operators,
+                             db.conversions)
         db.tables.link_refs(db.columns, db.constraints, db.indexes,
                             db.rules, db.triggers)
         db.types.link_refs(db.columns, db.constraints)
@@ -153,6 +156,7 @@ class Database(object):
         stmts.append(self.db.columns.diff_map(self.ndb.columns))
         stmts.append(self.db.triggers.diff_map(self.ndb.triggers))
         stmts.append(self.db.rules.diff_map(self.ndb.rules))
+        stmts.append(self.db.conversions.diff_map(self.ndb.conversions))
         stmts.append(self.db.casts.diff_map(self.ndb.casts))
         stmts.append(self.db.operators._drop())
         stmts.append(self.db.functions._drop())
