@@ -22,6 +22,7 @@ Contents:
 
    overview
    install
+   testing
 .. toctree::
    :maxdepth: 1
 
