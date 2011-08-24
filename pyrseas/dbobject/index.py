@@ -6,7 +6,7 @@
     This defines two classes, Index and IndexDict, derived
     from DbSchemaObject and DbObjectDict, respectively.
 """
-from pyrseas.dbobject import DbObjectDict, DbSchemaObject
+from pyrseas.dbobject import DbObjectDict, DbSchemaObject, quote_id
 
 
 class Index(DbSchemaObject):
@@ -51,8 +51,8 @@ class Index(DbSchemaObject):
         acc = hasattr(self, 'access_method') \
             and 'USING %s ' % self.access_method or ''
         stmts.append("CREATE %sINDEX %s ON %s %s(%s)" % (
-            unq and 'UNIQUE ' or '', self.name, self.table, acc,
-            hasattr(self, 'keycols') and self.key_columns() or
+            unq and 'UNIQUE ' or '', quote_id(self.name), quote_id(self.table),
+            acc, hasattr(self, 'keycols') and self.key_columns() or
             self.expression))
         return stmts
 

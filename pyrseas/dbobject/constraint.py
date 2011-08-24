@@ -8,7 +8,8 @@
     UniqueConstraint derived from Constraint, and ConstraintDict
     derived from DbObjectDict.
 """
-from pyrseas.dbobject import DbObjectDict, DbSchemaObject, split_schema_table
+from pyrseas.dbobject import DbObjectDict, DbSchemaObject
+from pyrseas.dbobject import quote_id, split_schema_table
 
 
 ACTIONS = {'r': 'restrict', 'c': 'cascade', 'n': 'set null',
@@ -26,7 +27,7 @@ class Constraint(DbSchemaObject):
 
         :return: string
         """
-        return ", ".join(self.keycols)
+        return ", ".join([quote_id(col) for col in self.keycols])
 
     def _qualtable(self):
         """Return a schema-qualified name for a newly constructed object"""
@@ -42,7 +43,7 @@ class Constraint(DbSchemaObject):
         """
         return "ALTER TABLE %s ADD CONSTRAINT %s %s (%s)" % (
             DbSchemaObject(schema=self.schema, name=self.table).qualname(),
-            self.name,
+            quote_id(self.name),
             self.objtype, self.key_columns())
 
     def drop(self):

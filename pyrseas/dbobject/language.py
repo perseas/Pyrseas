@@ -6,7 +6,7 @@
     This defines two classes, Language and LanguageDict, derived from
     DbObject and DbObjectDict, respectively.
 """
-from pyrseas.dbobject import DbObjectDict, DbObject
+from pyrseas.dbobject import DbObjectDict, DbObject, quote_id
 from pyrseas.dbobject.function import Function
 
 
@@ -37,7 +37,7 @@ class Language(DbObject):
 
         :return: SQL statements
         """
-        stmts = ["CREATE LANGUAGE %s" % self.name]
+        stmts = ["CREATE LANGUAGE %s" % quote_id(self.name)]
         if hasattr(self, 'description'):
             stmts.append(self.comment())
         return stmts
@@ -86,7 +86,10 @@ class LanguageDict(DbObjectDict):
         :param inmap: the input YAML map defining the languages
         """
         for lng in inmap.keys():
-            key = lng.split()[1]
+            spc = lng.find(' ')
+            if spc == -1:
+                raise KeyError("Unrecognized object type: %s" % lng)
+            key = lng[spc + 1:]
             language = self[key] = Language(name=key)
             inlanguage = inmap[lng]
             if inlanguage:

@@ -6,7 +6,8 @@
     This defines two classes, Schema and SchemaDict, derived from
     DbObject and DbObjectDict, respectively.
 """
-from pyrseas.dbobject import DbObjectDict, DbObject, split_schema_table
+from pyrseas.dbobject import DbObjectDict, DbObject
+from pyrseas.dbobject import quote_id, split_schema_table
 from dbtype import Domain, Enum
 from table import Table, Sequence, View
 
@@ -65,7 +66,7 @@ class Schema(DbObject):
 
         :return: SQL statements
         """
-        stmts = ["CREATE SCHEMA %s" % self.name]
+        stmts = ["CREATE SCHEMA %s" % quote_id(self.name)]
         if hasattr(self, 'description'):
             stmts.append(self.comment())
         return stmts
@@ -119,7 +120,10 @@ class SchemaDict(DbObjectDict):
         describing the database objects.
         """
         for sch in inmap.keys():
-            key = sch.split()[1]
+            spc = sch.find(' ')
+            if spc == -1:
+                raise KeyError("Unrecognized object type: %s" % sch)
+            key = sch[spc + 1:]
             schema = self[key] = Schema(name=key)
             inschema = inmap[sch]
             intypes = {}

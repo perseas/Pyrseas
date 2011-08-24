@@ -7,6 +7,31 @@
     Most Pyrseas classes are derived from either DbObject or
     DbObjectDict.
 """
+import string
+
+
+VALID_FIRST_CHARS = string.lowercase + '_'
+VALID_CHARS = string.lowercase + string.digits + '_$'
+
+
+def quote_id(name):
+    """Quotes an identifier if necessary.
+
+    :param name: string to be quoted
+
+    :return: possibly quoted string
+    """
+    # TODO: keywords
+    regular_id = True
+    if not name[0] in VALID_FIRST_CHARS:
+        regular_id = False
+    else:
+        for ltr in name[1:]:
+            if ltr not in VALID_CHARS:
+                regular_id = False
+                break
+
+    return regular_id and name or '"%s"' % name
 
 
 def split_schema_table(tbl, sch=None):
@@ -62,7 +87,7 @@ class DbObject(object):
 
         :return: string
         """
-        return self.name
+        return quote_id(self.name)
 
     def comment(self):
         """Return SQL statement to create COMMENT on object
@@ -130,8 +155,8 @@ class DbSchemaObject(DbObject):
 
         No qualification is used if the schema is 'public'.
         """
-        return self.schema == 'public' and self.name \
-            or "%s.%s" % (self.schema, self.name)
+        return self.schema == 'public' and quote_id(self.name) \
+            or "%s.%s" % (quote_id(self.schema), quote_id(self.name))
 
     def unqualify(self):
         """Adjust the schema and table name if the latter is qualified"""
