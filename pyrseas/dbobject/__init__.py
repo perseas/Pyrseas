@@ -45,6 +45,8 @@ def split_schema_table(tbl, sch=None):
         qualsch = 'public'
     if '.' in tbl:
         (qualsch, tbl) = tbl.split('.')
+    if tbl[:1] == '"' and tbl[-1:] == '"':
+        tbl = tbl[1:-1]
     if sch != qualsch:
         sch = qualsch
     return (sch, tbl)
@@ -186,7 +188,7 @@ class DbSchemaObject(DbObject):
         """Return a SQL SET search_path if not in the 'public' schema"""
         stmt = ''
         if self.schema != 'public':
-            stmt = "SET search_path TO %s, pg_catalog" % self.schema
+            stmt = "SET search_path TO %s, pg_catalog" % quote_id(self.schema)
         return stmt
 
 

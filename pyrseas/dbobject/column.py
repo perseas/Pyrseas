@@ -84,7 +84,7 @@ class Column(DbSchemaObject):
         if pth:
             stmts.append(pth)
         stmts.append("ALTER TABLE %s ALTER COLUMN %s SET DEFAULT %s" % (
-                self.table, self.name, self.default))
+                quote_id(self.table), quote_id(self.name), self.default))
         return stmts
 
     def diff_map(self, incol):

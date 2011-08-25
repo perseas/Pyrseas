@@ -109,7 +109,8 @@ class Sequence(DbClass):
         if pth:
             stmts.append(pth)
         stmts.append("ALTER SEQUENCE %s OWNED BY %s.%s" % (
-                self.name, self.owner_table, self.owner_column))
+                quote_id(self.name), quote_id(self.owner_table),
+                quote_id(self.owner_column)))
         return stmts
 
     def diff_map(self, inseq):
