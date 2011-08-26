@@ -6,7 +6,7 @@
     This module defines two classes: Trigger derived from
     DbSchemaObject, and TriggerDict derived from DbObjectDict.
 """
-from pyrseas.dbobject import DbObjectDict, DbSchemaObject
+from pyrseas.dbobject import DbObjectDict, DbSchemaObject, quote_id
 
 
 EXEC_PROC = 'EXECUTE PROCEDURE '
@@ -24,7 +24,7 @@ class Trigger(DbSchemaObject):
 
         :return: string
         """
-        return "%s ON %s" % (self.name, self._table.qualname())
+        return "%s ON %s" % (quote_id(self.name), self._table.qualname())
 
     def to_map(self):
         """Convert a trigger to a YAML-suitable format
@@ -64,7 +64,7 @@ class Trigger(DbSchemaObject):
             cond = "\n    WHEN (%s)" % self.condition
         stmts.append("CREATE %sTRIGGER %s\n    %s %s ON %s%s\n    FOR EACH %s"
                      "%s\n    EXECUTE PROCEDURE %s" % (
-                constr, self.name, self.timing.upper(), evts,
+                constr, quote_id(self.name), self.timing.upper(), evts,
                 self._table.qualname(), defer,
                 self.level.upper(), cond, self.procedure))
         if hasattr(self, 'description'):

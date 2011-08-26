@@ -6,7 +6,7 @@
     This module defines two classes: Operator derived from
     DbSchemaObject and OperatorDict derived from DbObjectDict.
 """
-from pyrseas.dbobject import DbObjectDict, DbSchemaObject
+from pyrseas.dbobject import DbObjectDict, DbSchemaObject, quote_id
 
 
 class Operator(DbSchemaObject):
@@ -23,6 +23,16 @@ class Operator(DbSchemaObject):
         """
         return '%s %s(%s, %s)' % (self.objtype.lower(), self.name,
                                   self.leftarg, self.rightarg)
+
+    def qualname(self):
+        """Return the schema-qualified name of the operator
+
+        :return: string
+
+        No qualification is used if the schema is 'public'.
+        """
+        return self.schema == 'public' and self.name \
+            or "%s.%s" % (quote_id(self.schema), self.name)
 
     def identifier(self):
         """Return a full identifier for an operator object

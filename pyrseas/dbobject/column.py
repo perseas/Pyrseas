@@ -6,7 +6,7 @@
     This module defines two classes: Column derived from
     DbSchemaObject and ColumnDict derived from DbObjectDict.
 """
-from pyrseas.dbobject import DbObjectDict, DbSchemaObject
+from pyrseas.dbobject import DbObjectDict, DbSchemaObject, quote_id
 
 
 class Column(DbSchemaObject):
@@ -34,7 +34,7 @@ class Column(DbSchemaObject):
 
         :return: partial SQL statement
         """
-        stmt = "%s %s" % (self.name, self.type)
+        stmt = "%s %s" % (quote_id(self.name), self.type)
         if hasattr(self, 'not_null'):
             stmt += ' NOT NULL'
         if hasattr(self, 'default'):
@@ -84,7 +84,7 @@ class Column(DbSchemaObject):
         if pth:
             stmts.append(pth)
         stmts.append("ALTER TABLE %s ALTER COLUMN %s SET DEFAULT %s" % (
-                self.table, self.name, self.default))
+                quote_id(self.table), quote_id(self.name), self.default))
         return stmts
 
     def diff_map(self, incol):

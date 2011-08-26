@@ -6,7 +6,7 @@
     This defines two classes, Rule and RuleDict, derived from
     DbSchemaObject and DbObjectDict, respectively.
 """
-from pyrseas.dbobject import DbObjectDict, DbSchemaObject
+from pyrseas.dbobject import DbObjectDict, DbSchemaObject, quote_id
 
 
 class Rule(DbSchemaObject):
@@ -20,7 +20,7 @@ class Rule(DbSchemaObject):
 
         :return: string
         """
-        return "%s ON %s" % (self.name, self._table.qualname())
+        return "%s ON %s" % (quote_id(self.name), self._table.qualname())
 
     def to_map(self):
         """Convert rule to a YAML-suitable format
@@ -45,8 +45,8 @@ class Rule(DbSchemaObject):
         if hasattr(self, 'instead'):
             instead = 'INSTEAD '
         stmts.append("CREATE RULE %s AS ON %s\n    TO %s%s\n    DO %s%s" % (
-                self.name, self.event.upper(), self._table.qualname(),
-                where, instead, self.actions))
+                quote_id(self.name), self.event.upper(),
+                self._table.qualname(), where, instead, self.actions))
         if hasattr(self, 'description'):
             stmts.append(self.comment())
         return stmts

@@ -1,3 +1,13 @@
+0.3.1 (26-Aug-2011)
+
+  * Added workaround for incorrect assumption that 'public' schema is
+    always present (issue #4).
+
+  * Added support for delimited (or quoted) identifiers, e.g., those
+    with embedded spaces, upper case characters, etc. (except for SQL
+    keywords) (issue #5).
+
+
 0.3.0 (30-Jun-2011)
 
   * Added support for:
@@ -19,6 +29,7 @@
 
   * Fixed problem with mapping a FOREIGN KEY in a table with a dropped
     column (issue #2).
+
 
 0.2.0 (19-May-2011)
 

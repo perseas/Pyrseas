@@ -48,7 +48,11 @@ class DbConnection(object):
                 self.host, self.port, self.dbname,
                 self.user or os.getenv("USER")),
                             connection_factory=DictConnection)
-        self._execute("set search_path to public, pg_catalog")
+        try:
+            self._execute("set search_path to public, pg_catalog")
+        except:
+            self.conn.rollback()
+            self._execute("set search_path to pg_catalog")
         self._version = int(self.fetchone("SHOW server_version_num")[0])
 
     def _execute(self, query):

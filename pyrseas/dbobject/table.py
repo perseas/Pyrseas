@@ -9,7 +9,8 @@
 """
 import sys
 
-from pyrseas.dbobject import DbObjectDict, DbSchemaObject, split_schema_table
+from pyrseas.dbobject import DbObjectDict, DbSchemaObject
+from pyrseas.dbobject import quote_id, split_schema_table
 from constraint import CheckConstraint, PrimaryKey, ForeignKey, \
     UniqueConstraint
 
@@ -35,7 +36,7 @@ class Sequence(DbClass):
         data = dbconn.fetchone(
             """SELECT start_value, increment_by, max_value, min_value,
                       cache_value
-               FROM %s.%s""" % (self.schema, self.name))
+               FROM %s.%s""" % (quote_id(self.schema), quote_id(self.name)))
         for key, val in data.items():
             setattr(self, key, val)
 
@@ -108,7 +109,8 @@ class Sequence(DbClass):
         if pth:
             stmts.append(pth)
         stmts.append("ALTER SEQUENCE %s OWNED BY %s.%s" % (
-                self.name, self.owner_table, self.owner_column))
+                quote_id(self.name), quote_id(self.owner_table),
+                quote_id(self.owner_column)))
         return stmts
 
     def diff_map(self, inseq):
