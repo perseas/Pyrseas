@@ -57,18 +57,22 @@ class Operator(DbSchemaObject):
         :return: SQL statements
         """
         stmts = []
-        leftarg = rightarg = com_op = neg_op = ''
+        opt_clauses = []
         if self.leftarg != 'NONE':
-            leftarg = ",\n    LEFTARG = %s" % self.leftarg
+            opt_clauses.append("LEFTARG = %s" % self.leftarg)
         if self.rightarg != 'NONE':
-            rightarg = ",\n    RIGHTARG = %s" % self.rightarg
+            opt_clauses.append("RIGHTARG = %s" % self.rightarg)
         if hasattr(self, 'commutator'):
-            com_op = ",\n    COMMUTATOR = OPERATOR(%s)" % self.commutator
+            opt_clauses.append("COMMUTATOR = OPERATOR(%s)" % self.commutator)
         if hasattr(self, 'negator'):
-            com_op = ",\n    NEGATOR = OPERATOR(%s)" % self.negator
-        stmts.append("CREATE OPERATOR %s (\n    PROCEDURE = %s%s%s%s%s)" % (
-                self.qualname(), self.procedure, leftarg, rightarg, com_op,
-                neg_op))
+            opt_clauses.append("NEGATOR = OPERATOR(%s)" % self.negator)
+        if hasattr(self, 'restrict'):
+            opt_clauses.append("RESTRICT = %s" % self.restrict)
+        if hasattr(self, 'join'):
+            opt_clauses.append("JOIN = %s" % self.join)
+        stmts.append("CREATE OPERATOR %s (\n    PROCEDURE = %s%s%s)" % (
+                self.qualname(), self.procedure,
+                ',\n    ' if opt_clauses else '', ',\n    '.join(opt_clauses)))
         if hasattr(self, 'description'):
             stmts.append(self.comment())
         return stmts
@@ -96,7 +100,8 @@ class OperatorDict(DbObjectDict):
         """SELECT nspname AS schema, oprname AS name,
                   oprleft::regtype AS leftarg, oprright::regtype AS rightarg,
                   oprcode::regproc AS procedure, oprcom::regoper AS commutator,
-                  oprnegate::regoper AS negator, description
+                  oprnegate::regoper AS negator, oprrest::regproc AS restrict,
+                  oprjoin::regproc AS join, description
            FROM pg_operator o
                 JOIN pg_namespace n ON (oprnamespace = n.oid)
                 LEFT JOIN pg_description d
@@ -116,6 +121,10 @@ class OperatorDict(DbObjectDict):
                 del oper.commutator
             if oper.negator == '0':
                 del oper.negator
+            if oper.restrict == '-':
+                del oper.restrict
+            if oper.join == '-':
+                del oper.join
             self[(sch, opr, lft, rgt)] = Operator(**oper.__dict__)
 
     def from_map(self, schema, inopers):
@@ -125,10 +134,9 @@ class OperatorDict(DbObjectDict):
         :param inopers: YAML map defining the operators
         """
         for key in inopers.keys():
-            spc = key.find(' ')
-            if spc == -1:
+            (objtype, spc, opr) = key.partition(' ')
+            if spc != ' ' or objtype != 'operator':
                 raise KeyError("Unrecognized object type: %s" % key)
-            opr = key[spc + 1:]
             paren = opr.find('(')
             if paren == -1 or opr[-1:] != ')':
                 raise KeyError("Invalid operator signature: %s" % opr)

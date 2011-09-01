@@ -42,8 +42,8 @@ class OperatorToMapTestCase(PyrseasTestCase):
         "Map a operator comment"
         self.db.execute(CREATE_STMT)
         dbmap = self.db.execute_and_map(COMMENT_STMT)
-        self.assertEqual(dbmap['schema public'] \
-                             ['operator +(text, text)']['description'],
+        self.assertEqual(dbmap['schema public']
+                         ['operator +(text, text)']['description'],
                          'Test operator +')
 
 

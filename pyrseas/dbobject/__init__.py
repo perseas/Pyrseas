@@ -34,22 +34,23 @@ def quote_id(name):
     return regular_id and name or '"%s"' % name
 
 
-def split_schema_table(tbl, sch=None):
-    """Return a (schema, table) tuple given a possibly schema-qualified name
+def split_schema_obj(obj, sch=None):
+    """Return a (schema, object) tuple given a possibly schema-qualified name
 
-    :param tbl: table name or schema.table
+    :param obj: object name or schema.object
+    :param sch: schema name (defaults to 'public')
     :return: tuple
     """
     qualsch = sch
     if sch == None:
         qualsch = 'public'
-    if '.' in tbl:
-        (qualsch, tbl) = tbl.split('.')
-    if tbl[:1] == '"' and tbl[-1:] == '"':
-        tbl = tbl[1:-1]
+    if '.' in obj:
+        (qualsch, obj) = obj.split('.')
+    if obj[:1] == '"' and obj[-1:] == '"':
+        obj = obj[1:-1]
     if sch != qualsch:
         sch = qualsch
-    return (sch, tbl)
+    return (sch, obj)
 
 
 class DbObject(object):
@@ -163,7 +164,7 @@ class DbSchemaObject(DbObject):
     def unqualify(self):
         """Adjust the schema and table name if the latter is qualified"""
         if hasattr(self, 'table') and '.' in self.table:
-            (sch, self.table) = split_schema_table(self.table, self.schema)
+            (sch, self.table) = split_schema_obj(self.table, self.schema)
 
     def drop(self):
         """Return a SQL DROP statement for the schema object

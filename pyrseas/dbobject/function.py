@@ -55,35 +55,55 @@ class Function(Proc):
         if hasattr(self, 'obj_file'):
             dct['link_symbol'] = self.source
             del dct['source']
+        if hasattr(self, '_dep_type'):
+            del dct['_dep_type']
+        if hasattr(self, 'cost') and self.cost != 0:
+            if self.language in ['c', 'internal']:
+                if self.cost == 1:
+                    del dct['cost']
+            else:
+                if self.cost == 100:
+                    del dct['cost']
         return {self.extern_key(): dct}
 
-    def create(self, newsrc=None):
+    def create(self, newsrc=None, basetype=False):
         """Return SQL statements to CREATE or REPLACE the function
 
         :param newsrc: new source for a changed function
         :return: SQL statements
         """
         stmts = []
+        if hasattr(self, '_dep_type') and not basetype:
+            return stmts
         if hasattr(self, 'dependent_table'):
             stmts.append(self.dependent_table.create())
         if hasattr(self, 'obj_file'):
             src = "'%s', '%s'" % (self.obj_file,
                                   hasattr(self, 'link_symbol')
                                   and self.link_symbol or self.name)
+        elif self.language == 'internal':
+            src = "$$%s$$" % (newsrc or self.source)
         else:
             src = "$_$%s$_$" % (newsrc or self.source)
-        volat = strict = secdef = ''
+        volat = strict = secdef = cost = ''
         if hasattr(self, 'volatility'):
             volat = ' ' + VOLATILITY_TYPES[self.volatility].upper()
         if hasattr(self, 'strict') and self.strict:
             strict = ' STRICT'
         if hasattr(self, 'security_definer') and self.security_definer:
             secdef = ' SECURITY DEFINER'
+        if hasattr(self, 'cost') and self.cost != 0:
+            if self.language in ['c', 'internal']:
+                if self.cost != 1:
+                    cost = " COST %s" % self.cost
+            else:
+                if self.cost != 100:
+                    cost = " COST %s" % self.cost
         stmts.append("CREATE%s FUNCTION %s(%s) RETURNS %s\n    LANGUAGE %s"
-                     "%s%s%s\n    AS %s" % (
+                     "%s%s%s%s\n    AS %s" % (
                 newsrc and " OR REPLACE" or '', self.qualname(),
                 self.arguments, self.returns, self.language, volat, strict,
-                secdef, src))
+                secdef, cost, src))
         if hasattr(self, 'description'):
             stmts.append(self.comment())
         return stmts
@@ -99,8 +119,9 @@ class Function(Proc):
         input.
         """
         stmts = []
-        if self.source != infunction.source:
-            stmts.append(self.create(infunction.source))
+        if hasattr(self, 'source') and hasattr(infunction, 'source'):
+            if self.source != infunction.source:
+                stmts.append(self.create(infunction.source))
         stmts.append(self.diff_description(infunction))
         return stmts
 
@@ -141,6 +162,20 @@ class Aggregate(Proc):
             stmts.append(self.comment())
         return stmts
 
+    def diff_map(self, inaggr):
+        """Generate SQL to transform an existing aggregate function
+
+        :param inaggr: a YAML map defining the new aggregate
+        :return: list of SQL statements
+
+        Compares the aggregate to an input aggregate and generates SQL
+        statements to transform it into the one represented by the
+        input.
+        """
+        stmts = []
+        stmts.append(self.diff_description(inaggr))
+        return stmts
+
 
 class ProcDict(DbObjectDict):
     "The collection of regular and aggregate functions in a database"
@@ -153,7 +188,7 @@ class ProcDict(DbObjectDict):
                   l.lanname AS language, provolatile AS volatility,
                   proisstrict AS strict, proisagg, prosrc AS source,
                   probin::text AS obj_file,
-                  prosecdef AS security_definer,
+                  prosecdef AS security_definer, procost AS cost,
                   aggtransfn::regprocedure AS sfunc,
                   aggtranstype::regtype AS stype,
                   aggfinalfn::regprocedure AS finalfunc,
@@ -177,6 +212,7 @@ class ProcDict(DbObjectDict):
                 del proc.source
                 del proc.volatility
                 del proc.returns
+                del proc.cost
                 if proc.finalfunc == '-':
                     del proc.finalfunc
                 self[(sch, prc, arg)] = Aggregate(**proc.__dict__)
@@ -190,13 +226,9 @@ class ProcDict(DbObjectDict):
         :param infuncs: YAML map defining the functions
         """
         for key in infuncs.keys():
-            spc = key.find(' ')
-            if spc == -1:
+            (objtype, spc, fnc) = key.partition(' ')
+            if spc != ' ' or objtype not in ['function', 'aggregate']:
                 raise KeyError("Unrecognized object type: %s" % key)
-            objtype = key[:spc]
-            if objtype not in ['function', 'aggregate']:
-                raise KeyError("Unrecognized object type: %s" % key)
-            fnc = key[spc + 1:]
             paren = fnc.find('(')
             if paren == -1 or fnc[-1:] != ')':
                 raise KeyError("Invalid function signature: %s" % fnc)
@@ -299,6 +331,12 @@ class ProcDict(DbObjectDict):
         stmts = []
         for (sch, fnc, arg) in self.keys():
             func = self[(sch, fnc, arg)]
-            if hasattr(func, 'dropped'):
+            if isinstance(func, Aggregate) and hasattr(func, 'dropped'):
                 stmts.append(func.drop())
+
+        for (sch, fnc, arg) in self.keys():
+            func = self[(sch, fnc, arg)]
+            if hasattr(func, 'dropped') and not hasattr(func, '_dep_type'):
+                stmts.append(func.drop())
+
         return stmts

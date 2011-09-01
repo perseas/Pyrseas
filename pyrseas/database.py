@@ -75,7 +75,7 @@ class Database(object):
                              db.conversions)
         db.tables.link_refs(db.columns, db.constraints, db.indexes,
                             db.rules, db.triggers)
-        db.types.link_refs(db.columns, db.constraints)
+        db.types.link_refs(db.columns, db.constraints, db.functions)
 
     def from_catalog(self):
         """Populate the database objects by querying the catalogs

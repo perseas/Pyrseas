@@ -9,7 +9,7 @@
     derived from DbObjectDict.
 """
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
-from pyrseas.dbobject import quote_id, split_schema_table
+from pyrseas.dbobject import quote_id, split_schema_obj
 
 
 ACTIONS = {'r': 'restrict', 'c': 'cascade', 'n': 'set null',
@@ -283,7 +283,7 @@ class ConstraintDict(DbObjectDict):
                 else:
                     constr.on_delete = ACTIONS[constr.on_delete]
                 reftbl = constr.ref_table
-                (constr.ref_schema, constr.ref_table) = split_schema_table(
+                (constr.ref_schema, constr.ref_table) = split_schema_obj(
                     reftbl)
                 self[(sch, tbl, cns)] = ForeignKey(**constr.__dict__)
             elif constr_type == 'u':

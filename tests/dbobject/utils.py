@@ -123,6 +123,7 @@ class PostgresDb(object):
 
     def clear(self):
         "Drop tables and other objects"
+        # Tables, sequences and views
         curs = pgexecute(
             self.conn,
             """SELECT nspname, relname, relkind FROM pg_class
@@ -143,6 +144,33 @@ class PostgresDb(object):
             elif obj['relkind'] == 'v':
                 self.execute("DROP VIEW %s.%s CASCADE" % (obj[0], obj[1]))
         self.conn.commit()
+
+        # Types (base, composite and enums) and domains
+        #
+        # TYPEs have to be done before FUNCTIONs because base types depend
+        # on functions, and we're using CASCADE. Also, exclude base array
+        # types because they depend on the scalar types.
+        curs = pgexecute(
+            self.conn,
+            """SELECT nspname, typname, typtype FROM pg_type t
+                      JOIN pg_namespace n ON (typnamespace = n.oid)
+               WHERE typtype IN ('b', 'c', 'd', 'e')
+                 AND NOT (typtype = 'b' AND typarray = 0)
+                 AND nspname NOT IN ('pg_catalog', 'pg_toast',
+                     'information_schema')""")
+        types = curs.fetchall()
+        curs.close()
+        self.conn.rollback()
+        for typ in types:
+            if typ['typtype'] == 'd':
+                self.execute("DROP DOMAIN IF EXISTS %s.%s CASCADE" % (
+                        typ[0], typ[1]))
+            else:
+                self.execute("DROP TYPE IF EXISTS %s.%s CASCADE" % (
+                        typ[0], typ[1]))
+        self.conn.commit()
+
+        # Functions
         curs = pgexecute(
             self.conn,
             """SELECT nspname, p.oid::regprocedure
@@ -156,6 +184,13 @@ class PostgresDb(object):
             self.execute("DROP FUNCTION IF EXISTS %s.%s CASCADE" % (
                     func[0], func[1]))
         self.conn.commit()
+
+        # Languages
+        if self.version < 90000:
+            if self.is_plpgsql_installed():
+                self.execute_commit("DROP LANGUAGE plpgsql")
+
+        # Operators
         curs = pgexecute(
             self.conn,
             """SELECT nspname, o.oid::regoperator
@@ -169,26 +204,8 @@ class PostgresDb(object):
             self.execute("DROP OPERATOR IF EXISTS %s.%s CASCADE" % (
                     oper[0], oper[1]))
         self.conn.commit()
-        if self.version < 90000:
-            if self.is_plpgsql_installed():
-                self.execute_commit("DROP LANGUAGE plpgsql")
-        curs = pgexecute(
-            self.conn,
-            """SELECT nspname, typname, typtype FROM pg_type t
-                      JOIN pg_namespace n ON (typnamespace = n.oid)
-               WHERE (nspname != 'pg_catalog'
-                     AND nspname != 'information_schema')""")
-        types = curs.fetchall()
-        curs.close()
-        self.conn.rollback()
-        for typ in types:
-            if typ['typtype'] == 'd':
-                self.execute("DROP DOMAIN IF EXISTS %s.%s CASCADE" % (
-                        typ[0], typ[1]))
-            elif typ['typtype'] == 'e':
-                self.execute("DROP TYPE IF EXISTS %s.%s CASCADE" % (
-                        typ[0], typ[1]))
-        self.conn.commit()
+
+        # Conversions
         curs = pgexecute(
             self.conn,
             """SELECT nspname, conname FROM pg_conversion c

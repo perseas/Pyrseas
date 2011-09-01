@@ -32,8 +32,8 @@ class FunctionToMapTestCase(PyrseasTestCase):
         dbmap = self.db.execute_and_map(
             "CREATE FUNCTION f1(integer, integer) RETURNS integer "
             "LANGUAGE sql AS $_$%s$_$" % SOURCE2)
-        self.assertEqual(dbmap['schema public'] \
-                             ['function f1(integer, integer)'], expmap)
+        self.assertEqual(dbmap['schema public']
+                         ['function f1(integer, integer)'], expmap)
 
     def test_map_void_function(self):
         "Map a function returning void"
@@ -79,8 +79,8 @@ class FunctionToMapTestCase(PyrseasTestCase):
         "Map a function comment"
         self.db.execute(CREATE_STMT2)
         dbmap = self.db.execute_and_map(COMMENT_STMT)
-        self.assertEqual(dbmap['schema public'] \
-                             ['function f1(integer, integer)']['description'],
+        self.assertEqual(dbmap['schema public']
+                         ['function f1(integer, integer)']['description'],
                          'Test function f1')
 
 
@@ -348,6 +348,16 @@ class AggregateToSqlTestCase(PyrseasTestCase):
                          "CREATE AGGREGATE a1(integer) "
                          "(SFUNC = f1, STYPE = integer, FINALFUNC = f2, "
                          "INITCOND = '-1')")
+
+    def test_drop_aggregate(self):
+        "Drop an existing aggregate"
+        self.db.execute(CREATE_STMT2)
+        self.db.execute_commit("CREATE AGGREGATE agg1 (integer) "
+                               "(SFUNC = f1, STYPE = integer)")
+        inmap = new_std_map()
+        dbsql = self.db.process_map(inmap)
+        self.assertEqual(dbsql[0], "DROP AGGREGATE agg1(integer)")
+        self.assertEqual(dbsql[1], "DROP FUNCTION f1(integer, integer)")
 
 
 def suite():

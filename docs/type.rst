@@ -3,10 +3,10 @@ Types and Domains
 
 .. module:: pyrseas.dbobject.dbtype
 
-The :mod:`dbtype` module defines five classes, :class:`DbType` derived
-from :class:`DbSchemaObject`, :class:`Composite`, :class:`Enum` and
-:class:`Domain` derived from :class:`DbType`, and :class:`TypeDict`
-derived from and :class:`DbObjectDict`.
+The :mod:`dbtype` module defines six classes, :class:`DbType` derived
+from :class:`DbSchemaObject`, :class:`BaseType`, :class:`Composite`,
+:class:`Enum` and :class:`Domain` derived from :class:`DbType`, and
+:class:`TypeDict` derived from and :class:`DbObjectDict`.
 
 Database Type
 -------------
@@ -17,6 +17,39 @@ domain as defined in the PostgreSQL `pg_type` catalog. Note: Only
 enumerated types are implemented currently.
 
 .. autoclass:: DbType
+
+Base Type
+---------
+
+:class:`BaseType` is derived from :class:`~pyrseas.dbobject.DbType`
+and represents a PostgreSQL `user-defined base type
+<http://www.postgresql.org/docs/current/static/xtypes.html>`_.
+
+The map returned by :meth:`to_map` and expected as argument by
+:meth:`diff_map` has the following structure (not all fields need be
+present)::
+
+  {'type t1':
+      {'alignment': 'double',
+       'analyze': 'analyze_func',
+       'input': 'input_func',
+       'internallength': 'variable',
+       'output': 'output_func',
+       'receive': 'receive_func',
+       'send': 'send_func',
+       'storage': 'plain'
+       'typmod_in': 'typmod_in_func',
+       'typmod_out': 'typmod_out_func'
+      }
+  }
+
+.. autoclass:: BaseType
+
+.. automethod:: BaseType.to_map
+
+.. automethod:: BaseType.create
+
+.. automethod:: BaseType.drop
 
 Composite
 ---------

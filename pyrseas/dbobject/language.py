@@ -85,13 +85,12 @@ class LanguageDict(DbObjectDict):
 
         :param inmap: the input YAML map defining the languages
         """
-        for lng in inmap.keys():
-            spc = lng.find(' ')
-            if spc == -1:
-                raise KeyError("Unrecognized object type: %s" % lng)
-            key = lng[spc + 1:]
-            language = self[key] = Language(name=key)
-            inlanguage = inmap[lng]
+        for key in inmap.keys():
+            (objtype, spc, lng) = key.partition(' ')
+            if spc != ' ' or objtype != 'language':
+                raise KeyError("Unrecognized object type: %s" % key)
+            language = self[lng] = Language(name=lng)
+            inlanguage = inmap[key]
             if inlanguage:
                 if 'oldname' in inlanguage:
                     language.oldname = inlanguage['oldname']

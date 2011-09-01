@@ -7,8 +7,8 @@
     DbObject and DbObjectDict, respectively.
 """
 from pyrseas.dbobject import DbObjectDict, DbObject
-from pyrseas.dbobject import quote_id, split_schema_table
-from dbtype import Domain, Enum, Composite
+from pyrseas.dbobject import quote_id, split_schema_obj
+from dbtype import BaseType, Composite, Domain, Enum
 from table import Table, Sequence, View
 
 
@@ -129,13 +129,12 @@ class SchemaDict(DbObjectDict):
         construction of the internal collection of dictionaries
         describing the database objects.
         """
-        for sch in inmap.keys():
-            spc = sch.find(' ')
-            if spc == -1:
-                raise KeyError("Unrecognized object type: %s" % sch)
-            key = sch[spc + 1:]
-            schema = self[key] = Schema(name=key)
-            inschema = inmap[sch]
+        for key in inmap.keys():
+            (objtype, spc, sch) = key.partition(' ')
+            if spc != ' ' or objtype != 'schema':
+                raise KeyError("Unrecognized object type: %s" % key)
+            schema = self[sch] = Schema(name=sch)
+            inschema = inmap[key]
             intypes = {}
             intables = {}
             infuncs = {}
@@ -192,7 +191,8 @@ class SchemaDict(DbObjectDict):
                 if not hasattr(schema, 'domains'):
                     schema.domains = {}
                 schema.domains.update({typ: dbtypes[(sch, typ)]})
-            elif isinstance(dbtype, Enum) or isinstance(dbtype, Composite):
+            elif isinstance(dbtype, Enum) or isinstance(dbtype, Composite) \
+                    or isinstance(dbtype, BaseType):
                 if not hasattr(schema, 'types'):
                     schema.types = {}
                 schema.types.update({typ: dbtypes[(sch, typ)]})
@@ -223,7 +223,7 @@ class SchemaDict(DbObjectDict):
                 rettype = func.returns
                 if rettype.upper().startswith("SETOF "):
                     rettype = rettype[6:]
-                (retsch, rettyp) = split_schema_table(rettype, sch)
+                (retsch, rettyp) = split_schema_obj(rettype, sch)
                 if (retsch, rettyp) in dbtables.keys():
                     deptbl = dbtables[(retsch, rettyp)]
                     if not hasattr(func, 'dependent_table'):

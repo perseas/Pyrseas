@@ -18,6 +18,8 @@ represents a `PostgreSQL user-defined operator
 
 .. automethod:: Operator.extern_key
 
+.. automethod:: Operator.qualname
+
 .. automethod:: Operator.identifier
 
 .. automethod:: Operator.to_map

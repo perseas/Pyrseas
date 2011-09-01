@@ -10,7 +10,7 @@
 import sys
 
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
-from pyrseas.dbobject import quote_id, split_schema_table
+from pyrseas.dbobject import quote_id, split_schema_obj
 from constraint import CheckConstraint, PrimaryKey, ForeignKey, \
     UniqueConstraint
 
@@ -51,7 +51,7 @@ class Sequence(DbClass):
                WHERE objid = '%s'::regclass
                  AND refclassid = 'pg_class'::regclass""" % self.qualname())
         if data:
-            (sch, self.owner_table) = split_schema_table(data[0], self.schema)
+            (sch, self.owner_table) = split_schema_obj(data[0], self.schema)
             self.owner_column = data[1]
             return
         data = dbconn.fetchone(
@@ -60,7 +60,7 @@ class Sequence(DbClass):
                WHERE refobjid = '%s'::regclass
                AND classid = 'pg_attrdef'::regclass""" % self.qualname())
         if data:
-            (sch, self.dependent_table) = split_schema_table(
+            (sch, self.dependent_table) = split_schema_obj(
                 data[0], self.schema)
 
     def to_map(self):
@@ -389,7 +389,7 @@ class ClassDict(DbObjectDict):
             elif kind == 'v':
                 self[(sch, tbl)] = View(**table.__dict__)
         for (tbl, partbl, num) in self.dbconn.fetchall(self.inhquery):
-            (sch, tbl) = split_schema_table(tbl)
+            (sch, tbl) = split_schema_obj(tbl)
             table = self[(sch, tbl)]
             if not hasattr(table, 'inherits'):
                 table.inherits = []
@@ -403,11 +403,9 @@ class ClassDict(DbObjectDict):
         :param newdb: collection of dictionaries defining the database
         """
         for k in inobjs.keys():
-            spc = k.find(' ')
-            if spc == -1:
+            (objtype, spc, key) = k.partition(' ')
+            if spc != ' ' or objtype not in ['table', 'sequence', 'view']:
                 raise KeyError("Unrecognized object type: %s" % k)
-            objtype = k[:spc]
-            key = k[spc + 1:]
             if objtype == 'table':
                 self[(schema.name, key)] = table = Table(
                     schema=schema.name, name=key)
@@ -485,7 +483,7 @@ class ClassDict(DbObjectDict):
                         column_names()[table.owner_column - 1]
             elif isinstance(table, Table) and hasattr(table, 'inherits'):
                 for partbl in table.inherits:
-                    (parsch, partbl) = split_schema_table(partbl)
+                    (parsch, partbl) = split_schema_obj(partbl)
                     assert self[(parsch, partbl)]
                     parent = self[(parsch, partbl)]
                     if not hasattr(parent, 'descendants'):
@@ -595,7 +593,7 @@ class ClassDict(DbObjectDict):
             intable = inhstack.pop()
             createit = True
             for partbl in intable.inherits:
-                if intables[split_schema_table(partbl)] in inhstack:
+                if intables[split_schema_obj(partbl)] in inhstack:
                     createit = False
             if createit:
                 stmts.append(intable.create())
