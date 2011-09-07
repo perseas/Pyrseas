@@ -92,6 +92,16 @@ class DbObject(object):
         """
         return quote_id(self.__dict__[self.keylist[0]])
 
+    def to_map(self):
+        """Convert an object to a YAML-suitable format
+
+        :return: dictionary
+        """
+        dct = self.__dict__.copy()
+        for k in self.keylist:
+            del dct[k]
+        return {self.extern_key(): dct}
+
     def comment(self):
         """Return SQL statement to create COMMENT on object
 
@@ -118,6 +128,20 @@ class DbObject(object):
         :return: SQL statement
         """
         return "ALTER %s %s RENAME TO %s" % (self.objtype, self.name, newname)
+
+    def diff_map(self, inobj):
+        """Generate SQL to transform an existing object
+
+        :param inobj: a YAML map defining the new object
+        :return: list of SQL statements
+
+        Compares the object to an input object and generates SQL
+        statements to transform it into the one represented by the
+        input.
+        """
+        stmts = []
+        stmts.append(self.diff_description(inobj))
+        return stmts
 
     def diff_description(self, inobj):
         """Generate SQL statements to add or change COMMENTs

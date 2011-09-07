@@ -62,6 +62,11 @@ class Schema(DbObject):
             for oper in self.operators.keys():
                 operators.update(self.operators[oper].to_map())
             schema[key].update(operators)
+        if hasattr(self, 'operfams'):
+            operfams = {}
+            for opf in self.operfams.keys():
+                operfams.update(self.operfams[opf].to_map())
+            schema[key].update(operfams)
         if hasattr(self, 'conversions'):
             conversions = {}
             for conv in self.conversions.keys():
@@ -139,6 +144,7 @@ class SchemaDict(DbObjectDict):
             intables = {}
             infuncs = {}
             inopers = {}
+            inopfams = {}
             inconvs = {}
             for key in inschema.keys():
                 if key.startswith('domain '):
@@ -151,6 +157,8 @@ class SchemaDict(DbObjectDict):
                 elif key.startswith('function ') \
                         or key.startswith('aggregate '):
                     infuncs.update({key: inschema[key]})
+                elif key.startswith('operator family'):
+                    inopfams.update({key: inschema[key]})
                 elif key.startswith('operator '):
                     inopers.update({key: inschema[key]})
                 elif key.startswith('conversion '):
@@ -166,15 +174,18 @@ class SchemaDict(DbObjectDict):
             newdb.tables.from_map(schema, intables, newdb)
             newdb.functions.from_map(schema, infuncs)
             newdb.operators.from_map(schema, inopers)
+            newdb.operfams.from_map(schema, inopfams)
             newdb.conversions.from_map(schema, inconvs)
 
-    def link_refs(self, dbtypes, dbtables, dbfunctions, dbopers, dbconvs):
+    def link_refs(self, dbtypes, dbtables, dbfunctions, dbopers, dbopfams,
+                  dbconvs):
         """Connect types, tables and functions to their respective schemas
 
         :param dbtypes: dictionary of types and domains
         :param dbtables: dictionary of tables, sequences and views
         :param dbfunctions: dictionary of functions
         :param dbopers: dictionary of operators
+        :param dbopfams: dictionary of operator families
         :param dbconvs: dictionary of conversions
 
         Fills in the `domains` dictionary for each schema by
@@ -238,6 +249,13 @@ class SchemaDict(DbObjectDict):
             if not hasattr(schema, 'operators'):
                 schema.operators = {}
             schema.operators.update({(opr, lft, rgt): oper})
+        for (sch, opf, idx) in dbopfams.keys():
+            opfam = dbopfams[(sch, opf, idx)]
+            assert self[sch]
+            schema = self[sch]
+            if not hasattr(schema, 'operfams'):
+                schema.operfams = {}
+            schema.operfams.update({(opf, idx): opfam})
         for (sch, cnv) in dbconvs.keys():
             conv = dbconvs[(sch, cnv)]
             assert self[sch]

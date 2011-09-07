@@ -20,6 +20,7 @@ from pyrseas.dbobject.constraint import ConstraintDict
 from pyrseas.dbobject.index import IndexDict
 from pyrseas.dbobject.function import ProcDict
 from pyrseas.dbobject.operator import OperatorDict
+from pyrseas.dbobject.operfamily import OperatorFamilyDict
 from pyrseas.dbobject.rule import RuleDict
 from pyrseas.dbobject.trigger import TriggerDict
 from pyrseas.dbobject.conversion import ConversionDict
@@ -56,6 +57,7 @@ class Database(object):
             self.indexes = IndexDict(dbconn)
             self.functions = ProcDict(dbconn)
             self.operators = OperatorDict(dbconn)
+            self.operfams = OperatorFamilyDict(dbconn)
             self.rules = RuleDict(dbconn)
             self.triggers = TriggerDict(dbconn)
             self.conversions = ConversionDict(dbconn)
@@ -72,7 +74,7 @@ class Database(object):
         """Link related objects"""
         db.languages.link_refs(db.functions)
         db.schemas.link_refs(db.types, db.tables, db.functions, db.operators,
-                             db.conversions)
+                             db.operfams, db.conversions)
         db.tables.link_refs(db.columns, db.constraints, db.indexes,
                             db.rules, db.triggers)
         db.types.link_refs(db.columns, db.constraints, db.functions)
@@ -150,6 +152,7 @@ class Database(object):
         stmts.append(self.db.types.diff_map(self.ndb.types))
         stmts.append(self.db.functions.diff_map(self.ndb.functions))
         stmts.append(self.db.operators.diff_map(self.ndb.operators))
+        stmts.append(self.db.operfams.diff_map(self.ndb.operfams))
         stmts.append(self.db.tables.diff_map(self.ndb.tables))
         stmts.append(self.db.constraints.diff_map(self.ndb.constraints))
         stmts.append(self.db.indexes.diff_map(self.ndb.indexes))
@@ -159,6 +162,7 @@ class Database(object):
         stmts.append(self.db.conversions.diff_map(self.ndb.conversions))
         stmts.append(self.db.casts.diff_map(self.ndb.casts))
         stmts.append(self.db.operators._drop())
+        stmts.append(self.db.operfams._drop())
         stmts.append(self.db.functions._drop())
         stmts.append(self.db.types._drop())
         stmts.append(self.db.schemas._drop())

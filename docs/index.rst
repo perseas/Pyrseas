@@ -51,6 +51,7 @@ classes and methods are documented mainly for developer use.
    conversion
    function
    operator
+   operfamily
    type
    table
    column
