@@ -222,6 +222,23 @@ class PostgresDb(object):
                     opfam[0], opfam[1], opfam[2]))
         self.conn.commit()
 
+        # Operator classes
+        curs = pgexecute(
+            self.conn,
+            """SELECT nspname, opcname, amname
+               FROM pg_opclass o JOIN pg_am a ON (opcmethod = a.oid)
+                    JOIN pg_namespace n ON (opcnamespace = n.oid)
+               WHERE (nspname != 'pg_catalog'
+                     AND nspname != 'information_schema')""")
+        opcls = curs.fetchall()
+        curs.close()
+        self.conn.rollback()
+        for opcl in opcls:
+            self.execute(
+                "DROP OPERATOR CLASS IF EXISTS %s.%s USING %s CASCADE" % (
+                    opcl[0], opcl[1], opcl[2]))
+        self.conn.commit()
+
         # Conversions
         curs = pgexecute(
             self.conn,

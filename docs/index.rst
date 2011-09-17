@@ -52,6 +52,7 @@ classes and methods are documented mainly for developer use.
    function
    operator
    operfamily
+   operclass
    type
    table
    column
