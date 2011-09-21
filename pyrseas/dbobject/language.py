@@ -53,18 +53,7 @@ class Language(DbObject):
         input.
         """
         stmts = []
-        if hasattr(self, 'description'):
-            if hasattr(inlanguage, 'description'):
-                if self.description != inlanguage.description:
-                    self.description = inlanguage.description
-                    stmts.append(self.comment())
-            else:
-                del self.description
-                stmts.append(self.comment())
-        else:
-            if hasattr(inlanguage, 'description'):
-                self.description = inlanguage.description
-                stmts.append(self.comment())
+        stmts.append(self.diff_description(inlanguage))
         return stmts
 
 

@@ -85,19 +85,23 @@ class Sequence(DbClass):
     def create(self):
         """Return a SQL statement to CREATE the sequence
 
-        :return: SQL statement
+        :return: SQL statements
         """
+        stmts = []
         maxval = self.max_value and ("MAXVALUE %d" % self.max_value) \
             or "NO MAXVALUE"
         minval = self.min_value and ("MINVALUE %d" % self.min_value) \
             or "NO MINVALUE"
-        return """CREATE SEQUENCE %s
+        stmts.append("""CREATE SEQUENCE %s
     START WITH %d
     INCREMENT BY %d
     %s
     %s
     CACHE %d""" % (self.qualname(), self.start_value, self.increment_by,
-                   maxval, minval, self.cache_value)
+                   maxval, minval, self.cache_value))
+        if hasattr(self, 'description'):
+            stmts.append(self.comment())
+        return stmts
 
     def add_owner(self):
         """Return statement to ALTER the sequence to indicate its owner table
@@ -123,6 +127,7 @@ class Sequence(DbClass):
         statements to transform it into the one represented by the
         input.
         """
+        stmts = []
         stmt = ""
         if self.start_value != inseq.start_value:
             stmt += " START WITH %d" % inseq.start_value
@@ -143,8 +148,9 @@ class Sequence(DbClass):
         if self.cache_value != inseq.cache_value:
             stmt += " CACHE %d" % inseq.cache_value
         if stmt:
-            return "ALTER SEQUENCE %s" % self.qualname() + stmt
-        return []
+            stmts.append("ALTER SEQUENCE %s" % self.qualname() + stmt)
+        stmts.append(self.diff_description(inseq))
+        return stmts
 
 
 class Table(DbClass):
@@ -316,7 +322,10 @@ class View(DbClass):
 
         :return: dictionary
         """
-        return {self.extern_key(): {'definition': self.definition}}
+        dct = self.__dict__.copy()
+        for k in self.keylist:
+            del dct[k]
+        return {self.extern_key(): dct}
 
     def create(self, newdefn=None):
         """Return SQL statements to CREATE the table

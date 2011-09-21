@@ -54,6 +54,8 @@ class Index(DbSchemaObject):
             unq and 'UNIQUE ' or '', quote_id(self.name), quote_id(self.table),
             acc, hasattr(self, 'keycols') and self.key_columns() or
             self.expression))
+        if hasattr(self, 'description'):
+            stmts.append(self.comment())
         return stmts
 
     def diff_map(self, inindex):
@@ -76,6 +78,7 @@ class Index(DbSchemaObject):
             self.unique = inindex.unique
             stmts.append(self.create())
         # TODO: need to deal with changes in keycols
+        stmts.append(self.diff_description(inindex))
         return stmts
 
 
@@ -87,7 +90,8 @@ class IndexDict(DbObjectDict):
         """SELECT nspname AS schema, indrelid::regclass AS table,
                   c.relname AS name, amname AS access_method,
                   indisunique AS unique, indkey AS keycols,
-                  pg_get_expr(indexprs, indrelid) AS expression
+                  pg_get_expr(indexprs, indrelid) AS expression,
+                  obj_description (c.oid, 'pg_class') AS description
            FROM pg_index JOIN pg_class c ON (indexrelid = c.oid)
                 JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
                 JOIN pg_roles ON (nspowner = pg_roles.oid)
@@ -129,6 +133,8 @@ class IndexDict(DbObjectDict):
                     setattr(idx, attr, val[attr])
             if not hasattr(idx, 'unique'):
                 idx.unique = False
+            if 'description' in val:
+                idx.description = val['description']
             self[(table.schema, table.name, i)] = idx
 
     def diff_map(self, inindexes):

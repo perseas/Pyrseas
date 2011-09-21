@@ -25,6 +25,8 @@ name, the table name and the constraint name.
 
 .. automethod:: Constraint.drop
 
+.. automethod:: Constraint.comment
+
 Check Constraint
 ----------------
 

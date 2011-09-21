@@ -41,10 +41,13 @@ class Constraint(DbSchemaObject):
         Works as is for primary keys and unique constraints but has
         to be overridden for check constraints and foreign keys.
         """
-        return "ALTER TABLE %s ADD CONSTRAINT %s %s (%s)" % (
-            DbSchemaObject(schema=self.schema, name=self.table).qualname(),
-            quote_id(self.name),
-            self.objtype, self.key_columns())
+        stmts = ["ALTER TABLE %s ADD CONSTRAINT %s %s (%s)" % (
+                DbSchemaObject(schema=self.schema, name=self.table).qualname(),
+                quote_id(self.name),
+                self.objtype, self.key_columns())]
+        if hasattr(self, 'description'):
+            stmts.append(self.comment())
+        return stmts
 
     def drop(self):
         """Return string to drop the constraint via ALTER TABLE
@@ -56,6 +59,18 @@ class Constraint(DbSchemaObject):
             return "ALTER TABLE %s DROP CONSTRAINT %s" % (
                 self._qualtable(), self.name)
         return []
+
+    def comment(self):
+        """Return SQL statement to create COMMENT on constraint
+
+        :return: SQL statement
+        """
+        if hasattr(self, 'description'):
+            descr = "'%s'" % self.description
+        else:
+            descr = 'NULL'
+        return "COMMENT ON CONSTRAINT %s ON %s IS %s" % (
+            self.identifier(), self._qualtable(), descr)
 
 
 class CheckConstraint(Constraint):
@@ -84,8 +99,11 @@ class CheckConstraint(Constraint):
 
         :return: SQL statement
         """
-        return "ALTER TABLE %s ADD CONSTRAINT %s %s (%s)" % (
-            self._qualtable(), self.name, self.objtype, self.expression)
+        stmts = ["ALTER TABLE %s ADD CONSTRAINT %s %s (%s)" % (
+                self._qualtable(), self.name, self.objtype, self.expression)]
+        if hasattr(self, 'description'):
+            stmts.append(self.comment())
+        return stmts
 
     def diff_map(self, inchk):
         """Generate SQL to transform an existing CHECK constraint
@@ -99,6 +117,7 @@ class CheckConstraint(Constraint):
         """
         stmts = []
         # TODO: to be implemented
+        stmts.append(self.diff_description(inchk))
         return stmts
 
 
@@ -132,6 +151,7 @@ class PrimaryKey(Constraint):
         """
         stmts = []
         # TODO: to be implemented (via ALTER DROP and ALTER ADD)
+        stmts.append(self.diff_description(inpk))
         return stmts
 
 
@@ -194,6 +214,7 @@ class ForeignKey(Constraint):
         """
         stmts = []
         # TODO: to be implemented (via ALTER DROP and ALTER ADD)
+        stmts.append(self.diff_description(infk))
         return stmts
 
 
@@ -229,6 +250,7 @@ class UniqueConstraint(Constraint):
         """
         stmts = []
         # TODO: to be implemented (via ALTER DROP and ALTER ADD)
+        stmts.append(self.diff_description(inuc))
         return stmts
 
 
@@ -245,8 +267,9 @@ class ConstraintDict(DbObjectDict):
                   contype AS type, conkey AS keycols,
                   confrelid::regclass AS ref_table, confkey AS ref_cols,
                   consrc AS expression, confupdtype AS on_update,
-                  confdeltype AS on_delete, amname AS access_method
-           FROM pg_constraint
+                  confdeltype AS on_delete, amname AS access_method,
+                  obj_description(c.oid, 'pg_constraint') AS description
+           FROM pg_constraint c
                 JOIN pg_namespace ON (connamespace = pg_namespace.oid)
                 JOIN pg_roles ON (nspowner = pg_roles.oid)
                 LEFT JOIN pg_class on (conname = relname)
@@ -313,6 +336,8 @@ class ConstraintDict(DbObjectDict):
                     check.keycols = val['columns']
                 if target:
                     check.target = target
+                if 'description' in val:
+                    check.description = val['description']
                 self[(table.schema, table.name, cns)] = check
         if 'primary_key' in inconstrs:
             cns = inconstrs['primary_key'].keys()[0]
@@ -326,6 +351,8 @@ class ConstraintDict(DbObjectDict):
                 raise
             if 'access_method' in val:
                 pkey.access_method = val['access_method']
+            if 'description' in val:
+                pkey.description = val['description']
             self[(table.schema, table.name, cns)] = pkey
         if 'foreign_keys' in inconstrs:
             fkeys = inconstrs['foreign_keys']
@@ -371,6 +398,8 @@ class ConstraintDict(DbObjectDict):
                 if 'schema' in refs:
                     sch = refs['schema']
                 fkey.ref_schema = sch
+                if 'description' in val:
+                    fkey.description = val['description']
                 self[(table.schema, table.name, cns)] = fkey
         if 'unique_constraints' in inconstrs:
             uconstrs = inconstrs['unique_constraints']
@@ -385,6 +414,8 @@ class ConstraintDict(DbObjectDict):
                     raise
                 if 'access_method' in val:
                     unq.access_method = val['access_method']
+                if 'description' in val:
+                    unq.description = val['description']
                 self[(table.schema, table.name, cns)] = unq
 
     def diff_map(self, inconstrs):
