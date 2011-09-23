@@ -68,20 +68,6 @@ class Cast(DbObject):
             stmts.append(self.comment())
         return stmts
 
-    def diff_map(self, incast):
-        """Generate SQL to transform an existing cast
-
-        :param incast: a YAML map defining the new cast
-        :return: list of SQL statements
-
-        Compares the cast to an input cast and generates SQL
-        statements to transform it into the one represented by the
-        input.
-        """
-        stmts = []
-        stmts.append(self.diff_description(incast))
-        return stmts
-
 
 class CastDict(DbObjectDict):
     "The collection of casts in a database"

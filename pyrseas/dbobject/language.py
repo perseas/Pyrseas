@@ -36,20 +36,6 @@ class Language(DbObject):
             stmts.append(self.comment())
         return stmts
 
-    def diff_map(self, inlanguage):
-        """Generate SQL to transform an existing language
-
-        :param inlanguage: a YAML map defining the new language
-        :return: list of SQL statements
-
-        Compares the language to an input language and generates SQL
-        statements to transform it into the one represented by the
-        input.
-        """
-        stmts = []
-        stmts.append(self.diff_description(inlanguage))
-        return stmts
-
 
 class LanguageDict(DbObjectDict):
     "The collection of procedural languages in a database."

@@ -158,20 +158,6 @@ class Aggregate(Proc):
             stmts.append(self.comment())
         return stmts
 
-    def diff_map(self, inaggr):
-        """Generate SQL to transform an existing aggregate function
-
-        :param inaggr: a YAML map defining the new aggregate
-        :return: list of SQL statements
-
-        Compares the aggregate to an input aggregate and generates SQL
-        statements to transform it into the one represented by the
-        input.
-        """
-        stmts = []
-        stmts.append(self.diff_description(inaggr))
-        return stmts
-
 
 class ProcDict(DbObjectDict):
     "The collection of regular and aggregate functions in a database"

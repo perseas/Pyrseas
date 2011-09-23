@@ -69,20 +69,6 @@ class Trigger(DbSchemaObject):
             stmts.append(self.comment())
         return stmts
 
-    def diff_map(self, intrigger):
-        """Generate SQL to transform an existing trigger
-
-        :param intrigger: a YAML map defining the new trigger
-        :return: list of SQL statements
-
-        Compares the trigger to an input trigger and generates SQL
-        statements to transform it into the one represented by the
-        input. For now, only the description can be changed.
-        """
-        stmts = []
-        stmts.append(self.diff_description(intrigger))
-        return stmts
-
 
 QUERY_PRE90 = \
         """SELECT nspname AS schema, relname AS table,

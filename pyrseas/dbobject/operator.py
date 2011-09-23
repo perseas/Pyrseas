@@ -67,20 +67,6 @@ class Operator(DbSchemaObject):
             stmts.append(self.comment())
         return stmts
 
-    def diff_map(self, inoperator):
-        """Generate SQL to transform an existing operator
-
-        :param inoperator: a YAML map defining the new operator
-        :return: list of SQL statements
-
-        Compares the operator to an input operator and generates SQL
-        statements to transform it into the one represented by the
-        input.
-        """
-        stmts = []
-        stmts.append(self.diff_description(inoperator))
-        return stmts
-
 
 class OperatorDict(DbObjectDict):
     "The collection of operators in a database"

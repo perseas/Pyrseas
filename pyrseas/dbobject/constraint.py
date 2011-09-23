@@ -65,12 +65,8 @@ class Constraint(DbSchemaObject):
 
         :return: SQL statement
         """
-        if hasattr(self, 'description'):
-            descr = "'%s'" % self.description
-        else:
-            descr = 'NULL'
         return "COMMENT ON CONSTRAINT %s ON %s IS %s" % (
-            self.identifier(), self._qualtable(), descr)
+            self.identifier(), self._qualtable(), self._comment_text())
 
 
 class CheckConstraint(Constraint):

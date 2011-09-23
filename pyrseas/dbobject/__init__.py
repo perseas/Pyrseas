@@ -155,17 +155,23 @@ class DbObject(object):
         """
         return {self.extern_key(): self._base_map()}
 
+    def _comment_text(self):
+        """Return the text for the SQL COMMENT statement
+
+        :return: string
+        """
+        if hasattr(self, 'description'):
+            return "'%s'" % self.description
+        else:
+            return 'NULL'
+
     def comment(self):
         """Return SQL statement to create a COMMENT on the object
 
         :return: SQL statement
         """
-        if hasattr(self, 'description'):
-            descr = "'%s'" % self.description
-        else:
-            descr = 'NULL'
         return "COMMENT ON %s %s IS %s" % (
-            self.objtype, self.identifier(), descr)
+            self.objtype, self.identifier(), self._comment_text())
 
     def drop(self):
         """Return SQL statement to DROP the object

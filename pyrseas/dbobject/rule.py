@@ -49,20 +49,6 @@ class Rule(DbSchemaObject):
             stmts.append(self.comment())
         return stmts
 
-    def diff_map(self, inrule):
-        """Generate SQL to transform an existing rule
-
-        :param inrule: a YAML map defining the new rule
-        :return: list of SQL statements
-
-        Compares the rule to an input rule and generates SQL
-        statements to transform it into the one represented by the
-        input.
-        """
-        stmts = []
-        stmts.append(self.diff_description(inrule))
-        return stmts
-
 
 class RuleDict(DbObjectDict):
     "The collection of rewrite rules in a database."

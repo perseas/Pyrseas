@@ -31,20 +31,6 @@ class Conversion(DbSchemaObject):
             stmts.append(self.comment())
         return stmts
 
-    def diff_map(self, inconv):
-        """Generate SQL to transform an existing conversion
-
-        :param inconv: a YAML map defining the new conversion
-        :return: list of SQL statements
-
-        Compares the conversion to an input conversion and generates SQL
-        statements to transform it into the one represented by the
-        input.
-        """
-        stmts = []
-        stmts.append(self.diff_description(inconv))
-        return stmts
-
 
 class ConversionDict(DbObjectDict):
     "The collection of conversions in a database."

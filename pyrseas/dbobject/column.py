@@ -45,12 +45,8 @@ class Column(DbSchemaObject):
 
         :return: SQL statement
         """
-        if hasattr(self, 'description'):
-            descr = "'%s'" % self.description
-        else:
-            descr = 'NULL'
-        return "COMMENT ON COLUMN %s.%s IS %s" % (self._table.qualname(),
-                                                  self.name, descr)
+        return "COMMENT ON COLUMN %s.%s IS %s" % (
+            self._table.qualname(), self.name, self._comment_text())
 
     def drop(self):
         """Return string to drop the column via ALTER TABLE
