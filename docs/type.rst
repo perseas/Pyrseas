@@ -73,8 +73,6 @@ represents an `enumerated type
 
 .. autoclass:: Enum
 
-.. automethod:: Enum.to_map
-
 .. automethod:: Enum.create
 
 Domain

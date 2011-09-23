@@ -57,7 +57,17 @@ class DbObject(object):
     "A single object in a database catalog, e.g., a schema, a table, a column"
 
     keylist = ['name']
+    """List of attributes that uniquely identify the object in the catalogs
+
+    See description of :meth:`key` for further details.
+    """
+
     objtype = ''
+    """Type of object as an uppercase string, for SQL syntax generation
+
+    This is used in most CREATE, ALTER and DROP statements.  It is
+    also used by :meth:`extern_key` in lowercase form.
+    """
 
     def __init__(self, **attrs):
         """Initialize the catalog object from a dictionary of attributes
@@ -74,13 +84,39 @@ class DbObject(object):
         """Return the key to be used in external maps for this object
 
         :return: string
+
+        This is used for the first two levels of external maps.  The
+        first level is the one that includes schemas, as well as
+        (procedural) languages and casts.  The second level includes
+        all schema-owned objects, i.e., tables, functions, operators,
+        etc.  All subsequent levels, e.g., primary keys, indexes,
+        etc., currently use the object name as the external
+        identifier, appearing in the map after an object grouping
+        header, such as ``primary_key``.
+
+        The common format for an external key is `object-type
+        non-schema-qualified-name`, where `object-type` is the
+        lowercase version of :attr:`objtype`, e.g., ``table
+        tablename``.  Some object types require more, e.g., functions
+        need the signature, so they override this implementation.
         """
         return '%s %s' % (self.objtype.lower(), self.name)
 
     def key(self):
         """Return a tuple that identifies the database object
 
-        :return: a single value or a tuple
+        :return: a single string or a tuple of strings
+
+        This is used as key for all internal maps. The first-level
+        objects (schemas, languages and casts) use the object name as
+        the key. Second-level (schema-owned) objects usually use the
+        schema name and the object name as the key. Some object types
+        need longer keys, e.g., operators need schema name, operator
+        symbols, left argument and right argument.
+
+        Each class implementing an object type specifies a
+        :attr:`keylist` attribute, i.e., a list giving the names of
+        attributes making up the key.
         """
         lst = [getattr(self, k) for k in self.keylist]
         return len(lst) == 1 and lst[0] or tuple(lst)
@@ -89,21 +125,38 @@ class DbObject(object):
         """Returns a full identifier for the database object
 
         :return: string
+
+        This is used by :meth:`comment` and :meth:`drop` to generate
+        SQL syntax referring to the object.  It does not include the
+        object type, but it may include (in overriden methods) other
+        elements, e.g., the arguments to a function.
         """
         return quote_id(self.__dict__[self.keylist[0]])
+
+    def _base_map(self):
+        """Return a base map, i.e., copy of attributes excluding keys
+
+        :return: dictionary
+        """
+        dct = self.__dict__.copy()
+        for key in self.keylist:
+            del dct[key]
+        return dct
 
     def to_map(self):
         """Convert an object to a YAML-suitable format
 
         :return: dictionary
+
+        This base implementation simply copies the internal Python
+        dictionary, removes the :attr:`keylist` attributes, and
+        returns a new dictionary using the :meth:`extern_key` result
+        as the key.
         """
-        dct = self.__dict__.copy()
-        for k in self.keylist:
-            del dct[k]
-        return {self.extern_key(): dct}
+        return {self.extern_key(): self._base_map()}
 
     def comment(self):
-        """Return SQL statement to create COMMENT on object
+        """Return SQL statement to create a COMMENT on the object
 
         :return: SQL statement
         """
@@ -137,7 +190,7 @@ class DbObject(object):
 
         Compares the object to an input object and generates SQL
         statements to transform it into the one represented by the
-        input.
+        input.  This base implementation simply deals with comments.
         """
         stmts = []
         stmts.append(self.diff_description(inobj))
@@ -210,7 +263,10 @@ class DbSchemaObject(DbObject):
                                              newname)
 
     def set_search_path(self):
-        """Return a SQL SET search_path if not in the 'public' schema"""
+        """Return a SQL SET search_path if not in the 'public' schema
+
+        :return: SQL statement
+        """
         stmt = ''
         if self.schema != 'public':
             stmt = "SET search_path TO %s, pg_catalog" % quote_id(self.schema)
@@ -221,7 +277,13 @@ class DbObjectDict(dict):
     """A dictionary of database objects, all of the same type"""
 
     cls = DbObject
+    """The class, derived from :class:`DbObject` that the objects belong to.
+    """
     query = ''
+    """The SQL SELECT query to fetch object instances from the catalogs
+
+    This is used by the method :meth:`fetch`.
+    """
 
     def __init__(self, dbconn=None):
         """Initialize the dictionary
@@ -245,7 +307,7 @@ class DbObjectDict(dict):
             self[obj.key()] = obj
 
     def fetch(self):
-        """Fetch all objects from the catalogs using the class query
+        """Fetch all objects from the catalogs using the class :attr:`query`
 
         :return: list of self.cls objects
         """

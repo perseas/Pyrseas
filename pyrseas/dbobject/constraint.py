@@ -84,9 +84,7 @@ class CheckConstraint(Constraint):
         :param dbcols: dictionary of dbobject columns
         :return: dictionary
         """
-        dct = self.__dict__.copy()
-        for k in self.keylist:
-            del dct[k]
+        dct = self._base_map()
         if 'target' in dct:
             del dct['target']
         if dbcols:
@@ -132,9 +130,7 @@ class PrimaryKey(Constraint):
         :param dbcols: dictionary of dbobject columns
         :return: dictionary
         """
-        dct = self.__dict__.copy()
-        for k in self.keylist:
-            del dct[k]
+        dct = self._base_map()
         dct['columns'] = [dbcols[k - 1] for k in self.keycols]
         del dct['keycols']
         return {self.name: dct}
@@ -173,9 +169,7 @@ class ForeignKey(Constraint):
         :param dbcols: dictionary of dbobject columns
         :return: dictionary
         """
-        dct = self.__dict__.copy()
-        for k in self.keylist:
-            del dct[k]
+        dct = self._base_map()
         dct['columns'] = [dbcols[k - 1] for k in self.keycols]
         del dct['keycols']
         refsch = hasattr(self, 'ref_schema') and self.ref_schema or self.schema
@@ -229,10 +223,7 @@ class UniqueConstraint(Constraint):
         :param dbcols: dictionary of dbobject columns
         :return: dictionary
         """
-        dct = self.__dict__.copy()
-        for k in self.keylist:
-            del dct[k]
-
+        dct = self._base_map()
         dct['columns'] = []
         dct['columns'] = [dbcols[k - 1] for k in self.keycols]
         del dct['keycols']

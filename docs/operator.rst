@@ -22,8 +22,6 @@ represents a `PostgreSQL user-defined operator
 
 .. automethod:: Operator.identifier
 
-.. automethod:: Operator.to_map
-
 .. automethod:: Operator.create
 
 .. automethod:: Operator.diff_map

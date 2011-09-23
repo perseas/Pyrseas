@@ -31,9 +31,7 @@ class Trigger(DbSchemaObject):
 
         :return: dictionary
         """
-        dct = self.__dict__.copy()
-        for k in self.keylist:
-            del dct[k]
+        dct = self._base_map()
         del dct['_table']
         if hasattr(self, 'columns'):
             dct['columns'] = [self._table.column_names()[int(k) - 1]

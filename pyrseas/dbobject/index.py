@@ -30,9 +30,7 @@ class Index(DbSchemaObject):
         :param dbcols: dictionary of dbobject columns
         :return: dictionary
         """
-        dct = self.__dict__.copy()
-        for k in self.keylist:
-            del dct[k]
+        dct = self._base_map()
         if hasattr(self, 'keycols'):
             dct['columns'] = [dbcols[int(k) - 1] for k in self.keycols.split()]
             del dct['keycols']

@@ -10,19 +10,26 @@ intermediate class. Most Pyrseas classes are derived from either
 Database Object
 ---------------
 
-A :class:`DbObject` represents a database object such as a
-schema, table, or column, defined in a system catalog. It is
+A :class:`DbObject` represents a database object such as a schema,
+table, or column, defined in a PostgreSQL `system catalog
+<http://www.postgresql.org/docs/current/static/catalogs.html>`_. It is
 initialized from a dictionary of attributes. Derived classes should
 define a :attr:`keylist` that is a list of attribute names that
 uniquely identify each object instance within the database.
 
 .. autoclass:: DbObject
 
+.. autoattribute:: DbObject.objtype
+
 .. automethod:: DbObject.extern_key
+
+.. autoattribute:: DbObject.keylist
 
 .. automethod:: DbObject.key
 
 .. automethod:: DbObject.identifier
+
+.. automethod:: DbObject.to_map
 
 .. automethod:: DbObject.comment
 
@@ -48,6 +55,10 @@ e.g., :class:`~pyrseas.schema.SchemaDict` sets :attr:`cls` to
 :class:`~pyrseas.schema.Schema`.
 
 .. autoclass:: DbObjectDict
+
+.. autoattribute:: DbObjectDict.cls
+
+.. autoattribute:: DbObjectDict.query
 
 .. automethod:: DbObjectDict.fetch
 

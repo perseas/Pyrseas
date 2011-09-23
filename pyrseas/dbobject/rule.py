@@ -27,9 +27,7 @@ class Rule(DbSchemaObject):
 
         :return: dictionary
         """
-        dct = self.__dict__.copy()
-        for k in self.keylist:
-            del dct[k]
+        dct = self._base_map()
         del dct['_table']
         return {self.name: dct}
 

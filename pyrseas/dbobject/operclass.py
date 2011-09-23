@@ -36,9 +36,7 @@ class OperatorClass(DbSchemaObject):
 
         :return: dictionary
         """
-        dct = self.__dict__.copy()
-        for k in self.keylist:
-            del dct[k]
+        dct = self._base_map()
         if self.name == self.family:
             del dct['family']
         return {self.extern_key(): dct}

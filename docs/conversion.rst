@@ -17,8 +17,6 @@ conversion between character set encodings
 
 .. autoclass:: Conversion
 
-.. automethod:: Conversion.to_map
-
 .. automethod:: Conversion.create
 
 .. automethod:: Conversion.diff_map

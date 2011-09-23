@@ -46,9 +46,7 @@ class BaseType(DbType):
 
         :return: dictionary
         """
-        dct = self.__dict__.copy()
-        for k in self.keylist:
-            del dct[k]
+        dct = self._base_map()
         del dct['dep_funcs']
         if self.internallength < 0:
             dct['internallength'] = 'variable'
@@ -132,16 +130,6 @@ class Composite(DbType):
 class Enum(DbType):
     "An enumerated type definition"
 
-    def to_map(self):
-        """Convert a type to a YAML-suitable format
-
-        :return: dictionary
-        """
-        dct = self.__dict__.copy()
-        for k in self.keylist:
-            del dct[k]
-        return {self.extern_key(): dct}
-
     def create(self):
         """Return SQL statements to CREATE the enum
 
@@ -166,9 +154,7 @@ class Domain(DbType):
 
         :return: dictionary
         """
-        dct = self.__dict__.copy()
-        for k in self.keylist:
-            del dct[k]
+        dct = self._base_map()
         if hasattr(self, 'check_constraints'):
             if not 'check_constraints' in dct:
                 dct.update(check_constraints={})

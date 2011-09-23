@@ -24,7 +24,7 @@ class Cast(DbObject):
 
         :return: string
         """
-        return '%s (%s AS %s)' % (self.objtype.lower(), self.source,
+        return '%s (%s as %s)' % (self.objtype.lower(), self.source,
                                   self.target)
 
     def identifier(self):
@@ -39,9 +39,7 @@ class Cast(DbObject):
 
         :return: dictionary
         """
-        dct = self.__dict__.copy()
-        for k in self.keylist:
-            del dct[k]
+        dct = self._base_map()
         dct['context'] = CONTEXTS[self.context]
         dct['method'] = METHODS[self.method]
         return {self.extern_key(): dct}

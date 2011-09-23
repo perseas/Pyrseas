@@ -21,9 +21,7 @@ class Column(DbSchemaObject):
         """
         if hasattr(self, 'dropped'):
             return None
-        dct = self.__dict__.copy()
-        for k in self.keylist:
-            del dct[k]
+        dct = self._base_map()
         del dct['number'], dct['name'], dct['_table']
         if hasattr(self, 'inherited'):
             dct['inherited'] = (self.inherited != 0)

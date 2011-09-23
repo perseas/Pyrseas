@@ -27,6 +27,7 @@ class LanguageToMapTestCase(PyrseasTestCase):
         self.assertEqual(dbmap['language plperl']['description'],
                          'Test language PL/Perl')
 
+
 class LanguageToSqlTestCase(PyrseasTestCase):
     """Test SQL generation for input languages"""
 

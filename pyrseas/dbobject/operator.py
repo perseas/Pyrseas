@@ -41,16 +41,6 @@ class Operator(DbSchemaObject):
         """
         return "%s(%s, %s)" % (self.qualname(), self.leftarg, self.rightarg)
 
-    def to_map(self):
-        """Convert a operator to a YAML-suitable format
-
-        :return: dictionary
-        """
-        dct = self.__dict__.copy()
-        for k in self.keylist:
-            del dct[k]
-        return {self.extern_key(): dct}
-
     def create(self):
         """Return SQL statements to CREATE or REPLACE the operator
 

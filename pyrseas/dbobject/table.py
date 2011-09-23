@@ -317,16 +317,6 @@ class View(DbClass):
 
     objtype = "VIEW"
 
-    def to_map(self):
-        """Convert a view to a YAML-suitable format
-
-        :return: dictionary
-        """
-        dct = self.__dict__.copy()
-        for k in self.keylist:
-            del dct[k]
-        return {self.extern_key(): dct}
-
     def create(self, newdefn=None):
         """Return SQL statements to CREATE the table
 

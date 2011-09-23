@@ -131,8 +131,6 @@ The map returned by :meth:`to_map` and expected as argument by
 
 .. autoclass:: View
 
-.. automethod:: View.to_map
-
 .. automethod:: View.create
 
 .. automethod:: View.diff_map

@@ -22,7 +22,7 @@ class OperatorFamily(DbSchemaObject):
         :return: string
         """
         return '%s %s using %s' % (self.objtype.lower(), self.name,
-                                    self.index_method)
+                                   self.index_method)
 
     def identifier(self):
         """Return a full identifier for an operator family object

@@ -21,16 +21,10 @@ class Language(DbObject):
 
         :return: dictionary
         """
-        dct = self.__dict__.copy()
-        for k in self.keylist:
-            del dct[k]
+        dct = self._base_map()
         if 'functions' in dct:
             del dct['functions']
-        key = self.extern_key()
-        language = {key: dct}
-        if hasattr(self, 'description'):
-            language[key].update(description=self.description)
-        return language
+        return {self.extern_key(): dct}
 
     def create(self):
         """Return SQL statements to CREATE the language

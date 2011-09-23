@@ -15,16 +15,6 @@ class Conversion(DbSchemaObject):
     keylist = ['schema', 'name']
     objtype = "CONVERSION"
 
-    def to_map(self):
-        """Convert conversion to a YAML-suitable format
-
-        :return: dictionary
-        """
-        dct = self.__dict__.copy()
-        for k in self.keylist:
-            del dct[k]
-        return {self.extern_key(): dct}
-
     def create(self):
         """Return SQL statements to CREATE the conversion
 
