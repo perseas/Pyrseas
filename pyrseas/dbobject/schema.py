@@ -91,31 +91,6 @@ class Schema(DbObject):
             stmts.append(self.comment())
         return stmts
 
-    def diff_map(self, inschema):
-        """Generate SQL to transform an existing schema
-
-        :param inschema: a YAML map defining the new schema
-        :return: list of SQL statements
-
-        Compares the schema to an input schema and generates SQL
-        statements to transform it into the one represented by the
-        input.
-        """
-        stmts = []
-        if hasattr(self, 'description'):
-            if hasattr(inschema, 'description'):
-                if self.description != inschema.description:
-                    self.description = inschema.description
-                    stmts.append(self.comment())
-            else:
-                del self.description
-                stmts.append(self.comment())
-        else:
-            if hasattr(inschema, 'description'):
-                self.description = inschema.description
-                stmts.append(self.comment())
-        return stmts
-
 
 class SchemaDict(DbObjectDict):
     "The collection of schemas in a database.  Minimally, the 'public' schema."
