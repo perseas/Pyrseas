@@ -493,7 +493,7 @@ class ClassDict(DbObjectDict):
             if hasattr(constr, 'target'):
                 continue
             assert self[(sch, tbl)]
-            table = self[(sch, tbl)]
+            constr._table = table = self[(sch, tbl)]
             if isinstance(constr, CheckConstraint):
                 if not hasattr(table, 'check_constraints'):
                     table.check_constraints = {}

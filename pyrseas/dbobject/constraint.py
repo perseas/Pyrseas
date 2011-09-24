@@ -29,10 +29,6 @@ class Constraint(DbSchemaObject):
         """
         return ", ".join([quote_id(col) for col in self.keycols])
 
-    def _qualtable(self):
-        """Return a schema-qualified name for a newly constructed object"""
-        return DbSchemaObject(schema=self.schema, name=self.table).qualname()
-
     def add(self):
         """Return string to add the constraint via ALTER TABLE
 
@@ -42,8 +38,7 @@ class Constraint(DbSchemaObject):
         to be overridden for check constraints and foreign keys.
         """
         stmts = ["ALTER TABLE %s ADD CONSTRAINT %s %s (%s)" % (
-                DbSchemaObject(schema=self.schema, name=self.table).qualname(),
-                quote_id(self.name),
+                self._table.qualname(), quote_id(self.name),
                 self.objtype, self.key_columns())]
         if hasattr(self, 'description'):
             stmts.append(self.comment())
@@ -57,7 +52,7 @@ class Constraint(DbSchemaObject):
         if not hasattr(self, 'dropped') or not self.dropped:
             self.dropped = True
             return "ALTER TABLE %s DROP CONSTRAINT %s" % (
-                self._qualtable(), self.name)
+                self._table.qualname(), self.name)
         return []
 
     def comment(self):
@@ -66,7 +61,7 @@ class Constraint(DbSchemaObject):
         :return: SQL statement
         """
         return "COMMENT ON CONSTRAINT %s ON %s IS %s" % (
-            self.identifier(), self._qualtable(), self._comment_text())
+            self.identifier(), self._table.qualname(), self._comment_text())
 
 
 class CheckConstraint(Constraint):
@@ -81,6 +76,8 @@ class CheckConstraint(Constraint):
         :return: dictionary
         """
         dct = self._base_map()
+        if '_table' in dct:
+            del dct['_table']
         if 'target' in dct:
             del dct['target']
         if dbcols:
@@ -94,7 +91,8 @@ class CheckConstraint(Constraint):
         :return: SQL statement
         """
         stmts = ["ALTER TABLE %s ADD CONSTRAINT %s %s (%s)" % (
-                self._qualtable(), self.name, self.objtype, self.expression)]
+                self._table.qualname(), self.name, self.objtype,
+                self.expression)]
         if hasattr(self, 'description'):
             stmts.append(self.comment())
         return stmts
@@ -127,6 +125,7 @@ class PrimaryKey(Constraint):
         :return: dictionary
         """
         dct = self._base_map()
+        del dct['_table']
         dct['columns'] = [dbcols[k - 1] for k in self.keycols]
         del dct['keycols']
         return {self.name: dct}
@@ -166,6 +165,7 @@ class ForeignKey(Constraint):
         :return: dictionary
         """
         dct = self._base_map()
+        del dct['_table']
         dct['columns'] = [dbcols[k - 1] for k in self.keycols]
         del dct['keycols']
         refsch = hasattr(self, 'ref_schema') and self.ref_schema or self.schema
@@ -189,7 +189,7 @@ class ForeignKey(Constraint):
             actions += " ON DELETE %s" % self.on_delete.upper()
         return "ALTER TABLE %s ADD CONSTRAINT %s FOREIGN KEY (%s) " \
             "REFERENCES %s (%s)%s" % (
-            self._qualtable(), self.name, self.key_columns(),
+            self._table.qualname(), self.name, self.key_columns(),
             self.references.qualname(), self.ref_columns(), actions)
 
     def diff_map(self, infk):
@@ -220,6 +220,7 @@ class UniqueConstraint(Constraint):
         :return: dictionary
         """
         dct = self._base_map()
+        del dct['_table']
         dct['columns'] = []
         dct['columns'] = [dbcols[k - 1] for k in self.keycols]
         del dct['keycols']
