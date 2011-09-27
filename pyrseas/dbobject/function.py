@@ -175,13 +175,11 @@ class ProcDict(DbObjectDict):
                   aggtranstype::regtype AS stype,
                   aggfinalfn::regprocedure AS finalfunc,
                   agginitval AS initcond,
-                  description
+                  obj_description(p.oid, 'pg_proc') AS description
            FROM pg_proc p
                 JOIN pg_namespace n ON (pronamespace = n.oid)
                 JOIN pg_language l ON (prolang = l.oid)
                 LEFT JOIN pg_aggregate a ON (p.oid = aggfnoid)
-                LEFT JOIN pg_description d
-                     ON (p.oid = d.objoid AND d.objsubid = 0)
            WHERE (nspname != 'pg_catalog' AND nspname != 'information_schema')
            ORDER BY nspname, proname"""
 

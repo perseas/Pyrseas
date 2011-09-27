@@ -50,12 +50,11 @@ class OperatorFamilyDict(DbObjectDict):
     cls = OperatorFamily
     query = \
         """SELECT nspname AS schema, opfname AS name,
-                  amname AS index_method, description
+                  amname AS index_method,
+                  obj_description(o.oid, 'pg_opfamily') AS description
            FROM pg_opfamily o
                 JOIN pg_am a ON (opfmethod = a.oid)
                 JOIN pg_namespace n ON (opfnamespace = n.oid)
-                LEFT JOIN pg_description d
-                     ON (o.oid = d.objoid AND d.objsubid = 0)
            WHERE (nspname != 'pg_catalog' AND nspname != 'information_schema')
            ORDER BY opfnamespace, opfname, amname"""
 

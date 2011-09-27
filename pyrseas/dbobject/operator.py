@@ -77,11 +77,10 @@ class OperatorDict(DbObjectDict):
                   oprleft::regtype AS leftarg, oprright::regtype AS rightarg,
                   oprcode::regproc AS procedure, oprcom::regoper AS commutator,
                   oprnegate::regoper AS negator, oprrest::regproc AS restrict,
-                  oprjoin::regproc AS join, description
+                  oprjoin::regproc AS join,
+                  obj_description(o.oid, 'pg_operator') AS description
            FROM pg_operator o
                 JOIN pg_namespace n ON (oprnamespace = n.oid)
-                LEFT JOIN pg_description d
-                     ON (o.oid = d.objoid AND d.objsubid = 0)
            WHERE (nspname != 'pg_catalog' AND nspname != 'information_schema')
            ORDER BY nspname, oprname"""
 

@@ -41,11 +41,9 @@ class ConversionDict(DbObjectDict):
                   pg_encoding_to_char(c.conforencoding) AS source_encoding,
                   pg_encoding_to_char(c.contoencoding) AS dest_encoding,
                   conproc AS function, condefault AS default,
-                  description
+                  obj_description(c.oid, 'pg_conversion') AS description
            FROM pg_conversion c
                 JOIN pg_namespace n ON (connamespace = n.oid)
-                LEFT JOIN pg_description d
-                     ON (c.oid = d.objoid AND d.objsubid = 0)
            WHERE (nspname != 'pg_catalog' AND nspname != 'information_schema')
            ORDER BY nspname, conname"""
 

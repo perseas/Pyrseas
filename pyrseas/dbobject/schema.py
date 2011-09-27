@@ -97,10 +97,9 @@ class SchemaDict(DbObjectDict):
 
     cls = Schema
     query = \
-        """SELECT nspname AS name, description
+        """SELECT nspname AS name,
+                  obj_description(n.oid, 'pg_namespace') AS description
            FROM pg_namespace n JOIN pg_roles ON (nspowner = pg_roles.oid)
-                LEFT JOIN pg_description d
-                     ON (n.oid = d.objoid AND d.objsubid = 0)
            WHERE nspname = 'public' OR rolname <> 'postgres'
            ORDER BY nspname"""
 

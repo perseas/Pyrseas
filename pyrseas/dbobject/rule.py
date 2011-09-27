@@ -58,11 +58,10 @@ class RuleDict(DbObjectDict):
         """SELECT nspname AS schema, relname AS table, rulename AS name,
                   split_part('select,update,insert,delete', ',',
                       ev_type::int - 48) AS event, is_instead AS instead,
-                  pg_get_ruledef(r.oid) AS definition, description
+                  pg_get_ruledef(r.oid) AS definition,
+                  obj_description(r.oid, 'pg_rewrite') AS description
            FROM pg_rewrite r JOIN pg_class c ON (ev_class = c.oid)
                 JOIN pg_namespace n ON (relnamespace = n.oid)
-                LEFT JOIN pg_description d
-                     ON (r.oid = d.objoid AND d.objsubid = 0)
            WHERE relkind = 'r'
              AND (nspname != 'pg_catalog' AND nspname != 'information_schema')
            ORDER BY nspname, relname, rulename"""

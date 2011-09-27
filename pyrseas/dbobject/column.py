@@ -122,15 +122,14 @@ class ColumnDict(DbObjectDict):
         """SELECT nspname AS schema, relname AS table, attname AS name,
                   attnum AS number, format_type(atttypid, atttypmod) AS type,
                   attnotnull AS not_null, attinhcount AS inherited,
-                  pg_get_expr(adbin, adrelid) AS default, description,
-                  attisdropped AS dropped
-           FROM pg_attribute JOIN pg_class ON (attrelid =  pg_class.oid)
+                  pg_get_expr(adbin, adrelid) AS default,
+                  attisdropped AS dropped,
+                  col_description(c.oid, attnum) AS description
+           FROM pg_attribute JOIN pg_class c ON (attrelid = c.oid)
                 JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
                 JOIN pg_roles ON (nspowner = pg_roles.oid)
                 LEFT JOIN pg_attrdef ON (attrelid = pg_attrdef.adrelid
                      AND attnum = pg_attrdef.adnum)
-                LEFT JOIN pg_description d
-                     ON (pg_class.oid = d.objoid AND d.objsubid = attnum)
            WHERE relkind in ('c', 'r')
                  AND (nspname = 'public' OR rolname <> 'postgres')
                  AND attnum > 0

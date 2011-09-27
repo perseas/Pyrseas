@@ -357,12 +357,10 @@ class ClassDict(DbObjectDict):
         """SELECT nspname AS schema, relname AS name, relkind AS kind,
                   CASE WHEN relkind = 'v' THEN pg_get_viewdef(c.oid, TRUE)
                        ELSE '' END AS definition,
-                  description
+                  obj_description(c.oid, 'pg_class') AS description
            FROM pg_class c
                 JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
                 JOIN pg_roles ON (nspowner = pg_roles.oid)
-                LEFT JOIN pg_description d
-                     ON (c.oid = d.objoid AND d.objsubid = 0)
            WHERE relkind in ('r', 'S', 'v')
                  AND (nspname = 'public' OR rolname <> 'postgres')
            ORDER BY nspname, relname"""

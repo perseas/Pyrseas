@@ -74,12 +74,11 @@ class OperatorClassDict(DbObjectDict):
         """SELECT nspname AS schema, opcname AS name,
                   amname AS index_method, opfname AS family,
                   opcintype::regtype AS type, opcdefault AS default,
-                  opckeytype::regtype AS storage, description
+                  opckeytype::regtype AS storage,
+                  obj_description(o.oid, 'pg_opclass') AS description
            FROM pg_opclass o JOIN pg_am a ON (opcmethod = a.oid)
                 JOIN pg_opfamily f ON (opcfamily = f.oid)
                 JOIN pg_namespace n ON (opcnamespace = n.oid)
-                LEFT JOIN pg_description d
-                     ON (o.oid = d.objoid AND d.objsubid = 0)
            WHERE (nspname != 'pg_catalog' AND nspname != 'information_schema')
            ORDER BY nspname, opcname, amname"""
 

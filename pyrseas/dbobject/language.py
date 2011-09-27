@@ -42,10 +42,9 @@ class LanguageDict(DbObjectDict):
 
     cls = Language
     query = \
-        """SELECT lanname AS name, lanpltrusted AS trusted, description
+        """SELECT lanname AS name, lanpltrusted AS trusted,
+                  obj_description(l.oid, 'pg_language') AS description
            FROM pg_language l
-                LEFT JOIN pg_description d
-                     ON (l.oid = d.objoid AND d.objsubid = 0)
            WHERE lanispl
            ORDER BY lanname"""
 

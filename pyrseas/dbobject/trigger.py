@@ -76,14 +76,13 @@ QUERY_PRE90 = \
                   tgdeferrable AS deferrable,
                   tginitdeferred AS initially_deferred,
                   pg_get_triggerdef(t.oid) AS definition,
-                  NULL AS columns, description
+                  NULL AS columns,
+                  obj_description(t.oid, 'pg_trigger') AS description
            FROM pg_trigger t
                 JOIN pg_class c ON (t.tgrelid = c.oid)
                 JOIN pg_namespace n ON (c.relnamespace = n.oid)
                 JOIN pg_roles ON (n.nspowner = pg_roles.oid)
                 LEFT JOIN pg_constraint cn ON (tgconstraint = cn.oid)
-                LEFT JOIN pg_description d
-                     ON (t.oid = d.objoid AND d.objsubid = 0)
            WHERE contype != 'f' OR contype IS NULL
              AND (nspname != 'pg_catalog' AND nspname != 'information_schema')
            ORDER BY 1, 2, 3"""
@@ -100,14 +99,13 @@ class TriggerDict(DbObjectDict):
                        constraint,
                   tgdeferrable AS deferrable,
                   tginitdeferred AS initially_deferred,
-                  tgattr AS columns, description
+                  tgattr AS columns,
+                  obj_description(t.oid, 'pg_trigger') AS description
            FROM pg_trigger t
                 JOIN pg_class c ON (t.tgrelid = c.oid)
                 JOIN pg_namespace n ON (c.relnamespace = n.oid)
                 JOIN pg_roles ON (n.nspowner = pg_roles.oid)
                 LEFT JOIN pg_constraint cn ON (tgconstraint = cn.oid)
-                LEFT JOIN pg_description d
-                     ON (t.oid = d.objoid AND d.objsubid = 0)
            WHERE NOT tgisinternal
              AND (nspname != 'pg_catalog' AND nspname != 'information_schema')
            ORDER BY 1, 2, 3"""

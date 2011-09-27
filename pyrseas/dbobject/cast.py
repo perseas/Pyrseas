@@ -79,7 +79,7 @@ class CastDict(DbObjectDict):
                   CASE WHEN castmethod = 'f' THEN castfunc::regprocedure
                        ELSE NULL::regprocedure END AS function,
                   castcontext AS context, castmethod AS method,
-                  description
+                  obj_description(c.oid, 'pg_cast') AS description
            FROM pg_cast c
                 JOIN pg_type s ON (castsource = s.oid)
                      JOIN pg_namespace sn ON (s.typnamespace = sn.oid)
@@ -87,8 +87,6 @@ class CastDict(DbObjectDict):
                      JOIN pg_namespace tn ON (t.typnamespace = tn.oid)
                 LEFT JOIN pg_proc p ON (castfunc = p.oid)
                      LEFT JOIN pg_namespace pn ON (p.pronamespace = pn.oid)
-                LEFT JOIN pg_description d
-                     ON (c.oid = d.objoid AND d.objsubid = 0)
            WHERE substring(sn.nspname for 3) != 'pg_'
               OR substring(tn.nspname for 3) != 'pg_'
               OR (castfunc != 0 AND substring(pn.nspname for 3) != 'pg_')

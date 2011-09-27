@@ -26,8 +26,6 @@ course the identifying attribute in the :class:`Schema`
 
 .. automethod:: Schema.create
 
-.. automethod:: Schema.diff_map
-
 Schema Dictionary
 -----------------
 

@@ -203,12 +203,11 @@ class TypeDict(DbObjectDict):
                   typmodout::regproc AS typmod_out,
                   typanalyze::regproc AS analyze,
                   typlen AS internallength, typalign AS alignment,
-                  typstorage AS storage, typdelim AS delimiter, description
+                  typstorage AS storage, typdelim AS delimiter,
+                  obj_description(t.oid, 'pg_type') AS description
            FROM pg_type t
                 JOIN pg_namespace n ON (typnamespace = n.oid)
                 LEFT JOIN pg_class c ON (typrelid = c.oid)
-                LEFT JOIN pg_description d
-                     ON (t.oid = d.objoid AND d.objsubid = 0)
            WHERE typisdefined AND (typtype in ('d', 'e')
                  OR (typtype = 'c' AND relkind = 'c')
                  OR (typtype = 'b' AND typarray != 0))
