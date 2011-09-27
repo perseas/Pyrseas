@@ -1,3 +1,20 @@
+0.4.0 (26-Sep-2011)
+
+  * Added support for:
+
+    - CASTs
+    - CONSTRAINT TRIGGERs
+    - CONVERSIONs
+    - OPERATORs, OPERATOR CLASSes and OPERATOR FAMILies
+    - Dynamically loaded C language functions
+    - Composite and base TYPEs
+
+  * Clean up and enhance documentation and redundant methods.
+
+  * Use obj_description/col_description functions instead of querying
+    pg_description directly.
+
+
 0.3.1 (26-Aug-2011)
 
   * Added workaround for incorrect assumption that 'public' schema is
