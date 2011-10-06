@@ -296,7 +296,10 @@ class Table(DbClass):
                 stmts.append(self.columns[num].rename(incol.name))
             # add new columns
             if num >= dbcols:
-                stmts.append(base + "ADD COLUMN %s" % incol.add())
+                (stmt, descr) = incol.add()
+                stmts.append(base + "ADD COLUMN %s" % stmt)
+                if descr:
+                    stmts.append(descr)
             # check existing columns
             # TODO: more work is needed, for columns out of order
             elif self.columns[num].name == incol.name:

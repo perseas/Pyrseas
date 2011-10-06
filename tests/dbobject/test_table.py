@@ -389,6 +389,19 @@ class TableCommentToSqlTestCase(PyrseasTestCase):
         self.assertEqual(dbsql[0],
                          "COMMENT ON COLUMN t1.c1 IS 'Test column c1'")
 
+    def test_add_column_with_comment(self):
+        "Add a commented column to an existing table"
+        inmap = self._tblmap()
+        inmap['schema public']['table t1']['columns'].append({'c3': {
+            'description': 'Test column c3', 'type': 'integer'}})
+        self.db.execute(CREATE_STMT)
+        self.db.execute_commit(COMMENT_STMT)
+        dbsql = self.db.process_map(inmap)
+        self.assertEqual(fix_indent(dbsql[0]),
+                         "ALTER TABLE t1 ADD COLUMN c3 integer")
+        self.assertEqual(dbsql[1],
+                         "COMMENT ON COLUMN t1.c3 IS 'Test column c3'")
+
     def test_drop_column_comment(self):
         "Drop a column comment on an existing table"
         inmap = self._tblmap()

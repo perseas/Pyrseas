@@ -38,7 +38,7 @@ class Column(DbSchemaObject):
         if hasattr(self, 'default'):
             if not self.default.startswith('nextval'):
                 stmt += ' DEFAULT ' + self.default
-        return stmt
+        return (stmt, self.comment())
 
     def comment(self):
         """Return a SQL COMMENT statement for the column
