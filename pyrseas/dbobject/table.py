@@ -300,9 +300,11 @@ class Table(DbClass):
             # check existing columns
             # TODO: more work is needed, for columns out of order
             elif self.columns[num].name == incol.name:
-                stmt = self.columns[num].diff_map(incol)
+                (stmt, descr) = self.columns[num].diff_map(incol)
                 if stmt:
                     stmts.append(base + stmt)
+                if descr:
+                    stmts.append(descr)
 
         stmts.append(self.diff_description(intable))
 

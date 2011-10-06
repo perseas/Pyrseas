@@ -111,7 +111,7 @@ class Column(DbSchemaObject):
             stmts.append(base + "SET DEFAULT %s" % incol.default)
         if hasattr(self, 'default') and not hasattr(incol, 'default'):
             stmts.append(base + "DROP DEFAULT")
-        return ", ".join(stmts)
+        return (", ".join(stmts), self.diff_description(incol))
 
 
 class ColumnDict(DbObjectDict):

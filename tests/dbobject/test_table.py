@@ -92,7 +92,6 @@ TYPELIST = [
     ('XML', 'xml')]
 
 CREATE_STMT = "CREATE TABLE t1 (c1 integer, c2 text)"
-DROP_STMT = "DROP TABLE IF EXISTS t1"
 COMMENT_STMT = "COMMENT ON TABLE t1 IS 'Test table t1'"
 
 
@@ -191,7 +190,6 @@ class TableToSqlTestCase(PyrseasTestCase):
 
     def test_create_table(self):
         "Create a two-column table"
-        self.db.execute_commit(DROP_STMT)
         inmap = new_std_map()
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c1': {'type': 'integer'}},
@@ -201,7 +199,6 @@ class TableToSqlTestCase(PyrseasTestCase):
 
     def test_create_table_with_defaults(self):
         "Create a table with two column DEFAULTs, one referring to a SEQUENCE"
-        self.db.execute(DROP_STMT)
         self.db.execute_commit("DROP SEQUENCE IF EXISTS t1_c1_seq")
         inmap = new_std_map()
         inmap['schema public'].update({'table t1': {
@@ -243,7 +240,6 @@ class TableToSqlTestCase(PyrseasTestCase):
 
     def test_drop_table(self):
         "Drop an existing table"
-        self.db.execute(DROP_STMT)
         self.db.execute_commit(CREATE_STMT)
         inmap = new_std_map()
         dbsql = self.db.process_map(inmap)
@@ -251,7 +247,6 @@ class TableToSqlTestCase(PyrseasTestCase):
 
     def test_rename_table(self):
         "Rename an existing table"
-        self.db.execute(DROP_STMT)
         self.db.execute_commit(CREATE_STMT)
         inmap = new_std_map()
         inmap['schema public'].update({'table t2': {
@@ -263,7 +258,6 @@ class TableToSqlTestCase(PyrseasTestCase):
 
     def test_add_columns(self):
         "Add two new columns to a table"
-        self.db.execute(DROP_STMT)
         self.db.execute_commit(CREATE_STMT)
         inmap = new_std_map()
         inmap['schema public'].update({'table t1': {
@@ -280,7 +274,6 @@ class TableToSqlTestCase(PyrseasTestCase):
 
     def test_set_column_not_null(self):
         "Change a nullable column to NOT NULL"
-        self.db.execute(DROP_STMT)
         self.db.execute_commit(CREATE_STMT)
         inmap = new_std_map()
         inmap['schema public'].update({'table t1': {
@@ -292,7 +285,6 @@ class TableToSqlTestCase(PyrseasTestCase):
 
     def test_change_column_types(self):
         "Change the datatypes of two columns"
-        self.db.execute(DROP_STMT)
         self.db.execute_commit(CREATE_STMT)
         inmap = new_std_map()
         inmap['schema public'].update({'table t1': {
@@ -306,7 +298,6 @@ class TableToSqlTestCase(PyrseasTestCase):
 
     def test_drop_column(self):
         "Drop a column from a table"
-        self.db.execute(DROP_STMT)
         self.db.execute_commit("CREATE TABLE t1 (c1 INTEGER, c2 TEXT, "
                                "c3 SMALLINT, c4 DATE)")
         inmap = new_std_map()
@@ -320,7 +311,6 @@ class TableToSqlTestCase(PyrseasTestCase):
 
     def test_rename_column(self):
         "Rename a table column"
-        self.db.execute(DROP_STMT)
         self.db.execute_commit(CREATE_STMT)
         inmap = new_std_map()
         inmap['schema public'].update({'table t1': {
@@ -344,21 +334,18 @@ class TableCommentToSqlTestCase(PyrseasTestCase):
 
     def test_table_with_comment(self):
         "Create a table with a comment"
-        self.db.execute_commit(DROP_STMT)
         dbsql = self.db.process_map(self._tblmap())
         self.assertEqual(fix_indent(dbsql[0]), CREATE_STMT)
         self.assertEqual(dbsql[1], COMMENT_STMT)
 
     def test_comment_on_table(self):
         "Create a comment for an existing table"
-        self.db.execute(DROP_STMT)
         self.db.execute_commit(CREATE_STMT)
         dbsql = self.db.process_map(self._tblmap())
         self.assertEqual(dbsql, [COMMENT_STMT])
 
     def test_drop_table_comment(self):
         "Drop a comment on an existing table"
-        self.db.execute(DROP_STMT)
         self.db.execute(CREATE_STMT)
         self.db.execute_commit(COMMENT_STMT)
         inmap = self._tblmap()
@@ -368,7 +355,6 @@ class TableCommentToSqlTestCase(PyrseasTestCase):
 
     def test_change_table_comment(self):
         "Change existing comment on a table"
-        self.db.execute(DROP_STMT)
         self.db.execute(CREATE_STMT)
         self.db.execute_commit(COMMENT_STMT)
         inmap = self._tblmap()
@@ -384,7 +370,6 @@ class TableCommentToSqlTestCase(PyrseasTestCase):
             description='Test column c1')
         inmap['schema public']['table t1']['columns'][1]['c2'].update(
             description='Test column c2')
-        self.db.execute_commit(DROP_STMT)
         dbsql = self.db.process_map(inmap)
         self.assertEqual(fix_indent(dbsql[0]), CREATE_STMT)
         self.assertEqual(dbsql[1], COMMENT_STMT)
@@ -393,13 +378,44 @@ class TableCommentToSqlTestCase(PyrseasTestCase):
         self.assertEqual(dbsql[3],
                          "COMMENT ON COLUMN t1.c2 IS 'Test column c2'")
 
+    def test_add_column_comment(self):
+        "Add a column comment to an existing table"
+        inmap = self._tblmap()
+        inmap['schema public']['table t1']['columns'][0]['c1'].update(
+            description='Test column c1')
+        self.db.execute(CREATE_STMT)
+        self.db.execute_commit(COMMENT_STMT)
+        dbsql = self.db.process_map(inmap)
+        self.assertEqual(dbsql[0],
+                         "COMMENT ON COLUMN t1.c1 IS 'Test column c1'")
+
+    def test_drop_column_comment(self):
+        "Drop a column comment on an existing table"
+        inmap = self._tblmap()
+        self.db.execute(CREATE_STMT)
+        self.db.execute(COMMENT_STMT)
+        self.db.execute_commit("COMMENT ON COLUMN t1.c1 IS 'Test column c1'")
+        dbsql = self.db.process_map(inmap)
+        self.assertEqual(dbsql[0],
+                         "COMMENT ON COLUMN t1.c1 IS NULL")
+
+    def test_change_column_comment(self):
+        "Add a column comment to an existing table"
+        inmap = self._tblmap()
+        inmap['schema public']['table t1']['columns'][0]['c1'].update(
+            description='Changed column c1')
+        self.db.execute(CREATE_STMT)
+        self.db.execute_commit(COMMENT_STMT)
+        dbsql = self.db.process_map(inmap)
+        self.assertEqual(dbsql[0],
+                         "COMMENT ON COLUMN t1.c1 IS 'Changed column c1'")
+
 
 class TableInheritToSqlTestCase(PyrseasTestCase):
     """Test SQL generation of table inheritance statements"""
 
     def test_table_inheritance(self):
         "Create a table that inherits from another"
-        self.db.execute_commit(DROP_STMT)
         inmap = new_std_map()
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c1': {'type': 'integer'}},
@@ -416,7 +432,6 @@ class TableInheritToSqlTestCase(PyrseasTestCase):
 
     def test_drop_inherited(self):
         "Drop tables that inherit from others"
-        self.db.execute(DROP_STMT)
         self.db.execute(CREATE_STMT)
         self.db.execute("CREATE TABLE t2 (c3 numeric) INHERITS (t1)")
         self.db.execute_commit("CREATE TABLE t3 (c4 date) INHERITS (t2)")
