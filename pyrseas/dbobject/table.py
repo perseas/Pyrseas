@@ -245,7 +245,7 @@ class Table(DbClass):
         cols = []
         for col in self.columns:
             if not (hasattr(col, 'inherited') and col.inherited):
-                cols.append("    " + col.add())
+                cols.append("    " + col.add()[0])
         inhclause = ''
         if hasattr(self, 'inherits'):
             inhclause = " INHERITS (%s)" % ", ".join(t for t in self.inherits)
