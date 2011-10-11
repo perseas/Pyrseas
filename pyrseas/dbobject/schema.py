@@ -99,8 +99,9 @@ class SchemaDict(DbObjectDict):
     query = \
         """SELECT nspname AS name,
                   obj_description(n.oid, 'pg_namespace') AS description
-           FROM pg_namespace n JOIN pg_roles ON (nspowner = pg_roles.oid)
-           WHERE nspname = 'public' OR rolname <> 'postgres'
+           FROM pg_namespace n
+           WHERE nspname NOT IN ('pg_catalog', 'information_schema',
+                                 'pg_temp_1', 'pg_toast', 'pg_toast_temp_1')
            ORDER BY nspname"""
 
     def from_map(self, inmap, newdb):

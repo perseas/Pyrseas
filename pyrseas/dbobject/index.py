@@ -92,10 +92,10 @@ class IndexDict(DbObjectDict):
                   obj_description (c.oid, 'pg_class') AS description
            FROM pg_index JOIN pg_class c ON (indexrelid = c.oid)
                 JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
-                JOIN pg_roles ON (nspowner = pg_roles.oid)
                 JOIN pg_am ON (relam = pg_am.oid)
            WHERE NOT indisprimary
-                 AND (nspname = 'public' OR rolname <> 'postgres')
+                 AND (nspname != 'pg_catalog'
+                      AND nspname != 'information_schema')
                  AND c.relname NOT IN (
                      SELECT conname FROM pg_constraint
                      WHERE contype = 'u')

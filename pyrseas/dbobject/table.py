@@ -365,9 +365,9 @@ class ClassDict(DbObjectDict):
                   obj_description(c.oid, 'pg_class') AS description
            FROM pg_class c
                 JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
-                JOIN pg_roles ON (nspowner = pg_roles.oid)
            WHERE relkind in ('r', 'S', 'v')
-                 AND (nspname = 'public' OR rolname <> 'postgres')
+                 AND (nspname != 'pg_catalog'
+                      AND nspname != 'information_schema')
            ORDER BY nspname, relname"""
 
     inhquery = \

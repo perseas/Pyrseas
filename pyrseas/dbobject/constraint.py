@@ -259,10 +259,9 @@ class ConstraintDict(DbObjectDict):
                   obj_description(c.oid, 'pg_constraint') AS description
            FROM pg_constraint c
                 JOIN pg_namespace ON (connamespace = pg_namespace.oid)
-                JOIN pg_roles ON (nspowner = pg_roles.oid)
                 LEFT JOIN pg_class on (conname = relname)
                 LEFT JOIN pg_am on (relam = pg_am.oid)
-           WHERE (nspname = 'public' OR rolname <> 'postgres')
+           WHERE (nspname != 'pg_catalog' AND nspname != 'information_schema')
            ORDER BY schema, 2, name"""
 
     def _from_catalog(self):
