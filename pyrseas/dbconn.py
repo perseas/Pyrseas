@@ -53,6 +53,7 @@ class DbConnection(object):
         except:
             self.conn.rollback()
             self._execute("set search_path to pg_catalog")
+        self.conn.commit()
         self._version = int(self.fetchone("SHOW server_version_num")[0])
 
     def _execute(self, query):

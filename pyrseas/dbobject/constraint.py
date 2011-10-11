@@ -172,7 +172,7 @@ class ForeignKey(Constraint):
         ref_cols = [refcols[k - 1] for k in self.ref_cols]
         dct['references'] = {'table': dct['ref_table'], 'columns': ref_cols}
         if 'ref_schema' in dct:
-            dct['references'].update(schema=dct['ref_schema'])
+            dct['references'].update(schema=refsch)
             del dct['ref_schema']
         del dct['ref_table'], dct['ref_cols']
         return {self.name: dct}
