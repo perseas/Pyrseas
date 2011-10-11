@@ -127,11 +127,11 @@ class ColumnDict(DbObjectDict):
                   col_description(c.oid, attnum) AS description
            FROM pg_attribute JOIN pg_class c ON (attrelid = c.oid)
                 JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
-                JOIN pg_roles ON (nspowner = pg_roles.oid)
                 LEFT JOIN pg_attrdef ON (attrelid = pg_attrdef.adrelid
                      AND attnum = pg_attrdef.adnum)
            WHERE relkind in ('c', 'r')
-                 AND (nspname = 'public' OR rolname <> 'postgres')
+                 AND (nspname != 'pg_catalog'
+                      AND nspname != 'information_schema')
                  AND attnum > 0
            ORDER BY nspname, relname, attnum"""
 
