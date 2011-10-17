@@ -262,6 +262,7 @@ class ConstraintDict(DbObjectDict):
                 LEFT JOIN pg_class on (conname = relname)
                 LEFT JOIN pg_am on (relam = pg_am.oid)
            WHERE (nspname != 'pg_catalog' AND nspname != 'information_schema')
+                 AND conislocal
            ORDER BY schema, 2, name"""
 
     def _from_catalog(self):
