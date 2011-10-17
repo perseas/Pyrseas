@@ -160,6 +160,16 @@ class TableToMapTestCase(PyrseasTestCase):
         dbmap = self.db.execute_and_map(COMMENT_STMT)
         self.assertEqual(dbmap['schema public']['table t1'], expmap)
 
+    def test_map_table_comment_quotes(self):
+        "Map a table comment with quotes"
+        self.db.execute(CREATE_STMT)
+        expmap = {'columns': [{'c1': {'type': 'integer'}},
+                              {'c2': {'type': 'text'}}],
+                  'description': "A \"special\" person's table t1"}
+        dbmap = self.db.execute_and_map("COMMENT ON TABLE t1 IS "
+                                        "'A \"special\" person''s table t1'")
+        self.assertEqual(dbmap['schema public']['table t1'], expmap)
+
     def test_map_column_comments(self):
         "Map two column comments"
         self.db.execute(CREATE_STMT)
@@ -355,6 +365,16 @@ class TableCommentToSqlTestCase(PyrseasTestCase):
         self.db.execute_commit(CREATE_STMT)
         dbsql = self.db.process_map(self._tblmap())
         self.assertEqual(dbsql, [COMMENT_STMT])
+
+    def test_table_comment_quotes(self):
+        "Create a table comment with quotes"
+        self.db.execute_commit(CREATE_STMT)
+        inmap = self._tblmap()
+        inmap['schema public']['table t1']['description'] = \
+            "A \"special\" person's table t1"
+        dbsql = self.db.process_map(inmap)
+        self.assertEqual(dbsql, ["COMMENT ON TABLE t1 IS "
+                                 "'A \"special\" person''s table t1'"])
 
     def test_drop_table_comment(self):
         "Drop a comment on an existing table"

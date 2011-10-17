@@ -161,7 +161,7 @@ class DbObject(object):
         :return: string
         """
         if hasattr(self, 'description'):
-            return "'%s'" % self.description
+            return "'%s'" % self.description.replace("'", "''")
         else:
             return 'NULL'
 
