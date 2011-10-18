@@ -301,13 +301,23 @@ class Table(DbClass):
                 if descr:
                     stmts.append(descr)
             # check existing columns
-            # TODO: more work is needed, for columns out of order
             elif self.columns[num].name == incol.name:
                 (stmt, descr) = self.columns[num].diff_map(incol)
                 if stmt:
                     stmts.append(base + stmt)
                 if descr:
                     stmts.append(descr)
+        # check existing columns that may be out of order
+        cols = [col for col in self.columns if not hasattr(col, 'dropped')]
+        innames = [col.name for col in intable.columns]
+        numincols = len(intable.columns)
+        for (num, col) in enumerate(cols):
+            if num < numincols:
+                break
+            if cols[num].name != intable.columns[num].name:
+                if cols[num].name not in innames:
+                    stmts.append(base + "ADD COLUMN %s" %
+                                 intable.columns[num].add())
 
         stmts.append(self.diff_description(intable))
 
