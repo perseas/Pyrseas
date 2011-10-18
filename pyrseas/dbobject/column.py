@@ -183,7 +183,8 @@ class ColumnDict(DbObjectDict):
         for (sch, tbl) in incols.keys():
             if (sch, tbl) in self.keys():
                 for col in self[(sch, tbl)]:
-                    if col.name not in [c.name for c in incols[(sch, tbl)]]:
+                    if col.name not in [c.name for c in incols[(sch, tbl)]] \
+                            and not hasattr(col, 'dropped'):
                         stmts.append(col.drop())
 
         return stmts
