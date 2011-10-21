@@ -3,7 +3,7 @@
 
 import unittest
 
-from utils import PyrseasTestCase, fix_indent, new_std_map
+from utils import PyrseasTestCase, fix_indent
 
 COMMENT_STMT = "COMMENT ON CONSTRAINT cns1 ON t1 IS 'Test constraint cns1'"
 
@@ -40,7 +40,7 @@ class CheckConstraintToSqlTestCase(PyrseasTestCase):
 
     def test_create_w_check_constraint(self):
         "Create new table with a single column CHECK constraint"
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c1': {'type': 'integer'}},
                                 {'c2': {'type': 'text'}}],
@@ -58,7 +58,7 @@ class CheckConstraintToSqlTestCase(PyrseasTestCase):
         "Add a two-column CHECK constraint to an existing table"
         self.db.execute_commit("CREATE TABLE t1 (c1 INTEGER NOT NULL, "
                         "c2 INTEGER NOT NULL, c3 TEXT)")
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                 'columns': [
                     {'c1': {'type': 'integer', 'not_null': True}},
@@ -132,7 +132,7 @@ class PrimaryKeyToSqlTestCase(PyrseasTestCase):
 
     def test_create_with_primary_key(self):
         "Create new table with single column primary key"
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c1': {'type': 'text'}},
                                 {'c2': {'type': 'integer'}}],
@@ -150,7 +150,7 @@ class PrimaryKeyToSqlTestCase(PyrseasTestCase):
         "Add a two-column primary key to an existing table"
         self.db.execute_commit("CREATE TABLE t1 (c1 INTEGER NOT NULL, "
                         "c2 INTEGER NOT NULL, c3 TEXT)")
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                     'columns': [
                         {'c1': {'type': 'integer', 'not_null': True}},
@@ -168,7 +168,7 @@ class PrimaryKeyToSqlTestCase(PyrseasTestCase):
         "Drop a primary key on an existing table"
         self.db.execute_commit("CREATE TABLE t1 (c1 INTEGER NOT NULL "
                                "PRIMARY KEY, c2 TEXT)")
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c1': {'type': 'integer', 'not_null': True},
                                  'c2': {'type': 'text'}}]}})
@@ -370,7 +370,7 @@ class ForeignKeyToSqlTestCase(PyrseasTestCase):
 
     def test_create_with_foreign_key(self):
         "Create a table with a foreign key constraint"
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c11': {'type': 'integer'}},
                                 {'c12': {'type': 'text'}}]},
@@ -406,7 +406,7 @@ class ForeignKeyToSqlTestCase(PyrseasTestCase):
         self.db.execute_commit("CREATE TABLE t2 (c21 INTEGER NOT NULL, "
                                "c22 TEXT, c23 INTEGER, c24 INTEGER, "
                                "PRIMARY KEY (c21))")
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({
                 'table t1': {'columns': [
                         {'c11': {'type': 'integer', 'not_null': True}},
@@ -439,7 +439,7 @@ class ForeignKeyToSqlTestCase(PyrseasTestCase):
         self.db.execute_commit("CREATE TABLE t2 (c21 INTEGER NOT NULL "
                                "PRIMARY KEY, c22 INTEGER NOT NULL "
                                "REFERENCES t1 (c11), c23 TEXT)")
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c11': {'type': 'integer', 'not_null': True}},
                                 {'c12': {'type': 'text'}}],
@@ -454,7 +454,7 @@ class ForeignKeyToSqlTestCase(PyrseasTestCase):
 
     def test_create_foreign_key_actions(self):
         "Create a table with foreign key ON UPDATE/ON DELETE actions"
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c11': {'type': 'integer'}},
                                 {'c12': {'type': 'text'}}]},
@@ -538,7 +538,7 @@ class UniqueConstraintToSqlTestCase(PyrseasTestCase):
 
     def test_create_w_unique_constraint(self):
         "Create new table with a single column unique constraint"
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c1': {'type': 'integer'}},
                                 {'c2': {'type': 'text'}}],
@@ -556,7 +556,7 @@ class UniqueConstraintToSqlTestCase(PyrseasTestCase):
         "Add a two-column unique constraint to an existing table"
         self.db.execute_commit("CREATE TABLE t1 (c1 INTEGER NOT NULL, "
                         "c2 INTEGER NOT NULL, c3 TEXT)")
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                 'columns': [
                     {'c1': {'type': 'integer', 'not_null': True}},
@@ -574,7 +574,7 @@ class UniqueConstraintToSqlTestCase(PyrseasTestCase):
         "Drop a unique constraint on an existing table"
         self.db.execute_commit("CREATE TABLE t1 (c1 INTEGER NOT NULL UNIQUE, "
                                "c2 TEXT)")
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c1': {'type': 'integer', 'not_null': True},
                                  'c2': {'type': 'text'}}]}})
@@ -604,7 +604,7 @@ class ConstraintCommentTestCase(PyrseasTestCase):
 
     def test_check_constraint_with_comment(self):
         "Create a CHECK constraint with a comment"
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c1': {'type': 'integer'}},
                                 {'c2': {'type': 'text'}}],
@@ -622,7 +622,7 @@ class ConstraintCommentTestCase(PyrseasTestCase):
         "Create a comment for an existing primary key"
         self.db.execute_commit("CREATE TABLE t1 (c1 text CONSTRAINT cns1 "
                                "PRIMARY KEY, c2 integer)")
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c1': {'type': 'text', 'not_null': True}},
                                 {'c2': {'type': 'integer'}}],
@@ -638,7 +638,7 @@ class ConstraintCommentTestCase(PyrseasTestCase):
         self.db.execute("CREATE TABLE t1 (c11 integer, c12 text, "
                         "c13 integer CONSTRAINT cns1 REFERENCES t2 (c21))")
         self.db.execute_commit(COMMENT_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'table t2': {
                     'columns': [{'c21': {'type': 'integer', 'not_null': True}},
                                 {'c22': {'type': 'text'}}],
@@ -660,7 +660,7 @@ class ConstraintCommentTestCase(PyrseasTestCase):
         self.db.execute("CREATE TABLE t1 (c1 integer CONSTRAINT cns1 UNIQUE, "
                         "c2 text)")
         self.db.execute_commit(COMMENT_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c1': {'type': 'integer'}},
                                 {'c2': {'type': 'text'}}],

@@ -3,7 +3,7 @@
 
 import unittest
 
-from utils import PyrseasTestCase, fix_indent, new_std_map
+from utils import PyrseasTestCase, fix_indent
 
 CREATE_TABLE_STMT = "CREATE TABLE t1 (c1 integer, c2 text)"
 CREATE_STMT = "CREATE INDEX t1_idx ON t1 (c1)"
@@ -78,7 +78,7 @@ class IndexToSqlTestCase(PyrseasTestCase):
 
     def test_create_table_with_index(self):
         "Create new table with a single column index"
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c1': {'type': 'integer'}},
                                 {'c2': {'type': 'text'}}],
@@ -95,7 +95,7 @@ class IndexToSqlTestCase(PyrseasTestCase):
         "Add a two-column unique index to an existing table"
         self.db.execute_commit("CREATE TABLE t1 (c1 INTEGER NOT NULL, "
                         "c2 INTEGER NOT NULL, c3 TEXT)")
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                     'columns': [
                         {'c1': {'type': 'integer', 'not_null': True}},
@@ -109,7 +109,7 @@ class IndexToSqlTestCase(PyrseasTestCase):
     def test_bad_index(self):
         "Fail on creating an index without columns or expression"
         self.db.execute_commit("DROP TABLE IF EXISTS t1")
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c1': {'type': 'integer'}},
                                 {'c2': {'type': 'text'}}],
@@ -118,7 +118,7 @@ class IndexToSqlTestCase(PyrseasTestCase):
 
     def test_create_index_function(self):
         "Create an index which uses a function"
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c1': {'type': 'integer'}},
                                 {'c2': {'type': 'text'}}],
@@ -131,7 +131,7 @@ class IndexToSqlTestCase(PyrseasTestCase):
     def test_index_with_comment(self):
         "Create an index with a comment"
         self.db.execute_commit(CREATE_TABLE_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c1': {'type': 'integer'}},
                                 {'c2': {'type': 'text'}}],
@@ -147,7 +147,7 @@ class IndexToSqlTestCase(PyrseasTestCase):
         "Create a comment for an existing index"
         self.db.execute(CREATE_TABLE_STMT)
         self.db.execute_commit(CREATE_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c1': {'type': 'integer'}},
                                 {'c2': {'type': 'text'}}],
@@ -162,7 +162,7 @@ class IndexToSqlTestCase(PyrseasTestCase):
         self.db.execute(CREATE_TABLE_STMT)
         self.db.execute(CREATE_STMT)
         self.db.execute_commit(COMMENT_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c1': {'type': 'integer'}},
                                 {'c2': {'type': 'text'}}],
@@ -176,7 +176,7 @@ class IndexToSqlTestCase(PyrseasTestCase):
         self.db.execute(CREATE_TABLE_STMT)
         self.db.execute(CREATE_STMT)
         self.db.execute_commit(COMMENT_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c1': {'type': 'integer'}},
                                 {'c2': {'type': 'text'}}],

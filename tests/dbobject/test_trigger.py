@@ -3,7 +3,7 @@
 
 import unittest
 
-from utils import PyrseasTestCase, fix_indent, new_std_map
+from utils import PyrseasTestCase, fix_indent
 
 FUNC_SRC = "BEGIN NEW.c3 := CURRENT_TIMESTAMP; RETURN NEW; END"
 CREATE_TABLE_STMT = "CREATE TABLE t1 (c1 integer, c2 text, " \
@@ -137,8 +137,7 @@ class TriggerToSqlTestCase(PyrseasTestCase):
 
     def test_create_trigger(self):
         "Create a simple trigger"
-        inmap = new_std_map()
-        inmap.update({'language plpgsql': {'trusted': True}})
+        inmap = self.std_map(plpgsql_installed=True)
         inmap['schema public'].update({'function f1()': {
                     'language': 'plpgsql', 'returns': 'trigger',
                     'source': FUNC_SRC}})
@@ -156,8 +155,7 @@ class TriggerToSqlTestCase(PyrseasTestCase):
 
     def test_create_trigger2(self):
         "Create another simple trigger with"
-        inmap = new_std_map()
-        inmap.update({'language plpgsql': {'trusted': True}})
+        inmap = self.std_map(plpgsql_installed=True)
         inmap['schema public'].update({'function f1()': {
                     'language': 'plpgsql', 'returns': 'trigger',
                     'source': FUNC_SRC}})
@@ -179,8 +177,7 @@ class TriggerToSqlTestCase(PyrseasTestCase):
         "Create a trigger with UPDATE OF columns"
         if self.db.version < 90000:
             return True
-        inmap = new_std_map()
-        inmap.update({'language plpgsql': {'trusted': True}})
+        inmap = self.std_map()
         inmap['schema public'].update({'function f1()': {
                     'language': 'plpgsql', 'returns': 'trigger',
                     'source': FUNC_SRC}})
@@ -203,8 +200,7 @@ class TriggerToSqlTestCase(PyrseasTestCase):
         "Create a trigger with a WHEN qualification"
         if self.db.version < 90000:
             return True
-        inmap = new_std_map()
-        inmap.update({'language plpgsql': {'trusted': True}})
+        inmap = self.std_map()
         inmap['schema public'].update({'function f1()': {
                     'language': 'plpgsql', 'returns': 'trigger',
                     'source': FUNC_SRC}})
@@ -229,8 +225,7 @@ class TriggerToSqlTestCase(PyrseasTestCase):
         "Create a trigger within a non-public schema"
         self.db.execute("DROP SCHEMA IF EXISTS s1 CASCADE")
         self.db.execute_commit("CREATE SCHEMA s1")
-        inmap = new_std_map()
-        inmap.update({'language plpgsql': {'trusted': True}})
+        inmap = self.std_map(plpgsql_installed=True)
         inmap.update({'schema s1': {'function f1()': {
                         'language': 'plpgsql', 'returns': 'trigger',
                         'source': FUNC_SRC},
@@ -252,8 +247,7 @@ class TriggerToSqlTestCase(PyrseasTestCase):
         self.db.execute(CREATE_TABLE_STMT)
         self.db.execute(CREATE_FUNC_STMT)
         self.db.execute_commit(CREATE_STMT)
-        inmap = new_std_map()
-        inmap.update({'language plpgsql': {'trusted': True}})
+        inmap = self.std_map(plpgsql_installed=True)
         inmap['schema public'].update({'function f1()': {
                     'language': 'plpgsql', 'returns': 'trigger',
                     'source': FUNC_SRC}})
@@ -270,8 +264,7 @@ class TriggerToSqlTestCase(PyrseasTestCase):
         self.db.execute(CREATE_TABLE_STMT)
         self.db.execute(CREATE_FUNC_STMT)
         self.db.execute_commit(CREATE_STMT)
-        inmap = new_std_map()
-        inmap.update({'language plpgsql': {'trusted': True}})
+        inmap = self.std_map(plpgsql_installed=True)
         inmap['schema public'].update({'function f1()': {
                     'language': 'plpgsql', 'returns': 'trigger',
                     'source': FUNC_SRC}})
@@ -281,8 +274,7 @@ class TriggerToSqlTestCase(PyrseasTestCase):
 
     def test_trigger_with_comment(self):
         "Create a trigger with a comment"
-        inmap = new_std_map()
-        inmap.update({'language plpgsql': {'trusted': True}})
+        inmap = self.std_map(plpgsql_installed=True)
         inmap['schema public'].update({'function f1()': {
                     'language': 'plpgsql', 'returns': 'trigger',
                     'source': FUNC_SRC}})
@@ -305,8 +297,7 @@ class TriggerToSqlTestCase(PyrseasTestCase):
         self.db.execute(CREATE_TABLE_STMT)
         self.db.execute(CREATE_FUNC_STMT)
         self.db.execute_commit(CREATE_STMT)
-        inmap = new_std_map()
-        inmap.update({'language plpgsql': {'trusted': True}})
+        inmap = self.std_map(plpgsql_installed=True)
         inmap['schema public'].update({'function f1()': {
                     'language': 'plpgsql', 'returns': 'trigger',
                     'source': FUNC_SRC}})
@@ -327,8 +318,7 @@ class TriggerToSqlTestCase(PyrseasTestCase):
         self.db.execute(CREATE_FUNC_STMT)
         self.db.execute(CREATE_STMT)
         self.db.execute_commit(COMMENT_STMT)
-        inmap = new_std_map()
-        inmap.update({'language plpgsql': {'trusted': True}})
+        inmap = self.std_map(plpgsql_installed=True)
         inmap['schema public'].update({'function f1()': {
                     'language': 'plpgsql', 'returns': 'trigger',
                     'source': FUNC_SRC}})
@@ -349,8 +339,7 @@ class TriggerToSqlTestCase(PyrseasTestCase):
         self.db.execute(CREATE_FUNC_STMT)
         self.db.execute(CREATE_STMT)
         self.db.execute_commit(COMMENT_STMT)
-        inmap = new_std_map()
-        inmap.update({'language plpgsql': {'trusted': True}})
+        inmap = self.std_map(plpgsql_installed=True)
         inmap['schema public'].update({'function f1()': {
                     'language': 'plpgsql', 'returns': 'trigger',
                     'source': FUNC_SRC}})
@@ -378,8 +367,7 @@ class ConstraintTriggerToSqlTestCase(PyrseasTestCase):
 
     def test_create_trigger(self):
         "Create a constraint trigger"
-        inmap = new_std_map()
-        inmap.update({'language plpgsql': {'trusted': True}})
+        inmap = self.std_map(plpgsql_installed=True)
         inmap['schema public'].update({'function f1()': {
                     'language': 'plpgsql', 'returns': 'trigger',
                     'source': FUNC_SRC}})
@@ -400,8 +388,7 @@ class ConstraintTriggerToSqlTestCase(PyrseasTestCase):
 
     def test_create_trigger_deferrable(self):
         "Create a deferrable constraint trigger"
-        inmap = new_std_map()
-        inmap.update({'language plpgsql': {'trusted': True}})
+        inmap = self.std_map(plpgsql_installed=True)
         inmap['schema public'].update({'function f1()': {
                     'language': 'plpgsql', 'returns': 'trigger',
                     'source': FUNC_SRC}})

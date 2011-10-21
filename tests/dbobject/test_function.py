@@ -3,7 +3,7 @@
 
 import unittest
 
-from utils import PyrseasTestCase, fix_indent, new_std_map
+from utils import PyrseasTestCase, fix_indent
 
 SOURCE1 = "SELECT 'dummy'::text"
 CREATE_STMT1 = "CREATE FUNCTION f1() RETURNS text LANGUAGE sql IMMUTABLE AS " \
@@ -90,7 +90,7 @@ class FunctionToSqlTestCase(PyrseasTestCase):
     def test_create_function(self):
         "Create a very simple function with no arguments"
         self.db.execute_commit(DROP_STMT1)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'function f1()': {
                     'language': 'sql', 'returns': 'text',
                     'source': SOURCE1, 'volatility': 'immutable'}})
@@ -100,7 +100,7 @@ class FunctionToSqlTestCase(PyrseasTestCase):
     def test_create_function_with_args(self):
         "Create a function with two arguments"
         self.db.execute_commit(DROP_STMT2)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({
                 'function f1(integer, integer)': {
                     'language': 'sql', 'returns': 'integer',
@@ -113,7 +113,7 @@ class FunctionToSqlTestCase(PyrseasTestCase):
     def test_create_setof_row_function(self):
         "Create a function returning a set of rows"
         self.db.execute_commit(DROP_STMT1)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c1': {'type': 'integer'}},
                                 {'c2': {'type': 'text'}}]}})
@@ -129,7 +129,7 @@ class FunctionToSqlTestCase(PyrseasTestCase):
     def test_create_security_definer_function(self):
         "Create a SECURITY DEFINER function"
         self.db.execute_commit(DROP_STMT1)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'function f1()': {
                     'language': 'sql', 'returns': 'text',
                     'source': SOURCE1, 'security_definer': True}})
@@ -143,7 +143,7 @@ class FunctionToSqlTestCase(PyrseasTestCase):
         # NOTE 1: Needs contrib/spi module to be available
         # NOTE 2: Needs superuser privilege
         self.db.execute_commit("DROP FUNCTION IF EXISTS autoinc()")
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'function autoinc()': {
                     'language': 'c', 'returns': 'trigger',
                     'obj_file': '$libdir/autoinc'}})
@@ -156,7 +156,7 @@ class FunctionToSqlTestCase(PyrseasTestCase):
         "Create a function within a non-public schema"
         self.db.execute("CREATE SCHEMA s1")
         self.db.execute_commit(DROP_STMT1)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap.update({'schema s1': {'function f1()': {
                     'language': 'sql', 'returns': 'text',
                     'source': SOURCE1, 'volatility': 'immutable'}}})
@@ -168,7 +168,7 @@ class FunctionToSqlTestCase(PyrseasTestCase):
 
     def test_bad_function_map(self):
         "Error creating a function with a bad map"
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'f1()': {
                     'language': 'sql', 'returns': 'text',
                     'source': SOURCE1}})
@@ -178,21 +178,21 @@ class FunctionToSqlTestCase(PyrseasTestCase):
         "Drop an existing function with no arguments"
         self.db.execute(DROP_STMT1)
         self.db.execute_commit(CREATE_STMT1)
-        dbsql = self.db.process_map(new_std_map())
+        dbsql = self.db.process_map(self.std_map())
         self.assertEqual(dbsql, ["DROP FUNCTION f1()"])
 
     def test_drop_function_with_args(self):
         "Drop an existing function which has arguments"
         self.db.execute(DROP_STMT2)
         self.db.execute_commit(CREATE_STMT2)
-        dbsql = self.db.process_map(new_std_map())
+        dbsql = self.db.process_map(self.std_map())
         self.assertEqual(dbsql[0], "DROP FUNCTION f1(integer, integer)")
 
     def test_change_function_defn(self):
         "Change function definition"
         self.db.execute(DROP_STMT1)
         self.db.execute_commit(CREATE_STMT1)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'function f1()': {
                     'language': 'sql', 'returns': 'text',
                     'source': "SELECT 'example'::text",
@@ -205,7 +205,7 @@ class FunctionToSqlTestCase(PyrseasTestCase):
     def test_function_with_comment(self):
         "Create a function with a comment"
         self.db.execute_commit(DROP_STMT2)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({
                 'function f1(integer, integer)': {
                     'description': 'Test function f1',
@@ -221,7 +221,7 @@ class FunctionToSqlTestCase(PyrseasTestCase):
         "Create a comment for an existing function"
         self.db.execute(DROP_STMT2)
         self.db.execute_commit(CREATE_STMT2)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({
                 'function f1(integer, integer)': {
                     'description': 'Test function f1',
@@ -235,7 +235,7 @@ class FunctionToSqlTestCase(PyrseasTestCase):
         self.db.execute(DROP_STMT2)
         self.db.execute(CREATE_STMT2)
         self.db.execute_commit(COMMENT_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({
                 'function f1(integer, integer)': {
                     'language': 'sql', 'returns': 'integer',
@@ -249,7 +249,7 @@ class FunctionToSqlTestCase(PyrseasTestCase):
         self.db.execute(DROP_STMT2)
         self.db.execute(CREATE_STMT2)
         self.db.execute_commit(COMMENT_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({
                 'function f1(integer, integer)': {
                     'description': 'Changed function f1',
@@ -308,7 +308,7 @@ class AggregateToSqlTestCase(PyrseasTestCase):
         "Create a simple aggregate"
         self.db.execute("DROP AGGREGATE IF EXISTS a1(integer)")
         self.db.execute_commit(DROP_STMT2)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'function f1(integer, integer)': {
                     'language': 'sql', 'returns': 'integer',
                     'source': SOURCE2,
@@ -326,7 +326,7 @@ class AggregateToSqlTestCase(PyrseasTestCase):
         self.db.execute("DROP AGGREGATE IF EXISTS a1(integer)")
         self.db.execute_commit("DROP FUNCTION IF EXISTS f2(integer)")
         self.db.execute_commit(DROP_STMT2)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'function f1(integer, integer)': {
                     'language': 'sql', 'returns': 'integer',
                     'source': SOURCE2,
@@ -354,7 +354,7 @@ class AggregateToSqlTestCase(PyrseasTestCase):
         self.db.execute(CREATE_STMT2)
         self.db.execute_commit("CREATE AGGREGATE agg1 (integer) "
                                "(SFUNC = f1, STYPE = integer)")
-        inmap = new_std_map()
+        inmap = self.std_map()
         dbsql = self.db.process_map(inmap)
         self.assertEqual(dbsql[0], "DROP AGGREGATE agg1(integer)")
         self.assertEqual(dbsql[1], "DROP FUNCTION f1(integer, integer)")

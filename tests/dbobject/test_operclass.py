@@ -3,7 +3,7 @@
 
 import unittest
 
-from utils import PyrseasTestCase, fix_indent, new_std_map
+from utils import PyrseasTestCase, fix_indent
 
 CREATE_STMT = "CREATE OPERATOR CLASS oc1 FOR TYPE integer USING btree " \
     "AS OPERATOR 1 <, OPERATOR 3 =, FUNCTION 1 btint4cmp(integer,integer)"
@@ -41,7 +41,7 @@ class OperatorClassToSqlTestCase(PyrseasTestCase):
 
     def test_create_operclass(self):
         "Create an operator class"
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'operator class oc1 using btree': {
                     'type': 'integer', 'operators': {
                         1: '<(integer,integer)', 3: '=(integer,integer)'},
@@ -52,7 +52,7 @@ class OperatorClassToSqlTestCase(PyrseasTestCase):
     def test_create_operclass_in_schema(self):
         "Create a operator within a non-public schema"
         self.db.execute("CREATE SCHEMA s1")
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap.update({'schema s1': {'operator class oc1 using btree': {
                         'type': 'integer', 'operators': {
                             1: '<(integer,integer)', 3: '=(integer,integer)'},
@@ -68,13 +68,13 @@ class OperatorClassToSqlTestCase(PyrseasTestCase):
     def test_drop_operclass(self):
         "Drop an existing operator"
         self.db.execute_commit(CREATE_STMT)
-        dbsql = self.db.process_map(new_std_map())
+        dbsql = self.db.process_map(self.std_map())
         self.assertEqual(dbsql, ["DROP OPERATOR CLASS oc1 USING btree",
                                  "DROP OPERATOR FAMILY oc1 USING btree"])
 
     def test_operclass_with_comment(self):
         "Create an operator class with a comment"
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'operator class oc1 using btree': {
                     'description': 'Test operator class oc1',
                     'type': 'integer', 'operators': {
@@ -87,7 +87,7 @@ class OperatorClassToSqlTestCase(PyrseasTestCase):
     def test_comment_on_operclass(self):
         "Create a comment for an existing operator class"
         self.db.execute_commit(CREATE_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'operator class oc1 using btree': {
                     'description': 'Test operator class oc1',
                     'type': 'integer', 'operators': {
@@ -101,7 +101,7 @@ class OperatorClassToSqlTestCase(PyrseasTestCase):
         "Drop the existing comment on an operator class"
         self.db.execute(CREATE_STMT)
         self.db.execute_commit(COMMENT_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'operator class oc1 using btree': {
                     'type': 'integer', 'operators': {
                         1: '<(integer,integer)', 3: '=(integer,integer)'},
@@ -115,7 +115,7 @@ class OperatorClassToSqlTestCase(PyrseasTestCase):
         "Change existing comment on an operator class"
         self.db.execute(CREATE_STMT)
         self.db.execute_commit(COMMENT_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'operator class oc1 using btree': {
                     'description': 'Changed operator class oc1',
                     'type': 'integer', 'operators': {

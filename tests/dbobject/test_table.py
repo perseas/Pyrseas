@@ -3,7 +3,7 @@
 
 import unittest
 
-from utils import PyrseasTestCase, fix_indent, new_std_map
+from utils import PyrseasTestCase, fix_indent
 
 
 TYPELIST = [
@@ -200,7 +200,7 @@ class TableToSqlTestCase(PyrseasTestCase):
 
     def test_create_table(self):
         "Create a two-column table"
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c1': {'type': 'integer'}},
                                {'c2': {'type': 'text'}}]}})
@@ -210,7 +210,7 @@ class TableToSqlTestCase(PyrseasTestCase):
     def test_create_table_with_defaults(self):
         "Create a table with two column DEFAULTs, one referring to a SEQUENCE"
         self.db.execute_commit("DROP SEQUENCE IF EXISTS t1_c1_seq")
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c1': {
                                 'type': 'integer',
@@ -236,7 +236,7 @@ class TableToSqlTestCase(PyrseasTestCase):
 
     def test_bad_table_map(self):
         "Error creating a table with a bad map"
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'t1': {
                     'columns': [{'c1': {'type': 'integer'}},
                                 {'c2': {'type': 'text'}}]}})
@@ -244,21 +244,21 @@ class TableToSqlTestCase(PyrseasTestCase):
 
     def test_missing_columns(self):
         "Error creating a table with no columns"
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'table t1': {'columns': []}})
         self.assertRaises(ValueError, self.db.process_map, inmap)
 
     def test_drop_table(self):
         "Drop an existing table"
         self.db.execute_commit(CREATE_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         dbsql = self.db.process_map(inmap)
         self.assertEqual(dbsql, ["DROP TABLE t1"])
 
     def test_rename_table(self):
         "Rename an existing table"
         self.db.execute_commit(CREATE_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'table t2': {
                     'oldname': 't1',
                     'columns': [{'c1': {'type': 'integer'}},
@@ -269,7 +269,7 @@ class TableToSqlTestCase(PyrseasTestCase):
     def test_add_columns(self):
         "Add two new columns to a table"
         self.db.execute_commit(CREATE_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c1': {'type': 'integer'}},
                                 {'c2': {'type': 'text'}},
@@ -285,7 +285,7 @@ class TableToSqlTestCase(PyrseasTestCase):
     def test_set_column_not_null(self):
         "Change a nullable column to NOT NULL"
         self.db.execute_commit(CREATE_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                 'columns': [{'c1': {'type': 'integer', 'not_null': True}},
                             {'c2': {'type': 'text'}}]}})
@@ -296,7 +296,7 @@ class TableToSqlTestCase(PyrseasTestCase):
     def test_change_column_types(self):
         "Change the datatypes of two columns"
         self.db.execute_commit(CREATE_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c1': {'type': 'bigint'}},
                                 {'c2': {'type': 'varchar(25)'}}]}})
@@ -310,7 +310,7 @@ class TableToSqlTestCase(PyrseasTestCase):
         "Drop a column from a table"
         self.db.execute_commit("CREATE TABLE t1 (c1 INTEGER, c2 TEXT, "
                                "c3 SMALLINT, c4 DATE)")
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c1': {'type': 'integer'}},
                                 {'c2': {'type': 'text'}},
@@ -322,7 +322,7 @@ class TableToSqlTestCase(PyrseasTestCase):
     def test_rename_column(self):
         "Rename a table column"
         self.db.execute_commit(CREATE_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c1': {'type': 'integer'}},
                                 {'c3': {'type': 'text', 'oldname': 'c2'}}]}})
@@ -335,7 +335,7 @@ class TableCommentToSqlTestCase(PyrseasTestCase):
 
     def _tblmap(self):
         "Return a table input map with a comment"
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                     'description': 'Test table t1',
                     'columns': [{'c1': {'type': 'integer'}},
@@ -449,7 +449,7 @@ class TableInheritToSqlTestCase(PyrseasTestCase):
 
     def test_table_inheritance(self):
         "Create a table that inherits from another"
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c1': {'type': 'integer'}},
                                {'c2': {'type': 'text'}}]}})
@@ -468,7 +468,7 @@ class TableInheritToSqlTestCase(PyrseasTestCase):
         self.db.execute(CREATE_STMT)
         self.db.execute("CREATE TABLE t2 (c3 numeric) INHERITS (t1)")
         self.db.execute_commit("CREATE TABLE t3 (c4 date) INHERITS (t2)")
-        inmap = new_std_map()
+        inmap = self.std_map()
         dbsql = self.db.process_map(inmap)
         self.assertEqual(dbsql, ["DROP TABLE t3", "DROP TABLE t2",
                                  "DROP TABLE t1"])

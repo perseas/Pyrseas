@@ -3,7 +3,7 @@
 
 import unittest
 
-from utils import PyrseasTestCase, fix_indent, new_std_map
+from utils import PyrseasTestCase, fix_indent
 
 CREATE_STMT = "CREATE OPERATOR + (PROCEDURE = textcat, LEFTARG = text, " \
     "RIGHTARG = text)"
@@ -53,7 +53,7 @@ class OperatorToSqlTestCase(PyrseasTestCase):
     def test_create_operator(self):
         "Create a simple operator"
         self.db.execute_commit(DROP_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'operator +(text, text)': {
                     'procedure': 'textcat'}})
         dbsql = self.db.process_map(inmap)
@@ -62,7 +62,7 @@ class OperatorToSqlTestCase(PyrseasTestCase):
     def test_create_operator_rightarg(self):
         "Create a unitary operator with a right argument"
         self.db.execute_commit("DROP OPERATOR IF EXISTS +(NONE, text)")
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'operator +(NONE, text)': {
                     'procedure': 'upper'}})
         dbsql = self.db.process_map(inmap)
@@ -72,7 +72,7 @@ class OperatorToSqlTestCase(PyrseasTestCase):
     def test_create_operator_commutator(self):
         "Create an operator with a commutator"
         self.db.execute_commit("DROP OPERATOR IF EXISTS &&(integer, integer)")
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'operator &&(integer, integer)': {
                     'procedure': 'int4pl', 'commutator': 'public.&&'}})
         dbsql = self.db.process_map(inmap)
@@ -84,7 +84,7 @@ class OperatorToSqlTestCase(PyrseasTestCase):
     def test_create_operator_in_schema(self):
         "Create a operator within a non-public schema"
         self.db.execute("CREATE SCHEMA s1")
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap.update({'schema s1': {'operator +(text, text)': {
                     'procedure': 'textcat'}}})
         dbsql = self.db.process_map(inmap)
@@ -97,13 +97,13 @@ class OperatorToSqlTestCase(PyrseasTestCase):
         "Drop an existing operator"
         self.db.execute(DROP_STMT)
         self.db.execute_commit(CREATE_STMT)
-        dbsql = self.db.process_map(new_std_map())
+        dbsql = self.db.process_map(self.std_map())
         self.assertEqual(dbsql, ["DROP OPERATOR +(text, text)"])
 
     def test_operator_with_comment(self):
         "Create a operator with a comment"
         self.db.execute_commit(DROP_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({
                 'operator +(text, text)': {
                     'description': 'Test operator +',
@@ -116,7 +116,7 @@ class OperatorToSqlTestCase(PyrseasTestCase):
         "Create a comment for an existing operator"
         self.db.execute(DROP_STMT)
         self.db.execute_commit(CREATE_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({
                 'operator +(text, text)': {
                     'description': 'Test operator +',
@@ -129,7 +129,7 @@ class OperatorToSqlTestCase(PyrseasTestCase):
         self.db.execute(DROP_STMT)
         self.db.execute(CREATE_STMT)
         self.db.execute_commit(COMMENT_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({
                 'operator +(text, text)': {
                     'language': 'sql', 'returns': 'integer',
@@ -143,7 +143,7 @@ class OperatorToSqlTestCase(PyrseasTestCase):
         self.db.execute(DROP_STMT)
         self.db.execute(CREATE_STMT)
         self.db.execute_commit(COMMENT_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({
                 'operator +(text, text)': {
                     'description': 'Changed operator +',
