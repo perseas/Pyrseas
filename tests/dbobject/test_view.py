@@ -3,7 +3,7 @@
 
 import unittest
 
-from utils import PyrseasTestCase, fix_indent, new_std_map
+from utils import PyrseasTestCase, fix_indent
 
 CREATE_STMT = "CREATE VIEW v1 AS SELECT now()::date AS today"
 COMMENT_STMT = "COMMENT ON VIEW v1 IS 'Test view v1'"
@@ -40,14 +40,14 @@ class ViewToSqlTestCase(PyrseasTestCase):
 
     def test_create_view_no_table(self):
         "Create a view with no table dependency"
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'view v1': {'definition': VIEW_DEFN}})
         dbsql = self.db.process_map(inmap)
         self.assertEqual(fix_indent(dbsql[0]), CREATE_STMT)
 
     def test_create_view(self):
         "Create a view"
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c1': {'type': 'integer'}},
                                 {'c2': {'type': 'text'}},
@@ -64,7 +64,7 @@ class ViewToSqlTestCase(PyrseasTestCase):
         "Create a view within a non-public schema"
         self.db.execute("DROP SCHEMA IF EXISTS s1 CASCADE")
         self.db.execute_commit("CREATE SCHEMA s1")
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap.update({'schema s1': {'view v1': {'definition': VIEW_DEFN}}})
         dbsql = self.db.process_map(inmap)
         self.assertEqual(fix_indent(dbsql[0]), "CREATE VIEW s1.v1 AS "
@@ -73,14 +73,14 @@ class ViewToSqlTestCase(PyrseasTestCase):
 
     def test_bad_view_map(self):
         "Error creating a view with a bad map"
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'v1': {'definition': VIEW_DEFN}})
         self.assertRaises(KeyError, self.db.process_map, inmap)
 
     def test_drop_view_no_table(self):
         "Drop an existing view without a table dependency"
         self.db.execute_commit(CREATE_STMT)
-        dbsql = self.db.process_map(new_std_map())
+        dbsql = self.db.process_map(self.std_map())
         self.assertEqual(dbsql, ["DROP VIEW v1"])
 
     def test_drop_view(self):
@@ -89,7 +89,7 @@ class ViewToSqlTestCase(PyrseasTestCase):
         self.db.execute("CREATE TABLE t2 (c1 INTEGER, c3 TEXT)")
         self.db.execute_commit("CREATE VIEW v1 AS SELECT t1.c1, c2, c3 "
                                "FROM t1 JOIN t2 ON (t1.c1 = t2.c1)")
-        dbsql = self.db.process_map(new_std_map())
+        dbsql = self.db.process_map(self.std_map())
         self.assertEqual(dbsql[0], "DROP VIEW v1")
         # can't control which table will be dropped first
         drt1 = 1
@@ -103,7 +103,7 @@ class ViewToSqlTestCase(PyrseasTestCase):
     def test_rename_view(self):
         "Rename an existing view"
         self.db.execute_commit(CREATE_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'view v2': {
                     'oldname': 'v1', 'definition': VIEW_DEFN}})
         dbsql = self.db.process_map(inmap)
@@ -112,7 +112,7 @@ class ViewToSqlTestCase(PyrseasTestCase):
     def test_bad_rename_view(self):
         "Error renaming a non-existing view"
         self.db.execute_commit(CREATE_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'view v2': {
                     'oldname': 'v3', 'definition': VIEW_DEFN}})
         self.assertRaises(KeyError, self.db.process_map, inmap)
@@ -120,7 +120,7 @@ class ViewToSqlTestCase(PyrseasTestCase):
     def test_change_view_defn(self):
         "Change view definition"
         self.db.execute_commit(CREATE_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'view v1': {
                     'definition': " SELECT now()::date AS todays_date;"}})
         dbsql = self.db.process_map(inmap)
@@ -129,7 +129,7 @@ class ViewToSqlTestCase(PyrseasTestCase):
 
     def test_view_with_comment(self):
         "Create a view with a comment"
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'view v1': {
                     'definition': VIEW_DEFN, 'description': "Test view v1"}})
         dbsql = self.db.process_map(inmap)
@@ -139,7 +139,7 @@ class ViewToSqlTestCase(PyrseasTestCase):
     def test_comment_on_view(self):
         "Create a comment for an existing view"
         self.db.execute_commit(CREATE_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'view v1': {
                     'definition': VIEW_DEFN, 'description': "Test view v1"}})
         dbsql = self.db.process_map(inmap)
@@ -149,7 +149,7 @@ class ViewToSqlTestCase(PyrseasTestCase):
         "Drop the comment on an existing view"
         self.db.execute(CREATE_STMT)
         self.db.execute_commit(COMMENT_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'view v1': {'definition': VIEW_DEFN}})
         dbsql = self.db.process_map(inmap)
         self.assertEqual(dbsql, ["COMMENT ON VIEW v1 IS NULL"])
@@ -158,7 +158,7 @@ class ViewToSqlTestCase(PyrseasTestCase):
         "Change existing comment on a view"
         self.db.execute(CREATE_STMT)
         self.db.execute_commit(COMMENT_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'view v1': {
                     'definition': VIEW_DEFN,
                     'description': "Changed view v1"}})

@@ -3,7 +3,7 @@
 
 import unittest
 
-from utils import PyrseasTestCase, fix_indent, new_std_map
+from utils import PyrseasTestCase, fix_indent
 
 CREATE_STMT = "CREATE DOMAIN d1 AS integer"
 DROP_STMT = "DROP DOMAIN IF EXISTS d1"
@@ -52,7 +52,7 @@ class DomainToSqlTestCase(PyrseasTestCase):
     def test_create_domain(self):
         "Create a simple domain"
         self.db.execute_commit(DROP_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'domain d1': {'type': 'integer'}})
         dbsql = self.db.process_map(inmap)
         self.assertEqual(dbsql, [CREATE_STMT])
@@ -60,7 +60,7 @@ class DomainToSqlTestCase(PyrseasTestCase):
     def test_create_domain_default(self):
         "Create a domain with a DEFAULT and NOT NULL"
         self.db.execute_commit(DROP_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'domain d1': {
                     'type': 'integer', 'not_null': True, 'default': 0}})
         dbsql = self.db.process_map(inmap)
@@ -69,7 +69,7 @@ class DomainToSqlTestCase(PyrseasTestCase):
     def test_create_domain_check(self):
         "Create a domain with a CHECK constraint"
         self.db.execute_commit(DROP_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'domain d1': {
                     'type': 'integer', 'check_constraints': {
                         'd1_check': {'expression': '(VALUE >= 1888)'}}}})
@@ -81,7 +81,7 @@ class DomainToSqlTestCase(PyrseasTestCase):
         "Drop an existing domain"
         self.db.execute(DROP_STMT)
         self.db.execute_commit(CREATE_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         dbsql = self.db.process_map(inmap)
         self.assertEqual(dbsql, ["DROP DOMAIN d1"])
 
@@ -89,7 +89,7 @@ class DomainToSqlTestCase(PyrseasTestCase):
         "Rename an existing domain"
         self.db.execute(DROP_STMT)
         self.db.execute_commit(CREATE_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'domain d2': {
                     'oldname': 'd1', 'type': 'integer'}})
         dbsql = self.db.process_map(inmap)

@@ -3,7 +3,7 @@
 
 import unittest
 
-from utils import PyrseasTestCase, fix_indent, new_std_map
+from utils import PyrseasTestCase, fix_indent
 
 CREATE_TABLE_STMT = "CREATE TABLE t1 (c1 integer, c2 text)"
 CREATE_STMT = "CREATE RULE r1 AS ON %s TO t1 DO %s"
@@ -72,7 +72,7 @@ class RuleToSqlTestCase(PyrseasTestCase):
 
     def test_create_rule_nothing(self):
         "Create a rule"
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c1': {'type': 'integer'}},
                                 {'c2': {'type': 'text'}}],
@@ -85,7 +85,7 @@ class RuleToSqlTestCase(PyrseasTestCase):
 
     def test_create_rule_instead(self):
         "Create a rule with an INSTEAD action"
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c1': {'type': 'integer'}},
                                 {'c2': {'type': 'text'}}],
@@ -99,7 +99,7 @@ class RuleToSqlTestCase(PyrseasTestCase):
 
     def test_create_rule_conditional(self):
         "Create a rule with qualification"
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c1': {'type': 'integer'}},
                                 {'c2': {'type': 'text'}}],
@@ -115,7 +115,7 @@ class RuleToSqlTestCase(PyrseasTestCase):
 
     def test_create_rule_multi_actions(self):
         "Create a rule with multiple actions"
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c1': {'type': 'integer'}},
                                 {'c2': {'type': 'text'}}],
@@ -133,7 +133,7 @@ class RuleToSqlTestCase(PyrseasTestCase):
         "Create a rule within a non-public schema"
         self.db.execute("DROP SCHEMA IF EXISTS s1 CASCADE")
         self.db.execute_commit("CREATE SCHEMA s1")
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap.update({'schema s1': {
                     'table t1': {
                         'columns': [{'c1': {'type': 'integer'}},
@@ -149,7 +149,7 @@ class RuleToSqlTestCase(PyrseasTestCase):
         "Drop an existing rule"
         self.db.execute(CREATE_TABLE_STMT)
         self.db.execute_commit(CREATE_STMT % ('INSERT', 'NOTHING'))
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c1': {'type': 'integer'}},
                                 {'c2': {'type': 'text'}}]}})
@@ -160,13 +160,13 @@ class RuleToSqlTestCase(PyrseasTestCase):
         "Drop an existing rule and the related table"
         self.db.execute(CREATE_TABLE_STMT)
         self.db.execute_commit(CREATE_STMT % ('INSERT', 'NOTHING'))
-        dbsql = self.db.process_map(new_std_map())
+        dbsql = self.db.process_map(self.std_map())
         self.assertEqual(dbsql[0], "DROP RULE r1 ON t1")
         self.assertEqual(dbsql[1], "DROP TABLE t1")
 
     def test_rule_with_comment(self):
         "Create a rule with a comment"
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c1': {'type': 'integer'}},
                                 {'c2': {'type': 'text'}}],
@@ -180,7 +180,7 @@ class RuleToSqlTestCase(PyrseasTestCase):
         "Create a comment on an existing rule"
         self.db.execute(CREATE_TABLE_STMT)
         self.db.execute_commit(CREATE_STMT % ('INSERT', 'NOTHING'))
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c1': {'type': 'integer'}},
                                 {'c2': {'type': 'text'}}],
@@ -195,7 +195,7 @@ class RuleToSqlTestCase(PyrseasTestCase):
         self.db.execute(CREATE_TABLE_STMT)
         self.db.execute(CREATE_STMT % ('INSERT', 'NOTHING'))
         self.db.execute_commit(COMMENT_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c1': {'type': 'integer'}},
                                 {'c2': {'type': 'text'}}],
@@ -210,7 +210,7 @@ class RuleToSqlTestCase(PyrseasTestCase):
         self.db.execute(CREATE_TABLE_STMT)
         self.db.execute(CREATE_STMT % ('INSERT', 'NOTHING'))
         self.db.execute_commit(COMMENT_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c1': {'type': 'integer'}},
                                 {'c2': {'type': 'text'}}],

@@ -3,7 +3,7 @@
 
 import unittest
 
-from utils import PyrseasTestCase, fix_indent, new_std_map
+from utils import PyrseasTestCase, fix_indent
 
 CREATE_STMT = "CREATE OPERATOR FAMILY of1 USING btree"
 DROP_STMT = "DROP OPERATOR FAMILY IF EXISTS of1 USING btree"
@@ -35,7 +35,7 @@ class OperatorFamilyToSqlTestCase(PyrseasTestCase):
 
     def test_create_operfam(self):
         "Create an operator family"
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'operator family of1 using btree': {}})
         dbsql = self.db.process_map(inmap)
         self.assertEqual(fix_indent(dbsql[0]), CREATE_STMT)
@@ -43,7 +43,7 @@ class OperatorFamilyToSqlTestCase(PyrseasTestCase):
     def test_create_operfam_in_schema(self):
         "Create an operator family within a non-public schema"
         self.db.execute("CREATE SCHEMA s1")
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap.update({'schema s1': {'operator family of1 using btree': {}}})
         dbsql = self.db.process_map(inmap)
         self.assertEqual(fix_indent(dbsql[1]),
@@ -53,12 +53,12 @@ class OperatorFamilyToSqlTestCase(PyrseasTestCase):
     def test_drop_operfam(self):
         "Drop an existing operator family"
         self.db.execute_commit(CREATE_STMT)
-        dbsql = self.db.process_map(new_std_map())
+        dbsql = self.db.process_map(self.std_map())
         self.assertEqual(dbsql, ["DROP OPERATOR FAMILY of1 USING btree"])
 
     def test_operfam_with_comment(self):
         "Create an operator family with a comment"
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({
                 'operator family of1 using btree': {
                     'description': 'Test operator family of1'}})
@@ -69,7 +69,7 @@ class OperatorFamilyToSqlTestCase(PyrseasTestCase):
     def test_comment_on_operfam(self):
         "Create a comment for an existing operator family"
         self.db.execute_commit(CREATE_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({
                 'operator family of1 using btree': {
                     'description': 'Test operator family of1'}})
@@ -80,7 +80,7 @@ class OperatorFamilyToSqlTestCase(PyrseasTestCase):
         "Drop a comment on an existing operator family"
         self.db.execute(CREATE_STMT)
         self.db.execute_commit(COMMENT_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({
                 'operator family of1 using btree': {}})
         dbsql = self.db.process_map(inmap)
@@ -91,7 +91,7 @@ class OperatorFamilyToSqlTestCase(PyrseasTestCase):
         "Change existing comment on a operator"
         self.db.execute(CREATE_STMT)
         self.db.execute_commit(COMMENT_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({
                 'operator family of1 using btree': {
                     'description': 'Changed operator family of1'}})

@@ -3,7 +3,7 @@
 
 import unittest
 
-from utils import PyrseasTestCase, fix_indent, new_std_map
+from utils import PyrseasTestCase, fix_indent
 
 CREATE_STMT = "CREATE SEQUENCE seq1"
 CREATE_STMT_FULL = "CREATE SEQUENCE seq1 START WITH 1 INCREMENT BY 1 " \
@@ -35,7 +35,7 @@ class SequenceToSqlTestCase(PyrseasTestCase):
 
     def test_create_sequence(self):
         "Create a sequence"
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'sequence seq1': {
                     'start_value': 1, 'increment_by': 1, 'max_value': None,
                     'min_value': None, 'cache_value': 1}})
@@ -45,7 +45,7 @@ class SequenceToSqlTestCase(PyrseasTestCase):
     def test_create_sequence_in_schema(self):
         "Create a sequence within a non-public schema"
         self.db.execute_commit("CREATE SCHEMA s1")
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap.update({'schema s1': {'sequence seq1': {
                     'start_value': 1, 'increment_by': 1, 'max_value': None,
                     'min_value': None, 'cache_value': 1}}})
@@ -57,7 +57,7 @@ class SequenceToSqlTestCase(PyrseasTestCase):
 
     def test_bad_sequence_map(self):
         "Error creating a sequence with a bad map"
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'seq1': {
                     'start_value': 1, 'increment_by': 1, 'max_value': None,
                     'min_value': None, 'cache_value': 1}})
@@ -66,13 +66,13 @@ class SequenceToSqlTestCase(PyrseasTestCase):
     def test_drop_sequence(self):
         "Drop an existing sequence"
         self.db.execute_commit(CREATE_STMT)
-        dbsql = self.db.process_map(new_std_map())
+        dbsql = self.db.process_map(self.std_map())
         self.assertEqual(dbsql, ["DROP SEQUENCE seq1"])
 
     def test_rename_sequence(self):
         "Rename an existing sequence"
         self.db.execute_commit(CREATE_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'sequence seq2': {
                     'oldname': 'seq1',
                     'start_value': 1, 'increment_by': 1, 'max_value': None,
@@ -83,7 +83,7 @@ class SequenceToSqlTestCase(PyrseasTestCase):
     def test_bad_rename_sequence(self):
         "Error renaming a non-existing sequence"
         self.db.execute_commit(CREATE_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'sequence seq2': {
                     'oldname': 'seq3',
                     'start_value': 1, 'increment_by': 1, 'max_value': None,
@@ -93,7 +93,7 @@ class SequenceToSqlTestCase(PyrseasTestCase):
     def test_change_sequence(self):
         "Change sequence attributes"
         self.db.execute_commit(CREATE_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'sequence seq1': {
                     'start_value': 5, 'increment_by': 10, 'max_value': None,
                     'min_value': None, 'cache_value': 30}})
@@ -104,7 +104,7 @@ class SequenceToSqlTestCase(PyrseasTestCase):
 
     def test_sequence_with_comment(self):
         "Create a sequence with a comment"
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'sequence seq1': {
                     'start_value': 1, 'increment_by': 1, 'max_value': None,
                     'min_value': None, 'cache_value': 1,
@@ -116,7 +116,7 @@ class SequenceToSqlTestCase(PyrseasTestCase):
     def test_comment_on_sequence(self):
         "Create a comment for an existing sequence"
         self.db.execute_commit(CREATE_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'sequence seq1': {
                     'start_value': 1, 'increment_by': 1, 'max_value': None,
                     'min_value': None, 'cache_value': 1,
@@ -128,7 +128,7 @@ class SequenceToSqlTestCase(PyrseasTestCase):
         "Drop the comment on an existing sequence"
         self.db.execute(CREATE_STMT)
         self.db.execute_commit(COMMENT_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'sequence seq1': {
                     'start_value': 1, 'increment_by': 1, 'max_value': None,
                     'min_value': None, 'cache_value': 1}})
@@ -139,7 +139,7 @@ class SequenceToSqlTestCase(PyrseasTestCase):
         "Change existing comment on a sequence"
         self.db.execute(CREATE_STMT)
         self.db.execute_commit(COMMENT_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'sequence seq1': {
                     'start_value': 1, 'increment_by': 1, 'max_value': None,
                     'min_value': None, 'cache_value': 1,

@@ -3,7 +3,7 @@
 
 import unittest
 
-from utils import PyrseasTestCase, new_std_map
+from utils import PyrseasTestCase
 
 CREATE_STMT = "CREATE LANGUAGE plperl"
 DROP_STMT = "DROP LANGUAGE IF EXISTS plperl CASCADE"
@@ -61,7 +61,7 @@ class LanguageToSqlTestCase(PyrseasTestCase):
     def test_comment_on_language(self):
         "Create a comment for an existing language"
         self.db.execute_commit(CREATE_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap.update({'language plperl': {
                     'description': "Test language PL/Perl"}})
         dbsql = self.db.process_map(inmap)

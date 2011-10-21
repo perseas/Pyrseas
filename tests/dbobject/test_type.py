@@ -3,7 +3,7 @@
 
 import unittest
 
-from utils import PyrseasTestCase, fix_indent, new_std_map
+from utils import PyrseasTestCase, fix_indent
 
 CREATE_COMPOSITE_STMT = "CREATE TYPE t1 AS (x integer, y integer, z integer)"
 CREATE_ENUM_STMT = "CREATE TYPE t1 AS ENUM ('red', 'green', 'blue')"
@@ -33,7 +33,7 @@ class CompositeToSqlTestCase(PyrseasTestCase):
 
     def test_create_composite(self):
         "Create a composite type"
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'type t1': {
                     'attributes': [{'x': 'integer'}, {'y': 'integer'},
                                    {'z': 'integer'}]}})
@@ -43,14 +43,14 @@ class CompositeToSqlTestCase(PyrseasTestCase):
     def test_drop_composite(self):
         "Drop an existing composite"
         self.db.execute_commit(CREATE_COMPOSITE_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         dbsql = self.db.process_map(inmap)
         self.assertEqual(dbsql, ["DROP TYPE t1"])
 
     def test_rename_composite(self):
         "Rename an existing composite"
         self.db.execute_commit(CREATE_COMPOSITE_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'type t2': {
                     'oldname': 't1',
                     'attributes': [{'x': 'integer'}, {'y': 'integer'},
@@ -74,7 +74,7 @@ class EnumToSqlTestCase(PyrseasTestCase):
 
     def test_create_enum(self):
         "Create an enum"
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'type t1': {
                     'labels': ['red', 'green', 'blue']}})
         dbsql = self.db.process_map(inmap)
@@ -83,14 +83,14 @@ class EnumToSqlTestCase(PyrseasTestCase):
     def test_drop_enum(self):
         "Drop an existing enum"
         self.db.execute_commit(CREATE_ENUM_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         dbsql = self.db.process_map(inmap)
         self.assertEqual(dbsql, ["DROP TYPE t1"])
 
     def test_rename_enum(self):
         "Rename an existing enum"
         self.db.execute_commit(CREATE_ENUM_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'type t2': {
                     'oldname': 't1', 'labels': ['red', 'green', 'blue']}})
         dbsql = self.db.process_map(inmap)
@@ -117,7 +117,7 @@ class BaseTypeToSqlTestCase(PyrseasTestCase):
 
     def test_create_base_type(self):
         "Create a base type"
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'type t1': {
                     'input': 't1textin', 'output': 't1textout',
                     'internallength': 'variable', 'alignment': 'int4',
@@ -143,7 +143,7 @@ class BaseTypeToSqlTestCase(PyrseasTestCase):
         self.db.execute(CREATE_FUNC_IN)
         self.db.execute(CREATE_FUNC_OUT)
         self.db.execute_commit(CREATE_TYPE_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         dbsql = self.db.process_map(inmap)
         self.assertEqual(dbsql, ["DROP TYPE t1 CASCADE"])
 

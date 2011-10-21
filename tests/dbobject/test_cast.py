@@ -3,7 +3,7 @@
 
 import unittest
 
-from utils import PyrseasTestCase, fix_indent, new_std_map
+from utils import PyrseasTestCase, fix_indent
 
 SOURCE = "SELECT CAST($1::int AS boolean)"
 CREATE_FUNC = "CREATE FUNCTION int2_bool(smallint) RETURNS boolean " \
@@ -58,7 +58,7 @@ class CastToSqlTestCase(PyrseasTestCase):
         "Create a cast with a function"
         self.db.execute_commit(DROP_STMT)
         self.db.execute(CREATE_FUNC)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap.update({'cast (smallint as boolean)': {
                     'function': 'int2_bool(smallint)', 'context': 'explicit',
                     'method': 'function'}})
@@ -69,7 +69,7 @@ class CastToSqlTestCase(PyrseasTestCase):
         "Create a cast without a function"
         self.db.execute(CREATE_DOMAIN)
         self.db.execute_commit("DROP CAST IF EXISTS (integer AS d1)")
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap.update({'cast (integer as d1)': {
                     'context': 'assignment', 'method': 'binary coercible'}})
         inmap['schema public'].update({'domain d1': {'type': 'integer'}})
@@ -80,7 +80,7 @@ class CastToSqlTestCase(PyrseasTestCase):
         "Create a cast with INOUT"
         self.db.execute(CREATE_DOMAIN)
         self.db.execute_commit("DROP CAST IF EXISTS (d1 AS integer)")
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap.update({'cast (d1 as integer)': {
                     'context': 'implicit', 'method': 'inout'}})
         inmap['schema public'].update({'domain d1': {'type': 'integer'}})
@@ -93,7 +93,7 @@ class CastToSqlTestCase(PyrseasTestCase):
         self.db.execute("CREATE SCHEMA s1")
         self.db.execute("CREATE DOMAIN s1.d1 AS integer")
         self.db.execute_commit("DROP CAST IF EXISTS (integer AS s1.d1)")
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap.update({'cast (integer as s1.d1)': {
                     'context': 'assignment', 'method': 'binary coercible'}})
         inmap.update({'schema s1': {'domain d1': {'type': 'integer'}}})
@@ -105,7 +105,7 @@ class CastToSqlTestCase(PyrseasTestCase):
 
     def test_bad_cast_map(self):
         "Error creating a cast with a bad map"
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap.update({'(smallint as boolean)': {
                     'function': 'int2_bool(smallint)', 'context': 'explicit',
                     'method': 'function'}})
@@ -116,13 +116,13 @@ class CastToSqlTestCase(PyrseasTestCase):
         self.db.execute(DROP_STMT)
         self.db.execute(CREATE_FUNC)
         self.db.execute_commit(CREATE_STMT1)
-        dbsql = self.db.process_map(new_std_map())
+        dbsql = self.db.process_map(self.std_map())
         self.assertEqual(dbsql[0], "DROP CAST (smallint AS boolean)")
 
     def test_cast_with_comment(self):
         "Create a cast with a comment"
         self.db.execute_commit(DROP_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap.update({'cast (smallint as boolean)': {
                     'description': 'Test cast 1',
                     'function': 'int2_bool(smallint)', 'context': 'explicit',
@@ -140,7 +140,7 @@ class CastToSqlTestCase(PyrseasTestCase):
         self.db.execute(DROP_STMT)
         self.db.execute(CREATE_FUNC)
         self.db.execute_commit(CREATE_STMT1)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap.update({'cast (smallint as boolean)': {
                     'description': 'Test cast 1',
                     'function': 'int2_bool(smallint)', 'context': 'explicit',
@@ -157,7 +157,7 @@ class CastToSqlTestCase(PyrseasTestCase):
         self.db.execute(CREATE_FUNC)
         self.db.execute(CREATE_STMT1)
         self.db.execute_commit(COMMENT_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap.update({'cast (smallint as boolean)': {
                     'function': 'int2_bool(smallint)', 'context': 'explicit',
                     'method': 'function'}})
@@ -174,7 +174,7 @@ class CastToSqlTestCase(PyrseasTestCase):
         self.db.execute(CREATE_FUNC)
         self.db.execute(CREATE_STMT1)
         self.db.execute_commit(COMMENT_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap.update({'cast (smallint as boolean)': {
                     'description': 'Changed cast 1',
                     'function': 'int2_bool(smallint)', 'context': 'explicit',

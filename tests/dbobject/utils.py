@@ -18,11 +18,6 @@ def fix_indent(stmt):
         replace('( ', '(')
 
 
-def new_std_map():
-    "Return a standard public schema map with its description"
-    return {'schema public': {'description': 'standard public schema'}}
-
-
 def pgconnect(dbname, user, host, port):
     "Connect to a Postgres database using psycopg2"
     if host is None or host == '127.0.0.1' or host == 'localhost':
@@ -290,12 +285,7 @@ class PostgresDb(object):
         """Process an input map and return the SQL statements necessary to
         convert the database to match the map."""
         db = Database(DbConnection(self.name, self.user, self.host, self.port))
-        if self._version >= 90100 and 'language plpgsql' in input_map \
-                and 'description' not in input_map['language plpgsql']:
-            input_map['language plpgsql'].update(
-                description="PL/pgSQL procedural language")
-        stmts = db.diff_map(input_map)
-        return stmts
+        return db.diff_map(input_map)
 
 
 class PyrseasTestCase(TestCase):
@@ -308,3 +298,13 @@ class PyrseasTestCase(TestCase):
 
     def tearDown(self):
         self.db.close()
+
+    def std_map(self, plpgsql_installed=False):
+        "Return a standard public schema map with its description"
+        base = {'schema public': {'description': 'standard public schema'}}
+        if self.db._version >= 90000 or plpgsql_installed:
+            base.update({'language plpgsql': {'trusted': True}})
+        if self.db._version >= 90100:
+            base['language plpgsql'].update(
+                description="PL/pgSQL procedural language")
+        return base

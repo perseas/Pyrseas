@@ -3,7 +3,7 @@
 
 import unittest
 
-from utils import PyrseasTestCase, fix_indent, new_std_map
+from utils import PyrseasTestCase, fix_indent
 
 CREATE_STMT = "CREATE CONVERSION c1 FOR 'LATIN1' TO 'UTF8' " \
     "FROM iso8859_1_to_utf8"
@@ -34,7 +34,7 @@ class ConversionToSqlTestCase(PyrseasTestCase):
 
     def test_create_conversion(self):
         "Create a conversion"
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'conversion c1': {
                     'source_encoding': 'LATIN1', 'dest_encoding': 'UTF8',
                     'function': 'iso8859_1_to_utf8'}})
@@ -45,7 +45,7 @@ class ConversionToSqlTestCase(PyrseasTestCase):
         "Create a conversion in a non-public schema"
         self.db.execute_commit("DROP SCHEMA IF EXISTS s1 CASCADE")
         self.db.execute_commit("CREATE SCHEMA s1")
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap.update({'schema s1': {'conversion c1': {
                     'source_encoding': 'LATIN1', 'dest_encoding': 'UTF8',
                     'function': 'iso8859_1_to_utf8', 'default': True}}})
@@ -57,7 +57,7 @@ class ConversionToSqlTestCase(PyrseasTestCase):
 
     def test_bad_conversion_map(self):
         "Error creating a conversion with a bad map"
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'c1': {
                     'source_encoding': 'LATIN1', 'dest_encoding': 'UTF8',
                     'function': 'iso8859_1_to_utf8'}})
@@ -66,12 +66,12 @@ class ConversionToSqlTestCase(PyrseasTestCase):
     def test_drop_conversion(self):
         "Drop an existing conversion"
         self.db.execute_commit(CREATE_STMT)
-        dbsql = self.db.process_map(new_std_map())
+        dbsql = self.db.process_map(self.std_map())
         self.assertEqual(dbsql[0], "DROP CONVERSION c1")
 
     def test_conversion_with_comment(self):
         "Create a conversion with a comment"
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'conversion c1': {
                     'description': 'Test conversion c1',
                     'source_encoding': 'LATIN1', 'dest_encoding': 'UTF8',
@@ -83,7 +83,7 @@ class ConversionToSqlTestCase(PyrseasTestCase):
     def test_comment_on_conversion(self):
         "Create a comment for an existing conversion"
         self.db.execute_commit(CREATE_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'conversion c1': {
                     'description': 'Test conversion c1',
                     'source_encoding': 'LATIN1', 'dest_encoding': 'UTF8',
@@ -95,7 +95,7 @@ class ConversionToSqlTestCase(PyrseasTestCase):
         "Drop a comment on an existing conversion"
         self.db.execute(CREATE_STMT)
         self.db.execute_commit(COMMENT_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'conversion c1': {
                     'source_encoding': 'LATIN1', 'dest_encoding': 'UTF8',
                     'function': 'iso8859_1_to_utf8'}})
@@ -106,7 +106,7 @@ class ConversionToSqlTestCase(PyrseasTestCase):
         "Change existing comment on a conversion"
         self.db.execute(CREATE_STMT)
         self.db.execute_commit(COMMENT_STMT)
-        inmap = new_std_map()
+        inmap = self.std_map()
         inmap['schema public'].update({'conversion c1': {
                     'description': 'Changed conversion c1',
                     'source_encoding': 'LATIN1', 'dest_encoding': 'UTF8',
