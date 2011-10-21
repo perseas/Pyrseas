@@ -290,6 +290,10 @@ class PostgresDb(object):
         """Process an input map and return the SQL statements necessary to
         convert the database to match the map."""
         db = Database(DbConnection(self.name, self.user, self.host, self.port))
+        if self._version >= 90100 and 'language plpgsql' in input_map \
+                and 'description' not in input_map['language plpgsql']:
+            input_map['language plpgsql'].update(
+                description="PL/pgSQL procedural language")
         stmts = db.diff_map(input_map)
         return stmts
 
