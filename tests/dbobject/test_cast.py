@@ -11,7 +11,6 @@ CREATE_FUNC = "CREATE FUNCTION int2_bool(smallint) RETURNS boolean " \
 CREATE_DOMAIN = "CREATE DOMAIN d1 AS integer"
 CREATE_STMT1 = "CREATE CAST (smallint AS boolean) WITH FUNCTION " \
     "int2_bool(smallint)"
-CREATE_STMT2 = "CREATE CAST (integer AS d1) WITHOUT FUNCTION AS ASSIGNMENT"
 CREATE_STMT3 = "CREATE CAST (d1 AS integer) WITH INOUT AS IMPLICIT"
 DROP_STMT = "DROP CAST IF EXISTS (smallint AS boolean)"
 COMMENT_STMT = "COMMENT ON CAST (smallint AS boolean) IS 'Test cast 1'"
@@ -27,13 +26,6 @@ class CastToMapTestCase(PyrseasTestCase):
                   'method': 'function'}
         dbmap = self.db.execute_and_map(CREATE_STMT1)
         self.assertEqual(dbmap['cast (smallint as boolean)'], expmap)
-
-    def test_map_cast_no_function(self):
-        "Map a cast without a function"
-        self.db.execute(CREATE_DOMAIN)
-        expmap = {'context': 'assignment', 'method': 'binary coercible'}
-        dbmap = self.db.execute_and_map(CREATE_STMT2)
-        self.assertEqual(dbmap['cast (integer as d1)'], expmap)
 
     def test_map_cast_inout(self):
         "Map a cast with INOUT"
@@ -64,17 +56,6 @@ class CastToSqlTestCase(PyrseasTestCase):
                     'method': 'function'}})
         dbsql = self.db.process_map(inmap)
         self.assertEqual(fix_indent(dbsql[0]), CREATE_STMT1)
-
-    def test_create_cast_no_function(self):
-        "Create a cast without a function"
-        self.db.execute(CREATE_DOMAIN)
-        self.db.execute_commit("DROP CAST IF EXISTS (integer AS d1)")
-        inmap = self.std_map()
-        inmap.update({'cast (integer as d1)': {
-                    'context': 'assignment', 'method': 'binary coercible'}})
-        inmap['schema public'].update({'domain d1': {'type': 'integer'}})
-        dbsql = self.db.process_map(inmap)
-        self.assertEqual(fix_indent(dbsql[0]), CREATE_STMT2)
 
     def test_create_cast_inout(self):
         "Create a cast with INOUT"
