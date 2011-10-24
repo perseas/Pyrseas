@@ -10,6 +10,7 @@ import test_type
 import test_domain
 import test_sequence
 import test_table
+import test_column
 import test_constraint
 import test_index
 import test_view
@@ -31,6 +32,7 @@ def suite():
     tests.addTest(test_domain.suite())
     tests.addTest(test_sequence.suite())
     tests.addTest(test_table.suite())
+    tests.addTest(test_column.suite())
     tests.addTest(test_constraint.suite())
     tests.addTest(test_index.suite())
     tests.addTest(test_view.suite())
