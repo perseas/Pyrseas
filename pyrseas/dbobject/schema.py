@@ -27,56 +27,26 @@ class Schema(DbObject):
         """
         key = self.extern_key()
         schema = {key: {}}
-        if hasattr(self, 'domains'):
-            doms = {}
-            for dom in self.domains.keys():
-                doms.update(self.domains[dom].to_map())
-            schema[key].update(doms)
-        if hasattr(self, 'types'):
-            typs = {}
-            for typ in self.types.keys():
-                typs.update(self.types[typ].to_map())
-            schema[key].update(typs)
-        if hasattr(self, 'sequences'):
-            seqs = {}
-            for seq in self.sequences.keys():
-                seqs.update(self.sequences[seq].to_map())
-            schema[key].update(seqs)
+
+        def mapper(schema, objtypes):
+            mappeddict = {}
+            if hasattr(schema, objtypes):
+                schemadict = getattr(schema, objtypes)
+                for objkey in schemadict.keys():
+                    mappeddict.update(schemadict[objkey].to_map())
+            return mappeddict
+
         if hasattr(self, 'tables'):
             tbls = {}
             for tbl in self.tables.keys():
                 tbls.update(self.tables[tbl].to_map(dbschemas))
             schema[key].update(tbls)
-        if hasattr(self, 'views'):
-            views = {}
-            for view in self.views.keys():
-                views.update(self.views[view].to_map())
-            schema[key].update(views)
-        if hasattr(self, 'functions'):
-            functions = {}
-            for func in self.functions.keys():
-                functions.update(self.functions[func].to_map())
-            schema[key].update(functions)
-        if hasattr(self, 'operators'):
-            operators = {}
-            for oper in self.operators.keys():
-                operators.update(self.operators[oper].to_map())
-            schema[key].update(operators)
-        if hasattr(self, 'operclasses'):
-            operclasses = {}
-            for opf in self.operclasses.keys():
-                operclasses.update(self.operclasses[opf].to_map())
-            schema[key].update(operclasses)
-        if hasattr(self, 'operfams'):
-            operfams = {}
-            for opf in self.operfams.keys():
-                operfams.update(self.operfams[opf].to_map())
-            schema[key].update(operfams)
-        if hasattr(self, 'conversions'):
-            conversions = {}
-            for conv in self.conversions.keys():
-                conversions.update(self.conversions[conv].to_map())
-            schema[key].update(conversions)
+
+        for objtypes in ['conversions', 'domains', 'functions', 'operators',
+                         'operclasses', 'operfams',  'sequences', 'types',
+                         'views']:
+            schema[key].update(mapper(self, objtypes))
+
         if hasattr(self, 'description'):
             schema[key].update(description=self.description)
         return schema
