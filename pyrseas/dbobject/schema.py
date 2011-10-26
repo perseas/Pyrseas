@@ -43,8 +43,8 @@ class Schema(DbObject):
             schema[key].update(tbls)
 
         for objtypes in ['conversions', 'domains', 'functions', 'operators',
-                         'operclasses', 'operfams',  'sequences', 'types',
-                         'views']:
+                         'operclasses', 'operfams',  'sequences', 'tsparsers',
+                         'types', 'views']:
             schema[key].update(mapper(self, objtypes))
 
         if hasattr(self, 'description'):
@@ -97,6 +97,7 @@ class SchemaDict(DbObjectDict):
             inopcls = {}
             inopfams = {}
             inconvs = {}
+            intsps = {}
             for key in inschema.keys():
                 if key.startswith('domain '):
                     intypes.update({key: inschema[key]})
@@ -116,6 +117,8 @@ class SchemaDict(DbObjectDict):
                     inopers.update({key: inschema[key]})
                 elif key.startswith('conversion '):
                     inconvs.update({key: inschema[key]})
+                elif key.startswith('text search parser '):
+                    intsps.update({key: inschema[key]})
                 elif key == 'oldname':
                     schema.oldname = inschema[key]
                     del inschema['oldname']
@@ -130,9 +133,10 @@ class SchemaDict(DbObjectDict):
             newdb.operclasses.from_map(schema, inopcls)
             newdb.operfams.from_map(schema, inopfams)
             newdb.conversions.from_map(schema, inconvs)
+            newdb.tsparsers.from_map(schema, intsps)
 
     def link_refs(self, dbtypes, dbtables, dbfunctions, dbopers, dbopfams,
-                  dbopcls, dbconvs):
+                  dbopcls, dbconvs, dbtspars):
         """Connect types, tables and functions to their respective schemas
 
         :param dbtypes: dictionary of types and domains
@@ -142,6 +146,7 @@ class SchemaDict(DbObjectDict):
         :param dbopfams: dictionary of operator families
         :param dbopcls: dictionary of operator classes
         :param dbconvs: dictionary of conversions
+        :param dbtspars: dictionary of text search parsers
 
         Fills in the `domains` dictionary for each schema by
         traversing the `dbtypes` dictionary.  Fills in the `tables`,
@@ -225,6 +230,13 @@ class SchemaDict(DbObjectDict):
             if not hasattr(schema, 'conversions'):
                 schema.conversions = {}
             schema.conversions.update({cnv: conv})
+        for (sch, tsp) in dbtspars.keys():
+            tspar = dbtspars[(sch, tsp)]
+            assert self[sch]
+            schema = self[sch]
+            if not hasattr(schema, 'tsparsers'):
+                schema.tsparsers = {}
+            schema.tsparsers.update({tsp: tspar})
 
     def to_map(self):
         """Convert the schema dictionary to a regular dictionary

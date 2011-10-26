@@ -21,6 +21,7 @@ import test_operclass
 import test_trigger
 import test_rule
 import test_conversion
+import test_textsearch
 
 
 def suite():
@@ -43,6 +44,7 @@ def suite():
     tests.addTest(test_trigger.suite())
     tests.addTest(test_rule.suite())
     tests.addTest(test_conversion.suite())
+    tests.addTest(test_textsearch.suite())
     return tests
 
 if __name__ == '__main__':

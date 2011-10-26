@@ -60,6 +60,7 @@ classes and methods are documented mainly for developer use.
    indexes
    rule
    trigger
+   textsearch
 
 
 Indices and tables
