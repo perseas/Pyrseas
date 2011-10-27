@@ -1,3 +1,20 @@
+0.4.0 (27-Oct-2011)
+
+  * Make the initial SET search_path persistent.
+
+  * Correct exclusion of PG internal schemas in various queries.
+
+  * Fix generation of COMMENTs with single quotes in the text.
+
+  * For inherited tables, only generate constraints that are defined
+    locally.
+
+  * Correct generation of ALTER TABLE ADD/DROP COLUMN when input
+    columns are in different order than original.
+
+  * Support PG 9.1 (add description for PL/pgSQL language).
+
+
 0.4.0 (26-Sep-2011)
 
   * Added support for:
