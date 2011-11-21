@@ -270,7 +270,7 @@ class ConstraintDict(DbObjectDict):
         for constr in self.fetch():
             constr.unqualify()
             sch, tbl, cns = constr.key()
-            sch, tbl = split_schema_obj('%s.%s' % (sch, tbl));
+            sch, tbl = split_schema_obj('%s.%s' % (sch, tbl))
             constr_type = constr.type
             del constr.type
             if constr_type != 'f':
