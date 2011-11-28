@@ -25,7 +25,8 @@ from pyrseas.dbobject.operfamily import OperatorFamilyDict
 from pyrseas.dbobject.rule import RuleDict
 from pyrseas.dbobject.trigger import TriggerDict
 from pyrseas.dbobject.conversion import ConversionDict
-from pyrseas.dbobject.textsearch import TSParserDict
+from pyrseas.dbobject.textsearch import TSConfigurationDict, TSDictionaryDict
+from pyrseas.dbobject.textsearch import TSParserDict, TSTemplateDict
 
 
 def flatten(lst):
@@ -64,7 +65,10 @@ class Database(object):
             self.rules = RuleDict(dbconn)
             self.triggers = TriggerDict(dbconn)
             self.conversions = ConversionDict(dbconn)
+            self.tstempls = TSTemplateDict(dbconn)
+            self.tsdicts = TSDictionaryDict(dbconn)
             self.tsparsers = TSParserDict(dbconn)
+            self.tsconfigs = TSConfigurationDict(dbconn)
 
     def __init__(self, dbconn):
         """Initialize the database
@@ -79,7 +83,8 @@ class Database(object):
         db.languages.link_refs(db.functions)
         db.schemas.link_refs(db.types, db.tables, db.functions, db.operators,
                              db.operfams, db.operclasses, db.conversions,
-                             db.tsparsers)
+                             db.tsconfigs, db.tsdicts, db.tsparsers,
+                             db.tstempls)
         db.tables.link_refs(db.columns, db.constraints, db.indexes,
                             db.rules, db.triggers)
         db.types.link_refs(db.columns, db.constraints, db.functions)
@@ -166,7 +171,10 @@ class Database(object):
         stmts.append(self.db.triggers.diff_map(self.ndb.triggers))
         stmts.append(self.db.rules.diff_map(self.ndb.rules))
         stmts.append(self.db.conversions.diff_map(self.ndb.conversions))
+        stmts.append(self.db.tsdicts.diff_map(self.ndb.tsdicts))
+        stmts.append(self.db.tstempls.diff_map(self.ndb.tstempls))
         stmts.append(self.db.tsparsers.diff_map(self.ndb.tsparsers))
+        stmts.append(self.db.tsconfigs.diff_map(self.ndb.tsconfigs))
         stmts.append(self.db.casts.diff_map(self.ndb.casts))
         stmts.append(self.db.operators._drop())
         stmts.append(self.db.operclasses._drop())
