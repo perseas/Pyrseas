@@ -15,7 +15,7 @@ CREATE_TST_STMT = "CREATE TEXT SEARCH TEMPLATE tst1 (INIT = dsimple_init, " \
     "LEXIZE = dsimple_lexize)"
 DROP_TSC_STMT = "DROP TEXT SEARCH CONFIGURATION IF EXISTS tsc1"
 DROP_TSD_STMT = "DROP TEXT SEARCH DICTIONARY IF EXISTS tsd1"
-DROP_TSP_STMT = "DROP TEXT SEARCH PARSER IF EXISTS tsp1"
+DROP_TSP_STMT = "DROP TEXT SEARCH PARSER IF EXISTS tsp1 CASCADE"
 DROP_TST_STMT = "DROP TEXT SEARCH TEMPLATE IF EXISTS tst1"
 COMMENT_TSC_STMT = "COMMENT ON TEXT SEARCH CONFIGURATION tsc1 IS " \
     "'Test configuration tsc1'"
@@ -28,6 +28,11 @@ COMMENT_TST_STMT = "COMMENT ON TEXT SEARCH TEMPLATE tst1 IS " \
 
 class TextSearchConfigToMapTestCase(PyrseasTestCase):
     """Test mapping of existing text search configurations"""
+
+    def tearDown(self):
+        self.db.execute(DROP_TSC_STMT)
+        self.db.execute_commit(DROP_TSP_STMT)
+        self.db.close()
 
     def test_map_ts_config(self):
         "Map an existing text search configuration"
@@ -52,10 +57,13 @@ class TextSearchConfigToMapTestCase(PyrseasTestCase):
         self.assertEqual(dbmap['schema public']
                          ['text search configuration tsc1'], {
                 'parser': 's1.tsp1'})
+        self.db.execute_commit("DROP SCHEMA s1 CASCADE")
 
     def test_map_ts_config_comment(self):
         "Map a text search configuration with a comment"
         self.db.execute(DROP_TSC_STMT)
+        self.db.execute(DROP_TSP_STMT)
+        self.db.execute(CREATE_TSP_STMT)
         self.db.execute(CREATE_TSC_STMT)
         dbmap = self.db.execute_and_map(COMMENT_TSC_STMT)
         self.assertEqual(dbmap['schema public']
@@ -130,6 +138,10 @@ class TextSearchConfigToSqlTestCase(PyrseasTestCase):
 class TextSearchDictToMapTestCase(PyrseasTestCase):
     """Test mapping of existing text search dictionaries"""
 
+    def tearDown(self):
+        self.db.execute_commit(DROP_TSD_STMT)
+        self.db.close()
+
     def test_map_ts_dict(self):
         "Map an existing text search dictionary"
         self.db.execute(DROP_TSD_STMT)
@@ -188,6 +200,10 @@ class TextSearchDictToSqlTestCase(PyrseasTestCase):
 
 class TextSearchParserToMapTestCase(PyrseasTestCase):
     """Test mapping of existing text search parsers"""
+
+    def tearDown(self):
+        self.db.execute_commit(DROP_TSP_STMT)
+        self.db.close()
 
     def test_map_ts_parser(self):
         "Map an existing text search parser"
@@ -279,6 +295,7 @@ class TextSearchTemplateToSqlTestCase(PyrseasTestCase):
 
     def test_create_ts_template(self):
         "Create a text search template that didn't exist"
+        self.db.execute_commit(DROP_TST_STMT)
         inmap = self.std_map()
         inmap['schema public'].update({'text search template tst1': {
                     'init': 'dsimple_init', 'lexize': 'dsimple_lexize'}})
@@ -311,7 +328,11 @@ class TextSearchTemplateToSqlTestCase(PyrseasTestCase):
 
 def suite():
     tests = unittest.TestLoader().loadTestsFromTestCase(
-        TextSearchDictToMapTestCase)
+        TextSearchConfigToMapTestCase)
+    tests.addTest(unittest.TestLoader().loadTestsFromTestCase(
+            TextSearchConfigToSqlTestCase))
+    tests.addTest(unittest.TestLoader().loadTestsFromTestCase(
+            TextSearchDictToMapTestCase))
     tests.addTest(unittest.TestLoader().loadTestsFromTestCase(
             TextSearchDictToSqlTestCase))
     tests.addTest(unittest.TestLoader().loadTestsFromTestCase(
