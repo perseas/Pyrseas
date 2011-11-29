@@ -6,7 +6,8 @@
     This defines two classes, Index and IndexDict, derived
     from DbSchemaObject and DbObjectDict, respectively.
 """
-from pyrseas.dbobject import DbObjectDict, DbSchemaObject, quote_id
+from pyrseas.dbobject import DbObjectDict, DbSchemaObject
+from pyrseas.dbobject import quote_id, split_schema_obj
 
 
 class Index(DbSchemaObject):
@@ -106,6 +107,7 @@ class IndexDict(DbObjectDict):
         for index in self.fetch():
             index.unqualify()
             sch, tbl, idx = index.key()
+            sch, tbl = split_schema_obj('%s.%s' % (sch, tbl))
             if index.keycols == '0':
                 del index.keycols
             self[(sch, tbl, idx)] = index
