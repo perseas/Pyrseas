@@ -75,3 +75,25 @@ the other hand, `Django's admin site application
 more than one table on a web page, but it requires defining the
 database "model" in Python and has limitations on how the database can
 be structured.
+
+Naming
+------
+
+The project name comes from `Python <http://www.python.org/>`_, the
+programming language, and `Perseas
+<http://en.wikipedia.org/wiki/Perseus>`_ [#]_, the Greek mythological
+hero who rescued Andromeda from a sea monster [#]_.  It is hoped that
+Pyrseas will rescue the Andromeda project <grin>.  You can pronounce
+Pyrseas like the hero.
+
+
+.. rubric:: Footnotes
+
+.. [#] The common English name for Perseas is Perseus and the Ancient
+   Greek name is Perseos. However, in modern Greek Περσέας_ is the
+   more common spelling for the mythical hero. The project would be
+   Πυρσέας or ΠΥΡΣΕΑΣ in Greek.
+
+.. _Περσέας: http://en.wiktionary.org/wiki/%CE%A0%CE%B5%CF%81%CF%83%CE%AD%CE%B1%CF%82
+
+.. [#] He is better known for having killed Medusa.

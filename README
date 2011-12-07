@@ -3,13 +3,34 @@ Pyrseas
 =======
 
 Pyrseas provides a framework and utilities to upgrade and maintain a
-relational database.  Its purpose is to enhance and follow through on
-the concepts of the `Andromeda Project
-<http://www.andromeda-project.org/>`_.
+PostgreSQL database.
 
-Pyrseas currently includes the dbtoyaml utility to create a `YAML
-<http://yaml.org/>`_ description of a PostgreSQL database's tables,
-and the yamltodb utility to generate SQL statements to modify a
-database to match an input YAML specification.
+Features
+--------
 
-Pyrseas is distributed under the BSD license.
+- Outputs a YAML/JSON description of a PostgreSQL database's tables
+  and other objects (metadata), suitable for storing in a version
+  control repository
+
+- Generates SQL statements to modify a database so that it will match
+  an input YAML/JSON specification
+
+- (planned) Generates a flexible web application to update PostgreSQL
+  tables
+
+Requirements
+------------
+
+- PostgreSQL 8.4 or higher
+
+- Python 2.6 or higher
+
+- (planned) Werkzeug
+
+- (planned) Jinja2
+
+License
+-------
+
+Pyrseas is free (libre) software and is distributed under the BSD
+license.  Please see the LICENSE file for details.
