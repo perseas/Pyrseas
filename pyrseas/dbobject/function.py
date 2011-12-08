@@ -62,6 +62,9 @@ class Function(Proc):
             else:
                 if self.cost == 100:
                     del dct['cost']
+        if hasattr(self, 'rows') and self.rows != 0:
+            if self.rows == 1000:
+                del dct['rows']
         return {self.extern_key(): dct}
 
     def create(self, newsrc=None, basetype=False):
@@ -83,7 +86,7 @@ class Function(Proc):
             src = "$$%s$$" % (newsrc or self.source)
         else:
             src = "$_$%s$_$" % (newsrc or self.source)
-        volat = strict = secdef = cost = ''
+        volat = strict = secdef = cost = rows = ''
         if hasattr(self, 'volatility'):
             volat = ' ' + VOLATILITY_TYPES[self.volatility].upper()
         if hasattr(self, 'strict') and self.strict:
@@ -97,11 +100,15 @@ class Function(Proc):
             else:
                 if self.cost != 100:
                     cost = " COST %s" % self.cost
+        if hasattr(self, 'rows') and self.rows != 0:
+            if self.rows != 1000:
+                rows = " ROWS %s" % self.rows
+
         stmts.append("CREATE%s FUNCTION %s(%s) RETURNS %s\n    LANGUAGE %s"
-                     "%s%s%s%s\n    AS %s" % (
+                     "%s%s%s%s%s\n    AS %s" % (
                 newsrc and " OR REPLACE" or '', self.qualname(),
                 self.arguments, self.returns, self.language, volat, strict,
-                secdef, cost, src))
+                secdef, cost, rows, src))
         if hasattr(self, 'description'):
             stmts.append(self.comment())
         return stmts
@@ -175,7 +182,8 @@ class ProcDict(DbObjectDict):
                   aggtranstype::regtype AS stype,
                   aggfinalfn::regprocedure AS finalfunc,
                   agginitval AS initcond,
-                  obj_description(p.oid, 'pg_proc') AS description
+                  obj_description(p.oid, 'pg_proc') AS description,
+                  prorows::integer AS rows
            FROM pg_proc p
                 JOIN pg_namespace n ON (pronamespace = n.oid)
                 JOIN pg_language l ON (prolang = l.oid)

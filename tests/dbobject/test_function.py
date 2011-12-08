@@ -9,11 +9,16 @@ SOURCE1 = "SELECT 'dummy'::text"
 CREATE_STMT1 = "CREATE FUNCTION f1() RETURNS text LANGUAGE sql IMMUTABLE AS " \
     "$_$%s$_$" % SOURCE1
 DROP_STMT1 = "DROP FUNCTION IF EXISTS f1()"
+
 SOURCE2 = "SELECT GREATEST($1, $2)"
 CREATE_STMT2 = "CREATE FUNCTION f1(integer, integer) RETURNS integer " \
     "LANGUAGE sql IMMUTABLE AS $_$%s$_$" % SOURCE2
 DROP_STMT2 = "DROP FUNCTION IF EXISTS f1(integer, integer)"
 COMMENT_STMT = "COMMENT ON FUNCTION f1(integer, integer) IS 'Test function f1'"
+
+SOURCE3 = "SELECT * FROM generate_series($1, $2)"
+CREATE_STMT3 = "CREATE FUNCTION f2(integer, integer) RETURNS SETOF integer ROWS 20" \
+    "LANGUAGE sql IMMUTABLE AS $_$%s$_$" % SOURCE3
 
 
 class FunctionToMapTestCase(PyrseasTestCase):
@@ -83,6 +88,13 @@ class FunctionToMapTestCase(PyrseasTestCase):
                          ['function f1(integer, integer)']['description'],
                          'Test function f1')
 
+    def test_map_function_rows(self):
+        "Map a function rows"
+        dbmap = self.db.execute_and_map(CREATE_STMT3)
+        self.assertEqual(dbmap['schema public']
+                         ['function f2(integer, integer)']['rows'],
+                         20)
+
 
 class FunctionToSqlTestCase(PyrseasTestCase):
     """Test SQL generation from input functions"""
@@ -124,6 +136,24 @@ class FunctionToSqlTestCase(PyrseasTestCase):
         dbsql = self.db.process_map(inmap)
         self.assertEqual(fix_indent(dbsql[2]),
                          "CREATE FUNCTION f1() RETURNS SETOF t1 LANGUAGE sql "
+                         "AS $_$SELECT * FROM t1$_$")
+
+    def test_create_setof_row_function_rows(self):
+        "Create a function returning a set of rows with suggested number"
+        self.db.execute_commit(DROP_STMT1)
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+                    'columns': [{'c1': {'type': 'integer'}},
+                                {'c2': {'type': 'text'}}]}})
+        inmap['schema public'].update({
+                'function f1()': {
+                    'language': 'sql', 'returns': 'SETOF t1',
+                    'source': "SELECT * FROM t1",
+                    'rows': 50}})
+        dbsql = self.db.process_map(inmap)
+        self.assertEqual(fix_indent(dbsql[2]),
+                         "CREATE FUNCTION f1() RETURNS SETOF t1 "
+                         "LANGUAGE sql ROWS 50 "
                          "AS $_$SELECT * FROM t1$_$")
 
     def test_create_security_definer_function(self):
