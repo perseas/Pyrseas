@@ -61,7 +61,7 @@ class Constraint(DbSchemaObject):
         :return: SQL statement
         """
         return "COMMENT ON CONSTRAINT %s ON %s IS %s" % (
-            self.identifier(), self._table.qualname(), self._comment_text())
+            quote_id(self.name), self._table.qualname(), self._comment_text())
 
 
 class CheckConstraint(Constraint):

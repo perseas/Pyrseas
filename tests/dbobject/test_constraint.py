@@ -671,6 +671,24 @@ class ConstraintCommentTestCase(PyrseasTestCase):
         self.assertEqual(dbsql, ["COMMENT ON CONSTRAINT cns1 ON t1 IS "
                                  "'Changed constraint cns1'"])
 
+    def test_constraint_comment_schema(self):
+        "Add comment on a constraint for a table in another schema"
+        self.db.execute("DROP SCHEMA IF EXISTS s1 CASCADE")
+        self.db.execute("CREATE SCHEMA s1")
+        self.db.execute_commit("CREATE TABLE s1.t1 (c1 integer "
+                        "CONSTRAINT cns1 CHECK (c1 > 50), c2 text)")
+        inmap = self.std_map()
+        inmap.update({'schema s1': {'table t1': {
+                        'columns': [{'c1': {'type': 'integer'}},
+                                    {'c2': {'type': 'text'}}],
+                        'check_constraints': {'cns1': {
+                                'columns': ['c1'], 'expression': 'c1 > 50',
+                                'description': 'Test constraint cns1'}}}}})
+        dbsql = self.db.process_map(inmap)
+        self.assertEqual(dbsql[0], "COMMENT ON CONSTRAINT cns1 ON s1.t1 IS "
+                         "'Test constraint cns1'")
+        self.db.execute_commit("DROP SCHEMA s1 CASCADE")
+
 
 def suite():
     tests = unittest.TestLoader().loadTestsFromTestCase(
