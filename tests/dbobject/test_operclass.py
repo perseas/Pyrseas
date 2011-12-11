@@ -5,6 +5,18 @@ import unittest
 
 from utils import PyrseasTestCase, fix_indent
 
+CREATE_TYPE_STMT = """
+CREATE TYPE myint;
+CREATE FUNCTION myintin(cstring) RETURNS myint AS 'int4in' LANGUAGE internal;
+CREATE FUNCTION myintout(myint) RETURNS cstring AS 'int4out' LANGUAGE internal;
+CREATE TYPE myint (INPUT = myintin, OUTPUT = myintout);
+CREATE FUNCTION myinteq(myint,myint) RETURNS boolean AS 'int4eq' LANGUAGE internal;
+CREATE FUNCTION myintlt(myint,myint) RETURNS boolean AS 'int4lt' LANGUAGE internal;
+CREATE OPERATOR < (PROCEDURE = myintlt, LEFTARG = myint, RIGHTARG = myint);
+CREATE OPERATOR = (PROCEDURE = myinteq, LEFTARG = myint, RIGHTARG = myint);
+CREATE FUNCTION btmyintcmp(myint,myint) RETURNS integer AS 'btint4cmp' LANGUAGE internal;
+"""
+
 CREATE_STMT = "CREATE OPERATOR CLASS oc1 FOR TYPE integer USING btree " \
     "AS OPERATOR 1 <, OPERATOR 3 =, FUNCTION 1 btint4cmp(integer,integer)"
 CREATE_STMT_LONG = "CREATE OPERATOR CLASS oc1 FOR TYPE integer USING btree " \
@@ -24,6 +36,22 @@ class OperatorClassToMapTestCase(PyrseasTestCase):
                 1: '<(integer,integer)', 3: '=(integer,integer)'},
                   'functions': {1: 'btint4cmp(integer,integer)'}}
         dbmap = self.db.execute_and_map(CREATE_STMT)
+        self.assertEqual(dbmap['schema public'][
+                'operator class oc1 using btree'], expmap)
+
+    def test_map_operclass_default(self):
+        "Map a default operator class"
+        expmap = {'type': 'myint',
+            'default': True,
+            'operators': {
+                1: '<(myint,myint)', 3: '=(myint,myint)'},
+              'functions': {1: 'btmyintcmp(myint,myint)'}}
+        self.db.execute(CREATE_TYPE_STMT)
+        dbmap = self.db.execute_and_map(
+            CREATE_STMT
+                .replace('integer', 'myint')
+                .replace('int4', 'myint')
+                .replace(' FOR ', ' DEFAULT FOR '))
         self.assertEqual(dbmap['schema public'][
                 'operator class oc1 using btree'], expmap)
 
@@ -48,6 +76,22 @@ class OperatorClassToSqlTestCase(PyrseasTestCase):
                     'functions': {1: 'btint4cmp(integer,integer)'}}})
         dbsql = self.db.process_map(inmap)
         self.assertEqual(fix_indent(dbsql[0]), CREATE_STMT_LONG)
+
+    def test_create_operclass_default(self):
+        "Create a default operator class"
+        inmap = self.std_map()
+        inmap['schema public'].update({'operator class oc1 using btree': {
+                    'default': True,
+                    'type': 'myint', 'operators': {
+                        1: '<(myint,myint)', 3: '=(myint,myint)'},
+                    'functions': {1: 'btmyintcmp(myint,myint)'}}})
+        self.db.execute(CREATE_TYPE_STMT)
+        dbsql = self.db.process_map(inmap)
+        self.assertEqual(fix_indent(dbsql[0]),
+            CREATE_STMT_LONG
+                .replace(' FOR ', ' DEFAULT FOR ')
+                .replace('integer', 'myint')
+                .replace('int4', 'myint'))
 
     def test_create_operclass_in_schema(self):
         "Create a operator within a non-public schema"
