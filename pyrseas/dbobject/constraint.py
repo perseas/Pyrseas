@@ -187,6 +187,11 @@ class ForeignKey(Constraint):
             actions = " ON UPDATE %s" % self.on_update.upper()
         if hasattr(self, 'on_delete'):
             actions += " ON DELETE %s" % self.on_delete.upper()
+        if getattr(self, 'deferrable', False):
+            actions += " DEFERRABLE"
+        if getattr(self, 'deferred', False):
+            actions += " INITIALLY DEFERRED"
+
         return "ALTER TABLE %s ADD CONSTRAINT %s FOREIGN KEY (%s) " \
             "REFERENCES %s (%s)%s" % (
             self._table.qualname(), self.name, self.key_columns(),
@@ -253,6 +258,8 @@ class ConstraintDict(DbObjectDict):
                   conname AS name,
                   CASE WHEN contypid != 0 THEN 'd' ELSE '' END AS target,
                   contype AS type, conkey AS keycols,
+                  condeferrable AS deferrable,
+                  condeferred AS deferred,
                   confrelid::regclass AS ref_table, confkey AS ref_cols,
                   consrc AS expression, confupdtype AS on_update,
                   confdeltype AS on_delete, amname AS access_method,
@@ -361,6 +368,10 @@ class ConstraintDict(DbObjectDict):
                         raise ValueError("Invalid action '%s' for constraint "
                                          "'%s'" % (act, cns))
                     fkey.on_delete = act
+                if 'deferrable' in val:
+                    fkey.deferrable = True
+                if 'deferred' in val:
+                    fkey.deferred = True
                 try:
                     fkey.keycols = val['columns']
                 except KeyError, exc:

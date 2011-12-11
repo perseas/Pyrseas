@@ -49,7 +49,7 @@ class OperatorClass(DbSchemaObject):
         stmts = []
         dflt = ''
         if hasattr(self, 'default') and self.default:
-            dflt = "DEFAULT %s" % self.default
+            dflt = "DEFAULT "
         clauses = []
         for (strat, oper) in self.operators.items():
             clauses.append("OPERATOR %d %s" % (strat, oper))
