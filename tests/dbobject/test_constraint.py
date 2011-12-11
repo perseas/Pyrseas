@@ -364,6 +364,23 @@ class ForeignKeyToMapTestCase(PyrseasTestCase):
                                    'columns': ['pc1']}}}}
         self.assertEqual(dbmap['schema public']['table t2'], t2map)
 
+    def test_foreign_key_deferred(self):
+        "check constraints deferred status"
+        self.db.execute("CREATE TABLE t2 (pc1 INTEGER PRIMARY KEY, pc2 TEXT)")
+        ddlstmt = """CREATE TABLE t1 (c1 INTEGER,
+              c2 INTEGER REFERENCES t2 (pc1),
+              c3 INTEGER REFERENCES t2 (pc1) DEFERRABLE,
+              c4 INTEGER REFERENCES t2 (pc1) DEFERRABLE INITIALLY DEFERRED
+              )"""
+        dbmap = self.db.execute_and_map(ddlstmt)
+        fks = dbmap['schema public']['table t1']['foreign_keys']
+        self.assert_(not fks['t1_c2_fkey'].get('deferrable'))
+        self.assert_(not fks['t1_c2_fkey'].get('deferred'))
+        self.assert_(fks['t1_c3_fkey'].get('deferrable'))
+        self.assert_(not fks['t1_c3_fkey'].get('deferred'))
+        self.assert_(fks['t1_c4_fkey'].get('deferrable'))
+        self.assert_(fks['t1_c4_fkey'].get('deferred'))
+
 
 class ForeignKeyToSqlTestCase(PyrseasTestCase):
     """Test SQL generation from input FOREIGN KEYs"""
@@ -397,6 +414,59 @@ class ForeignKeyToSqlTestCase(PyrseasTestCase):
         self.assertEqual(fix_indent(dbsql[2]),
                          "ALTER TABLE t2 ADD CONSTRAINT t2_c23_fkey "
                          "FOREIGN KEY (c23) REFERENCES t1 (c11)")
+
+    def test_create_foreign_key_deferred(self):
+        "Create a table with various foreign key deferring constraint"
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+                    'columns': [{'c11': {'type': 'integer'}},
+                                {'c12': {'type': 'text'}}]},
+                                   'table t2': {
+                    'columns': [{'c21': {'type': 'integer'}},
+                                {'c22': {'type': 'text'}},
+                                {'c23': {'type': 'integer'}},
+                                {'c24': {'type': 'integer'}},
+                                {'c25': {'type': 'integer'}},
+                                ],
+                    'foreign_keys': {
+                        't2_c23_fkey': {
+                            'columns': ['c23'],
+                            'references': {'columns': ['c11'],
+                                           'table': 't1'}},
+                        't2_c24_fkey': {
+                            'columns': ['c24'],
+                            'references': {'columns': ['c11'],
+                                           'table': 't1'},
+                            'deferrable': True},
+                        't2_c25_fkey': {
+                            'columns': ['c25'],
+                            'references': {'columns': ['c11'],
+                                           'table': 't1'},
+                            'deferrable': True,
+                            'deferred': True}}}})
+
+        dbsql = self.db.process_map(inmap)
+
+        # can't control which table/constraint will be created first
+        dbsql[0:2] = list(sorted(dbsql[0:2]))
+        dbsql[2:5] = list(sorted(dbsql[2:5]))
+
+        self.assertEqual(fix_indent(dbsql[0]),
+                             "CREATE TABLE t1 (c11 integer, c12 text)")
+        self.assertEqual(fix_indent(dbsql[1]),
+                         "CREATE TABLE t2 (c21 integer, c22 text, "
+                         "c23 integer, c24 integer, c25 integer)")
+        self.assertEqual(fix_indent(dbsql[2]),
+                         "ALTER TABLE t2 ADD CONSTRAINT t2_c23_fkey "
+                         "FOREIGN KEY (c23) REFERENCES t1 (c11)")
+        self.assertEqual(fix_indent(dbsql[3]),
+                         "ALTER TABLE t2 ADD CONSTRAINT t2_c24_fkey "
+                         "FOREIGN KEY (c24) REFERENCES t1 (c11) "
+                         "DEFERRABLE")
+        self.assertEqual(fix_indent(dbsql[4]),
+                         "ALTER TABLE t2 ADD CONSTRAINT t2_c25_fkey "
+                         "FOREIGN KEY (c25) REFERENCES t1 (c11) "
+                         "DEFERRABLE INITIALLY DEFERRED")
 
     def test_add_foreign_key(self):
         "Add a two-column foreign key to an existing table"
