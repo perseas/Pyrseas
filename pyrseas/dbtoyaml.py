@@ -42,16 +42,17 @@ def main(host='localhost', port=5432, schema=None):
     if options.schema:
         skey = 'schema ' + options.schema
         for sch in dbmap.keys():
-            if sch != skey:
+            if sch[:7] == 'schema ' and sch != skey:
                 del dbmap[sch]
     if options.tablist:
         ktablist = ['table ' + tbl for tbl in options.tablist]
         for sch in dbmap.keys():
-            for tbl in dbmap[sch].keys():
-                if tbl not in ktablist:
-                    del dbmap[sch][tbl]
-            if not dbmap[sch]:
-                del dbmap[sch]
+            if sch[:7] == 'schema ':
+                for tbl in dbmap[sch].keys():
+                    if tbl not in ktablist:
+                        del dbmap[sch][tbl]
+                if not dbmap[sch]:
+                    del dbmap[sch]
 
     print yaml.dump(dbmap, default_flow_style=False)
 
