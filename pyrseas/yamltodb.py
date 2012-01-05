@@ -25,6 +25,8 @@ def main(host='localhost', port=5432):
     parser.add_option('-1', '--single-transaction', action='store_true',
                       dest='onetrans',
                       help="wrap commands in BEGIN/COMMIT")
+    parser.add_option('-n', '--schema', dest='schlist', action='append',
+                     help="only for named schemas (default all)")
 
     parser.set_defaults(host=host, port=port, username=os.getenv("USER"))
     (options, args) = parser.parse_args()
@@ -37,7 +39,13 @@ def main(host='localhost', port=5432):
 
     db = Database(DbConnection(dbname, options.username, options.host,
                                options.port))
-    stmts = db.diff_map(yaml.load(open(yamlspec)))
+    inmap = yaml.load(open(yamlspec))
+    if options.schlist:
+        kschlist = ['schema ' + sch for sch in options.schlist]
+        for sch in inmap.keys():
+            if sch not in kschlist:
+                del inmap[sch]
+    stmts = db.diff_map(inmap, options.schlist)
     if stmts:
         if options.onetrans:
             print "BEGIN;"

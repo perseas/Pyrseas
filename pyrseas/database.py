@@ -89,6 +89,24 @@ class Database(object):
                             db.rules, db.triggers)
         db.types.link_refs(db.columns, db.constraints, db.functions)
 
+    def _trim_objects(self, schemas):
+        """Remove unwanted schema objects
+
+        :param schemas: list of schemas to keep
+        """
+        for objtype in ['types', 'tables', 'constraints', 'indexes',
+                        'functions', 'operators', 'operclasses', 'operfams',
+                        'rules', 'triggers', 'conversions', 'tstempls',
+                        'tsdicts', 'tsparsers', 'tsconfigs']:
+            objdict = getattr(self.db, objtype)
+            for obj in objdict.keys():
+                # obj[0] is the schema name in all these dicts
+                if obj[0] not in schemas:
+                    del objdict[obj]
+        for sch in self.db.schemas.keys():
+            if sch not in schemas:
+                del self.db.schemas[sch]
+
     def from_catalog(self):
         """Populate the database objects by querying the catalogs
 
@@ -142,10 +160,11 @@ class Database(object):
         dbmap.update(self.db.schemas.to_map())
         return dbmap
 
-    def diff_map(self, input_map):
+    def diff_map(self, input_map, schemas=[]):
         """Generate SQL to transform an existing database
 
         :param input_map: a YAML map defining the new database
+        :param schemas: list of schemas to diff
         :return: list of SQL statements
 
         Compares the existing database definition, as fetched from the
@@ -155,6 +174,8 @@ class Database(object):
         """
         if not self.db:
             self.from_catalog()
+        if schemas:
+            self._trim_objects(schemas)
         self.from_map(input_map)
         stmts = self.db.languages.diff_map(self.ndb.languages,
                                            self.dbconn.version)

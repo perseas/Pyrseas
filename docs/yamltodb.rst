@@ -61,6 +61,11 @@ yamlspec
     Specifies the TCP port on which the PostgreSQL server is listening
     for connections. The default port number is 5432.
 
+-n `schema`, --schema= `schema`
+
+    Compare only schema(s) matching `schema`. By default, all schemas
+    are compared.
+
 -U `username`, --user= `username`
 
     User name to connect as. The default user name is provided by the
