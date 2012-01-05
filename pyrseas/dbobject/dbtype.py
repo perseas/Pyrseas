@@ -79,6 +79,10 @@ class BaseType(DbType):
             opt_clauses.append("STORAGE = %s" % self.storage)
         if hasattr(self, 'delimiter'):
             opt_clauses.append("DELIMITER = '%s'" % self.delimiter)
+        if hasattr(self, 'category'):
+            opt_clauses.append("CATEGORY = '%s'" % self.category)
+        if hasattr(self, 'preferred'):
+            opt_clauses.append("PREFERRED = TRUE")
         stmts.append("CREATE TYPE %s (\n    INPUT = %s,"
                      "\n    OUTPUT = %s%s%s)" % (
                 self.qualname(), self.input, self.output,
@@ -204,6 +208,7 @@ class TypeDict(DbObjectDict):
                   typanalyze::regproc AS analyze,
                   typlen AS internallength, typalign AS alignment,
                   typstorage AS storage, typdelim AS delimiter,
+                  typcategory AS category, typispreferred AS preferred,
                   obj_description(t.oid, 'pg_type') AS description
            FROM pg_type t
                 JOIN pg_namespace n ON (typnamespace = n.oid)
@@ -226,7 +231,7 @@ class TypeDict(DbObjectDict):
                 del dbtype.receive, dbtype.send
                 del dbtype.typmod_in, dbtype.typmod_out, dbtype.analyze
                 del dbtype.internallength, dbtype.alignment, dbtype.storage
-                del dbtype.delimiter
+                del dbtype.delimiter, dbtype.category
             if kind == 'd':
                 self[(sch, typ)] = Domain(**dbtype.__dict__)
             elif kind == 'e':

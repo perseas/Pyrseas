@@ -107,8 +107,20 @@ class BaseTypeToMapTestCase(PyrseasTestCase):
         self.db.execute(CREATE_FUNC_OUT)
         expmap = {'input': 't1textin', 'output': 't1textout',
                   'internallength': 'variable', 'alignment': 'int4',
-                  'storage': 'plain'}
+                  'storage': 'plain', 'category': 'U'}
         dbmap = self.db.execute_and_map(CREATE_TYPE_STMT)
+        self.assertEqual(dbmap['schema public']['type t1'], expmap)
+
+    def test_base_type_category(self):
+        "Map a base type"
+        self.db.execute(CREATE_SHELL_STMT)
+        self.db.execute(CREATE_FUNC_IN)
+        self.db.execute(CREATE_FUNC_OUT)
+        expmap = {'input': 't1textin', 'output': 't1textout',
+                  'internallength': 'variable', 'alignment': 'int4',
+                  'storage': 'plain', 'category': 'S'}
+        dbmap = self.db.execute_and_map("CREATE TYPE t1 (INPUT = t1textin, "
+                                        "OUTPUT = t1textout, CATEGORY = 'S')")
         self.assertEqual(dbmap['schema public']['type t1'], expmap)
 
 
