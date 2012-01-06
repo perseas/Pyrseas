@@ -330,6 +330,17 @@ class AggregateToMapTestCase(PyrseasTestCase):
         self.assertEqual(dbmap['schema public']['aggregate a1(integer)'],
                          expmap)
 
+    def test_map_aggregate_sortop(self):
+        "Map an aggregate with a SORTOP"
+        self.db.execute(CREATE_STMT2)
+        expmap = {'sfunc': 'f1(integer,integer)', 'stype': 'integer',
+                  'sortop': 'pg_catalog.>'}
+        dbmap = self.db.execute_and_map(
+            "CREATE AGGREGATE a1 (integer) (SFUNC = f1, STYPE = integer, "
+            "SORTOP = >)")
+        self.assertEqual(dbmap['schema public']['aggregate a1(integer)'],
+                         expmap)
+
 
 class AggregateToSqlTestCase(PyrseasTestCase):
     """Test SQL generation from input aggregates"""

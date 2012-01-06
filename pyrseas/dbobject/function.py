@@ -151,16 +151,19 @@ class Aggregate(Proc):
         :return: SQL statements
         """
         stmts = []
-        ffunc = cond = ''
+        opt_clauses = []
         if hasattr(self, 'finalfunc'):
             ffname = self.finalfunc[:self.finalfunc.index('(')]
-            ffunc = ",\n    FINALFUNC = %s" % (ffname)
+            opt_clauses.append("FINALFUNC = %s" % ffname)
         if hasattr(self, 'initcond'):
-            cond = ",\n    INITCOND = '%s'" % (self.initcond)
+            opt_clauses.append("INITCOND = '%s'" % self.initcond)
+        if hasattr(self, 'sortop'):
+            opt_clauses.append("SORTOP = %s" % self.sortop)
         stmts.append("CREATE AGGREGATE %s(%s) (\n    SFUNC = %s,"
                      "\n    STYPE = %s%s%s)" % (
                 self.qualname(),
-                self.arguments, self.sfunc, self.stype, ffunc, cond))
+                self.arguments, self.sfunc, self.stype,
+                opt_clauses and ',\n    ' or '', ',\n    '.join(opt_clauses)))
         if hasattr(self, 'description'):
             stmts.append(self.comment())
         return stmts
@@ -181,7 +184,7 @@ class ProcDict(DbObjectDict):
                   aggtransfn::regprocedure AS sfunc,
                   aggtranstype::regtype AS stype,
                   aggfinalfn::regprocedure AS finalfunc,
-                  agginitval AS initcond,
+                  agginitval AS initcond, aggsortop::regoper AS sortop,
                   obj_description(p.oid, 'pg_proc') AS description,
                   prorows::integer AS rows
            FROM pg_proc p
@@ -203,6 +206,8 @@ class ProcDict(DbObjectDict):
                 del proc.cost
                 if proc.finalfunc == '-':
                     del proc.finalfunc
+                if proc.sortop == '0':
+                    del proc.sortop
                 self[(sch, prc, arg)] = Aggregate(**proc.__dict__)
             else:
                 self[(sch, prc, arg)] = Function(**proc.__dict__)
