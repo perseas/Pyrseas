@@ -38,6 +38,15 @@ class OperatorToMapTestCase(PyrseasTestCase):
         self.assertEqual(dbmap['schema public']
                          ['operator &&(integer, integer)'], expmap)
 
+    def test_map_operator_hash(self):
+        "Map an operator with HASHES clause"
+        expmap = {'procedure': 'texteq', 'hashes': True}
+        dbmap = self.db.execute_and_map(
+            "CREATE OPERATOR + (PROCEDURE = texteq, LEFTARG = text, "
+            "RIGHTARG = text, HASHES)")
+        self.assertEqual(dbmap['schema public']['operator +(text, text)'],
+                         expmap)
+
     def test_map_operator_comment(self):
         "Map a operator comment"
         self.db.execute(CREATE_STMT)

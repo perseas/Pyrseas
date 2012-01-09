@@ -60,6 +60,10 @@ class Operator(DbSchemaObject):
             opt_clauses.append("RESTRICT = %s" % self.restrict)
         if hasattr(self, 'join'):
             opt_clauses.append("JOIN = %s" % self.join)
+        if hasattr(self, 'hashes') and self.hashes:
+            opt_clauses.append("HASHES")
+        if hasattr(self, 'merges') and self.merges:
+            opt_clauses.append("MERGES")
         stmts.append("CREATE OPERATOR %s (\n    PROCEDURE = %s%s%s)" % (
                 self.qualname(), self.procedure,
                 ',\n    ' if opt_clauses else '', ',\n    '.join(opt_clauses)))
@@ -77,7 +81,8 @@ class OperatorDict(DbObjectDict):
                   oprleft::regtype AS leftarg, oprright::regtype AS rightarg,
                   oprcode::regproc AS procedure, oprcom::regoper AS commutator,
                   oprnegate::regoper AS negator, oprrest::regproc AS restrict,
-                  oprjoin::regproc AS join,
+                  oprjoin::regproc AS join, oprcanhash AS hashes,
+                  oprcanmerge AS merges,
                   obj_description(o.oid, 'pg_operator') AS description
            FROM pg_operator o
                 JOIN pg_namespace n ON (oprnamespace = n.oid)
