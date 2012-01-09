@@ -71,11 +71,16 @@ yamlspec
     User name to connect as. The default user name is provided by the
     environment variable :envvar:`USER`.
 
--1, --single-transaction
+-1\, --single-transaction
 
     Wrap the generated statements in BEGIN/COMMIT. This ensures that
     either all the statements complete successfully, or no changes are
     applied.
+
+-u\, --update
+
+    Execute the generated statements against the database mentioned in
+    ``dbname``.  This implies the --single-transaction option.
 
 Examples
 --------

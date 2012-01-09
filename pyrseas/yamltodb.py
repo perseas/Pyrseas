@@ -4,6 +4,7 @@
 to match the schema specified in a YAML file"""
 
 import os
+import sys
 from optparse import OptionParser
 
 import yaml
@@ -25,6 +26,8 @@ def main(host='localhost', port=5432):
     parser.add_option('-1', '--single-transaction', action='store_true',
                       dest='onetrans',
                       help="wrap commands in BEGIN/COMMIT")
+    parser.add_option('-u', '--update', action='store_true', dest='update',
+                      help="apply changes to database (implies -1)")
     parser.add_option('-n', '--schema', dest='schlist', action='append',
                      help="only for named schemas (default all)")
 
@@ -37,8 +40,8 @@ def main(host='localhost', port=5432):
     dbname = args[0]
     yamlspec = args[1]
 
-    db = Database(DbConnection(dbname, options.username, options.host,
-                               options.port))
+    dbconn = DbConnection(dbname, options.username, options.host, options.port)
+    db = Database(dbconn)
     inmap = yaml.load(open(yamlspec))
     if options.schlist:
         kschlist = ['schema ' + sch for sch in options.schlist]
@@ -47,11 +50,22 @@ def main(host='localhost', port=5432):
                 del inmap[sch]
     stmts = db.diff_map(inmap, options.schlist)
     if stmts:
-        if options.onetrans:
+        if options.onetrans or options.update:
             print "BEGIN;"
         print ";\n".join(stmts) + ';'
-        if options.onetrans:
+        if options.onetrans or options.update:
             print "COMMIT;"
+        if options.update:
+            dbconn.connect()
+            try:
+                for stmt in stmts:
+                    dbconn.conn.cursor().execute(stmt)
+            except:
+                dbconn.conn.rollback()
+                raise
+            else:
+                dbconn.conn.commit()
+                print >> sys.stderr, "Changes applied"
 
 if __name__ == '__main__':
     main()
