@@ -61,7 +61,7 @@ class DbConnection(object):
         curs = self.conn.cursor()
         try:
             curs.execute(query)
-        except Exception, exc:
+        except Exception as exc:
             exc.args += (query, )
             raise
         return curs

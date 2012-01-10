@@ -124,7 +124,7 @@ class LanguageDict(DbObjectDict):
                     try:
                         stmts.append(self[oldname].rename(inlng.name))
                         del self[oldname]
-                    except KeyError, exc:
+                    except KeyError as exc:
                         exc.args = ("Previous name '%s' for language '%s' "
                                    "not found" % (oldname, inlng.name), )
                         raise

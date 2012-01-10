@@ -3,6 +3,7 @@
 """yamltodb - generate SQL statements to update a PostgreSQL database
 to match the schema specified in a YAML file"""
 
+from __future__ import print_function
 import os
 import sys
 from optparse import OptionParser
@@ -51,10 +52,10 @@ def main(host='localhost', port=5432):
     stmts = db.diff_map(inmap, options.schlist)
     if stmts:
         if options.onetrans or options.update:
-            print "BEGIN;"
-        print ";\n".join(stmts) + ';'
+            print("BEGIN;")
+        print(";\n".join(stmts) + ';')
         if options.onetrans or options.update:
-            print "COMMIT;"
+            print("COMMIT;")
         if options.update:
             dbconn.connect()
             try:
@@ -65,7 +66,7 @@ def main(host='localhost', port=5432):
                 raise
             else:
                 dbconn.conn.commit()
-                print >> sys.stderr, "Changes applied"
+                print("Changes applied", file=sys.stderr)
 
 if __name__ == '__main__':
     main()

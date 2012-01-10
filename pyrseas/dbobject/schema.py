@@ -8,8 +8,8 @@
 """
 from pyrseas.dbobject import DbObjectDict, DbObject
 from pyrseas.dbobject import quote_id, split_schema_obj
-from dbtype import BaseType, Composite, Domain, Enum
-from table import Table, Sequence, View
+from pyrseas.dbobject.dbtype import BaseType, Composite, Domain, Enum
+from pyrseas.dbobject.table import Table, Sequence, View
 
 
 class Schema(DbObject):
@@ -312,7 +312,7 @@ class SchemaDict(DbObjectDict):
                     try:
                         stmts.append(self[oldname].rename(insch.name))
                         del self[oldname]
-                    except KeyError, exc:
+                    except KeyError as exc:
                         exc.args = ("Previous name '%s' for schema '%s' "
                                    "not found" % (oldname, insch.name), )
                         raise

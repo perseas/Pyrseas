@@ -11,8 +11,8 @@ import sys
 
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
 from pyrseas.dbobject import quote_id, split_schema_obj
-from constraint import CheckConstraint, PrimaryKey, ForeignKey, \
-    UniqueConstraint
+from pyrseas.dbobject.constraint import CheckConstraint, PrimaryKey
+from pyrseas.dbobject.constraint import ForeignKey, UniqueConstraint
 
 MAX_BIGINT = 9223372036854775807L
 
@@ -422,7 +422,7 @@ class ClassDict(DbObjectDict):
                     raise ValueError("Table '%s' has no specification" % k)
                 try:
                     newdb.columns.from_map(table, intable['columns'])
-                except KeyError, exc:
+                except KeyError as exc:
                     exc.args = ("Table '%s' has no columns" % key, )
                     raise
                 if 'inherits' in intable:
@@ -551,7 +551,7 @@ class ClassDict(DbObjectDict):
             stmt = self[(obj.schema, oldname)].rename(obj.name)
             self[(obj.schema, obj.name)] = self[(obj.schema, oldname)]
             del self[(obj.schema, oldname)]
-        except KeyError, exc:
+        except KeyError as exc:
             exc.args = ("Previous name '%s' for %s '%s' not found" % (
                     oldname, objtype, obj.name), )
             raise

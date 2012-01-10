@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 """dbtoyaml - extract the schema of a PostgreSQL database in YAML format"""
 
+from __future__ import print_function
 import os
 from optparse import OptionParser
 
@@ -54,7 +55,7 @@ def main(host='localhost', port=5432, schema=None):
                 if not dbmap[sch]:
                     del dbmap[sch]
 
-    print yaml.dump(dbmap, default_flow_style=False)
+    print(yaml.dump(dbmap, default_flow_style=False))
 
 if __name__ == '__main__':
     main()

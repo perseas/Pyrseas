@@ -105,7 +105,7 @@ class TSConfigurationDict(DbObjectDict):
                     try:
                         stmts.append(self[oldname].rename(intsc.name))
                         del self[oldname]
-                    except KeyError, exc:
+                    except KeyError as exc:
                         exc.args = ("Previous name '%s' for configuration "
                                    "'%s' not found" % (oldname, intsc.name), )
                         raise
@@ -201,7 +201,7 @@ class TSDictionaryDict(DbObjectDict):
                     try:
                         stmts.append(self[oldname].rename(intsd.name))
                         del self[oldname]
-                    except KeyError, exc:
+                    except KeyError as exc:
                         exc.args = ("Previous name '%s' for dictionary '%s' "
                                    "not found" % (oldname, intsd.name), )
                         raise
@@ -300,7 +300,7 @@ class TSParserDict(DbObjectDict):
                     try:
                         stmts.append(self[oldname].rename(intsp.name))
                         del self[oldname]
-                    except KeyError, exc:
+                    except KeyError as exc:
                         exc.args = ("Previous name '%s' for parser '%s' "
                                    "not found" % (oldname, intsp.name), )
                         raise
@@ -396,7 +396,7 @@ class TSTemplateDict(DbObjectDict):
                     try:
                         stmts.append(self[oldname].rename(intst.name))
                         del self[oldname]
-                    except KeyError, exc:
+                    except KeyError as exc:
                         exc.args = ("Previous name '%s' for template '%s' "
                                    "not found" % (oldname, intst.name), )
                         raise

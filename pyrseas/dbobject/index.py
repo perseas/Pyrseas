@@ -160,7 +160,7 @@ class IndexDict(DbObjectDict):
                         stmts.append(self[(sch, tbl, oldname)].rename(
                                 inidx.name))
                         del self[(sch, tbl, oldname)]
-                    except KeyError, exc:
+                    except KeyError as exc:
                         exc.args = ("Previous name '%s' for index '%s' "
                                   "not found" % (oldname, inidx.name), )
                         raise

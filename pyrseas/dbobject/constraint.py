@@ -322,7 +322,7 @@ class ConstraintDict(DbObjectDict):
                 val = chks[cns]
                 try:
                     check.expression = val['expression']
-                except KeyError, exc:
+                except KeyError as exc:
                     exc.args = ("Constraint '%s' is missing expression"
                                 % cns, )
                     raise
@@ -342,7 +342,7 @@ class ConstraintDict(DbObjectDict):
             val = inconstrs['primary_key'][cns]
             try:
                 pkey.keycols = val['columns']
-            except KeyError, exc:
+            except KeyError as exc:
                 exc.args = ("Constraint '%s' is missing columns" % cns, )
                 raise
             if 'access_method' in val:
@@ -374,23 +374,23 @@ class ConstraintDict(DbObjectDict):
                     fkey.deferred = True
                 try:
                     fkey.keycols = val['columns']
-                except KeyError, exc:
+                except KeyError as exc:
                     exc.args = ("Constraint '%s' is missing columns" % cns, )
                     raise
                 try:
                     refs = val['references']
-                except KeyError, exc:
+                except KeyError as exc:
                     exc.args = ("Constraint '%s' missing references" % cns, )
                     raise
                 try:
                     fkey.ref_table = refs['table']
-                except KeyError, exc:
+                except KeyError as exc:
                     exc.args = ("Constraint '%s' missing table reference"
                                 % cns, )
                     raise
                 try:
                     fkey.ref_cols = refs['columns']
-                except KeyError, exc:
+                except KeyError as exc:
                     exc.args = ("Constraint '%s' missing reference columns"
                                     % cns, )
                     raise
@@ -409,7 +409,7 @@ class ConstraintDict(DbObjectDict):
                 val = uconstrs[cns]
                 try:
                     unq.keycols = val['columns']
-                except KeyError, exc:
+                except KeyError as exc:
                     exc.args = ("Constraint '%s' is missing columns" % cns, )
                     raise
                 if 'access_method' in val:

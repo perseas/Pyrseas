@@ -120,7 +120,7 @@ class RuleDict(DbObjectDict):
                     try:
                         stmts.append(self[oldname].rename(inrul.name))
                         del self[oldname]
-                    except KeyError, exc:
+                    except KeyError as exc:
                         exc.args = ("Previous name '%s' for rule '%s' "
                                     "not found" % (oldname, inrul.name), )
                         raise
