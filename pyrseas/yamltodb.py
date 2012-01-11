@@ -31,6 +31,8 @@ def main(host='localhost', port=5432):
                       help="apply changes to database (implies -1)")
     parser.add_option('-n', '--schema', dest='schlist', action='append',
                      help="only for named schemas (default all)")
+    parser.add_option('-o', '--output', dest='filename',
+                      help="output file name (default stdout)")
 
     parser.set_defaults(host=host, port=port, username=os.getenv("USER"))
     (options, args) = parser.parse_args()
@@ -50,6 +52,9 @@ def main(host='localhost', port=5432):
             if sch not in kschlist:
                 del inmap[sch]
     stmts = db.diff_map(inmap, options.schlist)
+    if options.filename:
+        fd = open(options.filename, 'w')
+        sys.stdout = fd
     if stmts:
         if options.onetrans or options.update:
             print("BEGIN;")
@@ -67,6 +72,8 @@ def main(host='localhost', port=5432):
             else:
                 dbconn.conn.commit()
                 print("Changes applied", file=sys.stderr)
+    if options.filename:
+        fd.close()
 
 if __name__ == '__main__':
     main()

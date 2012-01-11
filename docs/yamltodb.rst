@@ -56,6 +56,11 @@ yamlspec
     Specifies the host name of the machine on which the PostgreSQL
     server is running. The default host name is 'localhost'.
 
+-o `file`, --output= `file`
+
+    Send SQL statements to the specified file. If this is omitted, the
+    standard output is used.
+
 -p `port`, --port= `port`
 
     Specifies the TCP port on which the PostgreSQL server is listening
