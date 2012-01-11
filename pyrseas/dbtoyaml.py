@@ -27,7 +27,7 @@ def main(host='localhost', port=5432, schema=None):
                      help="only for named schema (default %default)")
     parser.add_option('-t', '--table', dest='tablist', action='append',
                      help="only for named tables (default all)")
-    parser.add_option('-f', '--file', dest='filename',
+    parser.add_option('-o', '--output', dest='filename',
                       help="output file name (default stdout)")
 
     parser.set_defaults(host=host, port=port, username=os.getenv("USER"),
