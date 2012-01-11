@@ -4,6 +4,7 @@
 
 from __future__ import print_function
 import os
+import sys
 from optparse import OptionParser
 
 import yaml
@@ -26,6 +27,8 @@ def main(host='localhost', port=5432, schema=None):
                      help="only for named schema (default %default)")
     parser.add_option('-t', '--table', dest='tablist', action='append',
                      help="only for named tables (default all)")
+    parser.add_option('-f', '--file', dest='filename',
+                      help="output file name (default stdout)")
 
     parser.set_defaults(host=host, port=port, username=os.getenv("USER"),
                         schema=schema)
@@ -55,7 +58,12 @@ def main(host='localhost', port=5432, schema=None):
                 if not dbmap[sch]:
                     del dbmap[sch]
 
+    if options.filename:
+        fd = open(options.filename, 'w')
+        sys.stdout = fd
     print(yaml.dump(dbmap, default_flow_style=False))
+    if options.filename:
+        fd.close()
 
 if __name__ == '__main__':
     main()

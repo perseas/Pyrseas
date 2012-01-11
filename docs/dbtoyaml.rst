@@ -92,6 +92,11 @@ dbname
 
     Specifies the name of the database whose schema is to extracted.
 
+-f `file`, --file= `file`
+
+    Send output to the specified file. If this is omitted, the
+    standard output is used.
+
 -H `host`, --host= `host`
 
     Specifies the host name of the machine on which the PostgreSQL
