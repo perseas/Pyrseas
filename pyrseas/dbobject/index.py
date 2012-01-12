@@ -19,22 +19,32 @@ class Index(DbSchemaObject):
     objtype = "INDEX"
 
     def key_columns(self):
-        """Return comma-separated list of key column names
+        """Return comma-separated list of key column names and qualifiers
 
         :return: string
         """
-        return ", ".join(self.keycols)
+        colspec = []
+        for col in self.columns:
+            if isinstance(col, basestring):
+                colspec.append(col)
+            else:
+                clause = col.keys()[0]
+                vals = col.values()[0]
+                if 'opclass' in vals:
+                    clause += ' ' + vals['opclass']
+                if 'order' in vals:
+                    clause += ' ' + vals['order'].upper()
+                if 'nulls' in vals:
+                    clause += ' NULLS ' + vals['nulls'].upper()
+                colspec.append(clause)
+        return ", ".join(colspec)
 
-    def to_map(self, dbcols):
+    def to_map(self):
         """Convert an index definition to a YAML-suitable format
 
-        :param dbcols: dictionary of dbobject columns
         :return: dictionary
         """
         dct = self._base_map()
-        if hasattr(self, 'keycols'):
-            dct['columns'] = [dbcols[int(k) - 1] for k in self.keycols.split()]
-            del dct['keycols']
         return {self.name: dct}
 
     def create(self):
@@ -51,7 +61,7 @@ class Index(DbSchemaObject):
             and 'USING %s ' % self.access_method or ''
         stmts.append("CREATE %sINDEX %s ON %s %s(%s)" % (
             unq and 'UNIQUE ' or '', quote_id(self.name), quote_id(self.table),
-            acc, hasattr(self, 'keycols') and self.key_columns() or
+            acc, hasattr(self, 'columns') and self.key_columns() or
             self.expression))
         if hasattr(self, 'description'):
             stmts.append(self.comment())
@@ -90,6 +100,7 @@ class IndexDict(DbObjectDict):
                   c.relname AS name, amname AS access_method,
                   indisunique AS unique, indkey AS keycols,
                   pg_get_expr(indexprs, indrelid) AS expression,
+                  pg_get_indexdef(indexrelid) AS defn,
                   obj_description (c.oid, 'pg_class') AS description
            FROM pg_index JOIN pg_class c ON (indexrelid = c.oid)
                 JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
@@ -108,8 +119,28 @@ class IndexDict(DbObjectDict):
             index.unqualify()
             sch, tbl, idx = index.key()
             sch, tbl = split_schema_obj('%s.%s' % (sch, tbl))
-            if index.keycols == '0':
-                del index.keycols
+            if index.keycols != '0':
+                index.columns = []
+                for col in index.defn[index.defn.rfind('(') + 1:-1].split(','):
+                    opts = col.lstrip().split()
+                    nm = opts[0]
+                    extra = {}
+                    for i, opt in enumerate(opts[1:]):
+                        if opt.upper() not in ['ASC', 'DESC', 'NULLS',
+                                               'FIRST', 'LAST']:
+                            extra.update(opclass=opt)
+                            continue
+                        elif opt == 'NULLS':
+                            extra.update(nulls=opts[i + 2].lower())
+                        elif opt == 'DESC':
+                            extra.update(order='desc')
+                        else:
+                            continue
+                    if extra:
+                        index.columns.append({nm: extra})
+                    else:
+                        index.columns.append(nm)
+            del index.defn, index.keycols
             self[(sch, tbl, idx)] = index
 
     def from_map(self, table, inindexes):
@@ -122,7 +153,7 @@ class IndexDict(DbObjectDict):
             idx = Index(schema=table.schema, table=table.name, name=i)
             val = inindexes[i]
             if 'columns' in val:
-                idx.keycols = val['columns']
+                idx.columns = val['columns']
             elif 'expression' in val:
                 idx.expression = val['expression']
             else:

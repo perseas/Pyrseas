@@ -216,8 +216,7 @@ class Table(DbClass):
             if not 'indexes' in tbl:
                 tbl['indexes'] = {}
             for k in self.indexes.values():
-                tbl['indexes'].update(self.indexes[k.name].to_map(
-                        self.column_names()))
+                tbl['indexes'].update(self.indexes[k.name].to_map())
         if hasattr(self, 'inherits'):
             if not 'inherits' in tbl:
                 tbl['inherits'] = self.inherits

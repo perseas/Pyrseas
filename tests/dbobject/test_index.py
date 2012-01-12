@@ -64,6 +64,20 @@ class IndexToMapTestCase(PyrseasTestCase):
         dbmap = self.db.execute_and_map(ddlstmt)
         self.assertEqual(dbmap['schema public']['table t1'], expmap)
 
+    def test_index_col_opts(self):
+        "Map an index with various column options"
+        self.db.execute("CREATE TABLE t1 (c1 cidr, c2 text)")
+        ddlstmt = "CREATE INDEX t1_idx ON t1 (c1 cidr_ops NULLS FIRST, " \
+            "c2 DESC)"
+        expmap = {'columns': [{'c1': {'type': 'cidr'}},
+                              {'c2': {'type': 'text'}}],
+                  'indexes': {'t1_idx': {'columns': [
+                        {'c1': {'opclass': 'cidr_ops', 'nulls': 'first'}},
+                        {'c2': {'order': 'desc'}}],
+                                         'access_method': 'btree'}}}
+        dbmap = self.db.execute_and_map(ddlstmt)
+        self.assertEqual(dbmap['schema public']['table t1'], expmap)
+
     def test_map_index_comment(self):
         "Map an index comment"
         self.db.execute(CREATE_TABLE_STMT)
@@ -127,6 +141,20 @@ class IndexToSqlTestCase(PyrseasTestCase):
         dbsql = self.db.process_map(inmap)
         self.assertEqual(dbsql[1],
                          "CREATE INDEX t1_idx ON t1 USING btree (lower(c2))")
+
+    def test_create_index_col_opts(self):
+        "Create table and an index with column options"
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+                    'columns': [{'c1': {'type': 'cidr'}},
+                                {'c2': {'type': 'text'}}],
+                    'indexes': {'t1_idx': {'columns': [
+                                {'c1': {'opclass': 'cidr_ops',
+                                        'nulls': 'first'}}, 'c2'],
+                                           'access_method': 'btree'}}}})
+        dbsql = self.db.process_map(inmap)
+        self.assertEqual(dbsql[1], "CREATE INDEX t1_idx ON t1 USING btree "
+                         "(c1 cidr_ops NULLS FIRST, c2)")
 
     def test_index_with_comment(self):
         "Create an index with a comment"
