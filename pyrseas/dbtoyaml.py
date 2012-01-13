@@ -23,6 +23,8 @@ def main(host='localhost', port=5432, schema=None):
                      help="database server port (default %default)")
     parser.add_option('-U', '--username', dest='username',
                      help="database user name (default %default)")
+    parser.add_option('-W', '--password', action="store_true",
+                     help="force password prompt")
     parser.add_option('-n', '--schema', dest='schema',
                      help="only for named schema (default %default)")
     parser.add_option('-t', '--table', dest='tablist', action='append',
@@ -39,8 +41,8 @@ def main(host='localhost', port=5432, schema=None):
         parser.error("database name not specified")
     dbname = args[0]
 
-    db = Database(DbConnection(dbname, options.username, options.host,
-                               options.port))
+    db = Database(DbConnection(dbname, options.username, options.password,
+                               options.host, options.port))
     dbmap = db.to_map()
     # trim the map of schemas/tables not selected
     if options.schema:

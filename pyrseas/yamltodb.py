@@ -24,6 +24,8 @@ def main(host='localhost', port=5432):
                      help="database server port (default %default)")
     parser.add_option('-U', '--username', dest='username',
                      help="database user name (default %default)")
+    parser.add_option('-W', '--password', action="store_true",
+                     help="force password prompt")
     parser.add_option('-1', '--single-transaction', action='store_true',
                       dest='onetrans',
                       help="wrap commands in BEGIN/COMMIT")
@@ -43,7 +45,8 @@ def main(host='localhost', port=5432):
     dbname = args[0]
     yamlspec = args[1]
 
-    dbconn = DbConnection(dbname, options.username, options.host, options.port)
+    dbconn = DbConnection(dbname, options.username, options.password,
+                          options.host, options.port)
     db = Database(dbconn)
     inmap = yaml.load(open(yamlspec))
     if options.schlist:

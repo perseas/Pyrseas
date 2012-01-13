@@ -121,6 +121,16 @@ dbname
     User name to connect as. The default user name is provided by the
     environment variable :envvar:`USER`.
 
+-W\, --password
+
+    Force dbtoyaml to prompt for a password before connecting to a
+    database.  If this option is not specified and password
+    authentication is required, dbtoyaml will resort to libpq
+    defaults, i.e., `password file
+    <http://www.postgresql.org/docs/current/static/libpq-pgpass.html>`_
+    or `PGPASSWORD environment variable
+    <http://www.postgresql.org/docs/current/static/libpq-envars.html>`_.
+
 Examples
 --------
 

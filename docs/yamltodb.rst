@@ -87,6 +87,16 @@ yamlspec
     Execute the generated statements against the database mentioned in
     ``dbname``.  This implies the --single-transaction option.
 
+-W\, --password
+
+    Force yamltodb to prompt for a password before connecting to a
+    database.  If this option is not specified and password
+    authentication is required, yamltodb will resort to libpq
+    defaults, i.e., `password file
+    <http://www.postgresql.org/docs/current/static/libpq-pgpass.html>`_
+    or `PGPASSWORD environment variable
+    <http://www.postgresql.org/docs/current/static/libpq-envars.html>`_.
+
 Examples
 --------
 

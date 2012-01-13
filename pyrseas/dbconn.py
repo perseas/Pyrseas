@@ -6,8 +6,9 @@
     A `DbConnection` is a helper class representing a connection to a
     PostgreSQL database.
 """
-
 import os
+import sys
+import getpass
 
 from psycopg2 import connect
 from psycopg2.extras import DictConnection
@@ -16,16 +17,21 @@ from psycopg2.extras import DictConnection
 class DbConnection(object):
     """A database connection, possibly disconnected"""
 
-    def __init__(self, dbname, user=None, host=None, port=None):
+    def __init__(self, dbname, user=None, pswd=False, host=None, port=None):
         """Initialize the connection information
 
         :param dbname: database name
         :param user: user name
+        :param pswd: prompt user for password
         :param host: host name
         :param port: host port number
         """
         self.dbname = dbname
         self.user = user
+        if pswd:
+            self.pswd = " password=%s" % getpass.getpass()
+        else:
+            self.pswd = ''
         if host is None or host == '127.0.0.1' or host == 'localhost':
             self.host = ''
         else:
@@ -41,13 +47,18 @@ class DbConnection(object):
         """Connect to the database
 
         If user is None, the USER environment variable is used
-        instead. The password is either not required or supplied by
-        other means, e.g., a $HOME/.pgpass file.
+        instead.
         """
-        self.conn = connect("%s%sdbname=%s user=%s" % (
-                self.host, self.port, self.dbname,
-                self.user or os.getenv("USER")),
-                            connection_factory=DictConnection)
+        try:
+            self.conn = connect("%s%sdbname=%s user=%s%s" % (
+                    self.host, self.port, self.dbname,
+                    self.user or os.getenv("USER"), self.pswd),
+                                connection_factory=DictConnection)
+        except Exception as exc:
+            if exc.message[:6] == 'FATAL:':
+                sys.exit("Database connection error: %s" % exc.message[8:])
+            else:
+                raise
         try:
             self._execute("set search_path to public, pg_catalog")
         except:
