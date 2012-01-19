@@ -114,7 +114,8 @@ dbname
 
 -t `table`, \--table= `table`
 
-    Extract only tables matching `table`.
+    Extract only tables matching `table`.  Multiple tables can be
+    extracted by using multiple ``-t`` switches.
 
 -U `username`, --user= `username`
 

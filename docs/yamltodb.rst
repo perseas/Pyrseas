@@ -68,8 +68,9 @@ yamlspec
 
 -n `schema`, --schema= `schema`
 
-    Compare only schema(s) matching `schema`. By default, all schemas
-    are compared.
+    Compare only a schema matching `schema`.  By default, all schemas
+    are compared.  Multiple schemas can be compared by using multiple
+    ``-t` switches.
 
 -U `username`, --user= `username`
 
