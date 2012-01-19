@@ -42,7 +42,7 @@ Contents
    :maxdepth: 1
 
    dbtoyaml
-   dbenhance
+   dbextend
    yamltodb
 
 API Reference
