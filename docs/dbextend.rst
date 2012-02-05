@@ -25,9 +25,9 @@ The specification file format is as follows::
 
  schema public:
    table t1:
-     audit_trails: default
+     audit_columns: default
    table t3:
-     audit_trails: last_modified_only
+     audit_columns: last_modified_only
    table t4:
      denorm_columns:
      - c45:
@@ -99,12 +99,6 @@ spec
     Output a merged YAML file including the database schema and the
     extension specification to the given `file`.
 
--n `schema`, --schema= `schema`
-
-    Extend only a schema matching `schema`. By default, all schemas
-    are affected.  Multiple schemas can be augmented by using multiple
-    ``-n` switches.
-
 -o `file`, --output= `file`
 
     Send output to the specified file. If this is omitted, the
@@ -114,10 +108,6 @@ spec
 
     Specifies the TCP port on which the PostgreSQL server is listening
     for connections. The default port number is 5432.
-
--t `table`, \--table= `table`
-
-    Extend only tables matching `table`.
 
 -U `username`, --user= `username`
 
