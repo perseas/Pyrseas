@@ -3,7 +3,7 @@
 
 import unittest
 
-from utils import PyrseasTestCase, fix_indent
+from pyrseas.testutils import PyrseasTestCase, fix_indent
 
 
 TYPELIST = [

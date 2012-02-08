@@ -3,7 +3,7 @@
 
 import unittest
 
-from utils import PyrseasTestCase, fix_indent
+from pyrseas.testutils import PyrseasTestCase, fix_indent
 
 CREATE_STMT = "CREATE OPERATOR FAMILY of1 USING btree"
 DROP_STMT = "DROP OPERATOR FAMILY IF EXISTS of1 USING btree"

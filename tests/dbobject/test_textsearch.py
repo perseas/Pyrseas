@@ -3,7 +3,7 @@
 
 import unittest
 
-from utils import PyrseasTestCase, fix_indent
+from pyrseas.testutils import PyrseasTestCase, fix_indent
 
 CREATE_TSC_STMT = "CREATE TEXT SEARCH CONFIGURATION tsc1 (PARSER = tsp1)"
 CREATE_TSD_STMT = "CREATE TEXT SEARCH DICTIONARY tsd1 (TEMPLATE = simple, " \

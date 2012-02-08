@@ -3,7 +3,7 @@
 
 import unittest
 
-from utils import PyrseasTestCase, fix_indent
+from pyrseas.testutils import PyrseasTestCase, fix_indent
 
 CREATE_STMT = "CREATE VIEW v1 AS SELECT now()::date AS today"
 COMMENT_STMT = "COMMENT ON VIEW v1 IS 'Test view v1'"

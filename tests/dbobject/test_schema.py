@@ -3,7 +3,7 @@
 
 import unittest
 
-from utils import PyrseasTestCase, fix_indent
+from pyrseas.testutils import PyrseasTestCase, fix_indent
 
 CREATE_STMT = "CREATE SCHEMA s1"
 DROP_STMT = "DROP SCHEMA IF EXISTS s1 CASCADE"

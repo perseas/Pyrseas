@@ -3,7 +3,7 @@
 
 import unittest
 
-from utils import PyrseasTestCase, fix_indent
+from pyrseas.testutils import PyrseasTestCase, fix_indent
 
 CREATE_STMT = "CREATE DOMAIN d1 AS integer"
 DROP_STMT = "DROP DOMAIN IF EXISTS d1"

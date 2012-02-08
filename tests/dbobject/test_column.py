@@ -3,7 +3,7 @@
 
 import unittest
 
-from utils import PyrseasTestCase, fix_indent
+from pyrseas.testutils import PyrseasTestCase, fix_indent
 
 CREATE_STMT1 = "CREATE TABLE t1 (c1 integer, c2 text)"
 CREATE_STMT2 = "CREATE TABLE t1 (c1 integer, c2 text, c3 date)"
