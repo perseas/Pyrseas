@@ -3,7 +3,7 @@
 
 import unittest
 
-from utils import PyrseasTestCase
+from pyrseas.testutils import PyrseasTestCase
 
 CREATE_STMT = "CREATE LANGUAGE plperl"
 DROP_STMT = "DROP LANGUAGE IF EXISTS plperl CASCADE"

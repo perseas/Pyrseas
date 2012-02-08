@@ -3,7 +3,7 @@
 
 import unittest
 
-from utils import PyrseasTestCase, fix_indent
+from pyrseas.testutils import PyrseasTestCase, fix_indent
 
 CREATE_COMPOSITE_STMT = "CREATE TYPE t1 AS (x integer, y integer, z integer)"
 CREATE_ENUM_STMT = "CREATE TYPE t1 AS ENUM ('red', 'green', 'blue')"

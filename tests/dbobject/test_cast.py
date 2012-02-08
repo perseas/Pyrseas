@@ -3,7 +3,7 @@
 
 import unittest
 
-from utils import PyrseasTestCase, fix_indent
+from pyrseas.testutils import PyrseasTestCase, fix_indent
 
 SOURCE = "SELECT CAST($1::int AS boolean)"
 CREATE_FUNC = "CREATE FUNCTION int2_bool(smallint) RETURNS boolean " \

@@ -3,7 +3,7 @@
 
 import unittest
 
-from utils import PyrseasTestCase, fix_indent
+from pyrseas.testutils import PyrseasTestCase, fix_indent
 
 CREATE_STMT = "CREATE CONVERSION c1 FOR 'LATIN1' TO 'UTF8' " \
     "FROM iso8859_1_to_utf8"
