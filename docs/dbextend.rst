@@ -23,6 +23,11 @@ specified in a YAML-formatted ``spec`` file.
 
 The specification file format is as follows::
 
+ extender:
+   columns:
+     modified_date:
+       not_null: true
+       type: date
  schema public:
    table t1:
      audit_columns: default
@@ -46,7 +51,7 @@ The specification file format is as follows::
 The specification file lists each schema, and within it, each table to
 be augmented.  Under each table the following values are recognized:
 
- - audit_trails: This indicates that audit trail columns are to be
+ - audit_columns: This indicates that audit trail columns are to be
    added to the table, e.g., a timestamp column recording when a row
    was last modified.
 
@@ -58,14 +63,18 @@ be augmented.  Under each table the following values are recognized:
  - history_for: This table is to be added to the given schema and will
    hold a history of changes in another table.
 
-:program:`dbextend` first reads the database catalogs.  It also reads
-a configuration, either internal or external, from a file in the
-current directory, or from the location pointed at by the environment
-variable PYRSEAS_CONFIG. :program:`dbextend` then reads the extension
-specification file and outputs a YAML file, including the existing
-catalog information together with the desired enhancements.  The YAML
-file is suitable for input to :program:`yamltodb` to generate the SQL
-statements to implement the changes.
+The first section of the specification file, under the ``extender``
+header, lists configuration information. This is in addition to the
+built-in configuration objects (see :ref:`predef-ext`).
+
+:program:`dbextend` first reads the database catalogs.  It also
+initializes itself from pre-defined configuration information.
+:program:`dbextend` then reads the extension specification file, which
+may include additional configuration objects, and outputs a YAML file,
+including the existing catalog information together with the desired
+enhancements.  The YAML file is suitable for input to
+:program:`yamltodb` to generate the SQL statements to implement the
+changes.
 
 Options
 -------
@@ -79,10 +88,6 @@ dbname
 spec
 
     Location of the file with the extension specifications.
-
--\-config `file`
-
-    Use configuration specifications in the given file.
 
 -H `host`, --host= `host`
 
@@ -131,3 +136,8 @@ To extend a database called ``moviesdb`` according to the
 specifications in the file ``moviesbl.yaml``::
 
   dbextend moviesdb moviesbl.yaml
+
+See Also
+--------
+
+  :ref:`predef-ext`

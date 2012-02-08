@@ -14,6 +14,9 @@ Features
 - Generates SQL statements to modify a database so that it willl match
   an input YAML/JSON specification
 
+- Generates an extended YAML/JSON description of a PostgreSQL database
+  from its catalogs and from an extension specification.
+
 - (planned) Generates a flexible web application to update PostgreSQL
   tables
 
@@ -43,6 +46,7 @@ Contents
 
    dbtoyaml
    dbextend
+   predefext
    yamltodb
 
 API Reference
