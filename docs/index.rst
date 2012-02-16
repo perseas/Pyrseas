@@ -82,6 +82,16 @@ classes and methods are documented mainly for developer use.
    trigger
    textsearch
 
+Extender API Reference
+----------------------
+
+.. toctree::
+   :maxdepth: 2
+
+   extenddb
+   cfgobjects
+   extobjects
+
 
 Indices and tables
 ==================

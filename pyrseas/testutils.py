@@ -10,6 +10,7 @@ from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
 from pyrseas.dbconn import DbConnection
 from pyrseas.database import Database
+from pyrseas.extenddb import ExtendDatabase
 
 
 def fix_indent(stmt):
@@ -286,6 +287,11 @@ class PostgresDb(object):
         convert the database to match the map."""
         db = Database(DbConnection(self.name, self.user, self.host, self.port))
         return db.diff_map(input_map)
+
+    def process_extmap(self, extmap):
+        db = ExtendDatabase(DbConnection(self.name, self.user, self.host,
+                                         self.port))
+        return db.apply(extmap)
 
 
 class PyrseasTestCase(TestCase):
