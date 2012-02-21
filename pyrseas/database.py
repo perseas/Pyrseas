@@ -106,6 +106,9 @@ class Database(object):
         for sch in self.db.schemas.keys():
             if sch not in schemas:
                 del self.db.schemas[sch]
+        # exclude database-wide objects
+        self.db.languages = LanguageDict()
+        self.db.casts = CastDict()
 
     def from_catalog(self):
         """Populate the database objects by querying the catalogs
