@@ -278,13 +278,15 @@ class PostgresDb(object):
         "Execute a DDL statement, commit, and return a map of the database"
         self.execute(ddlstmt)
         self.conn.commit()
-        db = Database(DbConnection(self.name, self.user, self.host, self.port))
+        db = Database(DbConnection(self.name, self.user, host=self.host,
+                                   port=self.port))
         return db.to_map()
 
     def process_map(self, input_map):
         """Process an input map and return the SQL statements necessary to
         convert the database to match the map."""
-        db = Database(DbConnection(self.name, self.user, self.host, self.port))
+        db = Database(DbConnection(self.name, self.user, host=self.host,
+                                   port=self.port))
         return db.diff_map(input_map)
 
 
