@@ -22,6 +22,7 @@ import test_trigger
 import test_rule
 import test_conversion
 import test_textsearch
+import test_foreign
 
 
 def suite():
@@ -45,6 +46,7 @@ def suite():
     tests.addTest(test_rule.suite())
     tests.addTest(test_conversion.suite())
     tests.addTest(test_textsearch.suite())
+    tests.addTest(test_foreign.suite())
     return tests
 
 if __name__ == '__main__':

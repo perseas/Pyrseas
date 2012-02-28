@@ -249,6 +249,41 @@ class PostgresDb(object):
                     cnv[0], cnv[1]))
         self.conn.commit()
 
+        # User mappings
+        curs = pgexecute(
+            self.conn,
+            """SELECT CASE umuser WHEN 0 THEN 'PUBLIC' ELSE
+                  pg_get_userbyid(umuser) END AS username, srvname
+               FROM pg_user_mapping u
+                  JOIN pg_foreign_server s ON (umserver = s.oid)""")
+        umaps = curs.fetchall()
+        curs.close()
+        self.conn.rollback()
+        for ump in umaps:
+            self.execute("DROP USER MAPPING IF EXISTS FOR %s SERVER %s" % (
+                    ump[0], ump[1]))
+        self.conn.commit()
+
+        # Servers
+        curs = pgexecute(self.conn, "SELECT srvname FROM pg_foreign_server")
+        servs = curs.fetchall()
+        curs.close()
+        self.conn.rollback()
+        for srv in servs:
+            self.execute("DROP SERVER IF EXISTS %s CASCADE" % (srv[0]))
+        self.conn.commit()
+
+        # Foreign data wrappers
+        curs = pgexecute(self.conn,
+                         "SELECT fdwname FROM pg_foreign_data_wrapper")
+        fdws = curs.fetchall()
+        curs.close()
+        self.conn.rollback()
+        for fdw in fdws:
+            self.execute("DROP FOREIGN DATA WRAPPER IF EXISTS %s CASCADE" % (
+                    fdw[0]))
+        self.conn.commit()
+
     def drop(self):
         "Drop the database"
         conn = pgconnect(ADMIN_DB, self.user, self.host, self.port)

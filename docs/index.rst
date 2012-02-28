@@ -76,6 +76,7 @@ classes and methods are documented mainly for developer use.
    rule
    trigger
    textsearch
+   foreign
 
 
 Indices and tables
