@@ -35,10 +35,20 @@ class CfgColumn(DbExtension):
 
         :param table: table to which the columns will be added
         """
-        newcol = Column(schema=table.schema, table=table.name, **self.__dict__)
-        newcol.number = 0
-        newcol._table = table
-        table.columns.append(newcol)
+        if self.name in table.column_names():
+            for col in table.columns:
+                if col.name == self.name:
+                    col.type = self.type
+                    if hasattr(self, 'not_null'):
+                        col.not_null = self.not_null
+                    if hasattr(self, 'default'):
+                        col.default = self.default
+        else:
+            newcol = Column(schema=table.schema, table=table.name,
+                            **self.__dict__)
+            newcol.number = 0
+            newcol._table = table
+            table.columns.append(newcol)
 
 
 class CfgColumnDict(DbExtensionDict):
