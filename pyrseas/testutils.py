@@ -326,8 +326,13 @@ class PostgresDb(object):
         return db.diff_map(input_map)
 
     def process_extmap(self, extmap):
-        db = ExtendDatabase(DbConnection(self.name, self.user, self.host,
-                                         self.port))
+        """Process an extension map, apply it and return the updated database.
+
+        :param extmap: the extension map
+        :return: the updated database definition
+        """
+        db = ExtendDatabase(DbConnection(self.name, self.user, host=self.host,
+                                         port=self.port))
         return db.apply(extmap)
 
 
