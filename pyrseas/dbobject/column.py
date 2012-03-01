@@ -56,7 +56,12 @@ class Column(DbSchemaObject):
         """
         if hasattr(self, 'dropped'):
             return ""
-        return "ALTER TABLE %s DROP COLUMN %s" % (self.table, self.name)
+        if hasattr(self, '_table'):
+            (contype, objtype) = ('TABLE', 'COLUMN')
+        else:
+            (contype, objtype) = ('TYPE', 'ATTRIBUTE')
+        return "ALTER %s %s DROP %s %s" % (contype, self.table, objtype,
+                                           self.name)
 
     def rename(self, newname):
         """Return SQL statement to RENAME the column

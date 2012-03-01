@@ -14,8 +14,8 @@ Features
 - Generates SQL statements to modify a database so that it willl match
   an input YAML/JSON specification
 
-- Generates an extended YAML/JSON description of a PostgreSQL database
-  from its catalogs and from an extension specification.
+- (planned) Generates an extended YAML description of a PostgreSQL
+  database from its catalogs and from an extension specification.
 
 - (planned) Generates a flexible web application to update PostgreSQL
   tables
@@ -26,6 +26,9 @@ Requirements
 - `PostgreSQL <http://www.postgresql.org/>`_ 8.4 or higher
 
 - `Python <http://www.python.org/>`_ 2.6 or higher
+
+- `argparse <http://pypi.python.org/pypi/argparse>`_, if running under
+  Python 2.6
 
 - (planned) Werkzeug
 
@@ -48,6 +51,9 @@ Contents
    dbextend
    predefext
    yamltodb
+   cmdargs
+
+.. _api-ref:
 
 API Reference
 -------------
@@ -81,6 +87,7 @@ classes and methods are documented mainly for developer use.
    rule
    trigger
    textsearch
+   foreign
 
 Extender API Reference
 ----------------------
