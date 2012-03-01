@@ -80,57 +80,29 @@ table. Additional specifications (not shown) define unique constraints
 and indexes.
 
 :program:`dbtoyaml` currently supports extracting information about
-schemas, sequences, tables, columns, primary keys, foreign keys,
-unique constraints, check constraints and indexes.
+nearly all types of PostgreSQL database objects.  See :ref:`api-ref`
+for a list of supported objects.
 
 Options
 -------
 
-:program:`dbtoyaml` accepts the following command-line arguments:
+:program:`dbtoyaml` accepts the following command-line arguments (in
+addition to the :doc:`cmdargs`):
 
 dbname
 
     Specifies the name of the database whose schema is to extracted.
 
--H `host`, --host= `host`
-
-    Specifies the host name of the machine on which the PostgreSQL
-    server is running. The default host name is 'localhost'.
-
--n `schema`, --schema= `schema`
+-n `schema`, ---schema= `schema`
 
     Extracts only a schema matching `schema`. By default, all schemas
     are extracted.
 
--o `file`, --output= `file`
-
-    Send output to the specified file. If this is omitted, the
-    standard output is used.
-
--p `port`, --port= `port`
-
-    Specifies the TCP port on which the PostgreSQL server is listening
-    for connections. The default port number is 5432.
-
--t `table`, \--table= `table`
+-t `table`, ---table= `table`
 
     Extract only tables matching `table`.  Multiple tables can be
     extracted by using multiple ``-t`` switches.
 
--U `username`, --user= `username`
-
-    User name to connect as. The default user name is provided by the
-    environment variable :envvar:`USER`.
-
--W\, --password
-
-    Force dbtoyaml to prompt for a password before connecting to a
-    database.  If this option is not specified and password
-    authentication is required, dbtoyaml will resort to libpq
-    defaults, i.e., `password file
-    <http://www.postgresql.org/docs/current/static/libpq-pgpass.html>`_
-    or `PGPASSWORD environment variable
-    <http://www.postgresql.org/docs/current/static/libpq-envars.html>`_.
 
 Examples
 --------
@@ -145,4 +117,4 @@ To extract only the schema named ``store``::
 
 To extract the tables named ``film`` and ``category``::
 
-  dbtoyaml -t film -t category moviesdb > moviesdb.yaml
+  dbtoyaml -t film -t category moviesdb -o moviesdb.yaml

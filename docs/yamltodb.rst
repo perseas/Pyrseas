@@ -12,7 +12,7 @@ Synopsys
 
 ::
 
-   yamltodb [option...] dbname yamlspec
+   yamltodb [option...] dbname [spec]
 
 Description
 -----------
@@ -41,41 +41,24 @@ For example, given the input file shown under :doc:`dbtoyaml`,
 Options
 -------
 
-:program:`yamltodb` accepts the following command-line arguments:
+:program:`yamltodb` accepts the following command-line arguments (in
+addition to the :doc:`cmdargs`):
 
 dbname
 
     Specifies the name of the database whose schema is to analyzed.
 
-yamlspec
+spec
 
-    Specifies the location of the YAML specification.
+    Specifies the location of the YAML specification.  If this is
+    omitted or specified as a single or double dash, the specification
+    is read from the program's standard input.
 
--H `host`, --host= `host`
-
-    Specifies the host name of the machine on which the PostgreSQL
-    server is running. The default host name is 'localhost'.
-
--o `file`, --output= `file`
-
-    Send SQL statements to the specified file. If this is omitted, the
-    standard output is used.
-
--p `port`, --port= `port`
-
-    Specifies the TCP port on which the PostgreSQL server is listening
-    for connections. The default port number is 5432.
-
--n `schema`, --schema= `schema`
+-n `schema`, ---schema= `schema`
 
     Compare only a schema matching `schema`.  By default, all schemas
     are compared.  Multiple schemas can be compared by using multiple
-    ``-t` switches.
-
--U `username`, --user= `username`
-
-    User name to connect as. The default user name is provided by the
-    environment variable :envvar:`USER`.
+    ``-n`` switches.
 
 -1\, --single-transaction
 
@@ -88,24 +71,25 @@ yamlspec
     Execute the generated statements against the database mentioned in
     ``dbname``.  This implies the --single-transaction option.
 
--W\, --password
-
-    Force yamltodb to prompt for a password before connecting to a
-    database.  If this option is not specified and password
-    authentication is required, yamltodb will resort to libpq
-    defaults, i.e., `password file
-    <http://www.postgresql.org/docs/current/static/libpq-pgpass.html>`_
-    or `PGPASSWORD environment variable
-    <http://www.postgresql.org/docs/current/static/libpq-envars.html>`_.
-
 Examples
 --------
 
-Given a YAML file named `moviesdb.yaml`, to generate SQL statements to
-update a database called `mymovies`::
+Given a YAML file named ``moviesdb.yaml``, to generate SQL statements
+to update a database called `mymovies`::
 
   yamltodb mymovies moviesdb.yaml
 
 To generate the statements as above and immediately update `mymovies`::
 
   yamltodb mymovies moviesdb.yaml | psql mymovies
+
+or::
+
+  yamltodb --update mymovies moviesdb.yaml
+
+To generate the statements directly from the ouput of
+:program:`dbtoyaml` (against a different database), with statements
+enclosed in a single transaction, and save the statements in a file
+named ``mymovies.sql``::
+
+  dbtoyaml devmovies | yamltodb -1 mymovies -o mymovies.sql

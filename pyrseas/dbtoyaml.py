@@ -5,53 +5,40 @@
 from __future__ import print_function
 import os
 import sys
-from optparse import OptionParser
+from argparse import ArgumentParser
 
 import yaml
 
 from pyrseas.dbconn import DbConnection
 from pyrseas.database import Database
+from pyrseas.cmdargs import parent_parser
 
 
 def main(host='localhost', port=5432, schema=None):
     """Convert database table specifications to YAML."""
-    parser = OptionParser("usage: %prog [options] dbname")
-    parser.add_option('-H', '--host', dest='host',
-                      help="database server host or socket directory "
-                      "(default %default)")
-    parser.add_option('-p', '--port', dest='port', type='int',
-                     help="database server port (default %default)")
-    parser.add_option('-U', '--username', dest='username',
-                     help="database user name (default %default)")
-    parser.add_option('-W', '--password', action="store_true",
-                     help="force password prompt")
-    parser.add_option('-n', '--schema', dest='schema',
-                     help="only for named schema (default %default)")
-    parser.add_option('-t', '--table', dest='tablist', action='append',
+    parser = ArgumentParser(parents=[parent_parser()],
+                            description="Extract the schema of a PostgreSQL "
+                            "database in YAML format")
+    parser.add_argument('-n', '--schema',
+                        help="only for named schema (default %(default)s)")
+    parser.add_argument('-t', '--table', dest='tablist', action='append',
                      help="only for named tables (default all)")
-    parser.add_option('-o', '--output', dest='filename',
-                      help="output file name (default stdout)")
 
     parser.set_defaults(host=host, port=port, username=os.getenv("USER"),
                         schema=schema)
-    (options, args) = parser.parse_args()
-    if len(args) > 1:
-        parser.error("too many arguments")
-    elif len(args) != 1:
-        parser.error("database name not specified")
-    dbname = args[0]
+    args = parser.parse_args()
 
-    db = Database(DbConnection(dbname, options.username, options.password,
-                               options.host, options.port))
+    db = Database(DbConnection(args.dbname, args.username, args.password,
+                               args.host, args.port))
     dbmap = db.to_map()
     # trim the map of schemas/tables not selected
-    if options.schema:
-        skey = 'schema ' + options.schema
+    if args.schema:
+        skey = 'schema ' + args.schema
         for sch in dbmap.keys():
             if sch[:7] == 'schema ' and sch != skey:
                 del dbmap[sch]
-    if options.tablist:
-        ktablist = ['table ' + tbl for tbl in options.tablist]
+    if args.tablist:
+        ktablist = ['table ' + tbl for tbl in args.tablist]
         for sch in dbmap.keys():
             if sch[:7] == 'schema ':
                 for tbl in dbmap[sch].keys():
@@ -60,11 +47,11 @@ def main(host='localhost', port=5432, schema=None):
                 if not dbmap[sch]:
                     del dbmap[sch]
 
-    if options.filename:
-        fd = open(options.filename, 'w')
+    if args.output:
+        fd = args.output
         sys.stdout = fd
     print(yaml.dump(dbmap, default_flow_style=False))
-    if options.filename:
+    if args.output:
         fd.close()
 
 if __name__ == '__main__':
