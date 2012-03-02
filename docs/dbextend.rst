@@ -79,7 +79,8 @@ changes.
 Options
 -------
 
-:program:`dbextend` accepts the following command-line arguments:
+:program:`dbextend` accepts the following command-line arguments (in
+addition to the :doc:`cmdargs`):
 
 dbname
 
@@ -89,45 +90,15 @@ spec
 
     Location of the file with the extension specifications.
 
--H `host`, --host= `host`
-
-    Specifies the host name of the machine on which the PostgreSQL
-    server is running. The default host name is 'localhost'.
-
---merge\-config
+---merge-config
 
     Output a merged YAML file, including the database schema, the
     extension specification and the configuration information.
 
---merge\-specs `file`
+---merge-specs `file`
 
     Output a merged YAML file including the database schema and the
     extension specification to the given `file`.
-
--o `file`, --output= `file`
-
-    Send output to the specified file. If this is omitted, the
-    standard output is used.
-
--p `port`, --port= `port`
-
-    Specifies the TCP port on which the PostgreSQL server is listening
-    for connections. The default port number is 5432.
-
--U `username`, --user= `username`
-
-    User name to connect as. The default user name is provided by the
-    environment variable :envvar:`USER`.
-
--W\, --password
-
-    Force dbextend to prompt for a password before connecting to a
-    database.  If this option is not specified and password
-    authentication is required, dbextend will resort to libpq
-    defaults, i.e., `password file
-    <http://www.postgresql.org/docs/current/static/libpq-pgpass.html>`_
-    or `PGPASSWORD environment variable
-    <http://www.postgresql.org/docs/current/static/libpq-envars.html>`_.
 
 Examples
 --------
