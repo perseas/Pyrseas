@@ -130,7 +130,6 @@ class SchemaDict(DbObjectDict):
                     intscs.update({key: inschema[key]})
                 elif key == 'oldname':
                     schema.oldname = inschema[key]
-                    del inschema['oldname']
                 elif key == 'description':
                     schema.description = inschema[key]
                 else:

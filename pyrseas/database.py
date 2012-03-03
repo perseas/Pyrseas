@@ -34,7 +34,7 @@ from pyrseas.dbobject.foreign import ForeignServerDict, UserMappingDict
 def flatten(lst):
     "Flatten a list possibly containing lists to a single list"
     for elem in lst:
-        if isinstance(elem, list) and not isinstance(elem, basestring):
+        if isinstance(elem, list) and not isinstance(elem, str):
             for subelem in flatten(elem):
                 yield subelem
         else:

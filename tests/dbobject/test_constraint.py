@@ -374,12 +374,12 @@ class ForeignKeyToMapTestCase(PyrseasTestCase):
               )"""
         dbmap = self.db.execute_and_map(ddlstmt)
         fks = dbmap['schema public']['table t1']['foreign_keys']
-        self.assert_(not fks['t1_c2_fkey'].get('deferrable'))
-        self.assert_(not fks['t1_c2_fkey'].get('deferred'))
-        self.assert_(fks['t1_c3_fkey'].get('deferrable'))
-        self.assert_(not fks['t1_c3_fkey'].get('deferred'))
-        self.assert_(fks['t1_c4_fkey'].get('deferrable'))
-        self.assert_(fks['t1_c4_fkey'].get('deferred'))
+        self.assertTrue(not fks['t1_c2_fkey'].get('deferrable'))
+        self.assertTrue(not fks['t1_c2_fkey'].get('deferred'))
+        self.assertTrue(fks['t1_c3_fkey'].get('deferrable'))
+        self.assertTrue(not fks['t1_c3_fkey'].get('deferred'))
+        self.assertTrue(fks['t1_c4_fkey'].get('deferrable'))
+        self.assertTrue(fks['t1_c4_fkey'].get('deferred'))
 
 
 class ForeignKeyToSqlTestCase(PyrseasTestCase):
