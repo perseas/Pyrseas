@@ -27,7 +27,7 @@ class ForeignDataWrapper(DbObject):
         if hasattr(self, 'options'):
             opts = []
             for opt in self.options:
-                (nm, val) = opt.split('=')
+                (nm, val) = opt.split('=', 1)
                 opts.append("%s '%s'" % (nm, val))
             clauses.append("OPTIONS (%s)" % ', '.join(opts))
         stmts = ["CREATE FOREIGN DATA WRAPPER %s%s" % (
