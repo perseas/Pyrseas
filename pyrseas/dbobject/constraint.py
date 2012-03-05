@@ -336,7 +336,7 @@ class ConstraintDict(DbObjectDict):
                     check.description = val['description']
                 self[(table.schema, table.name, cns)] = check
         if 'primary_key' in inconstrs:
-            cns = inconstrs['primary_key'].keys()[0]
+            cns = list(inconstrs['primary_key'].keys())[0]
             pkey = PrimaryKey(table=table.name, schema=table.schema,
                               name=cns)
             val = inconstrs['primary_key'][cns]

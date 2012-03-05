@@ -14,7 +14,7 @@ from pyrseas.dbobject import quote_id, split_schema_obj
 from pyrseas.dbobject.constraint import CheckConstraint, PrimaryKey
 from pyrseas.dbobject.constraint import ForeignKey, UniqueConstraint
 
-MAX_BIGINT = 9223372036854775807L
+MAX_BIGINT = 9223372036854775807
 
 
 class DbClass(DbSchemaObject):
@@ -76,10 +76,17 @@ class Sequence(DbClass):
                 seq[key] = None
             elif key == 'min_value' and val == 1:
                 seq[key] = None
-            elif val <= sys.maxint:
-                seq[key] = int(val)
             else:
-                seq[key] = str(val)
+                if sys.version < '3':
+                    if isinstance(val, (int, long)) and val <= sys.maxsize:
+                        seq[key] = val
+                    else:
+                        seq[key] = str(val)
+                else:
+                    if isinstance(val, int):
+                        seq[key] = int(val)
+                    else:
+                        seq[key] = str(val)
         return {self.extern_key(): seq}
 
     def create(self):

@@ -16,7 +16,7 @@ def parent_parser():
                         "socket directory (default %(default)s)")
     group.add_argument('-p', '--port', type=int, help="database server port "
                         "number (default %(default)s)")
-    group.add_argument('-U', '--username', dest='user',
+    group.add_argument('-U', '--username', dest='username',
                         help="database user name (default %(default)s)")
     group.add_argument('-W', '--password', action="store_true",
                         help="force password prompt")

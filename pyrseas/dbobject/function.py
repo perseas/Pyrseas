@@ -283,8 +283,7 @@ class ProcDict(DbObjectDict):
                 for stmt in diff_stmts:
                     if isinstance(stmt, list) and stmt:
                         stmt = stmt[0]
-                    if isinstance(stmt, basestring) and \
-                            stmt.startswith("CREATE "):
+                    if isinstance(stmt, str) and stmt.startswith("CREATE "):
                         created = True
                         break
                 stmts.append(diff_stmts)

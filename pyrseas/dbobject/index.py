@@ -25,11 +25,11 @@ class Index(DbSchemaObject):
         """
         colspec = []
         for col in self.columns:
-            if isinstance(col, basestring):
+            if isinstance(col, str):
                 colspec.append(col)
             else:
-                clause = col.keys()[0]
-                vals = col.values()[0]
+                clause = list(col.keys())[0]
+                vals = list(col.values())[0]
                 if 'opclass' in vals:
                     clause += ' ' + vals['opclass']
                 if 'order' in vals:

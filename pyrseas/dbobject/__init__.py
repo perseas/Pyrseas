@@ -10,8 +10,8 @@
 import string
 
 
-VALID_FIRST_CHARS = string.lowercase + '_'
-VALID_CHARS = string.lowercase + string.digits + '_$'
+VALID_FIRST_CHARS = string.ascii_lowercase + '_'
+VALID_CHARS = string.ascii_lowercase + string.digits + '_$'
 
 
 def quote_id(name):
