@@ -29,6 +29,7 @@ from pyrseas.dbobject.textsearch import TSConfigurationDict, TSDictionaryDict
 from pyrseas.dbobject.textsearch import TSParserDict, TSTemplateDict
 from pyrseas.dbobject.foreign import ForeignDataWrapperDict
 from pyrseas.dbobject.foreign import ForeignServerDict, UserMappingDict
+from pyrseas.dbobject.foreign import ForeignTableDict
 
 
 def flatten(lst):
@@ -74,6 +75,7 @@ class Database(object):
             self.fdwrappers = ForeignDataWrapperDict(dbconn)
             self.servers = ForeignServerDict(dbconn)
             self.usermaps = UserMappingDict(dbconn)
+            self.ftables = ForeignTableDict(dbconn)
 
     def __init__(self, dbconn):
         """Initialize the database
@@ -89,9 +91,10 @@ class Database(object):
         db.schemas.link_refs(db.types, db.tables, db.functions, db.operators,
                              db.operfams, db.operclasses, db.conversions,
                              db.tsconfigs, db.tsdicts, db.tsparsers,
-                             db.tstempls)
+                             db.tstempls, db.ftables)
         db.tables.link_refs(db.columns, db.constraints, db.indexes,
                             db.rules, db.triggers)
+        db.ftables.link_refs(db.columns)
         db.types.link_refs(db.columns, db.constraints, db.functions)
 
     def _trim_objects(self, schemas):
@@ -223,6 +226,7 @@ class Database(object):
         stmts.append(self.db.usermaps.diff_map(self.ndb.usermaps))
         stmts.append(self.db.servers.diff_map(self.ndb.servers))
         stmts.append(self.db.fdwrappers.diff_map(self.ndb.fdwrappers))
+        stmts.append(self.db.ftables.diff_map(self.ndb.ftables))
         stmts.append(self.db.operators._drop())
         stmts.append(self.db.operclasses._drop())
         stmts.append(self.db.operfams._drop())

@@ -3,17 +3,20 @@ Foreign Data Objects
 
 .. module:: pyrseas.dbobject.foreign
 
-The :mod:`foreign` module defines six classes: classes
+The :mod:`foreign` module defines eight classes: classes
 :class:`ForeignDataWrapper`, :class:`ForeignServer` and
-:class:`UserMapping` derived from :class:`DbObject`, and classes
+:class:`UserMapping` derived from :class:`DbObject`,
+:class:`ForeignTable` derived from :class:`Table`, classes
 :class:`ForeignDataWrapperDict`, :class:`ForeignServerDict` and
-:class:`UserMappingDict` derived from :class:`DbObjectDict`.
+:class:`UserMappingDict` derived from :class:`DbObjectDict`, and
+:class:`ForeignTableDict` derived from :class:`ClassDict`.
 
 Foreign Data Wrapper
 --------------------
 
-:class:`ForeignDataWrapper` is derived from :class:`DbObject` and
-represents a `PostgreSQL foreign data wrapper
+:class:`ForeignDataWrapper` is derived from
+:class:`~pyrseas.dbobject.DbObject` and represents a `PostgreSQL
+foreign data wrapper
 <http://www.postgresql.org/docs/current/static/sql-createcreateforeigndatawrapper.html>`_.
 For PostgreSQL versions 9.1 and later see also `Foreign Data
 <http://www.postgresql.org/docs/current/static/ddl-foreign-data.html>`_
@@ -42,8 +45,9 @@ represents the collection of foreign data wrappers in a database.
 Foreign Server
 --------------
 
-:class:`ForeignServer` is derived from :class:`DbObject` and
-represents a `PostgreSQL foreign server
+:class:`ForeignServer` is derived from
+:class:`~pyrseas.dbobject.DbObject` and represents a `PostgreSQL
+foreign server
 <http://www.postgresql.org/docs/current/static/sql-createserver.html>`_.
 
 .. autoclass:: ForeignServer
@@ -68,8 +72,9 @@ that represents the collection of foreign servers in a database.
 User Mapping
 ------------
 
-:class:`UserMapping` is derived from :class:`DbObject` and represents
-a `PostgreSQL user mapping of a user to a foreign server
+:class:`UserMapping` is derived from
+:class:`~pyrseas.dbobject.DbObject` and represents a `PostgreSQL user
+mapping of a user to a foreign server
 <http://www.postgresql.org/docs/current/static/sql-createusermapping.html>`_.
 
 .. autoclass:: UserMapping
@@ -94,3 +99,34 @@ represents the collection of user mappings in a database.
 .. automethod:: UserMappingDict.to_map
 
 .. automethod:: UserMappingDict.diff_map
+
+Foreign Table
+-------------
+
+:class:`ForeignTable` is derived from :class:`~pyrseas.table.Table`
+and represents a `PostgreSQL foreign table
+<http://www.postgresql.org/docs/current/static/sql-createforeigntable.html>`_
+(available on PostgreSQL 9.1 or later).
+
+.. autoclass:: ForeignTable
+
+.. automethod:: ForeignTable.to_map
+
+.. automethod:: ForeignTable.create
+
+.. automethod:: ForeignTable.drop
+
+Foreign Table Dictionary
+------------------------
+
+:class:`ForeignTableDict` is derived from
+`~pyrseas.table.ClassDict`. It is a dictionary that represents the
+collection of foreign tables in a database.
+
+.. autoclass:: ForeignTableDict
+
+.. automethod:: ForeignTableDict.from_map
+
+.. automethod:: ForeignTableDict.link_refs
+
+.. automethod:: ForeignTableDict.diff_map

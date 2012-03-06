@@ -124,7 +124,7 @@ class PostgresDb(object):
             """SELECT nspname, relname, relkind FROM pg_class
                       JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
                       JOIN pg_roles ON (nspowner = pg_roles.oid)
-               WHERE relkind in ('r', 'S', 'v')
+               WHERE relkind in ('r', 'S', 'v', 'f')
                      AND (nspname = 'public' OR rolname <> 'postgres')
                ORDER BY relkind DESC""")
         objs = curs.fetchall()
@@ -138,6 +138,9 @@ class PostgresDb(object):
                 self.execute("DROP SEQUENCE %s.%s CASCADE" % (obj[0], obj[1]))
             elif obj['relkind'] == 'v':
                 self.execute("DROP VIEW %s.%s CASCADE" % (obj[0], obj[1]))
+            elif obj['relkind'] == 'f':
+                self.execute("DROP FOREIGN TABLE %s.%s CASCADE" % (
+                        obj[0], obj[1]))
         self.conn.commit()
 
         # Types (base, composite and enums) and domains

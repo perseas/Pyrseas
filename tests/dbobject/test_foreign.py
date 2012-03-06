@@ -8,6 +8,7 @@ from pyrseas.testutils import PyrseasTestCase, fix_indent
 CREATE_FDW_STMT = "CREATE FOREIGN DATA WRAPPER fdw1"
 CREATE_FS_STMT = "CREATE SERVER fs1 FOREIGN DATA WRAPPER fdw1"
 CREATE_UM_STMT = "CREATE USER MAPPING FOR PUBLIC SERVER fs1"
+CREATE_FT_STMT = "CREATE FOREIGN TABLE ft1 (c1 integer, c2 text) SERVER fs1"
 DROP_FDW_STMT = "DROP FOREIGN DATA WRAPPER IF EXISTS fdw1"
 DROP_FS_STMT = "DROP SERVER IF EXISTS fs1"
 DROP_UM_STMT = "DROP USER MAPPING IF EXISTS FOR PUBLIC SERVER fs1"
@@ -41,7 +42,7 @@ class ForeignDataWrapperToMapTestCase(PyrseasTestCase):
     def test_map_fd_wrapper_comment(self):
         "Map a foreign data wrapper with a comment"
         if self.db.version < 90100:
-            return True
+            self.skipTest('Only available on PG 9.1')
         self.db.execute(CREATE_FDW_STMT)
         dbmap = self.db.execute_and_map(COMMENT_FDW_STMT)
         self.assertEqual(dbmap['foreign data wrapper fdw1']['description'],
@@ -130,7 +131,7 @@ class ForeignServerToMapTestCase(PyrseasTestCase):
     def test_map_server_comment(self):
         "Map a foreign server with a comment"
         if self.db.version < 90100:
-            return True
+            self.skipTest('Only available on PG 9.1')
         self.db.execute(CREATE_FDW_STMT)
         self.db.execute(CREATE_FS_STMT)
         dbmap = self.db.execute_and_map(COMMENT_FS_STMT)
@@ -266,6 +267,95 @@ class UserMappingToSqlTestCase(PyrseasTestCase):
         self.assertEqual(dbsql[0], "DROP USER MAPPING FOR PUBLIC SERVER fs1")
 
 
+class ForeignTableToMapTestCase(PyrseasTestCase):
+    """Test mapping of existing foreign tables"""
+
+    def test_map_foreign_table(self):
+        "Map an existing foreign table"
+        if self.db.version < 90100:
+            self.skipTest('Only available on PG 9.1')
+        self.db.execute(CREATE_FDW_STMT)
+        self.db.execute(CREATE_FS_STMT)
+        expmap = {'columns': [{'c1': {'type': 'integer'}},
+                              {'c2': {'type': 'text'}}], 'server': 'fs1'}
+        dbmap = self.db.execute_and_map(CREATE_FT_STMT)
+        self.assertEqual(dbmap['schema public']['foreign table ft1'], expmap)
+
+    def test_map_foreign_table_options(self):
+        "Map a foreign table with options"
+        if self.db.version < 90100:
+            self.skipTest('Only available on PG 9.1')
+        self.db.execute(CREATE_FDW_STMT)
+        self.db.execute(CREATE_FS_STMT)
+        expmap = {'columns': [{'c1': {'type': 'integer'}},
+                              {'c2': {'type': 'text'}}], 'server': 'fs1',
+                  'options': ['user=jack']}
+        dbmap = self.db.execute_and_map(CREATE_FT_STMT +
+                                        " OPTIONS (user 'jack')")
+        self.assertEqual(dbmap['schema public']['foreign table ft1'], expmap)
+
+
+class ForeignTableToSqlTestCase(PyrseasTestCase):
+    """Test SQL generation for input foreign tables"""
+
+    def test_create_foreign_table(self):
+        "Create a foreign table that didn't exist"
+        if self.db.version < 90100:
+            self.skipTest('Only available on PG 9.1')
+        self.db.execute(CREATE_FDW_STMT)
+        self.db.execute_commit(CREATE_FS_STMT)
+        inmap = self.std_map()
+        inmap.update({'foreign data wrapper fdw1': {}, 'server fs1': {
+                    'wrapper': 'fs1'}})
+        inmap['schema public'].update({'foreign table ft1': {
+                    'columns': [{'c1': {'type': 'integer'}},
+                                {'c2': {'type': 'text'}}], 'server': 'fs1'}})
+        dbsql = self.db.process_map(inmap)
+        self.assertEqual(fix_indent(dbsql[0]), CREATE_FT_STMT)
+
+    def test_create_foreign_table_options(self):
+        "Create a foreign table with options"
+        if self.db.version < 90100:
+            self.skipTest('Only available on PG 9.1')
+        self.db.execute(CREATE_FDW_STMT)
+        self.db.execute_commit(CREATE_FS_STMT)
+        inmap = self.std_map()
+        inmap.update({'foreign data wrapper fdw1': {}, 'server fs1': {
+                    'wrapper': 'fs1'}})
+        inmap['schema public'].update({'foreign table ft1': {
+                    'columns': [{'c1': {'type': 'integer'}},
+                                {'c2': {'type': 'text'}}], 'server': 'fs1',
+                    'options': ['user=jack']}})
+        dbsql = self.db.process_map(inmap)
+        self.assertEqual(fix_indent(dbsql[0]), CREATE_FT_STMT +
+                         " OPTIONS (user 'jack')")
+
+    def test_bad_map_forein_table(self):
+        "Error creating a foreign table with a bad map"
+        if self.db.version < 90100:
+            self.skipTest('Only available on PG 9.1')
+        inmap = self.std_map()
+        inmap.update({'foreign data wrapper fdw1': {}, 'server fs1': {
+                    'wrapper': 'fs1'}})
+        inmap['schema public'].update({'ft1': {
+                    'columns': [{'c1': {'type': 'integer'}},
+                                {'c2': {'type': 'text'}}], 'server': 'fs1'}})
+        self.assertRaises(KeyError, self.db.process_map, inmap)
+
+    def test_drop_foreign_table(self):
+        "Drop an existing foreign table"
+        if self.db.version < 90100:
+            self.skipTest('Only available on PG 9.1')
+        self.db.execute(CREATE_FDW_STMT)
+        self.db.execute(CREATE_FS_STMT)
+        self.db.execute_commit(CREATE_FT_STMT)
+        inmap = self.std_map()
+        inmap.update({'foreign data wrapper fdw1': {}, 'server fs1': {
+                    'wrapper': 'fs1'}})
+        dbsql = self.db.process_map(inmap)
+        self.assertEqual(dbsql[0], "DROP FOREIGN TABLE ft1")
+
+
 def suite():
     tests = unittest.TestLoader().loadTestsFromTestCase(
         ForeignDataWrapperToMapTestCase)
@@ -279,6 +369,10 @@ def suite():
             UserMappingToMapTestCase))
     tests.addTest(unittest.TestLoader().loadTestsFromTestCase(
             UserMappingToSqlTestCase))
+    tests.addTest(unittest.TestLoader().loadTestsFromTestCase(
+            ForeignTableToMapTestCase))
+    tests.addTest(unittest.TestLoader().loadTestsFromTestCase(
+            ForeignTableToSqlTestCase))
     return tests
 
 if __name__ == '__main__':

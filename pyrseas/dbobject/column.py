@@ -135,7 +135,7 @@ class ColumnDict(DbObjectDict):
                 JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
                 LEFT JOIN pg_attrdef ON (attrelid = pg_attrdef.adrelid
                      AND attnum = pg_attrdef.adnum)
-           WHERE relkind in ('c', 'r')
+           WHERE relkind in ('c', 'r', 'f')
                  AND (nspname != 'pg_catalog'
                       AND nspname != 'information_schema')
                  AND attnum > 0

@@ -3,11 +3,27 @@
     pyrseas.dbobject.foreign
     ~~~~~~~~~~~~~~~~~~~~~~~~
 
-    This defines six classes: ForeignDataWrapper, ForeignServer and
-    UserMapping derived from DbObject, and ForeignDataWrapperDict,
-    ForeignServerDict and UserMappingDict derived from DbObjectDict.
+    This defines eight classes: ForeignDataWrapper, ForeignServer and
+    UserMapping derived from DbObject, ForeignDataWrapperDict,
+    ForeignServerDict and UserMappingDict derived from DbObjectDict,
+    ForeignTable derived from Table and ForeignTableDict derived from
+    ClassDict.
 """
 from pyrseas.dbobject import DbObjectDict, DbObject, quote_id
+from pyrseas.dbobject.table import ClassDict, Table
+
+
+def options_clause(optdict):
+    """Helper function to create the OPTIONS clauses
+
+    :param optdict: the dictionary of options
+    :return: SQL OPTIONS clause
+    """
+    opts = []
+    for opt in optdict:
+        (nm, val) = opt.split('=', 1)
+        opts.append("%s '%s'" % (nm, val))
+    return "OPTIONS (%s)" % ', '.join(opts)
 
 
 class ForeignDataWrapper(DbObject):
@@ -25,11 +41,7 @@ class ForeignDataWrapper(DbObject):
             if hasattr(self, fnc):
                 clauses.append("%s %s" % (fnc.upper(), getattr(self, fnc)))
         if hasattr(self, 'options'):
-            opts = []
-            for opt in self.options:
-                (nm, val) = opt.split('=', 1)
-                opts.append("%s '%s'" % (nm, val))
-            clauses.append("OPTIONS (%s)" % ', '.join(opts))
+            clauses.append(options_clause(self.options))
         stmts = ["CREATE FOREIGN DATA WRAPPER %s%s" % (
                 quote_id(self.name),
                 clauses and '\n    ' + ',\n    '.join(clauses) or '')]
@@ -158,11 +170,7 @@ class ForeignServer(DbObject):
             if hasattr(self, opt):
                 clauses.append("%s '%s'" % (opt.upper(), getattr(self, opt)))
         if hasattr(self, 'options'):
-            opts = []
-            for opt in self.options:
-                (nm, val) = opt.split('=')
-                opts.append("%s '%s'" % (nm, val))
-            options.append("OPTIONS (%s)" % ', '.join(opts))
+            options.append(options_clause(self.options))
         stmts = ["CREATE SERVER %s%s\n    FOREIGN DATA WRAPPER %s%s" % (
                 quote_id(self.name),
                 clauses and ' ' + ' '.join(clauses) or '',
@@ -289,11 +297,7 @@ class UserMapping(DbObject):
         """
         options = []
         if hasattr(self, 'options'):
-            opts = []
-            for opt in self.options:
-                (nm, val) = opt.split('=')
-                opts.append("%s '%s'" % (nm, val))
-            options.append("OPTIONS (%s)" % ', '.join(opts))
+            options.append(options_clause(self.options))
         stmts = ["CREATE USER MAPPING FOR %s\n    SERVER %s%s" % (
                 self.username == 'PUBLIC' and 'PUBLIC' or
                 quote_id(self.username), quote_id(self.server),
@@ -388,4 +392,165 @@ class UserMappingDict(DbObjectDict):
             # if missing, drop it
             if (usr, srv) not in inusermaps:
                 stmts.append(self[(usr, srv)].drop())
+        return stmts
+
+
+class ForeignTable(Table):
+    """A foreign table definition"""
+
+    objtype = "FOREIGN TABLE"
+
+    def to_map(self):
+        """Convert a foreign table to a YAML-suitable format
+
+        :return: dictionary
+        """
+        if not hasattr(self, 'columns'):
+            return
+        cols = []
+        for i in range(len(self.columns)):
+            col = self.columns[i].to_map()
+            if col:
+                cols.append(col)
+        tbl = {'columns': cols, 'server': self.server}
+        if hasattr(self, 'options'):
+            tbl.update(options=self.options)
+        if hasattr(self, 'description'):
+            tbl.update(description=self.description)
+
+        return {self.extern_key(): tbl}
+
+    def create(self):
+        """Return SQL statements to CREATE the foreign table
+
+        :return: SQL statements
+        """
+        stmts = []
+        cols = []
+        options = []
+        for col in self.columns:
+            cols.append("    " + col.add()[0])
+        if hasattr(self, 'options'):
+            options.append(options_clause(self.options))
+        stmts.append("CREATE FOREIGN TABLE %s (\n%s)\n    SERVER %s%s" % (
+                self.qualname(), ",\n".join(cols), self.server,
+                options and '\n    ' + ',\n    '.join(options) or ''))
+        if hasattr(self, 'description'):
+            stmts.append(self.comment())
+        for col in self.columns:
+            if hasattr(col, 'description'):
+                stmts.append(col.comment())
+        return stmts
+
+    def drop(self):
+        """Return a SQL DROP statement for the foreign table
+
+        :return: SQL statement
+        """
+        return "DROP %s %s" % (self.objtype, self.identifier())
+
+
+class ForeignTableDict(ClassDict):
+    "The collection of foreign tables in a database"
+
+    cls = ForeignTable
+    query = \
+        """SELECT nspname AS schema, relname AS name, srvname AS server,
+                  ftoptions AS options,
+                  obj_description(c.oid, 'pg_class') AS description
+           FROM pg_class c JOIN pg_foreign_table f ON (ftrelid = c.oid)
+                JOIN pg_foreign_server s ON (ftserver = s.oid)
+                JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
+           WHERE relkind = 'f'
+                 AND (nspname != 'pg_catalog'
+                      AND nspname != 'information_schema')
+           ORDER BY nspname, relname"""
+
+    def _from_catalog(self):
+        """Initialize the dictionary of tables by querying the catalogs"""
+        if self.dbconn.version < 90100:
+            return
+        for tbl in self.fetch():
+            self[tbl.key()] = tbl
+
+    def from_map(self, schema, inobjs, newdb):
+        """Initalize the dictionary of tables by converting the input map
+
+        :param schema: schema owning the tables
+        :param inobjs: YAML map defining the schema objects
+        :param newdb: collection of dictionaries defining the database
+        """
+        for key in inobjs.keys():
+            if not key.startswith('foreign table '):
+                raise KeyError("Unrecognized object type: %s" % key)
+            ftb = key[14:]
+            self[(schema.name, ftb)] = ftable = ForeignTable(
+                schema=schema.name, name=ftb)
+            inftable = inobjs[key]
+            if not inftable:
+                raise ValueError("Foreign table '%s' has no specification" %
+                                 ftb)
+            try:
+                newdb.columns.from_map(ftable, inftable['columns'])
+            except KeyError as exc:
+                exc.args = ("Foreign table '%s' has no columns" % ftb, )
+                raise
+            for attr in ['server', 'options']:
+                if attr in inftable:
+                    setattr(ftable, attr, inftable[attr])
+            if 'description' in inftable:
+                ftable.description = inftable['description']
+
+    def link_refs(self, dbcolumns):
+        """Connect columns to their respective foreign tables
+
+        :param dbcolumns: dictionary of columns
+        """
+        for (sch, tbl) in dbcolumns.keys():
+            if (sch, tbl) in self:
+                assert isinstance(self[(sch, tbl)], ForeignTable)
+                self[(sch, tbl)].columns = dbcolumns[(sch, tbl)]
+                for col in dbcolumns[(sch, tbl)]:
+                    col._table = self[(sch, tbl)]
+
+    def diff_map(self, intables):
+        """Generate SQL to transform existing foreign tables
+
+        :param intables: a YAML map defining the new foreign tables
+        :return: list of SQL statements
+
+        Compares the existing foreign table definitions, as fetched
+        from the catalogs, to the input map and generates SQL
+        statements to transform the foreign tables accordingly.
+        """
+        stmts = []
+        # check input tables
+        for (sch, tbl) in intables.keys():
+            intbl = intables[(sch, tbl)]
+            # does it exist in the database?
+            if (sch, tbl) not in self:
+                # check for possible RENAME
+                if hasattr(intbl, 'oldname'):
+                    oldname = intbl.oldname
+                    try:
+                        stmts.append(self[(sch, oldname)].rename(intbl.name))
+                        del self[(sch, oldname)]
+                    except KeyError as exc:
+                        exc.args = ("Previous name '%s' for foreign table "
+                                    "'%s' not found" % (oldname, intbl.name), )
+                        raise
+                else:
+                    # create new table
+                    stmts.append(intbl.create())
+
+        # check database tables
+        for (sch, tbl) in self.keys():
+            table = self[(sch, tbl)]
+            # if missing, drop it
+            if (sch, tbl) not in intables:
+                stmts.append(table.drop())
+            else:
+                # compare table objects
+                stmts.append(table.diff_map(intables[(sch, tbl)]))
+
         return stmts
