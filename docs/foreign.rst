@@ -25,6 +25,8 @@ and `Writing A Foreign Data Wrapper
 
 .. autoclass:: ForeignDataWrapper
 
+.. automethod:: ForeignDataWrapper.to_map
+
 .. automethod:: ForeignDataWrapper.create
 
 Foreign Data Wrapper Dictionary
@@ -37,6 +39,8 @@ represents the collection of foreign data wrappers in a database.
 .. autoclass:: ForeignDataWrapperDict
 
 .. automethod:: ForeignDataWrapperDict.from_map
+
+.. automethod:: ForeignDataWrapperDict.link_refs
 
 .. automethod:: ForeignDataWrapperDict.to_map
 
@@ -51,6 +55,8 @@ foreign server
 <http://www.postgresql.org/docs/current/static/sql-createserver.html>`_.
 
 .. autoclass:: ForeignServer
+
+.. automethod:: ForeignServer.identifier
 
 .. automethod:: ForeignServer.create
 

@@ -31,6 +31,21 @@ class ForeignDataWrapper(DbObject):
 
     objtype = "FOREIGN DATA WRAPPER"
 
+    def to_map(self):
+        """Convert wrappers and subsidiary objects to a YAML-suitable format
+
+        :return: dictionary
+        """
+        key = self.extern_key()
+        wrapper = {key: self._base_map()}
+        if hasattr(self, 'servers'):
+            srvs = {}
+            for srv in self.servers.keys():
+                srvs.update(self.servers[srv].to_map())
+            wrapper[key].update(srvs)
+            del wrapper[key]['servers']
+        return wrapper
+
     def create(self):
         """Return SQL statements to CREATE the data wrapper
 
@@ -93,14 +108,32 @@ class ForeignDataWrapperDict(DbObjectDict):
             fdw = key[21:]
             self[fdw] = wrapper = ForeignDataWrapper(name=fdw)
             inwrapper = inwrappers[key]
-            if inwrapper:
-                for attr, val in inwrapper.items():
-                    setattr(wrapper, attr, val)
-                if 'oldname' in inwrapper:
-                    wrapper.oldname = inwrapper['oldname']
-                    del inwrapper['oldname']
-                if 'description' in inwrapper:
-                    wrapper.description = inwrapper['description']
+            inservs = {}
+            for key in inwrapper.keys():
+                if key.startswith('server '):
+                    inservs.update({key: inwrapper[key]})
+                elif key == 'oldname':
+                    wrapper.oldname = inwrapper[key]
+                elif key == 'description':
+                    wrapper.description = inwrapper[key]
+                elif key in ['handler', 'validator', 'options']:
+                    setattr(wrapper, key, inwrapper[key])
+                else:
+                    raise KeyError("Expected typed object, found '%s'" % key)
+            newdb.servers.from_map(wrapper, inservs)
+
+    def link_refs(self, dbservers):
+        """Connect servers to their respective foreign data wrappers
+
+        :param dbservers: dictionary of foreign servers
+        """
+        for (fdw, srv) in dbservers.keys():
+            dbserver = dbservers[(fdw, srv)]
+            assert self[fdw]
+            wrapper = self[fdw]
+            if not hasattr(wrapper, 'servers'):
+                wrapper.servers = {}
+            wrapper.servers.update({srv: dbserver})
 
     def to_map(self):
         """Convert the wrapper dictionary to a regular dictionary
@@ -158,6 +191,14 @@ class ForeignServer(DbObject):
     """A foreign server definition"""
 
     objtype = "SERVER"
+    keylist = ['wrapper', 'name']
+
+    def identifier(self):
+        """Returns a full identifier for the foreign server
+
+        :return: string
+        """
+        return quote_id(self.name)
 
     def create(self):
         """Return SQL statements to CREATE the server
@@ -186,24 +227,25 @@ class ForeignServerDict(DbObjectDict):
 
     cls = ForeignServer
     query = \
-        """SELECT srvname AS name, fdwname AS wrapper, srvtype AS type,
+        """SELECT fdwname AS wrapper, srvname AS name, srvtype AS type,
                   srvversion AS version, srvoptions AS options,
                   obj_description(s.oid, 'pg_foreign_server') AS description
            FROM pg_foreign_server s
                 JOIN pg_foreign_data_wrapper w ON (srvfdw = w.oid)
-           ORDER BY srvname"""
+           ORDER BY fdwname, srvname"""
 
-    def from_map(self, inservers, newdb):
+    def from_map(self, wrapper, inservers):
         """Initialize the dictionary of servers by examining the input map
 
+        :param wrapper: associated foreign data wrapper
         :param inservers: input YAML map defining the foreign servers
-        :param newdb: collection of dictionaries defining the database
         """
         for key in inservers.keys():
             if not key.startswith('server '):
                 raise KeyError("Unrecognized object type: %s" % key)
             srv = key[7:]
-            self[srv] = serv = ForeignServer(name=srv)
+            self[(wrapper.name, srv)] = serv = ForeignServer(
+                wrapper=wrapper.name, name=srv)
             inserv = inservers[key]
             if inserv:
                 for attr, val in inserv.items():
@@ -320,8 +362,8 @@ class UserMappingDict(DbObjectDict):
     def from_map(self, inusermaps, newdb):
         """Initialize the dictionary of mappings by examining the input map
 
-        :param schema: schema owning the user mappings
         :param inusermaps: input YAML map defining the user mappings
+        :param newdb: collection of dictionaries defining the database
         """
         for key in inusermaps.keys():
             if not key.startswith('user mapping for '):

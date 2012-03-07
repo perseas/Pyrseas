@@ -108,7 +108,8 @@ class ForeignServerToMapTestCase(PyrseasTestCase):
         "Map an existing foreign server"
         self.db.execute(CREATE_FDW_STMT)
         dbmap = self.db.execute_and_map(CREATE_FS_STMT)
-        self.assertEqual(dbmap['server fs1'], {'wrapper': 'fdw1'})
+        self.assertEqual(dbmap['foreign data wrapper fdw1'],
+                         {'server fs1': {}})
 
     def test_map_server_type_version(self):
         "Map a foreign server with type and version"
@@ -116,8 +117,8 @@ class ForeignServerToMapTestCase(PyrseasTestCase):
         dbmap = self.db.execute_and_map(
             "CREATE SERVER fs1 TYPE 'test' VERSION '1.0' "
             "FOREIGN DATA WRAPPER fdw1")
-        self.assertEqual(dbmap['server fs1'], {
-                    'wrapper': 'fdw1', 'type': 'test', 'version': '1.0'})
+        self.assertEqual(dbmap['foreign data wrapper fdw1'], {'server fs1': {
+                    'type': 'test', 'version': '1.0'}})
 
     def test_map_server_options(self):
         "Map a foreign server with options"
@@ -125,8 +126,8 @@ class ForeignServerToMapTestCase(PyrseasTestCase):
         dbmap = self.db.execute_and_map(
             "CREATE SERVER fs1 FOREIGN DATA WRAPPER fdw1 "
             "OPTIONS (dbname 'test')")
-        self.assertEqual(dbmap['server fs1'], {'wrapper': 'fdw1',
-                                               'options': ['dbname=test']})
+        self.assertEqual(dbmap['foreign data wrapper fdw1'], {'server fs1': {
+                    'options': ['dbname=test']}})
 
     def test_map_server_comment(self):
         "Map a foreign server with a comment"
@@ -135,7 +136,8 @@ class ForeignServerToMapTestCase(PyrseasTestCase):
         self.db.execute(CREATE_FDW_STMT)
         self.db.execute(CREATE_FS_STMT)
         dbmap = self.db.execute_and_map(COMMENT_FS_STMT)
-        self.assertEqual(dbmap['server fs1']['description'], 'Test server fs1')
+        self.assertEqual(dbmap['foreign data wrapper fdw1'], {'server fs1': {
+                        'description': 'Test server fs1'}})
 
 
 class ForeignServerToSqlTestCase(PyrseasTestCase):
@@ -145,8 +147,7 @@ class ForeignServerToSqlTestCase(PyrseasTestCase):
         "Create a foreign server that didn't exist"
         self.db.execute_commit(CREATE_FDW_STMT)
         inmap = self.std_map()
-        inmap.update({'foreign data wrapper fdw1': {},
-                      'server fs1': {'wrapper': 'fdw1'}})
+        inmap.update({'foreign data wrapper fdw1': {'server fs1': {}}})
         dbsql = self.db.process_map(inmap)
         self.assertEqual(fix_indent(dbsql[0]), CREATE_FS_STMT)
 
@@ -154,9 +155,8 @@ class ForeignServerToSqlTestCase(PyrseasTestCase):
         "Create a foreign server with type and version"
         self.db.execute_commit(CREATE_FDW_STMT)
         inmap = self.std_map()
-        inmap.update({'foreign data wrapper fdw1': {},
-                      'server fs1': {'wrapper': 'fdw1', 'type': 'test',
-                                     'version': '1.0'}})
+        inmap.update({'foreign data wrapper fdw1': {'server fs1': {
+                            'type': 'test', 'version': '1.0'}}})
         dbsql = self.db.process_map(inmap)
         self.assertEqual(fix_indent(dbsql[0]),
             "CREATE SERVER fs1 TYPE 'test' VERSION '1.0' "
@@ -165,17 +165,18 @@ class ForeignServerToSqlTestCase(PyrseasTestCase):
     def test_create_server_options(self):
         "Create a foreign server with options"
         self.db.execute_commit(CREATE_FDW_STMT)
-        dbmap = self.db.execute_and_map(
+        inmap = self.std_map()
+        inmap.update({'foreign data wrapper fdw1': {'server fs1': {
+                            'options': ['dbname=test']}}})
+        dbsql = self.db.process_map(inmap)
+        self.assertEqual(fix_indent(dbsql[0]),
             "CREATE SERVER fs1 FOREIGN DATA WRAPPER fdw1 "
             "OPTIONS (dbname 'test')")
-        self.assertEqual(dbmap['server fs1'], {'wrapper': 'fdw1',
-                                               'options': ['dbname=test']})
 
     def test_bad_map_server(self):
         "Error creating a foreign server with a bad map"
         inmap = self.std_map()
-        inmap.update({'foreign data wrapper fdw1': {},
-                       'fs1': {'wrapper': 'fdw1'}})
+        inmap.update({'foreign data wrapper fdw1': {'fs1': {}}})
         self.assertRaises(KeyError, self.db.process_map, inmap)
 
     def test_drop_server(self):
@@ -188,7 +189,7 @@ class ForeignServerToSqlTestCase(PyrseasTestCase):
         self.assertEqual(dbsql[0], "DROP SERVER fs1")
 
     def test_drop_server_wrapper(self):
-        "Drop an existing foreign data wrapper"
+        "Drop an existing foreign data wrapper and its server"
         self.db.execute(CREATE_FDW_STMT)
         self.db.execute_commit(CREATE_FS_STMT)
         dbsql = self.db.process_map(self.std_map())
@@ -200,9 +201,8 @@ class ForeignServerToSqlTestCase(PyrseasTestCase):
         self.db.execute(CREATE_FDW_STMT)
         self.db.execute_commit(CREATE_FS_STMT)
         inmap = self.std_map()
-        inmap.update({'foreign data wrapper fdw1': {},
-                      'server fs1': {'wrapper': 'fdw1',
-                                     'description': "Test server fs1"}})
+        inmap.update({'foreign data wrapper fdw1': {'server fs1': {
+                                'description': "Test server fs1"}}})
         dbsql = self.db.process_map(inmap)
         self.assertEqual(dbsql, [COMMENT_FS_STMT])
 
@@ -305,8 +305,7 @@ class ForeignTableToSqlTestCase(PyrseasTestCase):
         self.db.execute(CREATE_FDW_STMT)
         self.db.execute_commit(CREATE_FS_STMT)
         inmap = self.std_map()
-        inmap.update({'foreign data wrapper fdw1': {}, 'server fs1': {
-                    'wrapper': 'fs1'}})
+        inmap.update({'foreign data wrapper fdw1': {'server fs1': {}}})
         inmap['schema public'].update({'foreign table ft1': {
                     'columns': [{'c1': {'type': 'integer'}},
                                 {'c2': {'type': 'text'}}], 'server': 'fs1'}})
@@ -320,8 +319,7 @@ class ForeignTableToSqlTestCase(PyrseasTestCase):
         self.db.execute(CREATE_FDW_STMT)
         self.db.execute_commit(CREATE_FS_STMT)
         inmap = self.std_map()
-        inmap.update({'foreign data wrapper fdw1': {}, 'server fs1': {
-                    'wrapper': 'fs1'}})
+        inmap.update({'foreign data wrapper fdw1': {'server fs1': {}}})
         inmap['schema public'].update({'foreign table ft1': {
                     'columns': [{'c1': {'type': 'integer'}},
                                 {'c2': {'type': 'text'}}], 'server': 'fs1',
@@ -335,8 +333,7 @@ class ForeignTableToSqlTestCase(PyrseasTestCase):
         if self.db.version < 90100:
             self.skipTest('Only available on PG 9.1')
         inmap = self.std_map()
-        inmap.update({'foreign data wrapper fdw1': {}, 'server fs1': {
-                    'wrapper': 'fs1'}})
+        inmap.update({'foreign data wrapper fdw1': {'server fs1': {}}})
         inmap['schema public'].update({'ft1': {
                     'columns': [{'c1': {'type': 'integer'}},
                                 {'c2': {'type': 'text'}}], 'server': 'fs1'}})
@@ -350,8 +347,7 @@ class ForeignTableToSqlTestCase(PyrseasTestCase):
         self.db.execute(CREATE_FS_STMT)
         self.db.execute_commit(CREATE_FT_STMT)
         inmap = self.std_map()
-        inmap.update({'foreign data wrapper fdw1': {}, 'server fs1': {
-                    'wrapper': 'fs1'}})
+        inmap.update({'foreign data wrapper fdw1': {'server fs1': {}}})
         dbsql = self.db.process_map(inmap)
         self.assertEqual(dbsql[0], "DROP FOREIGN TABLE ft1")
 
