@@ -3,20 +3,37 @@ Foreign Data Objects
 
 .. module:: pyrseas.dbobject.foreign
 
-The :mod:`foreign` module defines eight classes: classes
+The :mod:`foreign` module defines nine classes:
+:class:`DbObjectWithOptions` derived from :class:`DbObject`, classes
 :class:`ForeignDataWrapper`, :class:`ForeignServer` and
-:class:`UserMapping` derived from :class:`DbObject`,
-:class:`ForeignTable` derived from :class:`Table`, classes
-:class:`ForeignDataWrapperDict`, :class:`ForeignServerDict` and
-:class:`UserMappingDict` derived from :class:`DbObjectDict`, and
-:class:`ForeignTableDict` derived from :class:`ClassDict`.
+:class:`UserMapping` derived from :class:`DbObjectWithOptions`,
+:class:`ForeignTable` derived from :class:`DbObjectWithOptions` and
+:class:`Table`, classes :class:`ForeignDataWrapperDict`,
+:class:`ForeignServerDict` and :class:`UserMappingDict` derived from
+:class:`DbObjectDict`, and :class:`ForeignTableDict` derived from
+:class:`ClassDict`.
+
+Database Object With Options
+----------------------------
+
+:class:`DbObjectWithOptions` is derived from
+:class:`~pyrseas.dbobject.DbObject`.  It is a helper function dealing
+with the OPTIONS clauses common to the foreign data objects.
+
+.. autoclass:: DbObjectWithOptions
+
+.. automethod:: DbObjectWithOptions.options_clause
+
+.. automethod:: DbObjectWithOptions.diff_options
+
+.. automethod:: DbObjectWithOptions.diff_map
 
 Foreign Data Wrapper
 --------------------
 
 :class:`ForeignDataWrapper` is derived from
-:class:`~pyrseas.dbobject.DbObject` and represents a `PostgreSQL
-foreign data wrapper
+:class:`DbObjectWithOptions` and represents a `PostgreSQL foreign data
+wrapper
 <http://www.postgresql.org/docs/current/static/sql-createcreateforeigndatawrapper.html>`_.
 For PostgreSQL versions 9.1 and later see also `Foreign Data
 <http://www.postgresql.org/docs/current/static/ddl-foreign-data.html>`_
@@ -28,6 +45,8 @@ and `Writing A Foreign Data Wrapper
 .. automethod:: ForeignDataWrapper.to_map
 
 .. automethod:: ForeignDataWrapper.create
+
+.. automethod:: ForeignDataWrapper.diff_map
 
 Foreign Data Wrapper Dictionary
 -------------------------------
@@ -49,9 +68,8 @@ represents the collection of foreign data wrappers in a database.
 Foreign Server
 --------------
 
-:class:`ForeignServer` is derived from
-:class:`~pyrseas.dbobject.DbObject` and represents a `PostgreSQL
-foreign server
+:class:`ForeignServer` is derived from :class:`DbObjectWithOptions`
+and represents a `PostgreSQL foreign server
 <http://www.postgresql.org/docs/current/static/sql-createserver.html>`_.
 
 .. autoclass:: ForeignServer
@@ -61,6 +79,8 @@ foreign server
 .. automethod:: ForeignServer.to_map
 
 .. automethod:: ForeignServer.create
+
+.. automethod:: ForeignServer.diff_map
 
 Foreign Server Dictionary
 -------------------------
@@ -82,9 +102,8 @@ that represents the collection of foreign servers in a database.
 User Mapping
 ------------
 
-:class:`UserMapping` is derived from
-:class:`~pyrseas.dbobject.DbObject` and represents a `PostgreSQL user
-mapping of a user to a foreign server
+:class:`UserMapping` is derived from :class:`DbObjectWithOptions` and
+represents a `PostgreSQL user mapping of a user to a foreign server
 <http://www.postgresql.org/docs/current/static/sql-createusermapping.html>`_.
 
 .. autoclass:: UserMapping
@@ -113,8 +132,9 @@ represents the collection of user mappings in a database.
 Foreign Table
 -------------
 
-:class:`ForeignTable` is derived from :class:`~pyrseas.table.Table`
-and represents a `PostgreSQL foreign table
+:class:`ForeignTable` is derived from :class:`DbObjectWithOptions` and
+:class:`~pyrseas.dbobject.table.Table`.  It represents a `PostgreSQL foreign
+table
 <http://www.postgresql.org/docs/current/static/sql-createforeigntable.html>`_
 (available on PostgreSQL 9.1 or later).
 
@@ -126,12 +146,14 @@ and represents a `PostgreSQL foreign table
 
 .. automethod:: ForeignTable.drop
 
+.. automethod:: ForeignTable.diff_map
+
 Foreign Table Dictionary
 ------------------------
 
 :class:`ForeignTableDict` is derived from
-`~pyrseas.table.ClassDict`. It is a dictionary that represents the
-collection of foreign tables in a database.
+:class:`~pyrseas.dbobject.table.ClassDict`.  It is a dictionary that
+represents the collection of foreign tables in a database.
 
 .. autoclass:: ForeignTableDict
 

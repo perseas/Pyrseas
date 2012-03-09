@@ -91,6 +91,18 @@ class ForeignDataWrapperToSqlTestCase(PyrseasTestCase):
         dbsql = self.db.process_map(self.std_map())
         self.assertEqual(dbsql[0], "DROP FOREIGN DATA WRAPPER fdw1")
 
+    def test_alter_wrapper_options(self):
+        "Change foreign data wrapper options"
+        self.db.execute_commit(CREATE_FDW_STMT +
+                               " OPTIONS (opt1 'valA', opt2 'valB')")
+        inmap = self.std_map()
+        inmap.update({'foreign data wrapper fdw1': {
+                    'options': ['opt1=valX', 'opt3=valY']}})
+        dbsql = self.db.process_map(inmap)
+        self.assertEqual(fix_indent(dbsql[0]),
+                         "ALTER FOREIGN DATA WRAPPER fdw1 OPTIONS "
+                         "(SET opt1 'valX', opt3 'valY', DROP opt2)")
+
     def test_comment_on_fd_wrapper(self):
         "Create a comment for an existing foreign data wrapper"
         self.db.execute_commit(CREATE_FDW_STMT)
@@ -196,6 +208,17 @@ class ForeignServerToSqlTestCase(PyrseasTestCase):
         dbsql = self.db.process_map(inmap)
         self.assertEqual(dbsql[0], "DROP SERVER fs1")
 
+    def test_add_server_options(self):
+        "Add options to a foreign server"
+        self.db.execute(CREATE_FDW_STMT)
+        self.db.execute_commit(CREATE_FS_STMT)
+        inmap = self.std_map()
+        inmap.update({'foreign data wrapper fdw1': {'server fs1': {
+                            'options': ['opt1=valA', 'opt2=valB']}}})
+        dbsql = self.db.process_map(inmap)
+        self.assertEqual(fix_indent(dbsql[0]),
+            "ALTER SERVER fs1 OPTIONS (opt1 'valA', opt2 'valB')")
+
     def test_drop_server_wrapper(self):
         "Drop an existing foreign data wrapper and its server"
         self.db.execute(CREATE_FDW_STMT)
@@ -280,6 +303,20 @@ class UserMappingToSqlTestCase(PyrseasTestCase):
         dbsql = self.db.process_map(self.std_map())
         self.assertEqual(dbsql[0], "DROP USER MAPPING FOR PUBLIC SERVER fs1")
 
+    def test_drop_user_mapping_options(self):
+        "Drop options from a user mapping"
+        self.db.execute(CREATE_FDW_STMT)
+        self.db.execute(CREATE_FS_STMT)
+        self.db.execute_commit(CREATE_UM_STMT +
+                               " OPTIONS (opt1 'valA', opt2 'valB')")
+        inmap = self.std_map()
+        inmap.update({'foreign data wrapper fdw1': {'server fs1': {
+                        'user mappings': {'PUBLIC': {}}}}})
+        dbsql = self.db.process_map(inmap)
+        self.assertEqual(fix_indent(dbsql[0]),
+                         "ALTER USER MAPPING FOR PUBLIC SERVER fs1 "
+                         "OPTIONS (DROP opt1, DROP opt2)")
+
 
 class ForeignTableToMapTestCase(PyrseasTestCase):
     """Test mapping of existing foreign tables"""
@@ -342,7 +379,7 @@ class ForeignTableToSqlTestCase(PyrseasTestCase):
         self.assertEqual(fix_indent(dbsql[0]), CREATE_FT_STMT +
                          " OPTIONS (user 'jack')")
 
-    def test_bad_map_forein_table(self):
+    def test_bad_map_foreign_table(self):
         "Error creating a foreign table with a bad map"
         if self.db.version < 90100:
             self.skipTest('Only available on PG 9.1')
@@ -377,6 +414,24 @@ class ForeignTableToSqlTestCase(PyrseasTestCase):
         dbsql = self.db.process_map(inmap)
         self.assertEqual(dbsql[0], "DROP FOREIGN TABLE ft1")
         self.assertEqual(dbsql[1], "DROP SERVER fs1")
+
+    def test_alter_foreign_table_options(self):
+        "Alter options for a foreign table"
+        if self.db.version < 90100:
+            self.skipTest('Only available on PG 9.1')
+        self.db.execute(CREATE_FDW_STMT)
+        self.db.execute(CREATE_FS_STMT)
+        self.db.execute_commit(CREATE_FT_STMT +
+                               " OPTIONS (opt1 'valA', opt2 'valB')")
+        inmap = self.std_map()
+        inmap.update({'foreign data wrapper fdw1': {'server fs1': {}}})
+        inmap['schema public'].update({'foreign table ft1': {
+                    'columns': [{'c1': {'type': 'integer'}},
+                                {'c2': {'type': 'text'}}], 'server': 'fs1',
+                    'options': ['opt1=valX', 'opt2=valY']}})
+        dbsql = self.db.process_map(inmap)
+        self.assertEqual(fix_indent(dbsql[0]), "ALTER FOREIGN TABLE ft1 "
+                         "OPTIONS (SET opt1 'valX', SET opt2 'valY')")
 
 
 def suite():

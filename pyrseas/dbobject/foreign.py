@@ -3,30 +3,77 @@
     pyrseas.dbobject.foreign
     ~~~~~~~~~~~~~~~~~~~~~~~~
 
-    This defines eight classes: ForeignDataWrapper, ForeignServer and
-    UserMapping derived from DbObject, ForeignDataWrapperDict,
+    This defines nine classes: DbObjectWithOptions derived from
+    DbObject, ForeignDataWrapper, ForeignServer and UserMapping
+    derived from DbObjectWithOptions, ForeignDataWrapperDict,
     ForeignServerDict and UserMappingDict derived from DbObjectDict,
-    ForeignTable derived from Table and ForeignTableDict derived from
-    ClassDict.
+    ForeignTable derived from DbObjectWithOptions and Table, and
+    ForeignTableDict derived from ClassDict.
 """
 from pyrseas.dbobject import DbObjectDict, DbObject, quote_id
 from pyrseas.dbobject.table import ClassDict, Table
 
 
-def options_clause(optdict):
-    """Helper function to create the OPTIONS clauses
+class DbObjectWithOptions(DbObject):
+    """Helper class for database objects with OPTIONS clauses"""
 
-    :param optdict: the dictionary of options
-    :return: SQL OPTIONS clause
-    """
-    opts = []
-    for opt in optdict:
-        (nm, val) = opt.split('=', 1)
-        opts.append("%s '%s'" % (nm, val))
-    return "OPTIONS (%s)" % ', '.join(opts)
+    def options_clause(self):
+        """Create the OPTIONS clause
+
+        :param optdict: the dictionary of options
+        :return: SQL OPTIONS clause
+        """
+        opts = []
+        for opt in self.options:
+            (nm, val) = opt.split('=', 1)
+            opts.append("%s '%s'" % (nm, val))
+        return "OPTIONS (%s)" % ', '.join(opts)
+
+    def diff_options(self, newopts):
+        """Compare options lists and generate SQL OPTIONS clause
+
+        :newopts: list of new options
+        :return: SQL OPTIONS clause
+
+        Generate ([ADD|SET|DROP key 'value') clauses from two lists in the
+        form of 'key=value' strings.
+        """
+        def to_dict(optlist):
+            return dict(opt.split('=', 1) for opt in optlist)
+
+        oldopts = {}
+        if hasattr(self, 'options'):
+            oldopts = to_dict(self.options)
+        newopts = to_dict(newopts)
+        clauses = []
+        for key, val in newopts.items():
+            if key not in oldopts:
+                clauses.append("%s '%s'" % (key, val))
+            elif val != oldopts[key]:
+                clauses.append("SET %s '%s'" % (key, val))
+        for key, val in oldopts.items():
+            if key not in newopts:
+                clauses.append("DROP %s" % key)
+        return clauses and "OPTIONS (%s)" % ', '.join(clauses) or ''
+
+    def diff_map(self, inobj):
+        """Generate SQL to transform an existing object
+
+        :param inobj: a YAML map defining the new object
+        :return: list of SQL statements
+        """
+        stmts = []
+        newopts = []
+        if hasattr(inobj, 'options'):
+            newopts = inobj.options
+        diff_opts = self.diff_options(newopts)
+        if diff_opts:
+            stmts.append("ALTER %s %s %s" % (
+                    self.objtype, self.identifier(), diff_opts))
+        return stmts
 
 
-class ForeignDataWrapper(DbObject):
+class ForeignDataWrapper(DbObjectWithOptions):
     """A foreign data wrapper definition"""
 
     objtype = "FOREIGN DATA WRAPPER"
@@ -56,12 +103,22 @@ class ForeignDataWrapper(DbObject):
             if hasattr(self, fnc):
                 clauses.append("%s %s" % (fnc.upper(), getattr(self, fnc)))
         if hasattr(self, 'options'):
-            clauses.append(options_clause(self.options))
+            clauses.append(self.options_clause())
         stmts = ["CREATE FOREIGN DATA WRAPPER %s%s" % (
                 quote_id(self.name),
                 clauses and '\n    ' + ',\n    '.join(clauses) or '')]
         if hasattr(self, 'description'):
             stmts.append(self.comment())
+        return stmts
+
+    def diff_map(self, inwrapper):
+        """Generate SQL to transform an existing wrapper
+
+        :param inwrapper: a YAML map defining the new wrapper
+        :return: list of SQL statements
+        """
+        stmts = super(ForeignDataWrapper, self).diff_map(inwrapper)
+        stmts.append(self.diff_description(inwrapper))
         return stmts
 
 
@@ -198,7 +255,7 @@ class ForeignDataWrapperDict(DbObjectDict):
         return stmts
 
 
-class ForeignServer(DbObject):
+class ForeignServer(DbObjectWithOptions):
     """A foreign server definition"""
 
     objtype = "SERVER"
@@ -237,7 +294,7 @@ class ForeignServer(DbObject):
             if hasattr(self, opt):
                 clauses.append("%s '%s'" % (opt.upper(), getattr(self, opt)))
         if hasattr(self, 'options'):
-            options.append(options_clause(self.options))
+            options.append(self.options_clause())
         stmts = ["CREATE SERVER %s%s\n    FOREIGN DATA WRAPPER %s%s" % (
                 quote_id(self.name),
                 clauses and ' ' + ' '.join(clauses) or '',
@@ -245,6 +302,16 @@ class ForeignServer(DbObject):
                 options and '\n    ' + ',\n    '.join(options) or '')]
         if hasattr(self, 'description'):
             stmts.append(self.comment())
+        return stmts
+
+    def diff_map(self, inserver):
+        """Generate SQL to transform an existing server
+
+        :param inserver: a YAML map defining the new server
+        :return: list of SQL statements
+        """
+        stmts = super(ForeignServer, self).diff_map(inserver)
+        stmts.append(self.diff_description(inserver))
         return stmts
 
 
@@ -323,17 +390,17 @@ class ForeignServerDict(DbObjectDict):
         """
         stmts = []
         # check input foreign servers
-        for srv in inservers.keys():
-            insrv = inservers[srv]
+        for (fdw, srv) in inservers.keys():
+            insrv = inservers[(fdw, srv)]
             # does it exist in the database?
-            if srv in self:
-                stmts.append(self[srv].diff_map(insrv))
+            if (fdw, srv) in self:
+                stmts.append(self[(fdw, srv)].diff_map(insrv))
             else:
                 # check for possible RENAME
                 if hasattr(insrv, 'oldname'):
                     oldname = insrv.oldname
                     try:
-                        stmts.append(self[oldname].rename(insrv.name))
+                        stmts.append(self[(fdw, oldname)].rename(insrv.name))
                         del self[oldname]
                     except KeyError as exc:
                         exc.args = ("Previous name '%s' for dictionary '%s' "
@@ -361,7 +428,7 @@ class ForeignServerDict(DbObjectDict):
         return stmts
 
 
-class UserMapping(DbObject):
+class UserMapping(DbObjectWithOptions):
     """A user mapping definition"""
 
     objtype = "USER MAPPING"
@@ -391,7 +458,7 @@ class UserMapping(DbObject):
         """
         options = []
         if hasattr(self, 'options'):
-            options.append(options_clause(self.options))
+            options.append(self.options_clause())
         stmts = ["CREATE USER MAPPING FOR %s\n    SERVER %s%s" % (
                 self.username == 'PUBLIC' and 'PUBLIC' or
                 quote_id(self.username), quote_id(self.server),
@@ -466,8 +533,9 @@ class UserMappingDict(DbObjectDict):
                 if hasattr(inump, 'oldname'):
                     oldname = inump.oldname
                     try:
-                        stmts.append(self[oldname].rename(inump.name))
-                        del self[oldname]
+                        stmts.append(self[(fdw, srv, oldname)].rename(
+                                inump.name))
+                        del self[(fdw, srv, oldname)]
                     except KeyError as exc:
                         exc.args = ("Previous name '%s' for user mapping '%s' "
                                    "not found" % (oldname, inump.name), )
@@ -483,7 +551,7 @@ class UserMappingDict(DbObjectDict):
         return stmts
 
 
-class ForeignTable(Table):
+class ForeignTable(DbObjectWithOptions, Table):
     """A foreign table definition"""
 
     objtype = "FOREIGN TABLE"
@@ -519,7 +587,7 @@ class ForeignTable(Table):
         for col in self.columns:
             cols.append("    " + col.add()[0])
         if hasattr(self, 'options'):
-            options.append(options_clause(self.options))
+            options.append(self.options_clause())
         stmts.append("CREATE FOREIGN TABLE %s (\n%s)\n    SERVER %s%s" % (
                 self.qualname(), ",\n".join(cols), self.server,
                 options and '\n    ' + ',\n    '.join(options) or ''))
@@ -536,6 +604,16 @@ class ForeignTable(Table):
         :return: SQL statement
         """
         return "DROP %s %s" % (self.objtype, self.identifier())
+
+    def diff_map(self, intable):
+        """Generate SQL to transform an existing table
+
+        :param intable: a YAML map defining the new table
+        :return: list of SQL statements
+        """
+        stmts = super(ForeignTable, self).diff_map(intable)
+        stmts.append(self.diff_description(intable))
+        return stmts
 
 
 class ForeignTableDict(ClassDict):
