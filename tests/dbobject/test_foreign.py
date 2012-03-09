@@ -151,6 +151,14 @@ class ForeignServerToSqlTestCase(PyrseasTestCase):
         dbsql = self.db.process_map(inmap)
         self.assertEqual(fix_indent(dbsql[0]), CREATE_FS_STMT)
 
+    def test_create_wrapper_server(self):
+        "Create a foreign data wrapper and its server"
+        inmap = self.std_map()
+        inmap.update({'foreign data wrapper fdw1': {'server fs1': {}}})
+        dbsql = self.db.process_map(inmap)
+        self.assertEqual(fix_indent(dbsql[0]), CREATE_FDW_STMT)
+        self.assertEqual(fix_indent(dbsql[1]), CREATE_FS_STMT)
+
     def test_create_server_type_version(self):
         "Create a foreign server with type and version"
         self.db.execute_commit(CREATE_FDW_STMT)
@@ -241,6 +249,16 @@ class UserMappingToSqlTestCase(PyrseasTestCase):
                         'user mappings': {'PUBLIC': {}}}}})
         dbsql = self.db.process_map(inmap)
         self.assertEqual(fix_indent(dbsql[0]), CREATE_UM_STMT)
+
+    def test_create_wrapper_server_mapping(self):
+        "Create a FDW, server and user mapping"
+        inmap = self.std_map()
+        inmap.update({'foreign data wrapper fdw1': {'server fs1': {
+                        'user mappings': {'PUBLIC': {}}}}})
+        dbsql = self.db.process_map(inmap)
+        self.assertEqual(fix_indent(dbsql[0]), CREATE_FDW_STMT)
+        self.assertEqual(fix_indent(dbsql[1]), CREATE_FS_STMT)
+        self.assertEqual(fix_indent(dbsql[2]), CREATE_UM_STMT)
 
     def test_create_user_mapping_options(self):
         "Create a user mapping with options"
@@ -346,6 +364,19 @@ class ForeignTableToSqlTestCase(PyrseasTestCase):
         inmap.update({'foreign data wrapper fdw1': {'server fs1': {}}})
         dbsql = self.db.process_map(inmap)
         self.assertEqual(dbsql[0], "DROP FOREIGN TABLE ft1")
+
+    def test_drop_foreign_table_server(self):
+        "Drop a foreign table and associated server"
+        if self.db.version < 90100:
+            self.skipTest('Only available on PG 9.1')
+        self.db.execute(CREATE_FDW_STMT)
+        self.db.execute(CREATE_FS_STMT)
+        self.db.execute_commit(CREATE_FT_STMT)
+        inmap = self.std_map()
+        inmap.update({'foreign data wrapper fdw1': {}})
+        dbsql = self.db.process_map(inmap)
+        self.assertEqual(dbsql[0], "DROP FOREIGN TABLE ft1")
+        self.assertEqual(dbsql[1], "DROP SERVER fs1")
 
 
 def suite():

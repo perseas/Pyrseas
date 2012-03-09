@@ -183,6 +183,17 @@ class ForeignDataWrapperDict(DbObjectDict):
         for fdw in self.keys():
             # if missing, drop it
             if fdw not in inwrappers:
+                self[fdw].dropped = True
+        return stmts
+
+    def _drop(self):
+        """Actually drop the wrappers
+
+        :return: SQL statements
+        """
+        stmts = []
+        for fdw in self.keys():
+            if hasattr(self[fdw], 'dropped'):
                 stmts.append(self[fdw].drop())
         return stmts
 
@@ -335,6 +346,17 @@ class ForeignServerDict(DbObjectDict):
         for srv in self.keys():
             # if missing, drop it
             if srv not in inservers:
+                self[srv].dropped = True
+        return stmts
+
+    def _drop(self):
+        """Actually drop the servers
+
+        :return: SQL statements
+        """
+        stmts = []
+        for srv in self.keys():
+            if hasattr(self[srv], 'dropped'):
                 stmts.append(self[srv].drop())
         return stmts
 
