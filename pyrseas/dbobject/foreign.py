@@ -120,7 +120,7 @@ class ForeignDataWrapperDict(DbObjectDict):
                     setattr(wrapper, key, inwrapper[key])
                 else:
                     raise KeyError("Expected typed object, found '%s'" % key)
-            newdb.servers.from_map(wrapper, inservs)
+            newdb.servers.from_map(wrapper, inservs, newdb)
 
     def link_refs(self, dbservers):
         """Connect servers to their respective foreign data wrappers
@@ -200,6 +200,21 @@ class ForeignServer(DbObject):
         """
         return quote_id(self.name)
 
+    def to_map(self):
+        """Convert servers and subsidiary objects to a YAML-suitable format
+
+        :return: dictionary
+        """
+        key = self.extern_key()
+        server = {key: self._base_map()}
+        if hasattr(self, 'usermaps'):
+            umaps = {}
+            for umap in self.usermaps.keys():
+                umaps.update(self.usermaps[umap].to_map())
+            server[key]['user mappings'] = umaps
+            del server[key]['usermaps']
+        return server
+
     def create(self):
         """Return SQL statements to CREATE the server
 
@@ -234,11 +249,12 @@ class ForeignServerDict(DbObjectDict):
                 JOIN pg_foreign_data_wrapper w ON (srvfdw = w.oid)
            ORDER BY fdwname, srvname"""
 
-    def from_map(self, wrapper, inservers):
+    def from_map(self, wrapper, inservers, newdb):
         """Initialize the dictionary of servers by examining the input map
 
         :param wrapper: associated foreign data wrapper
         :param inservers: input YAML map defining the foreign servers
+        :param newdb: collection of dictionaries defining the database
         """
         for key in inservers.keys():
             if not key.startswith('server '):
@@ -250,6 +266,8 @@ class ForeignServerDict(DbObjectDict):
             if inserv:
                 for attr, val in inserv.items():
                     setattr(serv, attr, val)
+                if 'user mappings' in inserv:
+                    newdb.usermaps.from_map(serv, inserv['user mappings'])
                 if 'oldname' in inserv:
                     serv.oldname = inserv['oldname']
                     del inserv['oldname']
@@ -268,6 +286,19 @@ class ForeignServerDict(DbObjectDict):
         for srv in self.keys():
             servers.update(self[srv].to_map())
         return servers
+
+    def link_refs(self, dbusermaps):
+        """Connect user mappings to their respective servers
+
+        :param dbusermaps: dictionary of user mappings
+        """
+        for (fdw, srv, usr) in dbusermaps.keys():
+            dbusermap = dbusermaps[(fdw, srv, usr)]
+            assert self[(fdw, srv)]
+            server = self[(fdw, srv)]
+            if not hasattr(server, 'usermaps'):
+                server.usermaps = {}
+            server.usermaps.update({usr: dbusermap})
 
     def diff_map(self, inservers):
         """Generate SQL to transform existing foreign servers
@@ -313,15 +344,14 @@ class UserMapping(DbObject):
 
     objtype = "USER MAPPING"
 
-    keylist = ['username', 'server']
+    keylist = ['wrapper', 'server', 'username']
 
     def extern_key(self):
         """Return the key to be used in external maps for this user mapping
 
         :return: string
         """
-        return '%s for %s server %s' % (self.objtype.lower(), self.username,
-                                        self.server)
+        return self.username
 
     def identifier(self):
         """Return a full identifier for a user mapping object
@@ -352,31 +382,24 @@ class UserMappingDict(DbObjectDict):
 
     cls = UserMapping
     query = \
-        """SELECT CASE umuser WHEN 0 THEN 'PUBLIC' ELSE
-                  pg_get_userbyid(umuser) END AS username, srvname AS server,
+        """SELECT fdwname AS wrapper, srvname AS server,
+                  CASE umuser WHEN 0 THEN 'PUBLIC' ELSE
+                  pg_get_userbyid(umuser) END AS username,
                   umoptions AS options
            FROM pg_user_mapping u
                 JOIN pg_foreign_server s ON (umserver = s.oid)
-           ORDER BY umuser, srvname"""
+                JOIN pg_foreign_data_wrapper w ON (srvfdw = w.oid)
+           ORDER BY fdwname, srvname, umuser"""
 
-    def from_map(self, inusermaps, newdb):
+    def from_map(self, server, inusermaps):
         """Initialize the dictionary of mappings by examining the input map
 
+        :param server: foreign server associated with mappings
         :param inusermaps: input YAML map defining the user mappings
-        :param newdb: collection of dictionaries defining the database
         """
         for key in inusermaps.keys():
-            if not key.startswith('user mapping for '):
-                raise KeyError("Unrecognized object type: %s" % key)
-            ump = key[17:]
-            if ' server ' not in ump:
-                raise KeyError("Unrecognized object type: %s" % key)
-            pos = ump.find(' server ')
-            usr = ump[:pos]
-            if usr.lower() == 'public':
-                usr = 'PUBLIC'
-            srv = ump[pos + 8:]
-            self[(usr, srv)] = usermap = UserMapping(username=usr, server=srv)
+            usermap = UserMapping(wrapper=server.wrapper, server=server.name,
+                                  username=key)
             inusermap = inusermaps[key]
             if inusermap:
                 for attr, val in inusermap.items():
@@ -384,6 +407,7 @@ class UserMappingDict(DbObjectDict):
                 if 'oldname' in inusermap:
                     usermap.oldname = inusermap['oldname']
                     del inusermap['oldname']
+            self[(server.wrapper, server.name, key)] = usermap
 
     def to_map(self):
         """Convert the user mapping dictionary to a regular dictionary
@@ -410,11 +434,11 @@ class UserMappingDict(DbObjectDict):
         """
         stmts = []
         # check input user mappings
-        for (usr, srv) in inusermaps.keys():
-            inump = inusermaps[(usr, srv)]
+        for (fdw, srv, usr) in inusermaps.keys():
+            inump = inusermaps[(fdw, srv, usr)]
             # does it exist in the database?
-            if (usr, srv) in self:
-                stmts.append(self[(usr, srv)].diff_map(inump))
+            if (fdw, srv, usr) in self:
+                stmts.append(self[(fdw, srv, usr)].diff_map(inump))
             else:
                 # check for possible RENAME
                 if hasattr(inump, 'oldname'):
@@ -430,10 +454,10 @@ class UserMappingDict(DbObjectDict):
                     # create new user mapping
                     stmts.append(inump.create())
         # check database user mappings
-        for (usr, srv) in self.keys():
+        for (fdw, srv, usr) in self.keys():
             # if missing, drop it
-            if (usr, srv) not in inusermaps:
-                stmts.append(self[(usr, srv)].drop())
+            if (fdw, srv, usr) not in inusermaps:
+                stmts.append(self[(fdw, srv, usr)].drop())
         return stmts
 
 

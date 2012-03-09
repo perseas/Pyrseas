@@ -58,6 +58,8 @@ foreign server
 
 .. automethod:: ForeignServer.identifier
 
+.. automethod:: ForeignServer.to_map
+
 .. automethod:: ForeignServer.create
 
 Foreign Server Dictionary
@@ -72,6 +74,8 @@ that represents the collection of foreign servers in a database.
 .. automethod:: ForeignServerDict.from_map
 
 .. automethod:: ForeignServerDict.to_map
+
+.. automethod:: ForeignServerDict.link_refs
 
 .. automethod:: ForeignServerDict.diff_map
 

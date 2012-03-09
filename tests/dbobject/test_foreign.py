@@ -215,17 +215,18 @@ class UserMappingToMapTestCase(PyrseasTestCase):
         self.db.execute(CREATE_FDW_STMT)
         self.db.execute(CREATE_FS_STMT)
         dbmap = self.db.execute_and_map(CREATE_UM_STMT)
-        self.assertEqual(dbmap['user mapping for PUBLIC server fs1'], {})
+        self.assertEqual(dbmap['foreign data wrapper fdw1']['server fs1']
+                         ['user mappings'], {'PUBLIC': {}})
 
     def test_map_user_mapping_options(self):
         "Map a user mapping with options"
         self.db.execute(CREATE_FDW_STMT)
         self.db.execute(CREATE_FS_STMT)
-        dbmap = self.db.execute_and_map(
-            "CREATE USER MAPPING FOR PUBLIC SERVER fs1 "
-            "OPTIONS (user 'john', password 'doe')")
-        self.assertEqual(dbmap['user mapping for PUBLIC server fs1'], {
-                'options': ['user=john', 'password=doe']})
+        dbmap = self.db.execute_and_map(CREATE_UM_STMT +
+            " OPTIONS (user 'john', password 'doe')")
+        self.assertEqual(dbmap['foreign data wrapper fdw1']['server fs1'],
+                         {'user mappings': {'PUBLIC': {
+                        'options': ['user=john', 'password=doe']}}})
 
 
 class UserMappingToSqlTestCase(PyrseasTestCase):
@@ -236,7 +237,8 @@ class UserMappingToSqlTestCase(PyrseasTestCase):
         self.db.execute(CREATE_FDW_STMT)
         self.db.execute_commit(CREATE_FS_STMT)
         inmap = self.std_map()
-        inmap.update({'user mapping for PUBLIC server fs1': {}})
+        inmap.update({'foreign data wrapper fdw1': {'server fs1': {
+                        'user mappings': {'PUBLIC': {}}}}})
         dbsql = self.db.process_map(inmap)
         self.assertEqual(fix_indent(dbsql[0]), CREATE_UM_STMT)
 
@@ -245,18 +247,12 @@ class UserMappingToSqlTestCase(PyrseasTestCase):
         self.db.execute(CREATE_FDW_STMT)
         self.db.execute_commit(CREATE_FS_STMT)
         inmap = self.std_map()
-        inmap.update({'user mapping for PUBLIC server fs1': {
-                'options': ['user=john', 'password=doe']}})
+        inmap.update({'foreign data wrapper fdw1': {'server fs1': {
+                        'user mappings': {'PUBLIC': {
+                                'options': ['user=john', 'password=doe']}}}}})
         dbsql = self.db.process_map(inmap)
-        self.assertEqual(fix_indent(dbsql[0]),
-            "CREATE USER MAPPING FOR PUBLIC SERVER fs1 "
-            "OPTIONS (user 'john', password 'doe')")
-
-    def test_bad_map_user_mapping(self):
-        "Error creating a user mapping with a bad map"
-        inmap = self.std_map()
-        inmap.update({'PUBLIC server fs1': {}})
-        self.assertRaises(KeyError, self.db.process_map, inmap)
+        self.assertEqual(fix_indent(dbsql[0]), CREATE_UM_STMT +
+                         " OPTIONS (user 'john', password 'doe')")
 
     def test_drop_user_mapping(self):
         "Drop an existing user mapping"

@@ -95,6 +95,7 @@ class Database(object):
         db.tables.link_refs(db.columns, db.constraints, db.indexes,
                             db.rules, db.triggers)
         db.fdwrappers.link_refs(db.servers)
+        db.servers.link_refs(db.usermaps)
         db.ftables.link_refs(db.columns)
         db.types.link_refs(db.columns, db.constraints, db.functions)
 
@@ -165,7 +166,6 @@ class Database(object):
         self.ndb.schemas.from_map(input_schemas, self.ndb)
         self.ndb.casts.from_map(input_casts, self.ndb)
         self.ndb.fdwrappers.from_map(input_fdws, self.ndb)
-        self.ndb.usermaps.from_map(input_ums, self.ndb)
         self._link_refs(self.ndb)
 
     def to_map(self):
@@ -178,7 +178,6 @@ class Database(object):
         dbmap = self.db.languages.to_map()
         dbmap.update(self.db.casts.to_map())
         dbmap.update(self.db.fdwrappers.to_map())
-        dbmap.update(self.db.usermaps.to_map())
         dbmap.update(self.db.schemas.to_map())
         return dbmap
 
