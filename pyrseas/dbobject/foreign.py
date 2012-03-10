@@ -62,7 +62,7 @@ class DbObjectWithOptions(DbObject):
         :param inobj: a YAML map defining the new object
         :return: list of SQL statements
         """
-        stmts = []
+        stmts = super(DbObjectWithOptions, self).diff_map(inobj)
         newopts = []
         if hasattr(inobj, 'options'):
             newopts = inobj.options

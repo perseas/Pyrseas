@@ -57,7 +57,7 @@ class Column(DbSchemaObject):
         if hasattr(self, 'dropped'):
             return ""
         if hasattr(self, '_table'):
-            (contype, objtype) = ('TABLE', 'COLUMN')
+            (contype, objtype) = (self._table.objtype, 'COLUMN')
         else:
             (contype, objtype) = ('TYPE', 'ATTRIBUTE')
         return "ALTER %s %s DROP %s %s" % (contype, self.table, objtype,

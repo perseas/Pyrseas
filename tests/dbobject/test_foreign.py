@@ -433,6 +433,23 @@ class ForeignTableToSqlTestCase(PyrseasTestCase):
         self.assertEqual(fix_indent(dbsql[0]), "ALTER FOREIGN TABLE ft1 "
                          "OPTIONS (SET opt1 'valX', SET opt2 'valY')")
 
+    def test_add_column(self):
+        "Add new column to a foreign table"
+        if self.db.version < 90100:
+            self.skipTest('Only available on PG 9.1')
+        self.db.execute(CREATE_FDW_STMT)
+        self.db.execute(CREATE_FS_STMT)
+        self.db.execute_commit(CREATE_FT_STMT)
+        inmap = self.std_map()
+        inmap.update({'foreign data wrapper fdw1': {'server fs1': {}}})
+        inmap['schema public'].update({'foreign table ft1': {
+                    'columns': [{'c1': {'type': 'integer'}},
+                                {'c2': {'type': 'text'}},
+                                {'c3': {'type': 'date'}}], 'server': 'fs1'}})
+        dbsql = self.db.process_map(inmap)
+        self.assertEqual(fix_indent(dbsql[0]),
+                         "ALTER FOREIGN TABLE ft1 ADD COLUMN c3 date")
+
 
 def suite():
     tests = unittest.TestLoader().loadTestsFromTestCase(
