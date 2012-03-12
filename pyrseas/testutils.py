@@ -123,9 +123,9 @@ class PostgresDb(object):
             self.conn,
             """SELECT nspname, relname, relkind FROM pg_class
                       JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
-                      JOIN pg_roles ON (nspowner = pg_roles.oid)
                WHERE relkind in ('r', 'S', 'v', 'f')
-                     AND (nspname = 'public' OR rolname <> 'postgres')
+                     AND (nspname != 'pg_catalog'
+                          AND nspname != 'information_schema')
                ORDER BY relkind DESC""")
         objs = curs.fetchall()
         curs.close()
