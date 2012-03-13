@@ -7,6 +7,7 @@
     DbExtension and CfgTriggerDict derived from DbExtensionDict.
 """
 from pyrseas.extend import DbExtensionDict, DbExtension
+from pyrseas.dbobject import split_schema_obj
 from pyrseas.dbobject.trigger import Trigger
 
 
@@ -39,6 +40,10 @@ class CfgTrigger(DbExtension):
         newtrg._table = table
         if not hasattr(table, 'triggers'):
             table.triggers = {}
+        if hasattr(newtrg, 'procedure'):
+            (sch, fnc) = split_schema_obj(newtrg.procedure)
+            if sch != table.schema:
+                newtrg.procedure = "%s.%s" % (table.schema, fnc)
         table.triggers.update({newtrg.name: newtrg})
 
 

@@ -7,6 +7,7 @@
     DbExtension and CfgAuditColumnDict derived from DbExtensionDict.
 """
 from pyrseas.extend import DbExtension, DbExtensionDict
+from pyrseas.dbobject import split_schema_obj
 from pyrseas.dbobject.language import Language
 
 
@@ -43,6 +44,7 @@ class CfgAuditColumn(DbExtension):
                 for newtrg in table.triggers:
                     fncsig = table.triggers[newtrg].procedure
                     fnc = fncsig[:fncsig.find('(')]
+                    (sch, fnc) = split_schema_obj(fnc)
                     if (sch, fncsig) not in db.functions:
                         newfunc = cfgdb.functions[fnc].apply(
                             sch, cfgdb.columns.col_trans_tbl)

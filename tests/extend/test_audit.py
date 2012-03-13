@@ -100,6 +100,31 @@ class AuditColumnsTestCase(PyrseasTestCase):
         self.assertEqual(dbmap['schema public']['function aud_dflt()'][
                 'source'], FUNC_SRC)
 
+    def test_nonpublic_schema_with_trigger(self):
+        "Add predefined audit columns with trigger in a non-public schema"
+        self.db.execute("DROP SCHEMA IF EXISTS s1 CASCADE")
+        self.db.execute("CREATE SCHEMA s1")
+        self.db.execute_commit("CREATE TABLE s1.t1 (c1 integer, c2 text)")
+        extmap = {'schema s1': {'table t1': {
+                    'audit_columns': 'default'}}}
+        expmap = {'columns': [{'c1': {'type': 'integer'}},
+                              {'c2': {'type': 'text'}},
+                              {'modified_by_user': {
+                        'type': 'character varying(63)', 'not_null': True}},
+                              {'modified_timestamp': {
+                        'type': 'timestamp with time zone',
+                        'not_null': True}}],
+                  'triggers': {'t1_20_aud_dflt': {
+                    'events': ['update'], 'level': 'row',
+                    'procedure': 's1.aud_dflt()', 'timing': 'before'}}}
+        dbmap = self.db.process_extmap(extmap)
+        self.db.execute_commit("DROP SCHEMA s1 CASCADE")
+        self.assertEqual(dbmap['schema s1']['table t1'], expmap)
+        self.assertEqual(dbmap['schema s1']['function aud_dflt()'][
+                'returns'], 'trigger')
+        self.assertEqual(dbmap['schema s1']['function aud_dflt()'][
+                'source'], FUNC_SRC)
+
     def test_skip_existing_columns(self):
         "Do not add already existing audit columns"
         self.db.execute(CREATE_STMT)
