@@ -29,6 +29,7 @@ from pyrseas.dbobject.textsearch import TSConfigurationDict, TSDictionaryDict
 from pyrseas.dbobject.textsearch import TSParserDict, TSTemplateDict
 from pyrseas.dbobject.foreign import ForeignDataWrapperDict
 from pyrseas.dbobject.foreign import ForeignServerDict, UserMappingDict
+from pyrseas.dbobject.foreign import ForeignTableDict
 
 
 def flatten(lst):
@@ -74,6 +75,7 @@ class Database(object):
             self.fdwrappers = ForeignDataWrapperDict(dbconn)
             self.servers = ForeignServerDict(dbconn)
             self.usermaps = UserMappingDict(dbconn)
+            self.ftables = ForeignTableDict(dbconn)
 
     def __init__(self, dbconn):
         """Initialize the database
@@ -89,9 +91,12 @@ class Database(object):
         db.schemas.link_refs(db.types, db.tables, db.functions, db.operators,
                              db.operfams, db.operclasses, db.conversions,
                              db.tsconfigs, db.tsdicts, db.tsparsers,
-                             db.tstempls)
+                             db.tstempls, db.ftables)
         db.tables.link_refs(db.columns, db.constraints, db.indexes,
                             db.rules, db.triggers)
+        db.fdwrappers.link_refs(db.servers)
+        db.servers.link_refs(db.usermaps)
+        db.ftables.link_refs(db.columns)
         db.types.link_refs(db.columns, db.constraints, db.functions)
 
     def _trim_objects(self, schemas):
@@ -143,7 +148,6 @@ class Database(object):
         input_langs = {}
         input_casts = {}
         input_fdws = {}
-        input_fss = {}
         input_ums = {}
         for key in input_map.keys():
             if key.startswith('schema '):
@@ -154,8 +158,6 @@ class Database(object):
                 input_casts.update({key: input_map[key]})
             elif key.startswith('foreign data wrapper '):
                 input_fdws.update({key: input_map[key]})
-            elif key.startswith('server '):
-                input_fss.update({key: input_map[key]})
             elif key.startswith('user mapping for '):
                 input_ums.update({key: input_map[key]})
             else:
@@ -164,8 +166,6 @@ class Database(object):
         self.ndb.schemas.from_map(input_schemas, self.ndb)
         self.ndb.casts.from_map(input_casts, self.ndb)
         self.ndb.fdwrappers.from_map(input_fdws, self.ndb)
-        self.ndb.servers.from_map(input_fss, self.ndb)
-        self.ndb.usermaps.from_map(input_ums, self.ndb)
         self._link_refs(self.ndb)
 
     def to_map(self):
@@ -178,8 +178,6 @@ class Database(object):
         dbmap = self.db.languages.to_map()
         dbmap.update(self.db.casts.to_map())
         dbmap.update(self.db.fdwrappers.to_map())
-        dbmap.update(self.db.servers.to_map())
-        dbmap.update(self.db.usermaps.to_map())
         dbmap.update(self.db.schemas.to_map())
         return dbmap
 
@@ -220,14 +218,17 @@ class Database(object):
         stmts.append(self.db.tsparsers.diff_map(self.ndb.tsparsers))
         stmts.append(self.db.tsconfigs.diff_map(self.ndb.tsconfigs))
         stmts.append(self.db.casts.diff_map(self.ndb.casts))
-        stmts.append(self.db.usermaps.diff_map(self.ndb.usermaps))
-        stmts.append(self.db.servers.diff_map(self.ndb.servers))
         stmts.append(self.db.fdwrappers.diff_map(self.ndb.fdwrappers))
+        stmts.append(self.db.servers.diff_map(self.ndb.servers))
+        stmts.append(self.db.usermaps.diff_map(self.ndb.usermaps))
+        stmts.append(self.db.ftables.diff_map(self.ndb.ftables))
         stmts.append(self.db.operators._drop())
         stmts.append(self.db.operclasses._drop())
         stmts.append(self.db.operfams._drop())
         stmts.append(self.db.functions._drop())
         stmts.append(self.db.types._drop())
         stmts.append(self.db.schemas._drop())
+        stmts.append(self.db.servers._drop())
+        stmts.append(self.db.fdwrappers._drop())
         stmts.append(self.db.languages._drop())
         return [s for s in flatten(stmts)]

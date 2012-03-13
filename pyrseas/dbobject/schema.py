@@ -42,9 +42,10 @@ class Schema(DbObject):
                 tbls.update(self.tables[tbl].to_map(dbschemas))
             schema[key].update(tbls)
 
-        for objtypes in ['conversions', 'domains', 'functions', 'operators',
-                         'operclasses', 'operfams',  'sequences', 'tsconfigs',
-                         'tsdicts', 'tsparsers', 'tstempls', 'types', 'views']:
+        for objtypes in ['conversions', 'domains', 'ftables', 'functions',
+                         'operators', 'operclasses', 'operfams',  'sequences',
+                         'tsconfigs', 'tsdicts', 'tsparsers', 'tstempls',
+                         'types', 'views']:
             schema[key].update(mapper(self, objtypes))
 
         if hasattr(self, 'description'):
@@ -101,6 +102,7 @@ class SchemaDict(DbObjectDict):
             intsds = {}
             intsps = {}
             intsts = {}
+            inftbs = {}
             for key in inschema.keys():
                 if key.startswith('domain '):
                     intypes.update({key: inschema[key]})
@@ -128,6 +130,8 @@ class SchemaDict(DbObjectDict):
                     intsps.update({key: inschema[key]})
                 elif key.startswith('text search configuration '):
                     intscs.update({key: inschema[key]})
+                elif key.startswith('foreign table '):
+                    inftbs.update({key: inschema[key]})
                 elif key == 'oldname':
                     schema.oldname = inschema[key]
                 elif key == 'description':
@@ -145,10 +149,11 @@ class SchemaDict(DbObjectDict):
             newdb.tstempls.from_map(schema, intsts)
             newdb.tsparsers.from_map(schema, intsps)
             newdb.tsconfigs.from_map(schema, intscs)
+            newdb.ftables.from_map(schema, inftbs, newdb)
 
     def link_refs(self, dbtypes, dbtables, dbfunctions, dbopers, dbopfams,
                   dbopcls, dbconvs, dbtsconfigs, dbtsdicts, dbtspars,
-                  dbtstmpls):
+                  dbtstmpls, dbftables):
         """Connect types, tables and functions to their respective schemas
 
         :param dbtypes: dictionary of types and domains
@@ -162,6 +167,7 @@ class SchemaDict(DbObjectDict):
         :param dbtsdicts: dictionary of text search dictionaries
         :param dbtspars: dictionary of text search parsers
         :param dbtstmpls: dictionary of text search templates
+        :param dbftables: dictionary of foreign tables
 
         Fills in the `domains` dictionary for each schema by
         traversing the `dbtypes` dictionary.  Fills in the `tables`,
@@ -273,6 +279,13 @@ class SchemaDict(DbObjectDict):
             if not hasattr(schema, 'tstempls'):
                 schema.tstempls = {}
             schema.tstempls.update({tst: tstmpl})
+        for (sch, ftb) in dbftables.keys():
+            ftbl = dbftables[(sch, ftb)]
+            assert self[sch]
+            schema = self[sch]
+            if not hasattr(schema, 'ftables'):
+                schema.ftables = {}
+            schema.ftables.update({ftb: ftbl})
 
     def to_map(self):
         """Convert the schema dictionary to a regular dictionary

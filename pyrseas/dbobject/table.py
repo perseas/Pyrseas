@@ -296,7 +296,7 @@ class Table(DbClass):
                     if not hasattr(col, 'dropped')]
         dbcols = len(colnames)
 
-        base = "ALTER TABLE %s\n    " % self.qualname()
+        base = "ALTER %s %s\n    " % (self.objtype, self.qualname())
         # check input columns
         for (num, incol) in enumerate(intable.columns):
             if hasattr(incol, 'oldname'):

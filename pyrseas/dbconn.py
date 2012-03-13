@@ -55,8 +55,8 @@ class DbConnection(object):
                     self.user or os.getenv("USER"), self.pswd),
                                 connection_factory=DictConnection)
         except Exception as exc:
-            if exc.message[:6] == 'FATAL:':
-                sys.exit("Database connection error: %s" % exc.message[8:])
+            if str(exc)[:6] == 'FATAL:':
+                sys.exit("Database connection error: %s" % str(exc)[8:])
             else:
                 raise
         try:

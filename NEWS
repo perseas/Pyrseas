@@ -1,3 +1,42 @@
+0.5.0 (10-Mar-2012)
+
+  * Added support for:
+
+    - TEXTSEARCH parsers, dictionaries, configurations and templates
+    - FOREIGN DATA WRAPPERs, SERVERs, USER MAPPINGs and FOREIGN TABLEs
+    - ROWS clause in set-returning functions (issue #11)
+    - Deferrable/deferred constraints (#13)
+    - CATEGORY and PREFERRED clauses for TYPEs,
+      SORTOP clause for AGGREGATEs
+      HASHES and MERGES clauses for OPERATORs (#15)
+    - Operator class qualifiers for INDEXes (#16)
+    - Python 3.2 and later
+
+  * Correct schema normalization for constraints (#9) and indexes.
+
+  * Fix COMMENTs generated for constraints (#12).
+
+  * Fix DEFAULT clause for OPERATOR CLASS.
+
+  * dbtoyaml
+
+    - When restricting to specific schemas or tables, include
+      non-schema objects (e.g., languages).
+
+  * yamltodb
+
+    - Add -n/--schema option (#6).
+    - Add -u/--update option to apply SQL statements to target
+      database.
+    - Exclude database-wide objects when -n/--schema is used (#21).
+    - Allow YAML spec argument to be read from standard input.
+
+  * dbtoyaml/yamltodb
+
+    - Add -o/--output option
+    - Add -W/--password option (#18)
+
+
 0.4.1 (27-Oct-2011)
 
   * Make the initial SET search_path persistent.
