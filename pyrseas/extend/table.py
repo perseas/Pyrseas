@@ -41,7 +41,7 @@ class ExtClassDict(DbExtensionDict):
         :param schema: schema owning the tables
         :param inobjs: YAML map defining the schema objects
         """
-        for k in inobjs.keys():
+        for k in list(inobjs.keys()):
             (objtype, spc, key) = k.partition(' ')
             if spc != ' ' or objtype not in ['table', 'sequence', 'view']:
                 raise KeyError("Unrecognized object type: %s" % k)
@@ -61,7 +61,7 @@ class ExtClassDict(DbExtensionDict):
 
         :param tables: tables in current schema
         """
-        for (sch, tbl) in self.keys():
+        for (sch, tbl) in list(self.keys()):
             if not (sch, tbl) in tables:
                 raise KeyError("Table %s.%s not in current database" % (
                         sch, tbl))

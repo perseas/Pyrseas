@@ -67,5 +67,5 @@ class CfgTriggerDict(DbExtensionDict):
                 ctrg = self[trg]
             else:
                 self[trg] = ctrg = CfgTrigger(name=trg)
-            for attr, val in intrigs[trg].items():
+            for attr, val in list(intrigs[trg].items()):
                 setattr(ctrg, attr, val)

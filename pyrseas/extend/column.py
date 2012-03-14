@@ -74,5 +74,5 @@ class CfgColumnDict(DbExtensionDict):
                 ccol = self[col]
             else:
                 self[col] = ccol = CfgColumn(name=col)
-            for attr, val in incols[col].items():
+            for attr, val in list(incols[col].items()):
                 setattr(ccol, attr, val)

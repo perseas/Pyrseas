@@ -21,7 +21,7 @@ class DbExtension(object):
 
         Non-key attributes without a value are discarded.
         """
-        for key, val in attrs.items():
+        for key, val in list(attrs.items()):
             if val or key in self.keylist:
                 setattr(self, key, val)
 

@@ -41,7 +41,7 @@ class ExtSchemaDict(DbExtensionDict):
         construction of the internal collection of dictionaries
         describing the database objects.
         """
-        for key in extmap.keys():
+        for key in list(extmap.keys()):
             (objtype, spc, sch) = key.partition(' ')
             if spc != ' ' or objtype != 'schema':
                 raise KeyError("Unrecognized object type: %s" % key)
@@ -49,7 +49,7 @@ class ExtSchemaDict(DbExtensionDict):
             inschema = extmap[key]
             exttables = {}
             extfuncs = {}
-            for key in inschema.keys():
+            for key in list(inschema.keys()):
                 if key.startswith('table '):
                     exttables.update({key: inschema[key]})
                 elif key.startswith('function '):
@@ -63,7 +63,7 @@ class ExtSchemaDict(DbExtensionDict):
 
         :param schemas: schemas in current database
         """
-        for sch in self.keys():
+        for sch in list(self.keys()):
             if not sch in schemas:
                 raise KeyError("Schema %s not in current database" % sch)
             if not hasattr(self[sch], 'current'):
@@ -77,7 +77,7 @@ class ExtSchemaDict(DbExtensionDict):
         Fills in the `tables` dictionary for each schema by
         traversing the `dbtables` dictionary.
         """
-        for (sch, tbl) in dbtables.keys():
+        for (sch, tbl) in list(dbtables.keys()):
             table = dbtables[(sch, tbl)]
             assert self[sch]
             schema = self[sch]

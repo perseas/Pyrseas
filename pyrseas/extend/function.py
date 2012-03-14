@@ -74,5 +74,5 @@ class CfgFunctionDict(DbExtensionDict):
                 cfnc = self[fnc]
             else:
                 self[fnc] = cfnc = CfgFunction(name=fnc, arguments=args)
-            for attr, val in infuncs[func].items():
+            for attr, val in list(infuncs[func].items()):
                 setattr(cfnc, attr, val)
