@@ -218,7 +218,7 @@ class ProcDict(DbObjectDict):
         :param schema: schema owning the functions
         :param infuncs: YAML map defining the functions
         """
-        for key in infuncs.keys():
+        for key in list(infuncs.keys()):
             (objtype, spc, fnc) = key.partition(' ')
             if spc != ' ' or objtype not in ['function', 'aggregate']:
                 raise KeyError("Unrecognized object type: %s" % key)
@@ -237,7 +237,7 @@ class ProcDict(DbObjectDict):
                 func.language = 'internal'
             if not infunc:
                 raise ValueError("Function '%s' has no specification" % fnc)
-            for attr, val in infunc.items():
+            for attr, val in list(infunc.items()):
                 setattr(func, attr, val)
             if hasattr(func, 'volatility'):
                 func.volatility = func.volatility[:1].lower()
@@ -265,7 +265,7 @@ class ProcDict(DbObjectDict):
         stmts = []
         created = False
         # check input functions
-        for (sch, fnc, arg) in infuncs.keys():
+        for (sch, fnc, arg) in list(infuncs.keys()):
             infunc = infuncs[(sch, fnc, arg)]
             if isinstance(infunc, Aggregate):
                 continue
@@ -289,7 +289,7 @@ class ProcDict(DbObjectDict):
                 stmts.append(diff_stmts)
 
         # check input aggregates
-        for (sch, fnc, arg) in infuncs.keys():
+        for (sch, fnc, arg) in list(infuncs.keys()):
             infunc = infuncs[(sch, fnc, arg)]
             if not isinstance(infunc, Aggregate):
                 continue
@@ -305,7 +305,7 @@ class ProcDict(DbObjectDict):
                 stmts.append(self[(sch, fnc, arg)].diff_map(infunc))
 
         # check existing functions
-        for (sch, fnc, arg) in self.keys():
+        for (sch, fnc, arg) in list(self.keys()):
             func = self[(sch, fnc, arg)]
             # if missing, mark it for dropping
             if (sch, fnc, arg) not in infuncs:
@@ -321,12 +321,12 @@ class ProcDict(DbObjectDict):
         :return: SQL statements
         """
         stmts = []
-        for (sch, fnc, arg) in self.keys():
+        for (sch, fnc, arg) in list(self.keys()):
             func = self[(sch, fnc, arg)]
             if isinstance(func, Aggregate) and hasattr(func, 'dropped'):
                 stmts.append(func.drop())
 
-        for (sch, fnc, arg) in self.keys():
+        for (sch, fnc, arg) in list(self.keys()):
             func = self[(sch, fnc, arg)]
             if hasattr(func, 'dropped') and not hasattr(func, '_dep_type'):
                 stmts.append(func.drop())

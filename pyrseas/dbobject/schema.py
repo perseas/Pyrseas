@@ -32,13 +32,13 @@ class Schema(DbObject):
             mappeddict = {}
             if hasattr(schema, objtypes):
                 schemadict = getattr(schema, objtypes)
-                for objkey in schemadict.keys():
+                for objkey in list(schemadict.keys()):
                     mappeddict.update(schemadict[objkey].to_map())
             return mappeddict
 
         if hasattr(self, 'tables'):
             tbls = {}
-            for tbl in self.tables.keys():
+            for tbl in list(self.tables.keys()):
                 tbls.update(self.tables[tbl].to_map(dbschemas))
             schema[key].update(tbls)
 
@@ -85,7 +85,7 @@ class SchemaDict(DbObjectDict):
         construction of the internal collection of dictionaries
         describing the database objects.
         """
-        for key in inmap.keys():
+        for key in list(inmap.keys()):
             (objtype, spc, sch) = key.partition(' ')
             if spc != ' ' or objtype != 'schema':
                 raise KeyError("Unrecognized object type: %s" % key)
@@ -103,7 +103,7 @@ class SchemaDict(DbObjectDict):
             intsps = {}
             intsts = {}
             inftbs = {}
-            for key in inschema.keys():
+            for key in list(inschema.keys()):
                 if key.startswith('domain '):
                     intypes.update({key: inschema[key]})
                 elif key.startswith('type '):
@@ -175,7 +175,7 @@ class SchemaDict(DbObjectDict):
         traversing the `dbtables` dictionary. Fills in the `functions`
         dictionary by traversing the `dbfunctions` dictionary.
         """
-        for (sch, typ) in dbtypes.keys():
+        for (sch, typ) in list(dbtypes.keys()):
             dbtype = dbtypes[(sch, typ)]
             assert self[sch]
             schema = self[sch]
@@ -188,7 +188,7 @@ class SchemaDict(DbObjectDict):
                 if not hasattr(schema, 'types'):
                     schema.types = {}
                 schema.types.update({typ: dbtypes[(sch, typ)]})
-        for (sch, tbl) in dbtables.keys():
+        for (sch, tbl) in list(dbtables.keys()):
             table = dbtables[(sch, tbl)]
             assert self[sch]
             schema = self[sch]
@@ -204,7 +204,7 @@ class SchemaDict(DbObjectDict):
                 if not hasattr(schema, 'views'):
                     schema.views = {}
                 schema.views.update({tbl: table})
-        for (sch, fnc, arg) in dbfunctions.keys():
+        for (sch, fnc, arg) in list(dbfunctions.keys()):
             func = dbfunctions[(sch, fnc, arg)]
             assert self[sch]
             schema = self[sch]
@@ -216,70 +216,70 @@ class SchemaDict(DbObjectDict):
                 if rettype.upper().startswith("SETOF "):
                     rettype = rettype[6:]
                 (retsch, rettyp) = split_schema_obj(rettype, sch)
-                if (retsch, rettyp) in dbtables.keys():
+                if (retsch, rettyp) in list(dbtables.keys()):
                     deptbl = dbtables[(retsch, rettyp)]
                     if not hasattr(func, 'dependent_table'):
                         func.dependent_table = deptbl
                     if not hasattr(deptbl, 'dependent_funcs'):
                         deptbl.dependent_funcs = []
                     deptbl.dependent_funcs.append(func)
-        for (sch, opr, lft, rgt) in dbopers.keys():
+        for (sch, opr, lft, rgt) in list(dbopers.keys()):
             oper = dbopers[(sch, opr, lft, rgt)]
             assert self[sch]
             schema = self[sch]
             if not hasattr(schema, 'operators'):
                 schema.operators = {}
             schema.operators.update({(opr, lft, rgt): oper})
-        for (sch, opc, idx) in dbopcls.keys():
+        for (sch, opc, idx) in list(dbopcls.keys()):
             opcl = dbopcls[(sch, opc, idx)]
             assert self[sch]
             schema = self[sch]
             if not hasattr(schema, 'operclasses'):
                 schema.operclasses = {}
             schema.operclasses.update({(opc, idx): opcl})
-        for (sch, opf, idx) in dbopfams.keys():
+        for (sch, opf, idx) in list(dbopfams.keys()):
             opfam = dbopfams[(sch, opf, idx)]
             assert self[sch]
             schema = self[sch]
             if not hasattr(schema, 'operfams'):
                 schema.operfams = {}
             schema.operfams.update({(opf, idx): opfam})
-        for (sch, cnv) in dbconvs.keys():
+        for (sch, cnv) in list(dbconvs.keys()):
             conv = dbconvs[(sch, cnv)]
             assert self[sch]
             schema = self[sch]
             if not hasattr(schema, 'conversions'):
                 schema.conversions = {}
             schema.conversions.update({cnv: conv})
-        for (sch, tsc) in dbtsconfigs.keys():
+        for (sch, tsc) in list(dbtsconfigs.keys()):
             tscfg = dbtsconfigs[(sch, tsc)]
             assert self[sch]
             schema = self[sch]
             if not hasattr(schema, 'tsconfigs'):
                 schema.tsconfigs = {}
             schema.tsconfigs.update({tsc: tscfg})
-        for (sch, tsd) in dbtsdicts.keys():
+        for (sch, tsd) in list(dbtsdicts.keys()):
             tsdict = dbtsdicts[(sch, tsd)]
             assert self[sch]
             schema = self[sch]
             if not hasattr(schema, 'tsdicts'):
                 schema.tsdicts = {}
             schema.tsdicts.update({tsd: tsdict})
-        for (sch, tsp) in dbtspars.keys():
+        for (sch, tsp) in list(dbtspars.keys()):
             tspar = dbtspars[(sch, tsp)]
             assert self[sch]
             schema = self[sch]
             if not hasattr(schema, 'tsparsers'):
                 schema.tsparsers = {}
             schema.tsparsers.update({tsp: tspar})
-        for (sch, tst) in dbtstmpls.keys():
+        for (sch, tst) in list(dbtstmpls.keys()):
             tstmpl = dbtstmpls[(sch, tst)]
             assert self[sch]
             schema = self[sch]
             if not hasattr(schema, 'tstempls'):
                 schema.tstempls = {}
             schema.tstempls.update({tst: tstmpl})
-        for (sch, ftb) in dbftables.keys():
+        for (sch, ftb) in list(dbftables.keys()):
             ftbl = dbftables[(sch, ftb)]
             assert self[sch]
             schema = self[sch]
@@ -296,7 +296,7 @@ class SchemaDict(DbObjectDict):
         dictionary of schemas.
         """
         schemas = {}
-        for sch in self.keys():
+        for sch in list(self.keys()):
             schemas.update(self[sch].to_map(self))
         return schemas
 
@@ -312,7 +312,7 @@ class SchemaDict(DbObjectDict):
         """
         stmts = []
         # check input schemas
-        for sch in inschemas.keys():
+        for sch in list(inschemas.keys()):
             insch = inschemas[sch]
             # does it exist in the database?
             if sch in self:
@@ -332,7 +332,7 @@ class SchemaDict(DbObjectDict):
                     # create new schema
                     stmts.append(insch.create())
         # check database schemas
-        for sch in self.keys():
+        for sch in list(self.keys()):
             # if missing and not 'public', drop it
             if sch != 'public' and sch not in inschemas:
                 self[sch].dropped = True
@@ -344,7 +344,7 @@ class SchemaDict(DbObjectDict):
         :return: SQL statements
         """
         stmts = []
-        for sch in self.keys():
+        for sch in list(self.keys()):
             if sch != 'public' and hasattr(self[sch], 'dropped'):
                 stmts.append(self[sch].drop())
         return stmts

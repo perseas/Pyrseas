@@ -101,7 +101,7 @@ class CastDict(DbObjectDict):
         dictionary of casts.
         """
         casts = {}
-        for cst in self.keys():
+        for cst in list(self.keys()):
             casts.update(self[cst].to_map())
         return casts
 
@@ -111,7 +111,7 @@ class CastDict(DbObjectDict):
         :param incasts: YAML map defining the casts
         :param newdb: collection of dictionaries defining the database
         """
-        for key in incasts.keys():
+        for key in list(incasts.keys()):
             if not key.startswith('cast (') or ' AS ' not in key.upper() \
                     or key[-1:] != ')':
                 raise KeyError("Unrecognized object type: %s" % key)
@@ -122,7 +122,7 @@ class CastDict(DbObjectDict):
             self[(src, trg)] = cast = Cast(source=src, target=trg)
             if not incast:
                 raise ValueError("Cast '%s' has no specification" % key[5:])
-            for attr, val in incast.items():
+            for attr, val in list(incast.items()):
                 setattr(cast, attr, val)
             if not hasattr(cast, 'context'):
                 raise ValueError("Cast '%s' missing context" % key[5:])
@@ -145,7 +145,7 @@ class CastDict(DbObjectDict):
         """
         stmts = []
         # check input casts
-        for (src, trg) in incasts.keys():
+        for (src, trg) in list(incasts.keys()):
             incast = incasts[(src, trg)]
             # does it exist in the database?
             if (src, trg) not in self:
@@ -156,7 +156,7 @@ class CastDict(DbObjectDict):
                 stmts.append(self[(src, trg)].diff_map(incast))
 
         # check existing casts
-        for (src, trg) in self.keys():
+        for (src, trg) in list(self.keys()):
             cast = self[(src, trg)]
             # if missing, mark it for dropping
             if (src, trg) not in incasts:

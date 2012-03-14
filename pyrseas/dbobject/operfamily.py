@@ -64,7 +64,7 @@ class OperatorFamilyDict(DbObjectDict):
         :param schema: schema owning the operators
         :param inopfams: YAML map defining the operator families
         """
-        for key in inopfams.keys():
+        for key in list(inopfams.keys()):
             if not key.startswith('operator family ') or not ' using ' in key:
                 raise KeyError("Unrecognized object type: %s" % key)
             pos = key.rfind(' using ')
@@ -73,7 +73,7 @@ class OperatorFamilyDict(DbObjectDict):
             inopfam = inopfams[key]
             self[(schema.name, opf, idx)] = opfam = OperatorFamily(
                 schema=schema.name, name=opf, index_method=idx)
-            for attr, val in inopfam.items():
+            for attr, val in list(inopfam.items()):
                 setattr(opfam, attr, val)
             if 'oldname' in inopfam:
                 opfam.oldname = inopfam['oldname']
@@ -92,7 +92,7 @@ class OperatorFamilyDict(DbObjectDict):
         """
         stmts = []
         # check input operator families
-        for (sch, opf, idx) in inopfams.keys():
+        for (sch, opf, idx) in list(inopfams.keys()):
             inopfam = inopfams[(sch, opf, idx)]
             # does it exist in the database?
             if (sch, opf, idx) not in self:
@@ -106,7 +106,7 @@ class OperatorFamilyDict(DbObjectDict):
                 stmts.append(self[(sch, opf, idx)].diff_map(inopfam))
 
         # check existing operator families
-        for (sch, opf, idx) in self.keys():
+        for (sch, opf, idx) in list(self.keys()):
             oper = self[(sch, opf, idx)]
             # if missing, mark it for dropping
             if (sch, opf, idx) not in inopfams:
@@ -120,7 +120,7 @@ class OperatorFamilyDict(DbObjectDict):
         :return: SQL statements
         """
         stmts = []
-        for (sch, opf, idx) in self.keys():
+        for (sch, opf, idx) in list(self.keys()):
             oper = self[(sch, opf, idx)]
             if hasattr(oper, 'dropped'):
                 stmts.append(oper.drop())

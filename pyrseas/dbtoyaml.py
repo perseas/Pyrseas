@@ -34,14 +34,14 @@ def main(host='localhost', port=5432, schema=None):
     # trim the map of schemas/tables not selected
     if args.schema:
         skey = 'schema ' + args.schema
-        for sch in dbmap.keys():
+        for sch in list(dbmap.keys()):
             if sch[:7] == 'schema ' and sch != skey:
                 del dbmap[sch]
     if args.tablist:
         ktablist = ['table ' + tbl for tbl in args.tablist]
-        for sch in dbmap.keys():
+        for sch in list(dbmap.keys()):
             if sch[:7] == 'schema ':
-                for tbl in dbmap[sch].keys():
+                for tbl in list(dbmap[sch].keys()):
                     if tbl not in ktablist:
                         del dbmap[sch][tbl]
                 if not dbmap[sch]:

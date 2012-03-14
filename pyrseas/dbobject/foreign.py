@@ -46,12 +46,12 @@ class DbObjectWithOptions(DbObject):
             oldopts = to_dict(self.options)
         newopts = to_dict(newopts)
         clauses = []
-        for key, val in newopts.items():
+        for key, val in list(newopts.items()):
             if key not in oldopts:
                 clauses.append("%s '%s'" % (key, val))
             elif val != oldopts[key]:
                 clauses.append("SET %s '%s'" % (key, val))
-        for key, val in oldopts.items():
+        for key, val in list(oldopts.items()):
             if key not in newopts:
                 clauses.append("DROP %s" % key)
         return clauses and "OPTIONS (%s)" % ', '.join(clauses) or ''
@@ -87,7 +87,7 @@ class ForeignDataWrapper(DbObjectWithOptions):
         wrapper = {key: self._base_map()}
         if hasattr(self, 'servers'):
             srvs = {}
-            for srv in self.servers.keys():
+            for srv in list(self.servers.keys()):
                 srvs.update(self.servers[srv].to_map())
             wrapper[key].update(srvs)
             del wrapper[key]['servers']
@@ -159,14 +159,14 @@ class ForeignDataWrapperDict(DbObjectDict):
         :param inwrappers: input YAML map defining the data wrappers
         :param newdb: collection of dictionaries defining the database
         """
-        for key in inwrappers.keys():
+        for key in list(inwrappers.keys()):
             if not key.startswith('foreign data wrapper '):
                 raise KeyError("Unrecognized object type: %s" % key)
             fdw = key[21:]
             self[fdw] = wrapper = ForeignDataWrapper(name=fdw)
             inwrapper = inwrappers[key]
             inservs = {}
-            for key in inwrapper.keys():
+            for key in list(inwrapper.keys()):
                 if key.startswith('server '):
                     inservs.update({key: inwrapper[key]})
                 elif key == 'oldname':
@@ -184,7 +184,7 @@ class ForeignDataWrapperDict(DbObjectDict):
 
         :param dbservers: dictionary of foreign servers
         """
-        for (fdw, srv) in dbservers.keys():
+        for (fdw, srv) in list(dbservers.keys()):
             dbserver = dbservers[(fdw, srv)]
             assert self[fdw]
             wrapper = self[fdw]
@@ -201,7 +201,7 @@ class ForeignDataWrapperDict(DbObjectDict):
         dictionary of foreign data wrappers.
         """
         wrappers = {}
-        for fdw in self.keys():
+        for fdw in list(self.keys()):
             wrappers.update(self[fdw].to_map())
         return wrappers
 
@@ -217,7 +217,7 @@ class ForeignDataWrapperDict(DbObjectDict):
         """
         stmts = []
         # check input data wrappers
-        for fdw in inwrappers.keys():
+        for fdw in list(inwrappers.keys()):
             infdw = inwrappers[fdw]
             # does it exist in the database?
             if fdw in self:
@@ -237,7 +237,7 @@ class ForeignDataWrapperDict(DbObjectDict):
                     # create new data wrapper
                     stmts.append(infdw.create())
         # check database data wrappers
-        for fdw in self.keys():
+        for fdw in list(self.keys()):
             # if missing, drop it
             if fdw not in inwrappers:
                 self[fdw].dropped = True
@@ -249,7 +249,7 @@ class ForeignDataWrapperDict(DbObjectDict):
         :return: SQL statements
         """
         stmts = []
-        for fdw in self.keys():
+        for fdw in list(self.keys()):
             if hasattr(self[fdw], 'dropped'):
                 stmts.append(self[fdw].drop())
         return stmts
@@ -277,7 +277,7 @@ class ForeignServer(DbObjectWithOptions):
         server = {key: self._base_map()}
         if hasattr(self, 'usermaps'):
             umaps = {}
-            for umap in self.usermaps.keys():
+            for umap in list(self.usermaps.keys()):
                 umaps.update(self.usermaps[umap].to_map())
             server[key]['user mappings'] = umaps
             del server[key]['usermaps']
@@ -334,7 +334,7 @@ class ForeignServerDict(DbObjectDict):
         :param inservers: input YAML map defining the foreign servers
         :param newdb: collection of dictionaries defining the database
         """
-        for key in inservers.keys():
+        for key in list(inservers.keys()):
             if not key.startswith('server '):
                 raise KeyError("Unrecognized object type: %s" % key)
             srv = key[7:]
@@ -342,7 +342,7 @@ class ForeignServerDict(DbObjectDict):
                 wrapper=wrapper.name, name=srv)
             inserv = inservers[key]
             if inserv:
-                for attr, val in inserv.items():
+                for attr, val in list(inserv.items()):
                     setattr(serv, attr, val)
                 if 'user mappings' in inserv:
                     newdb.usermaps.from_map(serv, inserv['user mappings'])
@@ -361,7 +361,7 @@ class ForeignServerDict(DbObjectDict):
         dictionary of foreign servers.
         """
         servers = {}
-        for srv in self.keys():
+        for srv in list(self.keys()):
             servers.update(self[srv].to_map())
         return servers
 
@@ -370,7 +370,7 @@ class ForeignServerDict(DbObjectDict):
 
         :param dbusermaps: dictionary of user mappings
         """
-        for (fdw, srv, usr) in dbusermaps.keys():
+        for (fdw, srv, usr) in list(dbusermaps.keys()):
             dbusermap = dbusermaps[(fdw, srv, usr)]
             assert self[(fdw, srv)]
             server = self[(fdw, srv)]
@@ -390,7 +390,7 @@ class ForeignServerDict(DbObjectDict):
         """
         stmts = []
         # check input foreign servers
-        for (fdw, srv) in inservers.keys():
+        for (fdw, srv) in list(inservers.keys()):
             insrv = inservers[(fdw, srv)]
             # does it exist in the database?
             if (fdw, srv) in self:
@@ -410,7 +410,7 @@ class ForeignServerDict(DbObjectDict):
                     # create new dictionary
                     stmts.append(insrv.create())
         # check database foreign servers
-        for srv in self.keys():
+        for srv in list(self.keys()):
             # if missing, drop it
             if srv not in inservers:
                 self[srv].dropped = True
@@ -422,7 +422,7 @@ class ForeignServerDict(DbObjectDict):
         :return: SQL statements
         """
         stmts = []
-        for srv in self.keys():
+        for srv in list(self.keys()):
             if hasattr(self[srv], 'dropped'):
                 stmts.append(self[srv].drop())
         return stmts
@@ -486,12 +486,12 @@ class UserMappingDict(DbObjectDict):
         :param server: foreign server associated with mappings
         :param inusermaps: input YAML map defining the user mappings
         """
-        for key in inusermaps.keys():
+        for key in list(inusermaps.keys()):
             usermap = UserMapping(wrapper=server.wrapper, server=server.name,
                                   username=key)
             inusermap = inusermaps[key]
             if inusermap:
-                for attr, val in inusermap.items():
+                for attr, val in list(inusermap.items()):
                     setattr(usermap, attr, val)
                 if 'oldname' in inusermap:
                     usermap.oldname = inusermap['oldname']
@@ -507,7 +507,7 @@ class UserMappingDict(DbObjectDict):
         dictionary of user mappings.
         """
         usermaps = {}
-        for um in self.keys():
+        for um in list(self.keys()):
             usermaps.update(self[um].to_map())
         return usermaps
 
@@ -523,7 +523,7 @@ class UserMappingDict(DbObjectDict):
         """
         stmts = []
         # check input user mappings
-        for (fdw, srv, usr) in inusermaps.keys():
+        for (fdw, srv, usr) in list(inusermaps.keys()):
             inump = inusermaps[(fdw, srv, usr)]
             # does it exist in the database?
             if (fdw, srv, usr) in self:
@@ -544,7 +544,7 @@ class UserMappingDict(DbObjectDict):
                     # create new user mapping
                     stmts.append(inump.create())
         # check database user mappings
-        for (fdw, srv, usr) in self.keys():
+        for (fdw, srv, usr) in list(self.keys()):
             # if missing, drop it
             if (fdw, srv, usr) not in inusermaps:
                 stmts.append(self[(fdw, srv, usr)].drop())
@@ -646,7 +646,7 @@ class ForeignTableDict(ClassDict):
         :param inobjs: YAML map defining the schema objects
         :param newdb: collection of dictionaries defining the database
         """
-        for key in inobjs.keys():
+        for key in list(inobjs.keys()):
             if not key.startswith('foreign table '):
                 raise KeyError("Unrecognized object type: %s" % key)
             ftb = key[14:]
@@ -672,7 +672,7 @@ class ForeignTableDict(ClassDict):
 
         :param dbcolumns: dictionary of columns
         """
-        for (sch, tbl) in dbcolumns.keys():
+        for (sch, tbl) in list(dbcolumns.keys()):
             if (sch, tbl) in self:
                 assert isinstance(self[(sch, tbl)], ForeignTable)
                 self[(sch, tbl)].columns = dbcolumns[(sch, tbl)]
@@ -691,7 +691,7 @@ class ForeignTableDict(ClassDict):
         """
         stmts = []
         # check input tables
-        for (sch, tbl) in intables.keys():
+        for (sch, tbl) in list(intables.keys()):
             intbl = intables[(sch, tbl)]
             # does it exist in the database?
             if (sch, tbl) not in self:
@@ -710,7 +710,7 @@ class ForeignTableDict(ClassDict):
                     stmts.append(intbl.create())
 
         # check database tables
-        for (sch, tbl) in self.keys():
+        for (sch, tbl) in list(self.keys()):
             table = self[(sch, tbl)]
             # if missing, drop it
             if (sch, tbl) not in intables:

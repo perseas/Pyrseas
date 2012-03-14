@@ -109,11 +109,11 @@ class Database(object):
                         'rules', 'triggers', 'conversions', 'tstempls',
                         'tsdicts', 'tsparsers', 'tsconfigs']:
             objdict = getattr(self.db, objtype)
-            for obj in objdict.keys():
+            for obj in list(objdict.keys()):
                 # obj[0] is the schema name in all these dicts
                 if obj[0] not in schemas:
                     del objdict[obj]
-        for sch in self.db.schemas.keys():
+        for sch in list(self.db.schemas.keys()):
             if sch not in schemas:
                 del self.db.schemas[sch]
         # exclude database-wide objects
@@ -149,7 +149,7 @@ class Database(object):
         input_casts = {}
         input_fdws = {}
         input_ums = {}
-        for key in input_map.keys():
+        for key in list(input_map.keys()):
             if key.startswith('schema '):
                 input_schemas.update({key: input_map[key]})
             elif key.startswith('language '):

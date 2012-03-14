@@ -149,7 +149,7 @@ class IndexDict(DbObjectDict):
         :param table: table owning the indexes
         :param inindexes: YAML map defining the indexes
         """
-        for i in inindexes.keys():
+        for i in list(inindexes.keys()):
             idx = Index(schema=table.schema, table=table.name, name=i)
             val = inindexes[i]
             if 'columns' in val:
@@ -180,7 +180,7 @@ class IndexDict(DbObjectDict):
         """
         stmts = []
         # check input indexes
-        for (sch, tbl, idx) in inindexes.keys():
+        for (sch, tbl, idx) in list(inindexes.keys()):
             inidx = inindexes[(sch, tbl, idx)]
             # does it exist in the database?
             if (sch, tbl, idx) not in self:
@@ -200,7 +200,7 @@ class IndexDict(DbObjectDict):
                     stmts.append(inidx.create())
 
         # check database indexes
-        for (sch, tbl, idx) in self.keys():
+        for (sch, tbl, idx) in list(self.keys()):
             index = self[(sch, tbl, idx)]
             # if missing, drop it
             if (sch, tbl, idx) not in inindexes:
