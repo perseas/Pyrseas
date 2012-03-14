@@ -316,7 +316,7 @@ class ConstraintDict(DbObjectDict):
         """
         if 'check_constraints' in inconstrs:
             chks = inconstrs['check_constraints']
-            for cns in chks.keys():
+            for cns in list(chks.keys()):
                 check = CheckConstraint(table=table.name, schema=table.schema,
                                       name=cns)
                 val = chks[cns]
@@ -352,19 +352,19 @@ class ConstraintDict(DbObjectDict):
             self[(table.schema, table.name, cns)] = pkey
         if 'foreign_keys' in inconstrs:
             fkeys = inconstrs['foreign_keys']
-            for cns in fkeys.keys():
+            for cns in list(fkeys.keys()):
                 fkey = ForeignKey(table=table.name, schema=table.schema,
                                       name=cns)
                 val = fkeys[cns]
                 if 'on_update' in val:
                     act = val['on_update']
-                    if act.lower() not in ACTIONS.values():
+                    if act.lower() not in list(ACTIONS.values()):
                         raise ValueError("Invalid action '%s' for constraint "
                                          "'%s'" % (act, cns))
                     fkey.on_update = act
                 if 'on_delete' in val:
                     act = val['on_delete']
-                    if act.lower() not in ACTIONS.values():
+                    if act.lower() not in list(ACTIONS.values()):
                         raise ValueError("Invalid action '%s' for constraint "
                                          "'%s'" % (act, cns))
                     fkey.on_delete = act
@@ -403,7 +403,7 @@ class ConstraintDict(DbObjectDict):
                 self[(table.schema, table.name, cns)] = fkey
         if 'unique_constraints' in inconstrs:
             uconstrs = inconstrs['unique_constraints']
-            for cns in uconstrs.keys():
+            for cns in list(uconstrs.keys()):
                 unq = UniqueConstraint(table=table.name, schema=table.schema,
                                       name=cns)
                 val = uconstrs[cns]
@@ -433,7 +433,7 @@ class ConstraintDict(DbObjectDict):
         # constraints cannot be renamed
         for turn in (1, 2):
             # check database constraints
-            for (sch, tbl, cns) in self.keys():
+            for (sch, tbl, cns) in list(self.keys()):
                 constr = self[(sch, tbl, cns)]
                 if isinstance(constr, ForeignKey):
                     if turn == 1:
@@ -445,7 +445,7 @@ class ConstraintDict(DbObjectDict):
                         and not hasattr(constr, 'target'):
                     stmts.append(constr.drop())
             # check input constraints
-            for (sch, tbl, cns) in inconstrs.keys():
+            for (sch, tbl, cns) in list(inconstrs.keys()):
                 inconstr = inconstrs[(sch, tbl, cns)]
                 # skip DOMAIN constraints
                 if hasattr(inconstr, 'target'):

@@ -51,9 +51,9 @@ class OperatorClass(DbSchemaObject):
         if hasattr(self, 'default') and self.default:
             dflt = "DEFAULT "
         clauses = []
-        for (strat, oper) in self.operators.items():
+        for (strat, oper) in list(self.operators.items()):
             clauses.append("OPERATOR %d %s" % (strat, oper))
-        for (supp, func) in self.functions.items():
+        for (supp, func) in list(self.functions.items()):
             clauses.append("FUNCTION %d %s" % (supp, func))
         if hasattr(self, 'storage'):
             clauses.append("STORAGE %s" % self.storage)
@@ -129,7 +129,7 @@ class OperatorClassDict(DbObjectDict):
         :param schema: schema owning the operator classes
         :param inopcls: YAML map defining the operator classes
         """
-        for key in inopcls.keys():
+        for key in list(inopcls.keys()):
             if not key.startswith('operator class ') or not ' using ' in key:
                 raise KeyError("Unrecognized object type: %s" % key)
             pos = key.rfind(' using ')
@@ -140,7 +140,7 @@ class OperatorClassDict(DbObjectDict):
                 schema=schema.name, name=opc, index_method=idx)
             if not inopcl:
                 raise ValueError("Operator '%s' has no specification" % opc)
-            for attr, val in inopcl.items():
+            for attr, val in list(inopcl.items()):
                 setattr(opclass, attr, val)
             if 'oldname' in inopcl:
                 opclass.oldname = inopcl['oldname']
@@ -159,7 +159,7 @@ class OperatorClassDict(DbObjectDict):
         """
         stmts = []
         # check input operator classes
-        for (sch, opc, idx) in inopcls.keys():
+        for (sch, opc, idx) in list(inopcls.keys()):
             inoper = inopcls[(sch, opc, idx)]
             # does it exist in the database?
             if (sch, opc, idx) not in self:
@@ -173,7 +173,7 @@ class OperatorClassDict(DbObjectDict):
                 stmts.append(self[(sch, opc, idx)].diff_map(inoper))
 
         # check existing operators
-        for (sch, opc, idx) in self.keys():
+        for (sch, opc, idx) in list(self.keys()):
             oper = self[(sch, opc, idx)]
             # if missing, mark it for dropping
             if (sch, opc, idx) not in inopcls:
@@ -187,7 +187,7 @@ class OperatorClassDict(DbObjectDict):
         :return: SQL statements
         """
         stmts = []
-        for (sch, opc, idx) in self.keys():
+        for (sch, opc, idx) in list(self.keys()):
             oper = self[(sch, opc, idx)]
             if hasattr(oper, 'dropped'):
                 stmts.append(oper.drop())

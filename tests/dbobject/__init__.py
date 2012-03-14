@@ -3,26 +3,26 @@
 
 import unittest
 
-import test_language
-import test_cast
-import test_schema
-import test_type
-import test_domain
-import test_sequence
-import test_table
-import test_column
-import test_constraint
-import test_index
-import test_view
-import test_function
-import test_operator
-import test_operfamily
-import test_operclass
-import test_trigger
-import test_rule
-import test_conversion
-import test_textsearch
-import test_foreign
+from tests.dbobject import test_language
+from tests.dbobject import test_cast
+from tests.dbobject import test_schema
+from tests.dbobject import test_type
+from tests.dbobject import test_domain
+from tests.dbobject import test_sequence
+from tests.dbobject import test_table
+from tests.dbobject import test_column
+from tests.dbobject import test_constraint
+from tests.dbobject import test_index
+from tests.dbobject import test_view
+from tests.dbobject import test_function
+from tests.dbobject import test_operator
+from tests.dbobject import test_operfamily
+from tests.dbobject import test_operclass
+from tests.dbobject import test_trigger
+from tests.dbobject import test_rule
+from tests.dbobject import test_conversion
+from tests.dbobject import test_textsearch
+from tests.dbobject import test_foreign
 
 
 def suite():

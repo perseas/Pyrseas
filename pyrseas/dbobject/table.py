@@ -37,7 +37,7 @@ class Sequence(DbClass):
             """SELECT start_value, increment_by, max_value, min_value,
                       cache_value
                FROM %s.%s""" % (quote_id(self.schema), quote_id(self.name)))
-        for key, val in data.items():
+        for key, val in list(data.items()):
             setattr(self, key, val)
 
     def get_dependent_table(self, dbconn):
@@ -69,7 +69,7 @@ class Sequence(DbClass):
         :return: dictionary
         """
         seq = {}
-        for key, val in self.__dict__.items():
+        for key, val in list(self.__dict__.items()):
             if key in self.keylist or key == 'dependent_table':
                 continue
             if key == 'max_value' and val == MAX_BIGINT:
@@ -79,7 +79,7 @@ class Sequence(DbClass):
             else:
                 if sys.version < '3':
                     if isinstance(val, (int, long)) and val <= sys.maxsize:
-                        seq[key] = val
+                        seq[key] = int(val)
                     else:
                         seq[key] = str(val)
                 else:
@@ -197,7 +197,7 @@ class Table(DbClass):
         if hasattr(self, 'check_constraints'):
             if not 'check_constraints' in tbl:
                 tbl.update(check_constraints={})
-            for k in self.check_constraints.values():
+            for k in list(self.check_constraints.values()):
                 tbl['check_constraints'].update(
                     self.check_constraints[k.name].to_map(self.column_names()))
         if hasattr(self, 'primary_key'):
@@ -206,7 +206,7 @@ class Table(DbClass):
         if hasattr(self, 'foreign_keys'):
             if not 'foreign_keys' in tbl:
                 tbl['foreign_keys'] = {}
-            for k in self.foreign_keys.values():
+            for k in list(self.foreign_keys.values()):
                 tbls = dbschemas[k.ref_schema].tables
                 tbl['foreign_keys'].update(self.foreign_keys[k.name].to_map(
                         self.column_names(),
@@ -215,14 +215,14 @@ class Table(DbClass):
         if hasattr(self, 'unique_constraints'):
             if not 'unique_constraints' in tbl:
                 tbl.update(unique_constraints={})
-            for k in self.unique_constraints.values():
+            for k in list(self.unique_constraints.values()):
                 tbl['unique_constraints'].update(
                     self.unique_constraints[k.name].to_map(
                         self.column_names()))
         if hasattr(self, 'indexes'):
             if not 'indexes' in tbl:
                 tbl['indexes'] = {}
-            for k in self.indexes.values():
+            for k in list(self.indexes.values()):
                 tbl['indexes'].update(self.indexes[k.name].to_map())
         if hasattr(self, 'inherits'):
             if not 'inherits' in tbl:
@@ -230,12 +230,12 @@ class Table(DbClass):
         if hasattr(self, 'rules'):
             if not 'rules' in tbl:
                 tbl['rules'] = {}
-            for k in self.rules.values():
+            for k in list(self.rules.values()):
                 tbl['rules'].update(self.rules[k.name].to_map())
         if hasattr(self, 'triggers'):
             if not 'triggers' in tbl:
                 tbl['triggers'] = {}
-            for k in self.triggers.values():
+            for k in list(self.triggers.values()):
                 tbl['triggers'].update(self.triggers[k.name].to_map())
 
         return {self.extern_key(): tbl}
@@ -416,7 +416,7 @@ class ClassDict(DbObjectDict):
         :param inobjs: YAML map defining the schema objects
         :param newdb: collection of dictionaries defining the database
         """
-        for k in inobjs.keys():
+        for k in list(inobjs.keys()):
             (objtype, spc, key) = k.partition(' ')
             if spc != ' ' or objtype not in ['table', 'sequence', 'view']:
                 raise KeyError("Unrecognized object type: %s" % k)
@@ -450,7 +450,7 @@ class ClassDict(DbObjectDict):
                 inseq = inobjs[k]
                 if not inseq:
                     raise ValueError("Sequence '%s' has no specification" % k)
-                for attr, val in inseq.items():
+                for attr, val in list(inseq.items()):
                     setattr(seq, attr, val)
                 if 'oldname' in inseq:
                     seq.oldname = inseq['oldname']
@@ -460,7 +460,7 @@ class ClassDict(DbObjectDict):
                 inview = inobjs[k]
                 if not inview:
                     raise ValueError("View '%s' has no specification" % k)
-                for attr, val in inview.items():
+                for attr, val in list(inview.items()):
                     setattr(view, attr, val)
                 if 'oldname' in inview:
                     view.oldname = inview['oldname']
@@ -483,13 +483,13 @@ class ClassDict(DbObjectDict):
         `dbtriggers` dictionaries, which are keyed by schema, table
         and constraint, index or trigger name.
         """
-        for (sch, tbl) in dbcolumns.keys():
+        for (sch, tbl) in list(dbcolumns.keys()):
             if (sch, tbl) in self:
                 assert isinstance(self[(sch, tbl)], Table)
                 self[(sch, tbl)].columns = dbcolumns[(sch, tbl)]
                 for col in dbcolumns[(sch, tbl)]:
                     col._table = self[(sch, tbl)]
-        for (sch, tbl) in self.keys():
+        for (sch, tbl) in list(self.keys()):
             table = self[(sch, tbl)]
             if isinstance(table, Sequence) and hasattr(table, 'owner_table'):
                 if isinstance(table.owner_column, int):
@@ -503,7 +503,7 @@ class ClassDict(DbObjectDict):
                     if not hasattr(parent, 'descendants'):
                         parent.descendants = []
                     parent.descendants.append(table)
-        for (sch, tbl, cns) in dbconstrs.keys():
+        for (sch, tbl, cns) in list(dbconstrs.keys()):
             constr = dbconstrs[(sch, tbl, cns)]
             if hasattr(constr, 'target'):
                 continue
@@ -528,20 +528,20 @@ class ClassDict(DbObjectDict):
                 if not hasattr(table, 'unique_constraints'):
                     table.unique_constraints = {}
                 table.unique_constraints.update({cns: constr})
-        for (sch, tbl, idx) in dbindexes.keys():
+        for (sch, tbl, idx) in list(dbindexes.keys()):
             assert self[(sch, tbl)]
             table = self[(sch, tbl)]
             if not hasattr(table, 'indexes'):
                 table.indexes = {}
             table.indexes.update({idx: dbindexes[(sch, tbl, idx)]})
-        for (sch, tbl, rul) in dbrules.keys():
+        for (sch, tbl, rul) in list(dbrules.keys()):
             assert self[(sch, tbl)]
             table = self[(sch, tbl)]
             if not hasattr(table, 'rules'):
                 table.rules = {}
             table.rules.update({rul: dbrules[(sch, tbl, rul)]})
             dbrules[(sch, tbl, rul)]._table = self[(sch, tbl)]
-        for (sch, tbl, trg) in dbtriggers.keys():
+        for (sch, tbl, trg) in list(dbtriggers.keys()):
             assert self[(sch, tbl)]
             table = self[(sch, tbl)]
             if not hasattr(table, 'triggers'):
@@ -575,7 +575,7 @@ class ClassDict(DbObjectDict):
         """
         stmts = []
         # first pass: sequences owned by a table
-        for (sch, seq) in intables.keys():
+        for (sch, seq) in list(intables.keys()):
             inseq = intables[(sch, seq)]
             if not isinstance(inseq, Sequence) or \
                     not hasattr(inseq, 'owner_table'):
@@ -589,7 +589,7 @@ class ClassDict(DbObjectDict):
 
         # check input tables
         inhstack = []
-        for (sch, tbl) in intables.keys():
+        for (sch, tbl) in list(intables.keys()):
             intable = intables[(sch, tbl)]
             if not isinstance(intable, Table):
                 continue
@@ -615,7 +615,7 @@ class ClassDict(DbObjectDict):
                 inhstack.insert(0, intable)
 
         # check input views
-        for (sch, tbl) in intables.keys():
+        for (sch, tbl) in list(intables.keys()):
             intable = intables[(sch, tbl)]
             if not isinstance(intable, View):
                 continue
@@ -628,7 +628,7 @@ class ClassDict(DbObjectDict):
                     stmts.append(intable.create())
 
         # second pass: input sequences not owned by tables
-        for (sch, seq) in intables.keys():
+        for (sch, seq) in list(intables.keys()):
             inseq = intables[(sch, seq)]
             if not isinstance(inseq, Sequence):
                 continue
@@ -643,7 +643,7 @@ class ClassDict(DbObjectDict):
                     stmts.append(inseq.create())
 
         # check database tables, sequences and views
-        for (sch, tbl) in self.keys():
+        for (sch, tbl) in list(self.keys()):
             table = self[(sch, tbl)]
             # if missing, mark it for dropping
             if (sch, tbl) not in intables:
@@ -653,7 +653,7 @@ class ClassDict(DbObjectDict):
                 stmts.append(table.diff_map(intables[(sch, tbl)]))
 
         # now drop the marked tables
-        for (sch, tbl) in self.keys():
+        for (sch, tbl) in list(self.keys()):
             table = self[(sch, tbl)]
             if isinstance(table, Sequence) and hasattr(table, 'owner_table'):
                 continue
@@ -674,7 +674,7 @@ class ClassDict(DbObjectDict):
                     stmts.append(table.drop())
 
         inhstack = []
-        for (sch, tbl) in self.keys():
+        for (sch, tbl) in list(self.keys()):
             table = self[(sch, tbl)]
             if (isinstance(table, Sequence) \
                     and (hasattr(table, 'owner_table') \
@@ -715,7 +715,7 @@ class ClassDict(DbObjectDict):
                 stmts.append(table.drop())
             else:
                 inhstack.insert(0, table)
-        for (sch, tbl) in self.keys():
+        for (sch, tbl) in list(self.keys()):
             table = self[(sch, tbl)]
             if isinstance(table, Sequence) \
                     and hasattr(table, 'dependent_table') \
@@ -723,7 +723,7 @@ class ClassDict(DbObjectDict):
                 stmts.append(table.drop())
 
         # last pass to deal with nextval DEFAULTs
-        for (sch, tbl) in intables.keys():
+        for (sch, tbl) in list(intables.keys()):
             intable = intables[(sch, tbl)]
             if not isinstance(intable, Table):
                 continue

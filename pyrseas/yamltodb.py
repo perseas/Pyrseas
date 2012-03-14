@@ -39,7 +39,7 @@ def main(host='localhost', port=5432):
     inmap = yaml.load(args.spec)
     if args.schlist:
         kschlist = ['schema ' + sch for sch in args.schlist]
-        for sch in inmap.keys():
+        for sch in list(inmap.keys()):
             if sch not in kschlist:
                 del inmap[sch]
     stmts = db.diff_map(inmap, args.schlist)
