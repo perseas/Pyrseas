@@ -194,7 +194,6 @@ class FunctionToSqlTestCase(PyrseasTestCase):
         self.assertEqual(fix_indent(dbsql[1]), "CREATE FUNCTION s1.f1() "
                          "RETURNS text LANGUAGE sql IMMUTABLE "
                          "AS $_$%s$_$" % SOURCE1)
-        self.db.execute_commit("DROP SCHEMA s1 CASCADE")
 
     def test_bad_function_map(self):
         "Error creating a function with a bad map"

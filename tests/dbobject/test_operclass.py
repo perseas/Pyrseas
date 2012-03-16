@@ -107,7 +107,6 @@ class OperatorClassToSqlTestCase(PyrseasTestCase):
                          "OPERATOR 1 <(integer,integer), "
                          "OPERATOR 3 =(integer,integer), "
                          "FUNCTION 1 btint4cmp(integer,integer)")
-        self.db.execute_commit("DROP SCHEMA s1 CASCADE")
 
     def test_drop_operclass(self):
         "Drop an existing operator"

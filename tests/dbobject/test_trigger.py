@@ -223,7 +223,6 @@ class TriggerToSqlTestCase(PyrseasTestCase):
 
     def test_create_trigger_in_schema(self):
         "Create a trigger within a non-public schema"
-        self.db.execute("DROP SCHEMA IF EXISTS s1 CASCADE")
         self.db.execute_commit("CREATE SCHEMA s1")
         inmap = self.std_map(plpgsql_installed=True)
         inmap.update({'schema s1': {'function f1()': {
@@ -240,7 +239,6 @@ class TriggerToSqlTestCase(PyrseasTestCase):
         self.assertEqual(fix_indent(dbsql[3]), "CREATE TRIGGER tr1 "
                          "BEFORE INSERT OR UPDATE ON s1.t1 FOR EACH ROW "
                          "EXECUTE PROCEDURE f1()")
-        self.db.execute_commit("DROP SCHEMA s1 CASCADE")
 
     def test_drop_trigger(self):
         "Drop an existing trigger"

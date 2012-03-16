@@ -62,14 +62,12 @@ class ViewToSqlTestCase(PyrseasTestCase):
 
     def test_create_view_in_schema(self):
         "Create a view within a non-public schema"
-        self.db.execute("DROP SCHEMA IF EXISTS s1 CASCADE")
         self.db.execute_commit("CREATE SCHEMA s1")
         inmap = self.std_map()
         inmap.update({'schema s1': {'view v1': {'definition': VIEW_DEFN}}})
         dbsql = self.db.process_map(inmap)
         self.assertEqual(fix_indent(dbsql[0]), "CREATE VIEW s1.v1 AS "
                          "SELECT now()::date AS today")
-        self.db.execute_commit("DROP SCHEMA s1 CASCADE")
 
     def test_bad_view_map(self):
         "Error creating a view with a bad map"

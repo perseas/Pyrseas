@@ -209,7 +209,6 @@ class TableToSqlTestCase(PyrseasTestCase):
 
     def test_create_table_with_defaults(self):
         "Create a table with two column DEFAULTs, one referring to a SEQUENCE"
-        self.db.execute_commit("DROP SEQUENCE IF EXISTS t1_c1_seq")
         inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c1': {
@@ -265,6 +264,18 @@ class TableToSqlTestCase(PyrseasTestCase):
                                 {'c2': {'type': 'text'}}]}})
         dbsql = self.db.process_map(inmap)
         self.assertEqual(dbsql, ["ALTER TABLE t1 RENAME TO t2"])
+
+    def test_create_table_within_schema(self):
+        "Create a new schema and a table within it"
+        inmap = {'schema s1': {
+                'table t1':
+                    {'columns': [{'c1': {'type': 'integer'}},
+                                 {'c2': {'type': 'text'}}]}}}
+        dbsql = self.db.process_map(inmap)
+        expsql = ["CREATE SCHEMA s1",
+                  "CREATE TABLE s1.t1 (c1 integer, c2 text)"]
+        for i in range(len(expsql)):
+            self.assertEqual(fix_indent(dbsql[i]), expsql[i])
 
 
 class TableCommentToSqlTestCase(PyrseasTestCase):

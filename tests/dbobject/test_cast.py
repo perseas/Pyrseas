@@ -70,7 +70,6 @@ class CastToSqlTestCase(PyrseasTestCase):
 
     def test_create_cast_schema(self):
         "Create a cast using a type/domain in a non-public schema"
-        self.db.execute_commit("DROP SCHEMA IF EXISTS s1 CASCADE")
         self.db.execute("CREATE SCHEMA s1")
         self.db.execute("CREATE DOMAIN s1.d1 AS integer")
         self.db.execute_commit("DROP CAST IF EXISTS (integer AS s1.d1)")
@@ -79,7 +78,6 @@ class CastToSqlTestCase(PyrseasTestCase):
                     'context': 'assignment', 'method': 'binary coercible'}})
         inmap.update({'schema s1': {'domain d1': {'type': 'integer'}}})
         dbsql = self.db.process_map(inmap)
-        self.db.execute_commit("DROP SCHEMA s1 CASCADE")
         self.assertEqual(fix_indent(dbsql[0]),
                          "CREATE CAST (integer AS s1.d1) WITHOUT FUNCTION "
                          "AS ASSIGNMENT")

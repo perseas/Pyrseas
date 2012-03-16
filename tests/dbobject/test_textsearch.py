@@ -46,7 +46,6 @@ class TextSearchConfigToMapTestCase(PyrseasTestCase):
 
     def test_map_cross_schema_ts_config(self):
         "Map a text search config with parser in different schema"
-        self.db.execute("DROP SCHEMA IF EXISTS s1 CASCADE")
         self.db.execute("CREATE SCHEMA s1")
         self.db.execute("CREATE TEXT SEARCH PARSER s1.tsp1 "
                         "(START = prsd_start, GETTOKEN = prsd_nexttoken, "
@@ -57,7 +56,6 @@ class TextSearchConfigToMapTestCase(PyrseasTestCase):
         self.assertEqual(dbmap['schema public']
                          ['text search configuration tsc1'], {
                 'parser': 's1.tsp1'})
-        self.db.execute_commit("DROP SCHEMA s1 CASCADE")
 
     def test_map_ts_config_comment(self):
         "Map a text search configuration with a comment"
@@ -103,7 +101,6 @@ class TextSearchConfigToSqlTestCase(PyrseasTestCase):
                          "END = prsd_end, LEXTYPES = prsd_lextype)")
         self.assertEqual(fix_indent(dbsql[1]),
                 "CREATE TEXT SEARCH CONFIGURATION tsc1 (PARSER = s1.tsp1)")
-        self.db.execute_commit("DROP SCHEMA s1 CASCADE")
 
     def test_bad_map_ts_config_(self):
         "Error creating a text search configuration with a bad map"

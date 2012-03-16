@@ -43,14 +43,12 @@ class ConversionToSqlTestCase(PyrseasTestCase):
 
     def test_create_conversion_schema(self):
         "Create a conversion in a non-public schema"
-        self.db.execute_commit("DROP SCHEMA IF EXISTS s1 CASCADE")
         self.db.execute_commit("CREATE SCHEMA s1")
         inmap = self.std_map()
         inmap.update({'schema s1': {'conversion c1': {
                     'source_encoding': 'LATIN1', 'dest_encoding': 'UTF8',
                     'function': 'iso8859_1_to_utf8', 'default': True}}})
         dbsql = self.db.process_map(inmap)
-        self.db.execute_commit("DROP SCHEMA s1 CASCADE")
         self.assertEqual(fix_indent(dbsql[0]),
                          "CREATE DEFAULT CONVERSION s1.c1 FOR 'LATIN1' TO "
                          "'UTF8' FROM iso8859_1_to_utf8")

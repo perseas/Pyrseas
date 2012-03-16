@@ -100,7 +100,6 @@ class OperatorToSqlTestCase(PyrseasTestCase):
         self.assertEqual(fix_indent(dbsql[1]), "CREATE OPERATOR s1.+ "
                          "(PROCEDURE = textcat, LEFTARG = text, "
                          "RIGHTARG = text)")
-        self.db.execute_commit("DROP SCHEMA s1 CASCADE")
 
     def test_drop_operator(self):
         "Drop an existing operator"

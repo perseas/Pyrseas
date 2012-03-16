@@ -53,7 +53,6 @@ class SequenceToSqlTestCase(PyrseasTestCase):
         self.assertEqual(fix_indent(dbsql[0]),
                          "CREATE SEQUENCE s1.seq1 START WITH 1 "
                          "INCREMENT BY 1 NO MAXVALUE NO MINVALUE CACHE 1")
-        self.db.execute_commit("DROP SCHEMA s1 CASCADE")
 
     def test_bad_sequence_map(self):
         "Error creating a sequence with a bad map"

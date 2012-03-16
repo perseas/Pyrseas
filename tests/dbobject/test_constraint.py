@@ -297,13 +297,11 @@ class ForeignKeyToMapTestCase(PyrseasTestCase):
 
     def test_cross_schema_foreign_key(self):
         "Map a table with a foreign key on a table in another schema"
-        self.db.execute("DROP SCHEMA IF EXISTS s1 CASCADE")
         self.db.execute("CREATE SCHEMA s1")
         self.db.execute("CREATE TABLE t2 (pc1 INTEGER PRIMARY KEY, pc2 TEXT)")
         ddlstmt = """CREATE TABLE s1.t1 (c1 INTEGER PRIMARY KEY,
                           c2 INTEGER REFERENCES t2 (pc1), c3 TEXT)"""
         dbmap = self.db.execute_and_map(ddlstmt)
-        self.db.execute_commit("DROP SCHEMA s1 CASCADE")
         t2map = {'columns': [{'pc1': {'type': 'integer', 'not_null': True}},
                              {'pc2': {'type': 'text'}}],
                  'primary_key': {'t2_pkey': {
@@ -743,7 +741,6 @@ class ConstraintCommentTestCase(PyrseasTestCase):
 
     def test_constraint_comment_schema(self):
         "Add comment on a constraint for a table in another schema"
-        self.db.execute("DROP SCHEMA IF EXISTS s1 CASCADE")
         self.db.execute("CREATE SCHEMA s1")
         self.db.execute_commit("CREATE TABLE s1.t1 (c1 integer "
                         "CONSTRAINT cns1 CHECK (c1 > 50), c2 text)")
@@ -757,7 +754,6 @@ class ConstraintCommentTestCase(PyrseasTestCase):
         dbsql = self.db.process_map(inmap)
         self.assertEqual(dbsql[0], "COMMENT ON CONSTRAINT cns1 ON s1.t1 IS "
                          "'Test constraint cns1'")
-        self.db.execute_commit("DROP SCHEMA s1 CASCADE")
 
 
 def suite():

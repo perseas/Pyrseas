@@ -131,7 +131,6 @@ class RuleToSqlTestCase(PyrseasTestCase):
 
     def test_create_rule_in_schema(self):
         "Create a rule within a non-public schema"
-        self.db.execute("DROP SCHEMA IF EXISTS s1 CASCADE")
         self.db.execute_commit("CREATE SCHEMA s1")
         inmap = self.std_map()
         inmap.update({'schema s1': {
@@ -143,7 +142,6 @@ class RuleToSqlTestCase(PyrseasTestCase):
         dbsql = self.db.process_map(inmap)
         self.assertEqual(fix_indent(dbsql[1]), "CREATE RULE r1 "
                          "AS ON INSERT TO s1.t1 DO NOTHING")
-        self.db.execute_commit("DROP SCHEMA s1 CASCADE")
 
     def test_drop_rule(self):
         "Drop an existing rule"

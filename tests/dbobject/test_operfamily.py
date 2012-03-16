@@ -48,7 +48,6 @@ class OperatorFamilyToSqlTestCase(PyrseasTestCase):
         dbsql = self.db.process_map(inmap)
         self.assertEqual(fix_indent(dbsql[1]),
                          "CREATE OPERATOR FAMILY s1.of1 USING btree")
-        self.db.execute_commit("DROP SCHEMA s1 CASCADE")
 
     def test_drop_operfam(self):
         "Drop an existing operator family"

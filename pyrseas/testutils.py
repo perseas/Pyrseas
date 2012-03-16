@@ -118,29 +118,40 @@ class PostgresDb(object):
 
     def clear(self):
         "Drop tables and other objects"
+        # Schemas other than 'public'
+        curs = pgexecute(
+            self.conn,
+            """SELECT nspname FROM pg_namespace
+               WHERE nspname NOT IN ('public', 'information_schema')
+                     AND substring(nspname for 3) != 'pg_'
+               ORDER BY nspname""")
+        objs = curs.fetchall()
+        curs.close()
+        self.conn.rollback()
+        for obj in objs:
+                self.execute("DROP SCHEMA IF EXISTS %s CASCADE" % (obj[0]))
+        self.conn.commit()
+
         # Tables, sequences and views
         curs = pgexecute(
             self.conn,
-            """SELECT nspname, relname, relkind FROM pg_class
+            """SELECT relname, relkind FROM pg_class
                       JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
                WHERE relkind in ('r', 'S', 'v', 'f')
-                     AND (nspname != 'pg_catalog'
-                          AND nspname != 'information_schema')
+                     AND nspname NOT IN ('pg_catalog', 'information_schema')
                ORDER BY relkind DESC""")
         objs = curs.fetchall()
         curs.close()
         self.conn.rollback()
         for obj in objs:
             if obj['relkind'] == 'r':
-                self.execute("DROP TABLE IF EXISTS %s.%s CASCADE" % (
-                        obj[0], obj[1]))
+                self.execute("DROP TABLE IF EXISTS %s CASCADE" % (obj[0]))
             elif obj['relkind'] == 'S':
-                self.execute("DROP SEQUENCE %s.%s CASCADE" % (obj[0], obj[1]))
+                self.execute("DROP SEQUENCE %s CASCADE" % (obj[0]))
             elif obj['relkind'] == 'v':
-                self.execute("DROP VIEW %s.%s CASCADE" % (obj[0], obj[1]))
+                self.execute("DROP VIEW %s CASCADE" % (obj[0]))
             elif obj['relkind'] == 'f':
-                self.execute("DROP FOREIGN TABLE %s.%s CASCADE" % (
-                        obj[0], obj[1]))
+                self.execute("DROP FOREIGN TABLE %s CASCADE" % (obj[0]))
         self.conn.commit()
 
         # Types (base, composite and enums) and domains
@@ -150,7 +161,7 @@ class PostgresDb(object):
         # types because they depend on the scalar types.
         curs = pgexecute(
             self.conn,
-            """SELECT nspname, typname, typtype FROM pg_type t
+            """SELECT typname, typtype FROM pg_type t
                       JOIN pg_namespace n ON (typnamespace = n.oid)
                WHERE typtype IN ('b', 'c', 'd', 'e')
                  AND NOT (typtype = 'b' AND typarray = 0)
@@ -161,26 +172,22 @@ class PostgresDb(object):
         self.conn.rollback()
         for typ in types:
             if typ['typtype'] == 'd':
-                self.execute("DROP DOMAIN IF EXISTS %s.%s CASCADE" % (
-                        typ[0], typ[1]))
+                self.execute("DROP DOMAIN IF EXISTS %s CASCADE" % (typ[0]))
             else:
-                self.execute("DROP TYPE IF EXISTS %s.%s CASCADE" % (
-                        typ[0], typ[1]))
+                self.execute("DROP TYPE IF EXISTS %s CASCADE" % (typ[0]))
         self.conn.commit()
 
         # Functions
         curs = pgexecute(
             self.conn,
-            """SELECT nspname, p.oid::regprocedure
+            """SELECT p.oid::regprocedure
                FROM pg_proc p JOIN pg_namespace n ON (pronamespace = n.oid)
-               WHERE (nspname != 'pg_catalog'
-                     AND nspname != 'information_schema')""")
+               WHERE nspname NOT IN ('pg_catalog', 'information_schema')""")
         funcs = curs.fetchall()
         curs.close()
         self.conn.rollback()
         for func in funcs:
-            self.execute("DROP FUNCTION IF EXISTS %s.%s CASCADE" % (
-                    func[0], func[1]))
+            self.execute("DROP FUNCTION IF EXISTS %s CASCADE" % (func[0]))
         self.conn.commit()
 
         # Languages
@@ -191,65 +198,59 @@ class PostgresDb(object):
         # Operators
         curs = pgexecute(
             self.conn,
-            """SELECT nspname, o.oid::regoperator
+            """SELECT o.oid::regoperator
                FROM pg_operator o JOIN pg_namespace n ON (oprnamespace = n.oid)
-               WHERE (nspname != 'pg_catalog'
-                     AND nspname != 'information_schema')""")
+               WHERE nspname NOT IN ('pg_catalog', 'information_schema')""")
         opers = curs.fetchall()
         curs.close()
         self.conn.rollback()
         for oper in opers:
-            self.execute("DROP OPERATOR IF EXISTS %s.%s CASCADE" % (
-                    oper[0], oper[1]))
+            self.execute("DROP OPERATOR IF EXISTS %s CASCADE" % (oper[0]))
         self.conn.commit()
 
         # Operator families
         curs = pgexecute(
             self.conn,
-            """SELECT nspname, opfname, amname
+            """SELECT opfname, amname
                FROM pg_opfamily o JOIN pg_am a ON (opfmethod = a.oid)
                     JOIN pg_namespace n ON (opfnamespace = n.oid)
-               WHERE (nspname != 'pg_catalog'
-                     AND nspname != 'information_schema')""")
+               WHERE nspname NOT IN ('pg_catalog', 'information_schema')""")
         opfams = curs.fetchall()
         curs.close()
         self.conn.rollback()
         for opfam in opfams:
             self.execute(
-                "DROP OPERATOR FAMILY IF EXISTS %s.%s USING %s CASCADE" % (
-                    opfam[0], opfam[1], opfam[2]))
+                "DROP OPERATOR FAMILY IF EXISTS %s USING %s CASCADE" % (
+                    opfam[0], opfam[1]))
         self.conn.commit()
 
         # Operator classes
         curs = pgexecute(
             self.conn,
-            """SELECT nspname, opcname, amname
+            """SELECT opcname, amname
                FROM pg_opclass o JOIN pg_am a ON (opcmethod = a.oid)
                     JOIN pg_namespace n ON (opcnamespace = n.oid)
-               WHERE (nspname != 'pg_catalog'
-                     AND nspname != 'information_schema')""")
+               WHERE nspname NOT IN ('pg_catalog', 'information_schema')""")
         opcls = curs.fetchall()
         curs.close()
         self.conn.rollback()
         for opcl in opcls:
             self.execute(
-                "DROP OPERATOR CLASS IF EXISTS %s.%s USING %s CASCADE" % (
-                    opcl[0], opcl[1], opcl[2]))
+                "DROP OPERATOR CLASS IF EXISTS %s USING %s CASCADE" % (
+                    opcl[0], opcl[1]))
         self.conn.commit()
 
         # Conversions
         curs = pgexecute(
             self.conn,
-            """SELECT nspname, conname FROM pg_conversion c
+            """SELECT conname FROM pg_conversion c
                       JOIN pg_namespace n ON (connamespace = n.oid)
-               WHERE (nspname != 'pg_catalog'
-                     AND nspname != 'information_schema')""")
+               WHERE nspname NOT IN ('pg_catalog', 'information_schema')""")
         convs = curs.fetchall()
         curs.close()
         self.conn.rollback()
         for cnv in convs:
-            self.execute("DROP CONVERSION IF EXISTS %s.%s CASCADE" % (
-                    cnv[0], cnv[1]))
+            self.execute("DROP CONVERSION IF EXISTS %s CASCADE" % (cnv[0]))
         self.conn.commit()
 
         # User mappings
