@@ -177,6 +177,18 @@ class ColumnToSqlTestCase(PyrseasTestCase):
                          "ALTER TABLE t1 ADD COLUMN c4 text")
         self.assertEqual(dbsql[2], "ALTER TABLE t1 DROP COLUMN c1")
 
+    def test_drop_column_in_schema(self):
+        "Drop a column from a table in a non-public schema"
+        self.db.execute("CREATE SCHEMA s1")
+        self.db.execute_commit("CREATE TABLE s1.t1 (c1 integer, c2 text, "
+                               "c3 date)")
+        inmap = self.std_map()
+        inmap.update({'schema s1': {'table t1': {
+                    'columns': [{'c1': {'type': 'integer'}},
+                                {'c2': {'type': 'text'}}]}}})
+        dbsql = self.db.process_map(inmap)
+        self.assertEqual(fix_indent(dbsql[0]),
+                         "ALTER TABLE s1.t1 DROP COLUMN c3")
 
 def suite():
     tests = unittest.TestLoader().loadTestsFromTestCase(ColumnToSqlTestCase)
