@@ -313,13 +313,13 @@ class PostgresDb(object):
         curs.close()
         return row and True
 
-    def execute_and_map(self, ddlstmt):
+    def execute_and_map(self, ddlstmt, schemas=None, tables=None):
         "Execute a DDL statement, commit, and return a map of the database"
         self.execute(ddlstmt)
         self.conn.commit()
         db = Database(DbConnection(self.name, self.user, host=self.host,
                                    port=self.port))
-        return db.to_map()
+        return db.to_map(schemas=schemas, tables=tables)
 
     def process_map(self, input_map):
         """Process an input map and return the SQL statements necessary to

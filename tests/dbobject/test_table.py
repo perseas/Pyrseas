@@ -194,6 +194,32 @@ class TableToMapTestCase(PyrseasTestCase):
         dbmap = self.db.execute_and_map(ddlstmt)
         self.assertEqual(dbmap['schema public']['table t3'], expmap)
 
+    def test_map_select_tables(self):
+        "Map two tables out of three present"
+        self.db.execute(CREATE_STMT)
+        self.db.execute("CREATE TABLE t2 (c1 integer, c2 text)")
+        dbmap = self.db.execute_and_map("CREATE TABLE t3 (c1 integer, "
+                                        "c2 text)", None, ['t2', 't1'])
+        expmap = {'columns': [{'c1': {'type': 'integer'}},
+                              {'c2': {'type': 'text'}}]}
+        self.assertEqual(dbmap['schema public']['table t1'], expmap)
+        self.assertEqual(dbmap['schema public']['table t2'], expmap)
+        self.assertTrue('table t3' not in dbmap['schema public'])
+
+    def test_map_table_sequence(self):
+        "Map two tables out of three present"
+        self.db.execute(CREATE_STMT)
+        self.db.execute("CREATE TABLE t2 (c1 integer, c2 text)")
+        self.db.execute("CREATE SEQUENCE seq1")
+        dbmap = self.db.execute_and_map("ALTER SEQUENCE seq1 OWNED BY t2.c1",
+                                        None, ['t2'])
+        self.db.execute_commit("DROP SEQUENCE seq1")
+        expmap = {'columns': [{'c1': {'type': 'integer'}},
+                              {'c2': {'type': 'text'}}]}
+        self.assertTrue('table t1' not in dbmap['schema public'])
+        self.assertEqual(dbmap['schema public']['table t2'], expmap)
+        self.assertTrue('sequence seq1' in dbmap['schema public'])
+
 
 class TableToSqlTestCase(PyrseasTestCase):
     """Test SQL generation of table statements from input schemas"""

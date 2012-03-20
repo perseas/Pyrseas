@@ -33,6 +33,13 @@ class SchemaToMapTestCase(PyrseasTestCase):
         dbmap = self.db.execute_and_map(COMMENT_STMT)
         self.assertEqual(dbmap['schema s1'], {'description': 'Test schema s1'})
 
+    def test_map_select_schema(self):
+        "Map a single schema when three schemas exist"
+        self.db.execute(CREATE_STMT)
+        self.db.execute("CREATE SCHEMA s2")
+        dbmap = self.db.execute_and_map("CREATE SCHEMA s3", ['s2'])
+        self.assertEqual(dbmap['schema s2'], {})
+
 
 class SchemaToSqlTestCase(PyrseasTestCase):
     """Test SQL generation from input schemas"""
