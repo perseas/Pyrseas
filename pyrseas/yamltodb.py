@@ -40,7 +40,7 @@ def main(host='localhost', port=5432):
     if args.schlist:
         kschlist = ['schema ' + sch for sch in args.schlist]
         for sch in list(inmap.keys()):
-            if sch not in kschlist:
+            if sch not in kschlist and sch.startswith('schema '):
                 del inmap[sch]
     stmts = db.diff_map(inmap, args.schlist)
     if args.output:

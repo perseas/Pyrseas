@@ -3,32 +3,30 @@
 
 import unittest
 
-from pyrseas.testutils import PyrseasTestCase
+from pyrseas.testutils import DatabaseToMapTestCase
+from pyrseas.testutils import InputMapToSqlTestCase
 
 CREATE_STMT = "CREATE LANGUAGE plperl"
 DROP_STMT = "DROP LANGUAGE IF EXISTS plperl CASCADE"
 COMMENT_STMT = "COMMENT ON LANGUAGE plperl IS 'Test language PL/Perl'"
 
 
-class LanguageToMapTestCase(PyrseasTestCase):
+class LanguageToMapTestCase(DatabaseToMapTestCase):
     """Test mapping of existing languages"""
 
     def test_map_language(self):
         "Map an existing language"
-        self.db.execute(DROP_STMT)
-        dbmap = self.db.execute_and_map(CREATE_STMT)
+        dbmap = self.to_map([DROP_STMT, CREATE_STMT])
         self.assertEqual(dbmap['language plperl'], {'trusted': True})
 
     def test_map_language_comment(self):
         "Map a language with a comment"
-        self.db.execute(DROP_STMT)
-        self.db.execute(CREATE_STMT)
-        dbmap = self.db.execute_and_map(COMMENT_STMT)
+        dbmap = self.to_map([DROP_STMT, CREATE_STMT, COMMENT_STMT])
         self.assertEqual(dbmap['language plperl']['description'],
                          'Test language PL/Perl')
 
 
-class LanguageToSqlTestCase(PyrseasTestCase):
+class LanguageToSqlTestCase(InputMapToSqlTestCase):
     """Test SQL generation for input languages"""
 
     def tearDown(self):
@@ -37,35 +35,32 @@ class LanguageToSqlTestCase(PyrseasTestCase):
 
     def test_create_language(self):
         "Create a language that didn't exist"
-        dbsql = self.db.process_map({'language plperl': {}})
-        self.assertEqual(dbsql, [CREATE_STMT])
+        sql = self.to_sql({'language plperl': {}})
+        self.assertEqual(sql, [CREATE_STMT])
 
     def test_bad_language_map(self):
         "Error creating a language with a bad map"
-        self.assertRaises(KeyError, self.db.process_map, {'plperl': {}})
+        self.assertRaises(KeyError, self.to_sql, {'plperl': {}})
 
     def test_drop_language(self):
         "Drop an existing language"
-        self.db.execute_commit(CREATE_STMT)
-        dbsql = self.db.process_map({})
-        self.assertEqual(dbsql, ["DROP LANGUAGE plperl"])
+        sql = self.to_sql({}, [CREATE_STMT])
+        self.assertEqual(sql, ["DROP LANGUAGE plperl"])
 
     def test_drop_language_function(self):
         "Drop an existing function and the language it uses"
-        self.db.execute(CREATE_STMT)
-        self.db.execute_commit("CREATE FUNCTION f1() RETURNS text "
-                               "LANGUAGE plperl AS $_$return \"dummy\";$_$")
-        dbsql = self.db.process_map({})
-        self.assertEqual(dbsql, ["DROP FUNCTION f1()", "DROP LANGUAGE plperl"])
+        stmts = [CREATE_STMT, "CREATE FUNCTION f1() RETURNS text "
+                 "LANGUAGE plperl AS $_$return \"dummy\";$_$"]
+        sql = self.to_sql({}, stmts)
+        self.assertEqual(sql, ["DROP FUNCTION f1()", "DROP LANGUAGE plperl"])
 
     def test_comment_on_language(self):
         "Create a comment for an existing language"
-        self.db.execute_commit(CREATE_STMT)
         inmap = self.std_map()
         inmap.update({'language plperl': {
                     'description': "Test language PL/Perl"}})
-        dbsql = self.db.process_map(inmap)
-        self.assertEqual(dbsql, [COMMENT_STMT])
+        sql = self.to_sql(inmap, [CREATE_STMT])
+        self.assertEqual(sql, [COMMENT_STMT])
 
 
 def suite():

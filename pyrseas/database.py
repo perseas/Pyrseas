@@ -168,9 +168,11 @@ class Database(object):
         self.ndb.fdwrappers.from_map(input_fdws, self.ndb)
         self._link_refs(self.ndb)
 
-    def to_map(self):
+    def to_map(self, schemas=[], tables=[]):
         """Convert the db maps to a single hierarchy suitable for YAML
 
+        :param schemas: list of schemas to be output
+        :param tables: list of tables to be output
         :return: a YAML-suitable dictionary (without Python objects)
         """
         if not self.db:
@@ -179,6 +181,27 @@ class Database(object):
         dbmap.update(self.db.casts.to_map())
         dbmap.update(self.db.fdwrappers.to_map())
         dbmap.update(self.db.schemas.to_map())
+        # trim the map of schemas/tables not selected
+        if schemas and schemas[0] is not None:
+            skey = 'schema ' + schemas[0]
+            for sch in list(dbmap.keys()):
+                if sch.startswith('schema ') and sch != skey:
+                    del dbmap[sch]
+        if tables:
+            ktablist = ['table ' + tbl for tbl in tables]
+            for sch in list(dbmap.keys()):
+                if sch.startswith('schema '):
+                    for key in list(dbmap[sch].keys()):
+                        if key == 'description':
+                            continue
+                        if key.startswith('sequence '):
+                            if 'owner_table' in dbmap[sch][key] and \
+                                    dbmap[sch][key]['owner_table'] in tables:
+                                continue
+                        if key not in ktablist:
+                            del dbmap[sch][key]
+                    if not dbmap[sch]:
+                        del dbmap[sch]
         return dbmap
 
     def diff_map(self, input_map, schemas=[]):

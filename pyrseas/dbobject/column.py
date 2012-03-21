@@ -57,10 +57,13 @@ class Column(DbSchemaObject):
         if hasattr(self, 'dropped'):
             return ""
         if hasattr(self, '_table'):
-            (contype, objtype) = (self._table.objtype, 'COLUMN')
+            (comptype, objtype) = (self._table.objtype, 'COLUMN')
+            compname = self._table.qualname()
         else:
-            (contype, objtype) = ('TYPE', 'ATTRIBUTE')
-        return "ALTER %s %s DROP %s %s" % (contype, self.table, objtype,
+            # TODO: this is only a PG 9.1 feature, so more is required
+            (comptype, objtype) = ('TYPE', 'ATTRIBUTE')
+            compname = self.table
+        return "ALTER %s %s DROP %s %s" % (comptype, compname, objtype,
                                            self.name)
 
     def rename(self, newname):

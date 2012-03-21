@@ -3,7 +3,8 @@
 
 import unittest
 
-from pyrseas.testutils import PyrseasTestCase, fix_indent
+from pyrseas.testutils import DatabaseToMapTestCase
+from pyrseas.testutils import InputMapToSqlTestCase, fix_indent
 
 
 TYPELIST = [
@@ -95,14 +96,14 @@ CREATE_STMT = "CREATE TABLE t1 (c1 integer, c2 text)"
 COMMENT_STMT = "COMMENT ON TABLE t1 IS 'Test table t1'"
 
 
-class TableToMapTestCase(PyrseasTestCase):
+class TableToMapTestCase(DatabaseToMapTestCase):
     """Test mapping of created tables"""
 
     def test_create_table(self):
         "Map a table with two columns"
+        dbmap = self.to_map([CREATE_STMT])
         expmap = {'columns': [{'c1': {'type': 'integer'}},
                               {'c2': {'type': 'text'}}]}
-        dbmap = self.db.execute_and_map(CREATE_STMT)
         self.assertEqual(dbmap['schema public']['table t1'], expmap)
 
     def test_data_types(self):
@@ -113,31 +114,29 @@ class TableToMapTestCase(PyrseasTestCase):
             col = "c%d" % (colnum + 1)
             colstab.append("%s %s" % (col, coltype))
             colsmap.append({col: {'type': maptype}})
-        ddlstmt = "CREATE TABLE t1 (%s)" % ", ".join(colstab)
+        dbmap = self.to_map(["CREATE TABLE t1 (%s)" % ", ".join(colstab)])
         expmap = {'columns': colsmap}
-        dbmap = self.db.execute_and_map(ddlstmt)
         self.assertEqual(dbmap['schema public']['table t1'], expmap)
 
     def test_not_null(self):
         "Map a table with a NOT NULL column"
-        ddlstmt = """CREATE TABLE t1 (c1 INTEGER, c2 INTEGER NULL,
-                                      c3 INTEGER NOT NULL)"""
+        stmts = ["CREATE TABLE t1 (c1 INTEGER, c2 INTEGER NULL, "
+                 "c3 INTEGER NOT NULL)"]
+        dbmap = self.to_map(stmts)
         expmap = {'columns': [{'c1': {'type': 'integer'}},
                               {'c2': {'type': 'integer'}},
                               {'c3': {'type': 'integer', 'not_null': True}}]}
-        dbmap = self.db.execute_and_map(ddlstmt)
+
         self.assertEqual(dbmap['schema public']['table t1'], expmap)
 
     def test_column_defaults(self):
         "Map a table with various types and each with a DEFAULT clause"
-        ddlstmt = """CREATE TABLE t1 (c1 INTEGER DEFAULT 12345,
-                                      c2 NUMERIC DEFAULT 98.76,
-                                      c3 REAL DEFAULT 15e-2,
-                                      c4 TEXT DEFAULT 'Abc def',
-                                      c5 DATE DEFAULT CURRENT_DATE,
-                                      c6 TIMESTAMP WITH TIME ZONE
-                                         DEFAULT CURRENT_TIMESTAMP,
-                                      c7 BOOLEAN DEFAULT FALSE)"""
+        stmts = ["CREATE TABLE t1 (c1 INTEGER DEFAULT 12345, "
+                 "c2 NUMERIC DEFAULT 98.76, c3 REAL DEFAULT 15e-2, "
+                 "c4 TEXT DEFAULT 'Abc def', c5 DATE DEFAULT CURRENT_DATE, "
+                 "c6 TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP, "
+                 "c7 BOOLEAN DEFAULT FALSE)"]
+        dbmap = self.to_map(stmts)
         expmap = {'columns': [
                     {'c1': {'type': 'integer', 'default': '12345'}},
                     {'c2': {'type': 'numeric', 'default': '98.76'}},
@@ -147,55 +146,85 @@ class TableToMapTestCase(PyrseasTestCase):
                     {'c6': {'type': 'timestamp with time zone',
                             'default': 'now()'}},
                     {'c7': {'type': 'boolean', 'default': 'false'}}]}
-        dbmap = self.db.execute_and_map(ddlstmt)
         self.assertEqual(dbmap['schema public']['table t1'], expmap)
 
     def test_map_table_comment(self):
         "Map a table comment"
-        self.db.execute(CREATE_STMT)
+        dbmap = self.to_map([CREATE_STMT, COMMENT_STMT])
         expmap = {'columns': [{'c1': {'type': 'integer'}},
                               {'c2': {'type': 'text'}}],
                   'description': 'Test table t1'}
-        dbmap = self.db.execute_and_map(COMMENT_STMT)
         self.assertEqual(dbmap['schema public']['table t1'], expmap)
 
     def test_map_table_comment_quotes(self):
         "Map a table comment with quotes"
-        self.db.execute(CREATE_STMT)
+        stmts = [CREATE_STMT, "COMMENT ON TABLE t1 IS "
+                 "'A \"special\" person''s table t1'"]
+        dbmap = self.to_map(stmts)
         expmap = {'columns': [{'c1': {'type': 'integer'}},
                               {'c2': {'type': 'text'}}],
                   'description': "A \"special\" person's table t1"}
-        dbmap = self.db.execute_and_map("COMMENT ON TABLE t1 IS "
-                                        "'A \"special\" person''s table t1'")
         self.assertEqual(dbmap['schema public']['table t1'], expmap)
 
     def test_map_column_comments(self):
         "Map two column comments"
-        self.db.execute(CREATE_STMT)
-        self.db.execute("COMMENT ON COLUMN t1.c1 IS 'Test column c1 of t1'")
-        ddlstmt = "COMMENT ON COLUMN t1.c2 IS 'Test column c2 of t1'"
+        stmts = [CREATE_STMT,
+                 "COMMENT ON COLUMN t1.c1 IS 'Test column c1 of t1'",
+                 "COMMENT ON COLUMN t1.c2 IS 'Test column c2 of t1'"]
+        dbmap = self.to_map(stmts)
         expmap = {'columns': [{'c1': {'type': 'integer', 'description':
                                           'Test column c1 of t1'}},
                               {'c2': {'type': 'text', 'description':
                                           'Test column c2 of t1'}}]}
-        dbmap = self.db.execute_and_map(ddlstmt)
         self.assertEqual(dbmap['schema public']['table t1'], expmap)
 
     def test_map_inherit(self):
         "Map a table that inherits from two other tables"
-        self.db.execute(CREATE_STMT)
-        self.db.execute("CREATE TABLE t2 (c3 integer)")
-        ddlstmt = "CREATE TABLE t3 (c4 text) INHERITS (t1, t2)"
+        stmts = [CREATE_STMT, "CREATE TABLE t2 (c3 integer)",
+                 "CREATE TABLE t3 (c4 text) INHERITS (t1, t2)"]
+        dbmap = self.to_map(stmts)
         expmap = {'columns': [{'c1': {'type': 'integer', 'inherited': True}},
                               {'c2': {'type': 'text', 'inherited': True}},
                               {'c3': {'type': 'integer', 'inherited': True}},
                               {'c4': {'type': 'text'}}],
                   'inherits': ['t1', 't2']}
-        dbmap = self.db.execute_and_map(ddlstmt)
         self.assertEqual(dbmap['schema public']['table t3'], expmap)
 
+    def test_map_table_within_schema(self):
+        "Map a schema and a table within it"
+        stmts = ["CREATE SCHEMA s1",
+                 "CREATE TABLE s1.t1 (c1 INTEGER, c2 TEXT)"]
+        dbmap = self.to_map(stmts)
+        expmap = {'table t1': {
+                'columns': [{'c1': {'type': 'integer'}},
+                            {'c2': {'type': 'text'}}]}}
+        self.assertEqual(dbmap['schema s1'], expmap)
 
-class TableToSqlTestCase(PyrseasTestCase):
+    def test_map_select_tables(self):
+        "Map two tables out of three present"
+        stmts = [CREATE_STMT, "CREATE TABLE t2 (c1 integer, c2 text)",
+                 "CREATE TABLE t3 (c1 integer, c2 text)"]
+        dbmap = self.to_map(stmts, None, ['t2', 't1'])
+        expmap = {'columns': [{'c1': {'type': 'integer'}},
+                              {'c2': {'type': 'text'}}]}
+        self.assertEqual(dbmap['schema public']['table t1'], expmap)
+        self.assertEqual(dbmap['schema public']['table t2'], expmap)
+        self.assertTrue('table t3' not in dbmap['schema public'])
+
+    def test_map_table_sequence(self):
+        "Map two tables out of three present"
+        stmts = [CREATE_STMT, "CREATE TABLE t2 (c1 integer, c2 text)",
+                 "CREATE SEQUENCE seq1", "ALTER SEQUENCE seq1 OWNED BY t2.c1"]
+        dbmap = self.to_map(stmts, None, ['t2'])
+        self.db.execute_commit("DROP SEQUENCE seq1")
+        expmap = {'columns': [{'c1': {'type': 'integer'}},
+                              {'c2': {'type': 'text'}}]}
+        self.assertTrue('table t1' not in dbmap['schema public'])
+        self.assertEqual(dbmap['schema public']['table t2'], expmap)
+        self.assertTrue('sequence seq1' in dbmap['schema public'])
+
+
+class TableToSqlTestCase(InputMapToSqlTestCase):
     """Test SQL generation of table statements from input schemas"""
 
     def test_create_table(self):
@@ -204,12 +233,11 @@ class TableToSqlTestCase(PyrseasTestCase):
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c1': {'type': 'integer'}},
                                {'c2': {'type': 'text'}}]}})
-        dbsql = self.db.process_map(inmap)
-        self.assertEqual(fix_indent(dbsql[0]), CREATE_STMT)
+        sql = self.to_sql(inmap)
+        self.assertEqual(fix_indent(sql[0]), CREATE_STMT)
 
     def test_create_table_with_defaults(self):
         "Create a table with two column DEFAULTs, one referring to a SEQUENCE"
-        self.db.execute_commit("DROP SEQUENCE IF EXISTS t1_c1_seq")
         inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c1': {
@@ -223,15 +251,15 @@ class TableToSqlTestCase(PyrseasTestCase):
                                        'sequence t1_c1_seq': {
                     'cache_value': 1, 'increment_by': 1, 'max_value': None,
                     'min_value': None, 'start_value': 1}})
-        dbsql = self.db.process_map(inmap)
-        self.assertEqual(fix_indent(dbsql[0]),
+        sql = self.to_sql(inmap)
+        self.assertEqual(fix_indent(sql[0]),
                          "CREATE TABLE t1 (c1 integer NOT NULL, "
                          "c2 text NOT NULL, "
                          "c3 date NOT NULL DEFAULT ('now'::text)::date)")
-        self.assertEqual(fix_indent(dbsql[1]),
+        self.assertEqual(fix_indent(sql[1]),
                          "CREATE SEQUENCE t1_c1_seq START WITH 1 "
                          "INCREMENT BY 1 NO MAXVALUE NO MINVALUE CACHE 1")
-        self.assertEqual(dbsql[2], "ALTER TABLE t1 ALTER COLUMN c1 "
+        self.assertEqual(sql[2], "ALTER TABLE t1 ALTER COLUMN c1 "
                          "SET DEFAULT nextval('t1_c1_seq'::regclass)")
 
     def test_bad_table_map(self):
@@ -240,34 +268,43 @@ class TableToSqlTestCase(PyrseasTestCase):
         inmap['schema public'].update({'t1': {
                     'columns': [{'c1': {'type': 'integer'}},
                                 {'c2': {'type': 'text'}}]}})
-        self.assertRaises(KeyError, self.db.process_map, inmap)
+        self.assertRaises(KeyError, self.to_sql, inmap)
 
     def test_missing_columns(self):
         "Error creating a table with no columns"
         inmap = self.std_map()
         inmap['schema public'].update({'table t1': {'columns': []}})
-        self.assertRaises(ValueError, self.db.process_map, inmap)
+        self.assertRaises(ValueError, self.to_sql, inmap)
 
     def test_drop_table(self):
         "Drop an existing table"
-        self.db.execute_commit(CREATE_STMT)
-        inmap = self.std_map()
-        dbsql = self.db.process_map(inmap)
-        self.assertEqual(dbsql, ["DROP TABLE t1"])
+        sql = self.to_sql(self.std_map(), [CREATE_STMT])
+        self.assertEqual(sql, ["DROP TABLE t1"])
 
     def test_rename_table(self):
         "Rename an existing table"
-        self.db.execute_commit(CREATE_STMT)
         inmap = self.std_map()
         inmap['schema public'].update({'table t2': {
                     'oldname': 't1',
                     'columns': [{'c1': {'type': 'integer'}},
                                 {'c2': {'type': 'text'}}]}})
-        dbsql = self.db.process_map(inmap)
-        self.assertEqual(dbsql, ["ALTER TABLE t1 RENAME TO t2"])
+        sql = self.to_sql(inmap, [CREATE_STMT])
+        self.assertEqual(sql, ["ALTER TABLE t1 RENAME TO t2"])
+
+    def test_create_table_within_schema(self):
+        "Create a new schema and a table within it"
+        inmap = {'schema s1': {
+                'table t1':
+                    {'columns': [{'c1': {'type': 'integer'}},
+                                 {'c2': {'type': 'text'}}]}}}
+        sql = self.to_sql(inmap)
+        expsql = ["CREATE SCHEMA s1",
+                  "CREATE TABLE s1.t1 (c1 integer, c2 text)"]
+        for i in range(len(expsql)):
+            self.assertEqual(fix_indent(sql[i]), expsql[i])
 
 
-class TableCommentToSqlTestCase(PyrseasTestCase):
+class TableCommentToSqlTestCase(InputMapToSqlTestCase):
     """Test SQL generation of table and column COMMENT statements"""
 
     def _tblmap(self):
@@ -281,44 +318,38 @@ class TableCommentToSqlTestCase(PyrseasTestCase):
 
     def test_table_with_comment(self):
         "Create a table with a comment"
-        dbsql = self.db.process_map(self._tblmap())
-        self.assertEqual(fix_indent(dbsql[0]), CREATE_STMT)
-        self.assertEqual(dbsql[1], COMMENT_STMT)
+        sql = self.to_sql(self._tblmap())
+        self.assertEqual(fix_indent(sql[0]), CREATE_STMT)
+        self.assertEqual(sql[1], COMMENT_STMT)
 
     def test_comment_on_table(self):
         "Create a comment for an existing table"
-        self.db.execute_commit(CREATE_STMT)
-        dbsql = self.db.process_map(self._tblmap())
-        self.assertEqual(dbsql, [COMMENT_STMT])
+        sql = self.to_sql(self._tblmap(), [CREATE_STMT])
+        self.assertEqual(sql, [COMMENT_STMT])
 
     def test_table_comment_quotes(self):
         "Create a table comment with quotes"
-        self.db.execute_commit(CREATE_STMT)
         inmap = self._tblmap()
         inmap['schema public']['table t1']['description'] = \
             "A \"special\" person's table t1"
-        dbsql = self.db.process_map(inmap)
-        self.assertEqual(dbsql, ["COMMENT ON TABLE t1 IS "
+        sql = self.to_sql(inmap, [CREATE_STMT])
+        self.assertEqual(sql, ["COMMENT ON TABLE t1 IS "
                                  "'A \"special\" person''s table t1'"])
 
     def test_drop_table_comment(self):
         "Drop a comment on an existing table"
-        self.db.execute(CREATE_STMT)
-        self.db.execute_commit(COMMENT_STMT)
         inmap = self._tblmap()
         del inmap['schema public']['table t1']['description']
-        dbsql = self.db.process_map(inmap)
-        self.assertEqual(dbsql, ["COMMENT ON TABLE t1 IS NULL"])
+        sql = self.to_sql(inmap, [CREATE_STMT, COMMENT_STMT])
+        self.assertEqual(sql, ["COMMENT ON TABLE t1 IS NULL"])
 
     def test_change_table_comment(self):
         "Change existing comment on a table"
-        self.db.execute(CREATE_STMT)
-        self.db.execute_commit(COMMENT_STMT)
         inmap = self._tblmap()
         inmap['schema public']['table t1'].update(
             {'description': 'Changed table t1'})
-        dbsql = self.db.process_map(inmap)
-        self.assertEqual(dbsql, ["COMMENT ON TABLE t1 IS 'Changed table t1'"])
+        sql = self.to_sql(inmap, [CREATE_STMT, COMMENT_STMT])
+        self.assertEqual(sql, ["COMMENT ON TABLE t1 IS 'Changed table t1'"])
 
     def test_create_column_comments(self):
         "Create a table with column comments"
@@ -327,12 +358,12 @@ class TableCommentToSqlTestCase(PyrseasTestCase):
             description='Test column c1')
         inmap['schema public']['table t1']['columns'][1]['c2'].update(
             description='Test column c2')
-        dbsql = self.db.process_map(inmap)
-        self.assertEqual(fix_indent(dbsql[0]), CREATE_STMT)
-        self.assertEqual(dbsql[1], COMMENT_STMT)
-        self.assertEqual(dbsql[2],
+        sql = self.to_sql(inmap)
+        self.assertEqual(fix_indent(sql[0]), CREATE_STMT)
+        self.assertEqual(sql[1], COMMENT_STMT)
+        self.assertEqual(sql[2],
                          "COMMENT ON COLUMN t1.c1 IS 'Test column c1'")
-        self.assertEqual(dbsql[3],
+        self.assertEqual(sql[3],
                          "COMMENT ON COLUMN t1.c2 IS 'Test column c2'")
 
     def test_add_column_comment(self):
@@ -340,10 +371,8 @@ class TableCommentToSqlTestCase(PyrseasTestCase):
         inmap = self._tblmap()
         inmap['schema public']['table t1']['columns'][0]['c1'].update(
             description='Test column c1')
-        self.db.execute(CREATE_STMT)
-        self.db.execute_commit(COMMENT_STMT)
-        dbsql = self.db.process_map(inmap)
-        self.assertEqual(dbsql[0],
+        sql = self.to_sql(inmap, [CREATE_STMT, COMMENT_STMT])
+        self.assertEqual(sql[0],
                          "COMMENT ON COLUMN t1.c1 IS 'Test column c1'")
 
     def test_add_column_with_comment(self):
@@ -351,37 +380,30 @@ class TableCommentToSqlTestCase(PyrseasTestCase):
         inmap = self._tblmap()
         inmap['schema public']['table t1']['columns'].append({'c3': {
             'description': 'Test column c3', 'type': 'integer'}})
-        self.db.execute(CREATE_STMT)
-        self.db.execute_commit(COMMENT_STMT)
-        dbsql = self.db.process_map(inmap)
-        self.assertEqual(fix_indent(dbsql[0]),
+        sql = self.to_sql(inmap, [CREATE_STMT, COMMENT_STMT])
+        self.assertEqual(fix_indent(sql[0]),
                          "ALTER TABLE t1 ADD COLUMN c3 integer")
-        self.assertEqual(dbsql[1],
+        self.assertEqual(sql[1],
                          "COMMENT ON COLUMN t1.c3 IS 'Test column c3'")
 
     def test_drop_column_comment(self):
         "Drop a column comment on an existing table"
-        inmap = self._tblmap()
-        self.db.execute(CREATE_STMT)
-        self.db.execute(COMMENT_STMT)
-        self.db.execute_commit("COMMENT ON COLUMN t1.c1 IS 'Test column c1'")
-        dbsql = self.db.process_map(inmap)
-        self.assertEqual(dbsql[0],
-                         "COMMENT ON COLUMN t1.c1 IS NULL")
+        stmts = [CREATE_STMT, COMMENT_STMT,
+                 "COMMENT ON COLUMN t1.c1 IS 'Test column c1'"]
+        sql = self.to_sql(self._tblmap(), stmts)
+        self.assertEqual(sql[0], "COMMENT ON COLUMN t1.c1 IS NULL")
 
     def test_change_column_comment(self):
         "Add a column comment to an existing table"
         inmap = self._tblmap()
         inmap['schema public']['table t1']['columns'][0]['c1'].update(
             description='Changed column c1')
-        self.db.execute(CREATE_STMT)
-        self.db.execute_commit(COMMENT_STMT)
-        dbsql = self.db.process_map(inmap)
-        self.assertEqual(dbsql[0],
+        sql = self.to_sql(inmap, [CREATE_STMT, COMMENT_STMT])
+        self.assertEqual(sql[0],
                          "COMMENT ON COLUMN t1.c1 IS 'Changed column c1'")
 
 
-class TableInheritToSqlTestCase(PyrseasTestCase):
+class TableInheritToSqlTestCase(InputMapToSqlTestCase):
     """Test SQL generation of table inheritance statements"""
 
     def test_table_inheritance(self):
@@ -395,20 +417,18 @@ class TableInheritToSqlTestCase(PyrseasTestCase):
                                 {'c2': {'type': 'text', 'inherited': True}},
                                 {'c3': {'type': 'numeric'}}],
                     'inherits': ['t1']}})
-        dbsql = self.db.process_map(inmap)
-        self.assertEqual(fix_indent(dbsql[0]), CREATE_STMT)
-        self.assertEqual(fix_indent(dbsql[1]), "CREATE TABLE t2 (c3 numeric) "
+        sql = self.to_sql(inmap)
+        self.assertEqual(fix_indent(sql[0]), CREATE_STMT)
+        self.assertEqual(fix_indent(sql[1]), "CREATE TABLE t2 (c3 numeric) "
                          "INHERITS (t1)")
 
     def test_drop_inherited(self):
         "Drop tables that inherit from others"
-        self.db.execute(CREATE_STMT)
-        self.db.execute("CREATE TABLE t2 (c3 numeric) INHERITS (t1)")
-        self.db.execute_commit("CREATE TABLE t3 (c4 date) INHERITS (t2)")
-        inmap = self.std_map()
-        dbsql = self.db.process_map(inmap)
-        self.assertEqual(dbsql, ["DROP TABLE t3", "DROP TABLE t2",
-                                 "DROP TABLE t1"])
+        stmts = [CREATE_STMT, "CREATE TABLE t2 (c3 numeric) INHERITS (t1)",
+                 "CREATE TABLE t3 (c4 date) INHERITS (t2)"]
+        sql = self.to_sql(self.std_map(), stmts)
+        self.assertEqual(sql, ["DROP TABLE t3", "DROP TABLE t2",
+                               "DROP TABLE t1"])
 
 
 def suite():
