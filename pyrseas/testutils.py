@@ -314,16 +314,6 @@ class PostgresDb(object):
         curs.close()
         return row and True
 
-    def process_extmap(self, extmap):
-        """Process an extension map, apply it and return the updated database.
-
-        :param extmap: the extension map
-        :return: the updated database definition
-        """
-        db = ExtendDatabase(DbConnection(self.name, self.user, host=self.host,
-                                         port=self.port))
-        return db.apply(extmap)
-
 
 class PyrseasTestCase(TestCase):
     """Base class for most test cases"""
@@ -386,3 +376,20 @@ class InputMapToSqlTestCase(PyrseasTestCase):
             base['language plpgsql'].update(
                 description="PL/pgSQL procedural language")
         return base
+
+
+class ExtensionToMapTestCase(PyrseasTestCase):
+
+    def to_map(self, stmts, extmap):
+        """Apply an extension map and return a map of the updated database.
+
+        :param stmts: list of SQL statements to execute
+        :param extmap: dictionary describing the extension
+        :return: dictionary of the updated database
+        """
+        for stmt in stmts:
+            self.db.execute(stmt)
+        self.db.conn.commit()
+        db = ExtendDatabase(DbConnection(self.db.name, self.db.user,
+                                         host=self.db.host, port=self.db.port))
+        return db.apply(extmap)
