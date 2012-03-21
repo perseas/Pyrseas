@@ -313,21 +313,6 @@ class PostgresDb(object):
         curs.close()
         return row and True
 
-    def execute_and_map(self, ddlstmt, schemas=None, tables=None):
-        "Execute a DDL statement, commit, and return a map of the database"
-        self.execute(ddlstmt)
-        self.conn.commit()
-        db = Database(DbConnection(self.name, self.user, host=self.host,
-                                   port=self.port))
-        return db.to_map(schemas=schemas, tables=tables)
-
-    def process_map(self, input_map):
-        """Process an input map and return the SQL statements necessary to
-        convert the database to match the map."""
-        db = Database(DbConnection(self.name, self.user, host=self.host,
-                                   port=self.port))
-        return db.diff_map(input_map)
-
 
 class PyrseasTestCase(TestCase):
     """Base class for most test cases"""
@@ -339,6 +324,47 @@ class PyrseasTestCase(TestCase):
 
     def tearDown(self):
         self.db.close()
+
+    def database(self):
+        """The Pyrseas Database instance"""
+        return Database(DbConnection(self.db.name, self.db.user,
+                                     host=self.db.host, port=self.db.port))
+
+
+class DatabaseToMapTestCase(PyrseasTestCase):
+    """Base class for "database to map" test cases"""
+
+    def to_map(self, stmts, schemas=None, tables=None):
+        """Execute statements and return a database map.
+
+        :param stmts: list of SQL statements to execute
+        :param schemas: list of schemas to map
+        :param tables: list of tables to map
+        :return: possibly trimmed map of database
+        """
+        for stmt in stmts:
+            self.db.execute(stmt)
+        self.db.conn.commit()
+        db = self.database()
+        return db.to_map(schemas=schemas, tables=tables)
+
+
+class InputMapToSqlTestCase(PyrseasTestCase):
+    """Base class for "input map to SQL" test cases"""
+
+    def to_sql(self, inmap, stmts=None):
+        """Execute statements and compare database to input map.
+
+        :param inmap: dictionary defining target database
+        :param stmts: list of SQL database setup statements
+        :return: list of SQL statements
+        """
+        if stmts:
+            for stmt in stmts:
+                self.db.execute(stmt)
+            self.db.conn.commit()
+        db = self.database()
+        return db.diff_map(inmap)
 
     def std_map(self, plpgsql_installed=False):
         "Return a standard public schema map with its description"
