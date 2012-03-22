@@ -53,6 +53,8 @@ class ExtClassDict(DbExtensionDict):
                     raise ValueError("Table '%s' has no specification" % k)
                 if 'audit_columns' in intable:
                     table.audit_columns = intable['audit_columns']
+                else:
+                    raise KeyError("Unrecognized attribute for %s" % k)
             else:
                 raise KeyError("Unrecognized object type: %s" % k)
 

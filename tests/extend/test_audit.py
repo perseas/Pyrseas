@@ -29,6 +29,24 @@ class AuditColumnsTestCase(ExtensionToMapTestCase):
                     'default': "('now'::text)::date"}}]}
         self.assertEqual(dbmap['schema public']['table t1'], expmap)
 
+    def test_unknown_table(self):
+        "Error on non-existent table"
+        extmap = {'schema public': {'table t2': {
+                    'audit_column': 'created_date_only'}}}
+        self.assertRaises(KeyError, self.to_map, [CREATE_STMT], extmap)
+
+    def test_bad_audit_spec(self):
+        "Error on bad audit column specification"
+        extmap = {'schema public': {'table t1': {
+                    'audit_column': 'created_date_only'}}}
+        self.assertRaises(KeyError, self.to_map, [CREATE_STMT], extmap)
+
+    def test_unknown_audit_spec(self):
+        "Error on non-existent audit column specification"
+        extmap = {'schema public': {'table t1': {
+                    'audit_columns': 'created_date'}}}
+        self.assertRaises(KeyError, self.to_map, [CREATE_STMT], extmap)
+
     def test_new_column(self):
         "Add new (non-predefined) audit column"
         extmap = {'extender': {'columns': {
