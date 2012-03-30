@@ -61,7 +61,7 @@ class CfgAuditColumn(DbExtension):
 
 
 class CfgAuditColumnDict(DbExtensionDict):
-    "The collection of regular and aggregate functions in a database"
+    "The collection of audit column extensions"
 
     cls = CfgAuditColumn
 

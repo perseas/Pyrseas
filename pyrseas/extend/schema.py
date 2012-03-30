@@ -56,7 +56,7 @@ class ExtSchemaDict(DbExtensionDict):
                     extfuncs.update({key: inschema[key]})
                 else:
                     raise KeyError("Expected typed object, found '%s'" % key)
-            extdb.tables.from_map(schema, exttables)
+            extdb.tables.from_map(schema, exttables, extdb)
 
     def link_current(self, schemas):
         """Connect schemas to be extended to actual database schemas

@@ -17,6 +17,26 @@ BEGIN
     RETURN NEW;
 END """
 
+FUNC_COPY_DENORM = """\
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        SELECT {{parent_column}}
+               INTO NEW.{{child_column}}
+        FROM {{parent_schema}}.{{parent_table}}
+        WHERE {{parent_key}} = NEW.{{child_fkey}};
+    ELSIF TG_OP = 'UPDATE' AND (
+           NEW.{{child_fkey}} IS DISTINCT FROM OLD.{{child_fkey}} OR
+           NEW.{{child_column}} IS NULL) THEN
+        SELECT {{parent_column}}
+               INTO NEW.{{child_column}}
+        FROM {{parent_schema}}.{{parent_table}}
+        WHERE {{parent_key}} = NEW.{{child_fkey}};
+    ELSE
+        NEW.{{child_column}} := OLD.{{child_column}};
+    END IF;
+    RETURN NEW;
+END """
+
 CFG_FUNCTIONS = \
     {
     'aud_dflt()': {
@@ -26,7 +46,15 @@ CFG_FUNCTIONS = \
             'language': 'plpgsql',
             'returns': 'trigger',
             'security_definer': True,
-            'source': FUNC_AUD_DFLT}
+            'source': FUNC_AUD_DFLT},
+    'copy_denorm()': {
+            'description':
+                "Copies column from {{parent_table}}.{{parent_column}} " \
+                "into {{child_table}}.{{child_column}}.",
+            'language': 'plpgsql',
+            'name': '{{child_table}}_40_denorm',
+            'returns': 'trigger',
+            'source': FUNC_COPY_DENORM}
     }
 
 
@@ -35,18 +63,21 @@ class CfgFunction(DbExtension):
 
     keylist = ['name', 'arguments']
 
-    def apply(self, schema, col_trans_tbl):
+    def apply(self, schema, trans_tbl):
         """Apply a configuration function to a given schema.
 
         :param schema: name of the schema in which to create the function
-        :param col_trans_tbl: column translation table
+        :param trans_tbl: translation table
         """
         newfunc = Function(schema=schema, **self.__dict__)
         newfunc.volatility = 'v'
-        for (pat, repl) in col_trans_tbl:
-            if not '{{' in newfunc.source:
-                break
-            newfunc.source = newfunc.source.replace(pat, repl)
+        for (pat, repl) in trans_tbl:
+            if '{{' in newfunc.source:
+                newfunc.source = newfunc.source.replace(pat, repl)
+            if '{{' in newfunc.name:
+                newfunc.name = newfunc.name.replace(pat, repl)
+            if '{{' in newfunc.description:
+                newfunc.description = newfunc.description.replace(pat, repl)
         return newfunc
 
 
@@ -57,10 +88,14 @@ class CfgFunctionDict(DbExtensionDict):
 
     def __init__(self):
         for func in CFG_FUNCTIONS:
+            fncdict = CFG_FUNCTIONS[func]
             paren = func.find('(')
             (fnc, args) = (func[:paren], func[paren + 1:-1])
-            self[fnc] = CfgFunction(name=fnc, arguments=args,
-                                    **CFG_FUNCTIONS[func])
+            fncname = fnc
+            if 'name' in fncdict:
+                fncname = fncdict['name']
+                del fncdict['name']
+            self[fnc] = CfgFunction(name=fncname, arguments=args, **fncdict)
 
     def from_map(self, infuncs):
         """Initialize the dictionary of functions by converting the input list

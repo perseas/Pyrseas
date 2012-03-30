@@ -16,6 +16,7 @@
 from pyrseas.database import Database
 from pyrseas.extend.schema import ExtSchemaDict
 from pyrseas.extend.table import ExtClassDict
+from pyrseas.extend.denorm import ExtDenormDict
 from pyrseas.extend.column import CfgColumnDict
 from pyrseas.extend.function import CfgFunctionDict
 from pyrseas.extend.trigger import CfgTriggerDict
@@ -32,15 +33,18 @@ class ExtendDatabase(Database):
             """Initialize the various DbExtensionDict-derived dictionaries"""
             self.schemas = ExtSchemaDict()
             self.tables = ExtClassDict()
+            self.denorms = ExtDenormDict()
 
         def _link_refs(self):
             """Link related objects"""
             self.schemas.link_refs(self.tables)
+            self.tables.link_refs(self.denorms)
 
         def _link_current(self, db):
             """Link extension objects to current catalog objects"""
             self.schemas.link_current(db.schemas)
             self.tables.link_current(db.tables)
+            self.denorms.link_current(db.constraints)
 
     class CfgDicts(object):
         """A holder for dictionaries (maps) describing configuration objects"""
@@ -64,7 +68,7 @@ class ExtendDatabase(Database):
         """
         self.edb = self.ExtDicts()
         ext_schemas = {}
-        for key in ext_map.keys():
+        for key in list(ext_map.keys()):
             if key == 'extender':
                 self._from_cfgmap(ext_map[key])
             elif key.startswith('schema '):
@@ -84,7 +88,7 @@ class ExtendDatabase(Database):
         DbExtensionDict-derived classes by traversing the YAML
         configuration map.
         """
-        for key in cfg_map.keys():
+        for key in list(cfg_map.keys()):
             if key == 'columns':
                 self.cdb.columns.from_map(cfg_map[key])
             elif key == 'functions':

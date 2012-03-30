@@ -8,6 +8,7 @@
     derived from DbExtensionDict.
 """
 from pyrseas.extend import DbExtensionDict, DbExtension
+from pyrseas.extend.denorm import ExtDenormColumn
 
 
 class ExtDbClass(DbExtension):
@@ -25,7 +26,10 @@ class ExtTable(ExtDbClass):
         :param db: the database to be extended
         :param cfgdb: the configuration objects
         """
-        if hasattr(self, 'audit_columns'):
+        if hasattr(self, 'denorms'):
+            for col in self.denorms:
+                col.apply(db.tables[self.current.key()], cfgdb, db)
+        elif hasattr(self, 'audit_columns'):
             cfgdb.auditcols[self.audit_columns].apply(
                 db.tables[self.current.key()], cfgdb, db)
 
@@ -35,15 +39,16 @@ class ExtClassDict(DbExtensionDict):
 
     cls = ExtDbClass
 
-    def from_map(self, schema, inobjs):
+    def from_map(self, schema, inobjs, extdb):
         """Initalize the dictionary of tables by converting the input map
 
         :param schema: schema owning the tables
         :param inobjs: YAML map defining the schema objects
+        :param extdb: collection of dictionaries defining the extensions
         """
         for k in list(inobjs.keys()):
             (objtype, spc, key) = k.partition(' ')
-            if spc != ' ' or objtype not in ['table', 'sequence', 'view']:
+            if spc != ' ' or objtype not in ['table']:
                 raise KeyError("Unrecognized object type: %s" % k)
             if objtype == 'table':
                 self[(schema.name, key)] = table = ExtTable(
@@ -51,12 +56,28 @@ class ExtClassDict(DbExtensionDict):
                 intable = inobjs[k]
                 if not intable:
                     raise ValueError("Table '%s' has no specification" % k)
-                if 'audit_columns' in intable:
-                    table.audit_columns = intable['audit_columns']
-                else:
-                    raise KeyError("Unrecognized attribute for %s" % k)
+                for attr in list(intable.keys()):
+                    if attr == 'audit_columns':
+                        setattr(table, attr, intable[attr])
+                    elif attr == 'denorm_columns':
+                        extdb.denorms.from_map(table, intable[attr])
+                    else:
+                        raise KeyError("Unrecognized attribute '%s' for %s"
+                                       % (attr, k))
             else:
                 raise KeyError("Unrecognized object type: %s" % k)
+
+    def link_refs(self, extdenorms):
+        """Connect columns to their respective tables
+
+        :param extdenorms: dictionary of columns
+        """
+        for (sch, tbl) in list(extdenorms.keys()):
+            if (sch, tbl) in self:
+                assert isinstance(self[(sch, tbl)], ExtTable)
+                self[(sch, tbl)].denorms = extdenorms[(sch, tbl)]
+                for col in extdenorms[(sch, tbl)]:
+                    col._table = self[(sch, tbl)]
 
     def link_current(self, tables):
         """Connect tables to be extended to actual database tables

@@ -13,13 +13,18 @@ from pyrseas.dbobject.trigger import Trigger
 
 CFG_TRIGGERS = \
     {
-    'audit_columns_default':
-        {
-        'name': '{{table_name}}_20_aud_dflt',
-        'events': ['update'],
-        'level': 'row',
-        'procedure': 'aud_dflt()',
-        'timing': 'before'}
+    'audit_columns_default': {
+            'name': '{{table_name}}_20_aud_dflt',
+            'events': ['update'],
+            'level': 'row',
+            'procedure': 'aud_dflt()',
+            'timing': 'before'},
+    'copy_denorm': {
+            'name': '{{table_name}}_40_denorm',
+            'events': ['insert', 'update'],
+            'level': 'row',
+            'procedure': '{{table_name}}_40_denorm()',
+            'timing': 'before'}
     }
 
 
@@ -41,6 +46,9 @@ class CfgTrigger(DbExtension):
         if not hasattr(table, 'triggers'):
             table.triggers = {}
         if hasattr(newtrg, 'procedure'):
+            if newtrg.procedure.startswith('{{table_name}}'):
+                newtrg.procedure = newtrg.procedure.replace(
+                    newtrg.procedure[:14], table.name)
             (sch, fnc) = split_schema_obj(newtrg.procedure)
             if sch != table.schema:
                 newtrg.procedure = "%s.%s" % (table.schema, fnc)

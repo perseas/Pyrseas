@@ -32,7 +32,7 @@ class AuditColumnsTestCase(ExtensionToMapTestCase):
     def test_unknown_table(self):
         "Error on non-existent table"
         extmap = {'schema public': {'table t2': {
-                    'audit_column': 'created_date_only'}}}
+                    'audit_columns': 'created_date_only'}}}
         self.assertRaises(KeyError, self.to_map, [CREATE_STMT], extmap)
 
     def test_bad_audit_spec(self):
