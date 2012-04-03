@@ -16,14 +16,24 @@ class ExtSchema(DbExtension):
 
     keylist = ['name']
 
-    def apply(self, db, cfgdb):
+    def apply(self, extdb):
         """Apply extensions to objects in a schema.
 
-        :param db: the database to be extended
-        :param cfgdb: the configuration objects
+        :param extdb: the extension dictionaries
         """
         for tbl in self.tables:
-            self.tables[tbl].apply(db, cfgdb)
+            self.tables[tbl].apply(extdb)
+
+    def add_func(self, func):
+        """Add a function to the schema if not already present
+
+        :param func: the possibly new function
+        """
+        sch = self.current
+        if not hasattr(sch, 'functions'):
+            sch.functions = {}
+        if func.name not in sch.functions:
+            sch.functions.update({func.name: func})
 
 
 class ExtSchemaDict(DbExtensionDict):

@@ -8,7 +8,6 @@
     derived from DbExtensionDict.
 """
 from pyrseas.extend import DbExtensionDict, DbExtension
-from pyrseas.extend.denorm import ExtDenormColumn
 
 
 class ExtDbClass(DbExtension):
@@ -20,18 +19,17 @@ class ExtDbClass(DbExtension):
 class ExtTable(ExtDbClass):
     """A database table definition"""
 
-    def apply(self, db, cfgdb):
+    def apply(self, extdb):
         """Apply extensions to tables in a schema.
 
-        :param db: the database to be extended
-        :param cfgdb: the configuration objects
+        :param extdb: the extension dictionaries
         """
+        currtbl = extdb.current.tables[self.current.key()]
         if hasattr(self, 'denorms'):
             for col in self.denorms:
-                col.apply(db.tables[self.current.key()], cfgdb, db)
+                col.apply(currtbl, extdb)
         elif hasattr(self, 'audit_columns'):
-            cfgdb.auditcols[self.audit_columns].apply(
-                db.tables[self.current.key()], cfgdb, db)
+            extdb.auditcols[self.audit_columns].apply(currtbl, extdb)
 
 
 class ExtClassDict(DbExtensionDict):

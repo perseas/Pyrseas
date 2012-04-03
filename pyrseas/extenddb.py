@@ -4,16 +4,16 @@
     ~~~~~~~~~~~~~~~~
 
     An `ExtendDatabase` is initialized with a DbConnection object.  It
-    consists of three "dictionary" container objects, each holding
+    consists of two "dictionary" container objects, each holding
     various dictionary objects.  The `db` Dicts object (inherited from
     its parent class), defines the database schemas, including their
     tables and other objects, by querying the system catalogs.  The
-    `edb` ExtDicts object defines the extension schemas based on the
-    `ext_map` supplied to the `apply` method.  The `cdb` CfgDicts
-    object defines the configuration objects based on the cfg_map
-    supplied to the `apply` method.
+    `edb` ExtDicts object defines the extension schemas and the
+    configuration objects based on the ext_map supplied to the `apply`
+    method.
 """
 from pyrseas.database import Database
+from pyrseas.dbobject.language import Language
 from pyrseas.extend.schema import ExtSchemaDict
 from pyrseas.extend.table import ExtClassDict
 from pyrseas.extend.denorm import ExtDenormDict
@@ -33,6 +33,10 @@ class ExtendDatabase(Database):
             """Initialize the various DbExtensionDict-derived dictionaries"""
             self.schemas = ExtSchemaDict()
             self.tables = ExtClassDict()
+            self.columns = CfgColumnDict()
+            self.functions = CfgFunctionDict()
+            self.triggers = CfgTriggerDict()
+            self.auditcols = CfgAuditColumnDict()
             self.denorms = ExtDenormDict()
 
         def _link_refs(self):
@@ -42,18 +46,18 @@ class ExtendDatabase(Database):
 
         def _link_current(self, db):
             """Link extension objects to current catalog objects"""
+            self.current = db
             self.schemas.link_current(db.schemas)
             self.tables.link_current(db.tables)
             self.denorms.link_current(db.constraints)
 
-    class CfgDicts(object):
-        """A holder for dictionaries (maps) describing configuration objects"""
+        def add_lang(self, lang):
+            """Add a language if not already present
 
-        def __init__(self):
-            self.columns = CfgColumnDict()
-            self.functions = CfgFunctionDict()
-            self.triggers = CfgTriggerDict()
-            self.auditcols = CfgAuditColumnDict()
+            :param lang: the possibly new language
+            """
+            if lang not in self.current.languages:
+                self.current.languages[lang] = Language(name=lang)
 
     def from_extmap(self, ext_map):
         """Populate the extension objects from the input extension map
@@ -84,19 +88,19 @@ class ExtendDatabase(Database):
 
         :param cfg_map: a YAML map defining extension configuration
 
-        The `cdb` holder is populated by various
+        The extensions dictionary is populated by various
         DbExtensionDict-derived classes by traversing the YAML
         configuration map.
         """
         for key in list(cfg_map.keys()):
             if key == 'columns':
-                self.cdb.columns.from_map(cfg_map[key])
+                self.edb.columns.from_map(cfg_map[key])
             elif key == 'functions':
-                self.cdb.functions.from_map(cfg_map[key])
+                self.edb.functions.from_map(cfg_map[key])
             elif key == 'triggers':
-                self.cdb.triggers.from_map(cfg_map[key])
+                self.edb.triggers.from_map(cfg_map[key])
             elif key == 'audit_columns':
-                self.cdb.auditcols.from_map(cfg_map[key])
+                self.edb.auditcols.from_map(cfg_map[key])
             else:
                 raise KeyError("Expected typed object, found '%s'" % key)
 
@@ -112,8 +116,7 @@ class ExtendDatabase(Database):
         """
         if not self.db:
             self.from_catalog()
-        self.cdb = self.CfgDicts()
         self.from_extmap(ext_map)
         for sch in self.edb.schemas:
-            self.edb.schemas[sch].apply(self.db, self.cdb)
+            self.edb.schemas[sch].apply(self.edb)
         return self.to_map()

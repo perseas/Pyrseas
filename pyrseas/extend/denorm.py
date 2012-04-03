@@ -9,7 +9,6 @@
 from pyrseas.extend import DbExtension, DbExtensionDict
 from pyrseas.dbobject.column import Column
 from pyrseas.dbobject import split_schema_obj
-from pyrseas.dbobject.language import Language
 
 
 class ExtDenormColumn(DbExtension):
@@ -21,15 +20,15 @@ class ExtDenormColumn(DbExtension):
 class ExtCopyDenormColumn(ExtDenormColumn):
     """An extension that copies columns from one table to another"""
 
-    def apply(self, table, cfgdb, db):
+    def apply(self, table, extdb):
         """Apply copy denormalizations to the argument table.
 
         :param table: table to which columns/triggers will be added
-        :param cfgdb: configuration database
-        :param db: current database catalogs
+        :param extdb: extension dictionaries
         """
+        currdb = extdb.current
         fk = self._foreign_key
-        reftbl = db.tables[(fk.ref_schema, fk.ref_table)]
+        reftbl = currdb.tables[(fk.ref_schema, fk.ref_table)]
         newcol = None
         for col in reftbl.columns:
             if col.name == self.copy:
@@ -48,7 +47,7 @@ class ExtCopyDenormColumn(ExtDenormColumn):
                            (self.name, self.copy))
         if self.name not in table.column_names():
             table.columns.append(newcol)
-        cfgdb.triggers['copy_denorm'].apply(table)
+        extdb.triggers['copy_denorm'].apply(table)
 
         keys = [(table.column_names()[k - 1]) for k in fk.keycols]
         parkeys = [(fk.references.column_names()[k - 1]) for k in fk.ref_cols]
@@ -66,17 +65,11 @@ class ExtCopyDenormColumn(ExtDenormColumn):
         fncsig = 'copy_denorm()'
         fnc = fncsig[:fncsig.find('(')]
         (sch, fnc) = split_schema_obj(fnc)
-        if (sch, fncsig) not in db.functions:
-            newfunc = cfgdb.functions[fnc].apply(sch, trans_tbl)
-            # add new function to the ProcDict
-            db.functions[(sch, newfunc.name)] = newfunc
-            if not hasattr(db.schemas[sch], 'functions'):
-                db.schemas[sch].functions = {}
-            # link the function to its schema
-            db.schemas[sch].functions.update({newfunc.name: newfunc})
-            if newfunc.language not in db.languages:
-                db.languages[newfunc.language] = Language(
-                    name=newfunc.language)
+        if (sch, fncsig) not in currdb.functions:
+            newfunc = extdb.functions[fnc].apply(sch, trans_tbl)
+            # add new function to the current db
+            extdb.schemas[sch].add_func(newfunc)
+            extdb.add_lang(newfunc.language)
 
 
 class ExtDenormDict(DbExtensionDict):

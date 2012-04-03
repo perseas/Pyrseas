@@ -8,7 +8,6 @@
 """
 from pyrseas.extend import DbExtension, DbExtensionDict
 from pyrseas.dbobject import split_schema_obj
-from pyrseas.dbobject.language import Language
 
 
 CFG_AUDIT_COLUMNS = \
@@ -28,36 +27,29 @@ class CfgAuditColumn(DbExtension):
 
     keylist = ['name']
 
-    def apply(self, table, cfgdb, db):
+    def apply(self, table, extdb):
         """Apply configuration audit columns to argument table.
 
         :param table: table to which columns/triggers will be added
-        :param cfgdb: configuration database
-        :param db: current database catalogs
+        :param extdb: extension dictionaries
         """
+        currdb = extdb.current
         sch = table.schema
         for col in self.columns:
-            cfgdb.columns[col].apply(table)
+            extdb.columns[col].apply(table)
         if hasattr(self, 'triggers'):
             for trg in self.triggers:
-                cfgdb.triggers[trg].apply(table)
+                extdb.triggers[trg].apply(table)
                 for newtrg in table.triggers:
                     fncsig = table.triggers[newtrg].procedure
                     fnc = fncsig[:fncsig.find('(')]
                     (sch, fnc) = split_schema_obj(fnc)
-                    if (sch, fncsig) not in db.functions:
-                        newfunc = cfgdb.functions[fnc].apply(
-                            sch, cfgdb.columns.col_trans_tbl)
-                        # add new function to the ProcDict
-                        db.functions[(sch, newfunc.name)] = newfunc
-                        if not hasattr(db.schemas[sch], 'functions'):
-                            db.schemas[sch].functions = {}
-                        # link the function to its schema
-                        db.schemas[sch].functions.update(
-                            {newfunc.name: newfunc})
-                        if newfunc.language not in db.languages:
-                            db.languages[newfunc.language] = Language(
-                                name=newfunc.language)
+                    if (sch, fncsig) not in currdb.functions:
+                        newfunc = extdb.functions[fnc].apply(
+                            sch, extdb.columns.col_trans_tbl)
+                        # add new function to the current db
+                        extdb.schemas[sch].add_func(newfunc)
+                        extdb.add_lang(newfunc.language)
 
 
 class CfgAuditColumnDict(DbExtensionDict):
