@@ -62,11 +62,12 @@ class ExtCopyDenormColumn(ExtDenormColumn):
             ('{{child_column}}', self.name),
             ('{{child_fkey}}', keys[0])]
 
-        fncsig = 'copy_denorm()'
-        fnc = fncsig[:fncsig.find('(')]
-        (sch, fnc) = split_schema_obj(fnc)
+        cfgfnc = 'copy_denorm'
+        fncname = extdb.functions[cfgfnc].adjust_name(trans_tbl)
+        (sch, fncname) = split_schema_obj(fncname)
+        fncsig = fncname + '()'
         if (sch, fncsig) not in currdb.functions:
-            newfunc = extdb.functions[fnc].apply(sch, trans_tbl)
+            newfunc = extdb.functions[cfgfnc].apply(sch, trans_tbl)
             # add new function to the current db
             extdb.schemas[sch].add_func(newfunc)
             extdb.add_lang(newfunc.language)

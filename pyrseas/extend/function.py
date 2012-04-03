@@ -63,6 +63,19 @@ class CfgFunction(DbExtension):
 
     keylist = ['name', 'arguments']
 
+    def adjust_name(self, trans_tbl):
+        """Replace function configuration name by actual name
+
+        :param trans_tbl: translation table
+        """
+        name = self.name
+        if '{{' in name:
+            for (pat, repl) in trans_tbl:
+                if pat in name:
+                    name = name.replace(pat, repl)
+                    break
+        return name
+
     def apply(self, schema, trans_tbl):
         """Apply a configuration function to a given schema.
 
@@ -92,10 +105,11 @@ class CfgFunctionDict(DbExtensionDict):
             paren = func.find('(')
             (fnc, args) = (func[:paren], func[paren + 1:-1])
             fncname = fnc
-            if 'name' in fncdict:
-                fncname = fncdict['name']
-                del fncdict['name']
-            self[fnc] = CfgFunction(name=fncname, arguments=args, **fncdict)
+            dct = fncdict.copy()
+            if 'name' in dct:
+                fncname = dct['name']
+                del dct['name']
+            self[fnc] = CfgFunction(name=fncname, arguments=args, **dct)
 
     def from_map(self, infuncs):
         """Initialize the dictionary of functions by converting the input list
