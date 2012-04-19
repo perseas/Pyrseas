@@ -8,7 +8,6 @@ from psycopg2 import connect
 from psycopg2.extras import DictConnection
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
-from pyrseas.dbconn import DbConnection
 from pyrseas.database import Database
 
 
@@ -327,8 +326,8 @@ class PyrseasTestCase(TestCase):
 
     def database(self):
         """The Pyrseas Database instance"""
-        return Database(DbConnection(self.db.name, self.db.user,
-                                     host=self.db.host, port=self.db.port))
+        return Database(self.db.name, user=self.db.user, host=self.db.host,
+                        port=self.db.port)
 
 
 class DatabaseToMapTestCase(PyrseasTestCase):

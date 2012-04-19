@@ -5,11 +5,11 @@
 from __future__ import print_function
 import os
 import sys
+import getpass
 from argparse import ArgumentParser
 
 import yaml
 
-from pyrseas.dbconn import DbConnection
 from pyrseas.database import Database
 from pyrseas.cmdargs import parent_parser
 
@@ -28,8 +28,8 @@ def main(host='localhost', port=5432, schema=None):
                         schema=schema)
     args = parser.parse_args()
 
-    db = Database(DbConnection(args.dbname, args.username, args.password,
-                               args.host, args.port))
+    pswd = (args.password and getpass.getpass() or '')
+    db = Database(args.dbname, args.username, pswd, args.host, args.port)
     dbmap = db.to_map([args.schema], args.tablist)
     if args.output:
         fd = args.output

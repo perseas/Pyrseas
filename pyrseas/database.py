@@ -10,6 +10,7 @@
     system catalogs.  The `ndb` Dicts object defines the schemas based
     on the `input_map` supplied to the `from_map` method.
 """
+from pyrseas.lib.dbconn import DbConnection
 from pyrseas.dbobject.language import LanguageDict
 from pyrseas.dbobject.cast import CastDict
 from pyrseas.dbobject.schema import SchemaDict
@@ -40,6 +41,26 @@ def flatten(lst):
                 yield subelem
         else:
             yield elem
+
+
+class CatDbConnection(DbConnection):
+    """A database connection, specialized for querying catalogs"""
+
+    def connect(self):
+        """Connect to the database"""
+        super(CatDbConnection, self).connect()
+        try:
+            self.execute("set search_path to public, pg_catalog")
+        except:
+            self.rollback()
+            self.execute("set search_path to pg_catalog")
+        self.commit()
+        self._version = self.conn.server_version
+
+    @property
+    def version(self):
+        "The server's version number"
+        return self._version
 
 
 class Database(object):
@@ -77,12 +98,16 @@ class Database(object):
             self.usermaps = UserMappingDict(dbconn)
             self.ftables = ForeignTableDict(dbconn)
 
-    def __init__(self, dbconn):
+    def __init__(self, dbname, user=None, pswd=None, host=None, port=None):
         """Initialize the database
 
-        :param dbconn: a DbConnection object
+        :param dbname: database name
+        :param user: user name
+        :param pswd: user password
+        :param host: host name
+        :param port: host port number
         """
-        self.dbconn = dbconn
+        self.dbconn = CatDbConnection(dbname, user, pswd, host, port)
         self.db = None
 
     def _link_refs(self, db):

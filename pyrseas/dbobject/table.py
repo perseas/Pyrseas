@@ -402,7 +402,9 @@ class ClassDict(DbObjectDict):
                 inst.get_dependent_table(self.dbconn)
             elif kind == 'v':
                 self[(sch, tbl)] = View(**table.__dict__)
-        for (tbl, partbl, num) in self.dbconn.fetchall(self.inhquery):
+        inhtbls = self.dbconn.fetchall(self.inhquery)
+        self.dbconn.rollback()
+        for (tbl, partbl, num) in inhtbls:
             (sch, tbl) = split_schema_obj(tbl)
             table = self[(sch, tbl)]
             if not hasattr(table, 'inherits'):

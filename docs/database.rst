@@ -8,8 +8,10 @@ The :mod:`database` module defines :class:`Database`.
 Database
 --------
 
-A :class:`Database` is initialized with a
-:class:`~pyrseas.dbconn.DbConnection` object.  It consists of one or
+A :class:`Database` is initialized from a
+:class:`~pyrseas.database.CatDbConnection` object (a specialized class
+derived from :class:`~pyrseas.lib.dbconn.DbConnection`).
+It consists of one or
 two :class:`Dicts`. A :class:`Dicts` object holds various dictionary
 objects derived from :class:`~pyrseas.dbobject.DbObjectDict`, e.g.,
 :class:`~pyrseas.dbobject.schema.SchemaDict`,
