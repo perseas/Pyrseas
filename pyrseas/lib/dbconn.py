@@ -59,7 +59,7 @@ class DbConnection(object):
         """Close the database connection"""
         if self.conn and not self.conn.closed:
             self.conn.close()
-            self.conn = None
+        self.conn = None
 
     def commit(self):
         """Commit currently open transaction"""
@@ -76,7 +76,7 @@ class DbConnection(object):
         :param args: arguments to query
         :return: cursor
         """
-        if self.conn is None:
+        if self.conn is None or self.conn.closed:
             self.connect()
         curs = self.conn.cursor()
         try:
