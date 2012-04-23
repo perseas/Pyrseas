@@ -193,11 +193,18 @@ class Database(object):
         self.ndb.fdwrappers.from_map(input_fdws, self.ndb)
         self._link_refs(self.ndb)
 
-    def to_map(self, schemas=[], tables=[]):
+    def to_map(self, schemas=[], tables=[], exclude_schemas=[],
+            exclude_tables=[]):
         """Convert the db maps to a single hierarchy suitable for YAML
 
         :param schemas: list of schemas to be output
         :param tables: list of tables to be output
+        :param exclude_schemas:
+            list of schemas to be excluded from output, even those listed in
+            ``schemas``
+        :param exclude_tables:
+            list of tables to be excluded from output, even those listed in
+            ``tables``
         :return: a YAML-suitable dictionary (without Python objects)
         """
         if not self.db:
@@ -207,13 +214,22 @@ class Database(object):
         dbmap.update(self.db.fdwrappers.to_map())
         dbmap.update(self.db.schemas.to_map())
         # trim the map of schemas/tables not selected
-        if schemas and schemas[0] is not None:
-            skey = 'schema ' + schemas[0]
+
+        if schemas:
+            schemakeys = set('schema ' + sch for sch in schemas)
             for sch in list(dbmap.keys()):
-                if sch.startswith('schema ') and sch != skey:
+                if sch not in schemakeys:
                     del dbmap[sch]
-        if tables:
+
+        if exclude_schemas:
+            schemakeys = set('schema ' + sch for sch in exclude_schemas)
+            for sch in list(dbmap.keys()):
+                if sch in schemakeys:
+                    del dbmap[sch]
+
+        if tables or exclude_tables:
             ktablist = ['table ' + tbl for tbl in tables]
+            exktablist = ['table ' + tbl for tbl in exclude_tables]
             for sch in list(dbmap.keys()):
                 if sch.startswith('schema '):
                     for key in list(dbmap[sch].keys()):
@@ -223,7 +239,9 @@ class Database(object):
                             if 'owner_table' in dbmap[sch][key] and \
                                     dbmap[sch][key]['owner_table'] in tables:
                                 continue
-                        if key not in ktablist:
+                        if exktablist and key in exktablist:
+                            del dbmap[sch][key]
+                        if ktablist and key not in ktablist:
                             del dbmap[sch][key]
                     if not dbmap[sch]:
                         del dbmap[sch]
