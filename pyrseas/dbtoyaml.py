@@ -19,15 +19,22 @@ def main(host='localhost', port=5432, schema=None):
     parser = ArgumentParser(parents=[parent_parser()],
                             description="Extract the schema of a PostgreSQL "
                             "database in YAML format")
-    parser.add_argument('-n', '--schema', action='append', default=[],
-                        help="only for named schema (default %(default)s)")
-    parser.add_argument('-N', '--exclude-schema', action='append', default=[],
-                        help='exclude one or more database schemas')
-    parser.add_argument('-t', '--table', dest='tablist', action='append',
-                        default=[], help="only for named tables (default all)")
-    parser.add_argument('-T', '--exclude-table', dest='ex_tablist',
-                        action='append', default=[],
-                        help='exclude one or more database tables')
+    group = parser.add_argument_group("Object inclusion/exclusion options",
+                                      "(each can be given multiple times)")
+    group.add_argument('-n', '--schema', metavar='SCHEMA', dest='schemas',
+                       action='append', default=[],
+                       help="extract the named schema(s) (default all")
+    group.add_argument('-N', '--exclude-schema', metavar='SCHEMA',
+                       dest='excl_schemas', action='append', default=[],
+                       help="do NOT extract the named schema(s) "
+                       "(default none)")
+    group.add_argument('-t', '--table', metavar='TABLE', dest='tables',
+                       action='append', default=[],
+                       help="extract the named table(s) (default all)")
+    group.add_argument('-T', '--exclude-table', metavar='TABLE',
+                       dest='excl_tables', action='append', default=[],
+                        help="do NOT extract the named table(s) "
+                       "(default none)")
 
     parser.set_defaults(host=host, port=port, username=os.getenv("USER"),
                         schema=schema)
@@ -35,9 +42,9 @@ def main(host='localhost', port=5432, schema=None):
 
     pswd = (args.password and getpass.getpass() or '')
     db = Database(args.dbname, args.username, pswd, args.host, args.port)
-    dbmap = db.to_map(schemas=args.schema, tables=args.tablist,
-            exclude_schemas=args.exclude_schema,
-            exclude_tables=args.ex_tablist)
+    dbmap = db.to_map(schemas=args.schemas, tables=args.tables,
+                      exclude_schemas=args.excl_schemas,
+                      exclude_tables=args.excl_tables)
     if args.output:
         fd = args.output
         sys.stdout = fd
