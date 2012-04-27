@@ -389,6 +389,6 @@ class ExtensionToMapTestCase(PyrseasTestCase):
         for stmt in stmts:
             self.db.execute(stmt)
         self.db.conn.commit()
-        db = ExtendDatabase(DbConnection(self.db.name, self.db.user,
-                                         host=self.db.host, port=self.db.port))
+        db = ExtendDatabase(self.db.name, self.db.user, host=self.db.host,
+                            port=self.db.port)
         return db.apply(extmap)

@@ -5,11 +5,11 @@
 from __future__ import print_function
 import os
 import sys
+import getpass
 from argparse import ArgumentParser, FileType
 
 import yaml
 
-from pyrseas.dbconn import DbConnection
 from pyrseas.extenddb import ExtendDatabase
 from pyrseas.cmdargs import parent_parser
 
@@ -29,8 +29,9 @@ def main(host='localhost', port=5432):
     parser.set_defaults(host=host, port=port, username=os.getenv("USER"))
     args = parser.parse_args()
 
-    extdb = ExtendDatabase(DbConnection(args.dbname, args.username,
-                                        args.password, args.host, args.port))
+    pswd = (args.password and getpass.getpass() or '')
+    extdb = ExtendDatabase(args.dbname, args.username, pswd, args.host,
+                           args.port)
     extmap = yaml.load(args.extspec)
     outmap = extdb.apply(extmap)
     if args.output:
