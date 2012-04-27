@@ -59,7 +59,7 @@ API Reference
 -------------
 
 Currently, the only external APIs are the classes
-:class:`~pyrseas.dbconn.DbConnection` and
+:class:`~pyrseas.lib.dbconn.DbConnection` and
 :class:`~pyrseas.database.Database` and the methods
 :meth:`~pyrseas.database.Database.to_map` and
 :meth:`~pyrseas.database.Database.diff_map` of the latter. Other

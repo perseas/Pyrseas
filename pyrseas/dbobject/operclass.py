@@ -112,12 +112,16 @@ class OperatorClassDict(DbObjectDict):
             if opclass.storage == '-':
                 del opclass.storage
             self[opclass.key()] = OperatorClass(**opclass.__dict__)
-        for (sch, opc, idx, strat, oper) in self.dbconn.fetchall(self.opquery):
+        opers = self.dbconn.fetchall(self.opquery)
+        self.dbconn.rollback()
+        for (sch, opc, idx, strat, oper) in opers:
             opcls = self[(sch, opc, idx)]
             if not hasattr(opcls, 'operators'):
                 opcls.operators = {}
             opcls.operators.update({strat: oper})
-        for (sch, opc, idx, supp, func) in self.dbconn.fetchall(self.prquery):
+        funcs = self.dbconn.fetchall(self.prquery)
+        self.dbconn.rollback()
+        for (sch, opc, idx, supp, func) in funcs:
             opcls = self[(sch, opc, idx)]
             if not hasattr(opcls, 'functions'):
                 opcls.functions = {}

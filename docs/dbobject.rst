@@ -45,7 +45,7 @@ Database Object Dictionary
 
 A :class:`DbObjectDict` represents a collection of :class:`DbObject`'s
 and is derived from the Python built-in type :class:`dict`. If a
-:class:`~pyrseas.dbconn.DbConnection` object is used for
+:class:`~pyrseas.lib.dbconn.DbConnection` object is used for
 initialization, an internal method is called to initialize the
 dictionary from the database catalogs. The :class:`DbObjectDict`
 :meth:`fetch` method fetches all objects using the :attr:`query`

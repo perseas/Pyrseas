@@ -317,7 +317,6 @@ class DbObjectDict(dict):
 
         :return: list of self.cls objects
         """
-        if not self.dbconn.conn:
-            self.dbconn.connect()
         data = self.dbconn.fetchall(self.query)
+        self.dbconn.rollback()
         return [self.cls(**dict(row)) for row in data]

@@ -96,12 +96,27 @@ dbname
 -n `schema`, ---schema= `schema`
 
     Extracts only a schema matching `schema`. By default, all schemas
-    are extracted.
+    are extracted. Multiple schemas can be extracted by using multiple
+    ``-n`` switches. Note that normally all objects that belong to the
+    schema are extracted as well, unless excluded otherwise.
+
+-N `schema`, ---exclude-schema= `schema`
+
+    Does not extract schema matching `schema`. This can be given more
+    than once to exclude several schemas.
 
 -t `table`, ---table= `table`
 
     Extract only tables matching `table`.  Multiple tables can be
-    extracted by using multiple ``-t`` switches.
+    extracted by using multiple ``-t`` switches.  Note that selecting
+    a table may cause other objects, such as an owned sequence, to be
+    extracted as well
+
+
+-T `table`, ---exclude-table= `table`
+
+    Do not extract tables matching `table`.  Multiple tables can be
+    excluded by using multiple ``-T`` switches.
 
 
 Examples
@@ -115,6 +130,11 @@ To extract only the schema named ``store``::
 
   dbtoyaml --schema=store moviesdb > moviesdb.yaml
 
-To extract the tables named ``film`` and ``category``::
+To extract the tables named ``film`` and ``genre``::
 
-  dbtoyaml -t film -t category moviesdb -o moviesdb.yaml
+  dbtoyaml -t film -t genre moviesdb -o moviesdb.yaml
+
+To extract objects, to standard output, except those in schemas
+``product`` and ``store``::
+
+  dbtoyaml -N product -N store moviesdb

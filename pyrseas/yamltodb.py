@@ -6,11 +6,11 @@ to match the schema specified in a YAML file"""
 from __future__ import print_function
 import os
 import sys
+import getpass
 from argparse import ArgumentParser, FileType
 
 import yaml
 
-from pyrseas.dbconn import DbConnection
 from pyrseas.database import Database
 from pyrseas.cmdargs import parent_parser
 
@@ -33,9 +33,8 @@ def main(host='localhost', port=5432):
     parser.set_defaults(host=host, port=port, username=os.getenv("USER"))
     args = parser.parse_args()
 
-    dbconn = DbConnection(args.dbname, args.username, args.password,
-                          args.host, args.port)
-    db = Database(dbconn)
+    pswd = (args.password and getpass.getpass() or '')
+    db = Database(args.dbname, args.username, pswd, args.host, args.port)
     inmap = yaml.load(args.spec)
     if args.schlist:
         kschlist = ['schema ' + sch for sch in args.schlist]
@@ -53,15 +52,14 @@ def main(host='localhost', port=5432):
         if args.onetrans or args.update:
             print("COMMIT;")
         if args.update:
-            dbconn.connect()
             try:
                 for stmt in stmts:
-                    dbconn.conn.cursor().execute(stmt)
+                    db.dbconn.execute(stmt)
             except:
-                dbconn.conn.rollback()
+                db.dbconn.rollback()
                 raise
             else:
-                dbconn.conn.commit()
+                db.dbconn.commit()
                 print("Changes applied", file=sys.stderr)
     if args.output:
         fd.close()
