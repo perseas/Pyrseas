@@ -23,8 +23,14 @@ CFG_TRIGGERS = \
             'name': '{{table_name}}_40_denorm',
             'events': ['insert', 'update'],
             'level': 'row',
-            'procedure': '{{table_name}}_40_denorm()',
-            'timing': 'before'}
+            'procedure': '{{table_name}}_denorm()',
+            'timing': 'before'},
+    'copy_cascade': {
+            'name': '{{table_name}}_60_cascade',
+            'events': ['update'],
+            'level': 'row',
+            'procedure': '{{table_name}}_cascade()',
+            'timing': 'after'}
     }
 
 

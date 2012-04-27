@@ -20,6 +20,23 @@ class ExtDenormColumn(DbExtension):
 class ExtCopyDenormColumn(ExtDenormColumn):
     """An extension that copies columns from one table to another"""
 
+    def add_trigger_func(self, table, extdb, func, trans_tbl):
+        """Add trigger, function and language, if needed
+
+        :param table: table to which trigger will be added
+        :param extdb: extension dictionaries
+        :param func: base function name
+        :param trans_tbl: translation table for function source
+        """
+        extdb.triggers[func].apply(table)
+        fncname = extdb.functions[func].adjust_name(trans_tbl)
+        (sch, fncname) = split_schema_obj(fncname, table.schema)
+        fncsig = fncname + '()'
+        if (sch, fncsig) not in extdb.current.functions:
+            newfunc = extdb.functions[func].apply(sch, trans_tbl)
+            extdb.schemas[sch].add_func(newfunc)
+            extdb.add_lang(newfunc.language)
+
     def apply(self, table, extdb):
         """Apply copy denormalizations to the argument table.
 
@@ -47,7 +64,6 @@ class ExtCopyDenormColumn(ExtDenormColumn):
                            (self.name, self.copy))
         if self.name not in table.column_names():
             table.columns.append(newcol)
-        extdb.triggers['copy_denorm'].apply(table)
 
         keys = [(table.column_names()[k - 1]) for k in fk.keycols]
         parkeys = [(fk.references.column_names()[k - 1]) for k in fk.ref_cols]
@@ -62,15 +78,8 @@ class ExtCopyDenormColumn(ExtDenormColumn):
             ('{{child_column}}', self.name),
             ('{{child_fkey}}', keys[0])]
 
-        cfgfnc = 'copy_denorm'
-        fncname = extdb.functions[cfgfnc].adjust_name(trans_tbl)
-        (sch, fncname) = split_schema_obj(fncname)
-        fncsig = fncname + '()'
-        if (sch, fncsig) not in currdb.functions:
-            newfunc = extdb.functions[cfgfnc].apply(sch, trans_tbl)
-            # add new function to the current db
-            extdb.schemas[sch].add_func(newfunc)
-            extdb.add_lang(newfunc.language)
+        self.add_trigger_func(table, extdb, 'copy_denorm', trans_tbl)
+        self.add_trigger_func(reftbl, extdb, 'copy_cascade', trans_tbl)
 
 
 class ExtDenormDict(DbExtensionDict):

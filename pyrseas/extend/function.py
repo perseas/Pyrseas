@@ -37,6 +37,17 @@ BEGIN
     RETURN NEW;
 END """
 
+FUNC_COPY_CASCADE = """\
+BEGIN
+    IF TG_OP = 'UPDATE' AND (
+            NEW.{{parent_column}} IS DISTINCT FROM OLD.{{parent_column}}) THEN
+        UPDATE {{child_schema}}.{{child_table}}
+        SET {{child_column}} = NULL
+        WHERE {{child_fkey}} = NEW.{{child_fkey}};
+    END IF;
+    RETURN NULL;
+END """
+
 CFG_FUNCTIONS = \
     {
     'aud_dflt()': {
@@ -49,12 +60,20 @@ CFG_FUNCTIONS = \
             'source': FUNC_AUD_DFLT},
     'copy_denorm()': {
             'description':
-                "Copies column from {{parent_table}}.{{parent_column}} " \
-                "into {{child_table}}.{{child_column}}.",
+                "Copies into column {{child_table}}.{{child_column}} " \
+                "from {{parent_table}}.{{parent_column}}.",
             'language': 'plpgsql',
-            'name': '{{child_table}}_40_denorm',
+            'name': '{{child_table}}_denorm',
             'returns': 'trigger',
-            'source': FUNC_COPY_DENORM}
+            'source': FUNC_COPY_DENORM},
+    'copy_cascade()': {
+            'description':
+                "Forces cascade of {{parent_table}}.{{parent_column}} " \
+                "onto {{child_table}}.{{child_column}}.",
+            'language': 'plpgsql',
+            'name': '{{parent_table}}_cascade',
+            'returns': 'trigger',
+            'source': FUNC_COPY_CASCADE}
     }
 
 
