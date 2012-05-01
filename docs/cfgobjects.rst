@@ -1,5 +1,5 @@
-Configuration Objects
-=====================
+Extension Configuration Objects
+===============================
 
 These configuration objects are pre-defined in the Extender modules or
 can be defined or overriden by configuration elements in the extension

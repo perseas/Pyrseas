@@ -53,3 +53,31 @@ invoked to maintain the column values.
 
 - created_date_only: This is a simple audit trail that adds a
   ``created_date`` column which defaults to the CURRENT_DATE.
+
+Copy Denormalizations
+---------------------
+
+These are one or more columns to be added to a table by copying values
+from a related table.  Given a "child" table, a column from a "parent"
+table can be added to the child and triggers and functions added to
+both, by using a foreign key from the child and the corresponding
+parent primary key, so that the child's values are automatically kept
+in sync with those of the parent.
+
+Aggregate Denormalizations
+--------------------------
+
+These are one or more columns to be added to a table by aggregating
+values from a related table.  Given a "parent" table, a column can be
+added to it to summarize values from a "child" table.  Triggers and
+functions are added to the tables by using the parent's primary key
+and a suitable child foreign key.
+
+Calculated Columns
+------------------
+
+These are columns that can be added to a table that result from
+calculations on other columns of the same table and that are stored
+redundantly rather than re-calculated upon retrieval.  For example, an
+extended_price column can be added to an order item table to be
+derived by multiplying the quantity_ordered by the unit_price value.

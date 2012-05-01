@@ -32,10 +32,11 @@ activated using `dbapprun`.
 Use Cases
 ---------
 
-The following two sections discuss the main scenarios where Pyrseas
+The following three sections discuss the main scenarios where Pyrseas
 tools may be helpful. The first deals with the problem of controlling
-database structural changes while the second examines the topic of
-repetitive database maintenance operations.
+database structural changes, the second examines the topic of
+repetitive database maintenance operations, and the third section
+describes the database augmentation capabilities.
 
 Version Control
 ---------------
@@ -52,10 +53,10 @@ comparisons (diffs) between revisions of source files.
 
 The Pyrseas version control tools are not designed to be the ultimate
 SQL database version control solution. Instead, they are aimed at
-assisting two or more developers or DbAs in sharing changes to the
+assisting two or more developers or DBAs in sharing changes to the
 underlying database as they implement a database application. The
 sharing can occur through a centralized or distributed VCS. The
-Pyrseas tools may even be used by a single DbA in conjunction with a
+Pyrseas tools may even be used by a single DBA in conjunction with a
 distributed VCS to quickly explore alternative designs. The tools can
 also help to share changes with a conventional QA team, but may
 require additional controls for final releases and production
@@ -75,6 +76,17 @@ the other hand, `Django's admin site application
 more than one table on a web page, but it requires defining the
 database "model" in Python and has limitations on how the database can
 be structured.
+
+Schema Augmentation
+-------------------
+
+It is quite common for a DBA to need to extend a database in certain
+typical patterns.  For example, many tables need to include columns to
+track the date and time when the last change was made, i.e., an "audit
+trail."  A DBA may also decide to denormalize certain tables, e.g.,
+copy some columns from related tables, or aggregate columns to a
+summary table.  The Pyrseas database extending tool (`dbextend`, under
+development) facilitates these common tasks.
 
 Naming
 ------

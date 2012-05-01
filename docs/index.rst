@@ -44,12 +44,12 @@ Contents
    install
    testing
    issues
+   predefext
 .. toctree::
    :maxdepth: 1
 
-   dbtoyaml
    dbextend
-   predefext
+   dbtoyaml
    yamltodb
    cmdargs
 
