@@ -46,9 +46,9 @@ class CfgAuditColumn(DbExtension):
                     (sch, fnc) = split_schema_obj(fnc)
                     if (sch, fncsig) not in currdb.functions:
                         newfunc = extdb.functions[fnc].apply(
-                            sch, extdb.columns.col_trans_tbl)
+                            sch, extdb.columns.col_trans_tbl, extdb)
                         # add new function to the current db
-                        extdb.schemas[sch].add_func(newfunc)
+                        extdb.add_func(sch, newfunc)
                         extdb.add_lang(newfunc.language)
 
 

@@ -26,8 +26,7 @@ class ExtTable(ExtDbClass):
         """
         currtbl = extdb.current.tables[self.current.key()]
         if hasattr(self, 'denorms'):
-            for col in self.denorms:
-                col.apply(currtbl, extdb)
+            self.denorms.apply(currtbl, extdb)
         elif hasattr(self, 'audit_columns'):
             extdb.auditcols[self.audit_columns].apply(currtbl, extdb)
 
@@ -74,7 +73,7 @@ class ExtClassDict(DbExtensionDict):
             if (sch, tbl) in self:
                 assert isinstance(self[(sch, tbl)], ExtTable)
                 self[(sch, tbl)].denorms = extdenorms[(sch, tbl)]
-                for col in extdenorms[(sch, tbl)]:
+                for col in extdenorms[(sch, tbl)].columns:
                     col._table = self[(sch, tbl)]
 
     def link_current(self, tables):

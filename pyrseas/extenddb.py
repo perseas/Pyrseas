@@ -18,7 +18,7 @@ from pyrseas.extend.schema import ExtSchemaDict
 from pyrseas.extend.table import ExtClassDict
 from pyrseas.extend.denorm import ExtDenormDict
 from pyrseas.extend.column import CfgColumnDict
-from pyrseas.extend.function import CfgFunctionDict
+from pyrseas.extend.function import CfgFunctionDict, CfgFunctionSourceDict
 from pyrseas.extend.trigger import CfgTriggerDict
 from pyrseas.extend.audit import CfgAuditColumnDict
 
@@ -34,6 +34,7 @@ class ExtendDatabase(Database):
             self.schemas = ExtSchemaDict()
             self.tables = ExtClassDict()
             self.columns = CfgColumnDict()
+            self.funcsrcs = CfgFunctionSourceDict()
             self.functions = CfgFunctionDict()
             self.triggers = CfgTriggerDict()
             self.auditcols = CfgAuditColumnDict()
@@ -50,6 +51,21 @@ class ExtendDatabase(Database):
             self.schemas.link_current(db.schemas)
             self.tables.link_current(db.tables)
             self.denorms.link_current(db.constraints)
+
+        def add_func(self, schema, function):
+            """Add a function to a schema if not already present
+
+            :param schema: schema name
+            :param function: the possibly new function
+            """
+            if schema in self.schemas:
+                self.schemas[schema].add_func(function)
+            elif schema in self.current.schemas:
+                sch = self.current.schemas[schema]
+                if not hasattr(sch, 'functions'):
+                    sch.functions = {}
+                if function.name not in sch.functions:
+                    sch.functions.update({function.name: function})
 
         def add_lang(self, lang):
             """Add a language if not already present
@@ -95,6 +111,8 @@ class ExtendDatabase(Database):
         for key in list(cfg_map.keys()):
             if key == 'columns':
                 self.edb.columns.from_map(cfg_map[key])
+            elif key in ['function templates', 'function segments']:
+                self.edb.funcsrcs.from_map(cfg_map[key])
             elif key == 'functions':
                 self.edb.functions.from_map(cfg_map[key])
             elif key == 'triggers':

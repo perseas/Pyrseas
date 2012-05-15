@@ -18,12 +18,9 @@ class DbExtension(object):
         """Initialize the extension object from a dictionary of attributes
 
         :param attrs: the dictionary of attributes
-
-        Non-key attributes without a value are discarded.
         """
         for key, val in list(attrs.items()):
-            if val or key in self.keylist:
-                setattr(self, key, val)
+            setattr(self, key, val)
 
 
 class DbExtensionDict(dict):
