@@ -45,12 +45,12 @@ def main(host='localhost', port=5432, schema=None):
     dbmap = db.to_map(schemas=args.schemas, tables=args.tables,
                       exclude_schemas=args.excl_schemas,
                       exclude_tables=args.excl_tables)
+
+    print(yaml.dump(dbmap, default_flow_style=False),
+          file=args.output or sys.stdout)
+
     if args.output:
-        fd = args.output
-        sys.stdout = fd
-    print(yaml.dump(dbmap, default_flow_style=False))
-    if args.output:
-        fd.close()
+        args.output.close()
 
 if __name__ == '__main__':
     main()
