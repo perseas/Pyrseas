@@ -42,15 +42,13 @@ def main(host='localhost', port=5432):
             if sch not in kschlist and sch.startswith('schema '):
                 del inmap[sch]
     stmts = db.diff_map(inmap, args.schlist)
-    if args.output:
-        fd = args.output
-        sys.stdout = fd
+    fd = args.output or sys.stdout
     if stmts:
         if args.onetrans or args.update:
-            print("BEGIN;")
-        print(";\n".join(stmts) + ';')
+            print("BEGIN;", file=fd)
+        print(";\n".join(stmts) + ';', file=fd)
         if args.onetrans or args.update:
-            print("COMMIT;")
+            print("COMMIT;", file=fd)
         if args.update:
             try:
                 for stmt in stmts:
@@ -62,7 +60,7 @@ def main(host='localhost', port=5432):
                 db.dbconn.commit()
                 print("Changes applied", file=sys.stderr)
     if args.output:
-        fd.close()
+        args.output.close()
 
 if __name__ == '__main__':
     main()
