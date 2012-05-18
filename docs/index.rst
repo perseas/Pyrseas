@@ -73,6 +73,7 @@ classes and methods are documented mainly for developer use.
    language
    schema
    conversion
+   extension
    function
    operator
    operfamily

@@ -293,10 +293,11 @@ class TableToSqlTestCase(InputMapToSqlTestCase):
 
     def test_create_table_within_schema(self):
         "Create a new schema and a table within it"
-        inmap = {'schema s1': {
-                'table t1':
-                    {'columns': [{'c1': {'type': 'integer'}},
-                                 {'c2': {'type': 'text'}}]}}}
+        inmap = self.std_map()
+        inmap.update({'schema s1': {
+                    'table t1':
+                        {'columns': [{'c1': {'type': 'integer'}},
+                                     {'c2': {'type': 'text'}}]}}})
         sql = self.to_sql(inmap)
         expsql = ["CREATE SCHEMA s1",
                   "CREATE TABLE s1.t1 (c1 integer, c2 text)"]

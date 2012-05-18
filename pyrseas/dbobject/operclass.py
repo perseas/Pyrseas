@@ -80,6 +80,9 @@ class OperatorClassDict(DbObjectDict):
                 JOIN pg_opfamily f ON (opcfamily = f.oid)
                 JOIN pg_namespace n ON (opcnamespace = n.oid)
            WHERE (nspname != 'pg_catalog' AND nspname != 'information_schema')
+             AND o.oid NOT IN (
+                 SELECT objid FROM pg_depend WHERE deptype = 'e'
+                              AND classid = 'pg_opclass'::regclass)
            ORDER BY nspname, opcname, amname"""
 
     opquery = \
@@ -92,6 +95,9 @@ class OperatorClassDict(DbObjectDict):
              AND classid = 'pg_amop'::regclass AND objid = ao.oid
              AND refobjid = o.oid
              AND (nspname != 'pg_catalog' AND nspname != 'information_schema')
+             AND o.oid NOT IN (
+                 SELECT objid FROM pg_depend WHERE deptype = 'e'
+                              AND classid = 'pg_opclass'::regclass)
            ORDER BY nspname, opcname, amname, amopstrategy"""
 
     prquery = \
@@ -104,6 +110,9 @@ class OperatorClassDict(DbObjectDict):
              AND classid = 'pg_amproc'::regclass AND objid = ap.oid
              AND refobjid = o.oid
              AND (nspname != 'pg_catalog' AND nspname != 'information_schema')
+             AND o.oid NOT IN (
+                 SELECT objid FROM pg_depend WHERE deptype = 'e'
+                              AND classid = 'pg_opclass'::regclass)
            ORDER BY nspname, opcname, amname, amprocnum"""
 
     def _from_catalog(self):

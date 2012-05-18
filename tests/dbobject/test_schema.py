@@ -37,7 +37,9 @@ class SchemaToSqlTestCase(InputMapToSqlTestCase):
 
     def test_create_schema(self):
         "Create a schema that didn't exist"
-        sql = self.to_sql({'schema s1': {}})
+        inmap = self.std_map()
+        inmap.update({'schema s1': {}})
+        sql = self.to_sql(inmap)
         self.assertEqual(sql, [CREATE_STMT])
 
     def test_bad_schema_map(self):
@@ -46,39 +48,49 @@ class SchemaToSqlTestCase(InputMapToSqlTestCase):
 
     def test_drop_schema(self):
         "Drop an existing schema"
-        sql = self.to_sql({}, [CREATE_STMT])
+        sql = self.to_sql(self.std_map(), [CREATE_STMT])
         self.assertEqual(sql, ["DROP SCHEMA s1"])
 
     def test_rename_schema(self):
         "Rename an existing schema"
-        sql = self.to_sql({'schema s2': {'oldname': 's1'}}, [CREATE_STMT])
+        inmap = self.std_map()
+        inmap.update({'schema s2': {'oldname': 's1'}})
+        sql = self.to_sql(inmap, [CREATE_STMT])
         self.assertEqual(sql, ["ALTER SCHEMA s1 RENAME TO s2"])
 
     def test_bad_rename_schema(self):
         "Error renaming a non-existing schema"
-        inmap = {'schema s2': {'oldname': 's3'}}
+        inmap = self.std_map()
+        inmap.update({'schema s2': {'oldname': 's3'}})
         self.assertRaises(KeyError, self.to_sql, inmap, [CREATE_STMT])
 
     def test_schema_with_comment(self):
         "Create a schema with a comment"
-        sql = self.to_sql(self._schmap)
+        inmap = self.std_map()
+        inmap.update(self._schmap)
+        sql = self.to_sql(inmap)
         self.assertEqual(sql, [CREATE_STMT, COMMENT_STMT])
 
     def test_comment_on_schema(self):
         "Create a comment for an existing schema"
-        sql = self.to_sql(self._schmap, [CREATE_STMT])
+        inmap = self.std_map()
+        inmap.update(self._schmap)
+        sql = self.to_sql(inmap, [CREATE_STMT])
         self.assertEqual(sql, [COMMENT_STMT])
 
     def test_drop_schema_comment(self):
         "Drop a comment on an existing schema"
+        inmap = self.std_map()
+        inmap.update({'schema s1': {}})
         stmts = [CREATE_STMT, COMMENT_STMT]
-        sql = self.to_sql({'schema s1': {}}, stmts)
+        sql = self.to_sql(inmap, stmts)
         self.assertEqual(sql, ["COMMENT ON SCHEMA s1 IS NULL"])
 
     def test_change_schema_comment(self):
         "Change existing comment on a schema"
+        inmap = self.std_map()
+        inmap.update({'schema s1': {'description': 'Changed schema s1'}})
         stmts = [CREATE_STMT, COMMENT_STMT]
-        inmap = {'schema s1': {'description': 'Changed schema s1'}}
         sql = self.to_sql(inmap, stmts)
         self.assertEqual(sql, ["COMMENT ON SCHEMA s1 IS 'Changed schema s1'"])
 

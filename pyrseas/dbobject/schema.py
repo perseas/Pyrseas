@@ -45,7 +45,7 @@ class Schema(DbObject):
         for objtypes in ['conversions', 'domains', 'ftables', 'functions',
                          'operators', 'operclasses', 'operfams',  'sequences',
                          'tsconfigs', 'tsdicts', 'tsparsers', 'tstempls',
-                         'types', 'views']:
+                         'types', 'views', 'extensions']:
             schema[key].update(mapper(self, objtypes))
 
         if hasattr(self, 'description'):
@@ -71,7 +71,7 @@ class SchemaDict(DbObjectDict):
         """SELECT nspname AS name,
                   obj_description(n.oid, 'pg_namespace') AS description
            FROM pg_namespace n
-           WHERE nspname NOT IN ('pg_catalog', 'information_schema',
+           WHERE nspname NOT IN ('information_schema',
                                  'pg_temp_1', 'pg_toast', 'pg_toast_temp_1')
            ORDER BY nspname"""
 
@@ -103,6 +103,7 @@ class SchemaDict(DbObjectDict):
             intsps = {}
             intsts = {}
             inftbs = {}
+            inexts = {}
             for key in list(inschema.keys()):
                 if key.startswith('domain '):
                     intypes.update({key: inschema[key]})
@@ -132,12 +133,15 @@ class SchemaDict(DbObjectDict):
                     intscs.update({key: inschema[key]})
                 elif key.startswith('foreign table '):
                     inftbs.update({key: inschema[key]})
+                elif key.startswith('extension '):
+                    inexts.update({key: inschema[key]})
                 elif key == 'oldname':
                     schema.oldname = inschema[key]
                 elif key == 'description':
                     schema.description = inschema[key]
                 else:
                     raise KeyError("Expected typed object, found '%s'" % key)
+            newdb.extensions.from_map(schema, inexts)
             newdb.types.from_map(schema, intypes, newdb)
             newdb.tables.from_map(schema, intables, newdb)
             newdb.functions.from_map(schema, infuncs)
@@ -153,7 +157,7 @@ class SchemaDict(DbObjectDict):
 
     def link_refs(self, dbtypes, dbtables, dbfunctions, dbopers, dbopfams,
                   dbopcls, dbconvs, dbtsconfigs, dbtsdicts, dbtspars,
-                  dbtstmpls, dbftables):
+                  dbtstmpls, dbftables, dbexts):
         """Connect types, tables and functions to their respective schemas
 
         :param dbtypes: dictionary of types and domains
@@ -168,6 +172,7 @@ class SchemaDict(DbObjectDict):
         :param dbtspars: dictionary of text search parsers
         :param dbtstmpls: dictionary of text search templates
         :param dbftables: dictionary of foreign tables
+        :param dbexts: dictionary of extensions
 
         Fills in the `domains` dictionary for each schema by
         traversing the `dbtypes` dictionary.  Fills in the `tables`,
@@ -286,6 +291,13 @@ class SchemaDict(DbObjectDict):
             if not hasattr(schema, 'ftables'):
                 schema.ftables = {}
             schema.ftables.update({ftb: ftbl})
+        for (sch, ext) in list(dbexts.keys()):
+            exten = dbexts[(sch, ext)]
+            assert self[sch]
+            schema = self[sch]
+            if not hasattr(schema, 'extensions'):
+                schema.extensions = {}
+            schema.extensions.update({ext: exten})
 
     def to_map(self):
         """Convert the schema dictionary to a regular dictionary
@@ -334,7 +346,7 @@ class SchemaDict(DbObjectDict):
         # check database schemas
         for sch in list(self.keys()):
             # if missing and not 'public', drop it
-            if sch != 'public' and sch not in inschemas:
+            if sch not in ['public', 'pg_catalog'] and sch not in inschemas:
                 self[sch].dropped = True
         return stmts
 

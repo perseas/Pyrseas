@@ -56,6 +56,9 @@ class OperatorFamilyDict(DbObjectDict):
                 JOIN pg_am a ON (opfmethod = a.oid)
                 JOIN pg_namespace n ON (opfnamespace = n.oid)
            WHERE (nspname != 'pg_catalog' AND nspname != 'information_schema')
+             AND o.oid NOT IN (
+                 SELECT objid FROM pg_depend WHERE deptype = 'e'
+                              AND classid = 'pg_opfamily'::regclass)
            ORDER BY opfnamespace, opfname, amname"""
 
     def from_map(self, schema, inopfams):

@@ -31,6 +31,7 @@ from pyrseas.dbobject.textsearch import TSParserDict, TSTemplateDict
 from pyrseas.dbobject.foreign import ForeignDataWrapperDict
 from pyrseas.dbobject.foreign import ForeignServerDict, UserMappingDict
 from pyrseas.dbobject.foreign import ForeignTableDict
+from pyrseas.dbobject.extension import ExtensionDict
 
 
 def flatten(lst):
@@ -97,6 +98,7 @@ class Database(object):
             self.servers = ForeignServerDict(dbconn)
             self.usermaps = UserMappingDict(dbconn)
             self.ftables = ForeignTableDict(dbconn)
+            self.extensions = ExtensionDict(dbconn)
 
     def __init__(self, dbname, user=None, pswd=None, host=None, port=None):
         """Initialize the database
@@ -116,7 +118,7 @@ class Database(object):
         db.schemas.link_refs(db.types, db.tables, db.functions, db.operators,
                              db.operfams, db.operclasses, db.conversions,
                              db.tsconfigs, db.tsdicts, db.tsparsers,
-                             db.tstempls, db.ftables)
+                             db.tstempls, db.ftables, db.extensions)
         db.tables.link_refs(db.columns, db.constraints, db.indexes,
                             db.rules, db.triggers)
         db.fdwrappers.link_refs(db.servers)
@@ -132,7 +134,7 @@ class Database(object):
         for objtype in ['types', 'tables', 'constraints', 'indexes',
                         'functions', 'operators', 'operclasses', 'operfams',
                         'rules', 'triggers', 'conversions', 'tstempls',
-                        'tsdicts', 'tsparsers', 'tsconfigs']:
+                        'tsdicts', 'tsparsers', 'tsconfigs', 'extensions']:
             objdict = getattr(self.db, objtype)
             for obj in list(objdict.keys()):
                 # obj[0] is the schema name in all these dicts
@@ -267,6 +269,7 @@ class Database(object):
         stmts = self.db.languages.diff_map(self.ndb.languages,
                                            self.dbconn.version)
         stmts.append(self.db.schemas.diff_map(self.ndb.schemas))
+        stmts.append(self.db.extensions.diff_map(self.ndb.extensions))
         stmts.append(self.db.types.diff_map(self.ndb.types))
         stmts.append(self.db.functions.diff_map(self.ndb.functions))
         stmts.append(self.db.operators.diff_map(self.ndb.operators))
@@ -293,6 +296,7 @@ class Database(object):
         stmts.append(self.db.operfams._drop())
         stmts.append(self.db.functions._drop())
         stmts.append(self.db.types._drop())
+        stmts.append(self.db.extensions._drop())
         stmts.append(self.db.schemas._drop())
         stmts.append(self.db.servers._drop())
         stmts.append(self.db.fdwrappers._drop())

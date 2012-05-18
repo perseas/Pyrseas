@@ -16,11 +16,15 @@ class LanguageToMapTestCase(DatabaseToMapTestCase):
 
     def test_map_language(self):
         "Map an existing language"
+        if self.db.version >= 90100:
+            self.skipTest('Only available before PG 9.1')
         dbmap = self.to_map([DROP_STMT, CREATE_STMT])
         self.assertEqual(dbmap['language plperl'], {'trusted': True})
 
     def test_map_language_comment(self):
         "Map a language with a comment"
+        if self.db.version >= 90100:
+            self.skipTest('Only available before PG 9.1')
         dbmap = self.to_map([DROP_STMT, CREATE_STMT, COMMENT_STMT])
         self.assertEqual(dbmap['language plperl']['description'],
                          'Test language PL/Perl')
@@ -35,6 +39,8 @@ class LanguageToSqlTestCase(InputMapToSqlTestCase):
 
     def test_create_language(self):
         "Create a language that didn't exist"
+        if self.db.version >= 90100:
+            self.skipTest('Only available before PG 9.1')
         sql = self.to_sql({'language plperl': {}})
         self.assertEqual(sql, [CREATE_STMT])
 
@@ -44,11 +50,15 @@ class LanguageToSqlTestCase(InputMapToSqlTestCase):
 
     def test_drop_language(self):
         "Drop an existing language"
+        if self.db.version >= 90100:
+            self.skipTest('Only available before PG 9.1')
         sql = self.to_sql({}, [CREATE_STMT])
         self.assertEqual(sql, ["DROP LANGUAGE plperl"])
 
     def test_drop_language_function(self):
         "Drop an existing function and the language it uses"
+        if self.db.version >= 90100:
+            self.skipTest('Only available before PG 9.1')
         stmts = [CREATE_STMT, "CREATE FUNCTION f1() RETURNS text "
                  "LANGUAGE plperl AS $_$return \"dummy\";$_$"]
         sql = self.to_sql({}, stmts)
@@ -56,6 +66,8 @@ class LanguageToSqlTestCase(InputMapToSqlTestCase):
 
     def test_comment_on_language(self):
         "Create a comment for an existing language"
+        if self.db.version >= 90100:
+            self.skipTest('Only available before PG 9.1')
         inmap = self.std_map()
         inmap.update({'language plperl': {
                     'description': "Test language PL/Perl"}})

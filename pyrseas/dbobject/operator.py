@@ -87,6 +87,9 @@ class OperatorDict(DbObjectDict):
            FROM pg_operator o
                 JOIN pg_namespace n ON (oprnamespace = n.oid)
            WHERE (nspname != 'pg_catalog' AND nspname != 'information_schema')
+             AND o.oid NOT IN (
+                 SELECT objid FROM pg_depend WHERE deptype = 'e'
+                              AND classid = 'pg_operator'::regclass)
            ORDER BY nspname, oprname"""
 
     def _from_catalog(self):

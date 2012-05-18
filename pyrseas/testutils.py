@@ -131,6 +131,21 @@ class PostgresDb(object):
                 self.execute("DROP SCHEMA IF EXISTS %s CASCADE" % (obj[0]))
         self.conn.commit()
 
+        # Extensions
+        if self.version >= 90100:
+            curs = pgexecute(
+                self.conn,
+                """SELECT extname FROM pg_extension
+                          JOIN pg_namespace n ON (extnamespace = n.oid)
+                   WHERE nspname NOT IN ('information_schema')
+                     AND extname != 'plpgsql'""")
+            exts = curs.fetchall()
+            curs.close()
+            self.conn.rollback()
+            for ext in exts:
+                self.execute("DROP EXTENSION IF EXISTS %s CASCADE" % (ext[0]))
+            self.conn.commit()
+
         # Tables, sequences and views
         curs = pgexecute(
             self.conn,
@@ -366,11 +381,13 @@ class InputMapToSqlTestCase(PyrseasTestCase):
         return db.diff_map(inmap)
 
     def std_map(self, plpgsql_installed=False):
-        "Return a standard public schema map with its description"
+        "Return a standard schema map for the default database"
         base = {'schema public': {'description': 'standard public schema'}}
-        if self.db._version >= 90000 or plpgsql_installed:
+        if (self.db._version >= 90000 or plpgsql_installed) \
+                and self.db._version < 90100:
             base.update({'language plpgsql': {'trusted': True}})
         if self.db._version >= 90100:
-            base['language plpgsql'].update(
-                description="PL/pgSQL procedural language")
+            base.update({'schema pg_catalog': {'extension plpgsql': {
+                            'description': "PL/pgSQL procedural language"},
+                         'description': 'system catalog schema'}})
         return base

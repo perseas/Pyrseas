@@ -218,6 +218,9 @@ class TypeDict(DbObjectDict):
                  OR (typtype = 'b' AND typarray != 0))
              AND nspname NOT IN ('pg_catalog', 'pg_toast',
                                  'information_schema')
+             AND t.oid NOT IN (
+                 SELECT objid FROM pg_depend WHERE deptype = 'e'
+                              AND classid = 'pg_type'::regclass)
            ORDER BY nspname, typname"""
 
     def _from_catalog(self):

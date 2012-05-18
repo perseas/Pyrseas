@@ -46,6 +46,9 @@ class LanguageDict(DbObjectDict):
                   obj_description(l.oid, 'pg_language') AS description
            FROM pg_language l
            WHERE lanispl
+             AND l.oid NOT IN (
+                 SELECT objid FROM pg_depend WHERE deptype = 'e'
+                              AND classid = 'pg_language'::regclass)
            ORDER BY lanname"""
 
     def from_map(self, inmap):
@@ -79,8 +82,12 @@ class LanguageDict(DbObjectDict):
             func = dbfunctions[(sch, fnc, arg)]
             if func.language in ['sql', 'c', 'internal']:
                 continue
-            assert self[(func.language)]
-            language = self[(func.language)]
+            try:
+                language = self[(func.language)]
+            except KeyError as exc:
+                if func.language == 'plpgsql':
+                    continue
+                raise exc
             if isinstance(func, Function):
                 if not hasattr(language, 'functions'):
                     language.functions = {}

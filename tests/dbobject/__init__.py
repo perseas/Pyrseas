@@ -23,6 +23,7 @@ from tests.dbobject import test_rule
 from tests.dbobject import test_conversion
 from tests.dbobject import test_textsearch
 from tests.dbobject import test_foreign
+from tests.dbobject import test_extension
 
 
 def suite():
@@ -47,6 +48,7 @@ def suite():
     tests.addTest(test_conversion.suite())
     tests.addTest(test_textsearch.suite())
     tests.addTest(test_foreign.suite())
+    tests.addTest(test_extension.suite())
     return tests
 
 if __name__ == '__main__':

@@ -192,6 +192,9 @@ class ProcDict(DbObjectDict):
                 JOIN pg_language l ON (prolang = l.oid)
                 LEFT JOIN pg_aggregate a ON (p.oid = aggfnoid)
            WHERE (nspname != 'pg_catalog' AND nspname != 'information_schema')
+             AND p.oid NOT IN (
+                 SELECT objid FROM pg_depend WHERE deptype = 'e'
+                              AND classid = 'pg_proc'::regclass)
            ORDER BY nspname, proname"""
 
     def _from_catalog(self):
