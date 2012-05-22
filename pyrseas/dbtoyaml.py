@@ -23,7 +23,7 @@ def main(host='localhost', port=5432, schema=None):
                                       "(each can be given multiple times)")
     group.add_argument('-n', '--schema', metavar='SCHEMA', dest='schemas',
                        action='append', default=[],
-                       help="extract the named schema(s) (default all")
+                       help="extract the named schema(s) (default all)")
     group.add_argument('-N', '--exclude-schema', metavar='SCHEMA',
                        dest='excl_schemas', action='append', default=[],
                        help="do NOT extract the named schema(s) "
