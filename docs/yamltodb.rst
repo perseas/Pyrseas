@@ -38,38 +38,53 @@ For example, given the input file shown under :doc:`dbtoyaml`,
  ALTER TABLE t1 ADD CONSTRAINT t1_pkey PRIMARY KEY (c1);
  ALTER TABLE t1 ADD CONSTRAINT t1_c2_fkey FOREIGN KEY (c2) REFERENCES s1.t2 (c21);
 
+:program:`yamltodb` can also be used to verify that a database has not
+changed, i.e., that it matches the input YAML specification (see `Exit
+status`_ 0 below).
+
 Options
 -------
 
 :program:`yamltodb` accepts the following command-line arguments (in
 addition to the :doc:`cmdargs`):
 
-dbname
+**dbname**
 
     Specifies the name of the database whose schema is to analyzed.
 
-spec
+**spec**
 
     Specifies the location of the YAML specification.  If this is
     omitted or specified as a single or double dash, the specification
     is read from the program's standard input.
 
--n `schema`, ---schema= `schema`
+-n **schema**, ``--schema=`` **schema**
 
-    Compare only a schema matching `schema`.  By default, all schemas
+    Compare only a schema matching **schema**.  By default, all schemas
     are compared.  Multiple schemas can be compared by using multiple
     ``-n`` switches.
 
--1\, --single-transaction
+-1\, ``--single-transaction``
 
     Wrap the generated statements in BEGIN/COMMIT. This ensures that
     either all the statements complete successfully, or no changes are
     applied.
 
--u\, --update
+-u\, ``--update``
 
     Execute the generated statements against the database mentioned in
-    ``dbname``.  This implies the --single-transaction option.
+    **dbname**.  This implies the ``--single-transaction`` option.
+
+Exit status
+~~~~~~~~~~~
+
+0    if OK (no differences found)
+
+1    if there was an error in processing, particularly applicable if
+``--update`` was used
+
+2    if differences were found: SQL statements were generated, and
+applied if ``--update`` was used
 
 Examples
 --------
