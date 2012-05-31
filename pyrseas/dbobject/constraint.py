@@ -14,6 +14,7 @@ from pyrseas.dbobject import quote_id, split_schema_obj
 
 ACTIONS = {'r': 'restrict', 'c': 'cascade', 'n': 'set null',
            'd': 'set default'}
+MATCHTYPES = {'f': 'full', 'p': 'partial', 'u': 'simple'}
 
 
 class Constraint(DbSchemaObject):
@@ -182,6 +183,9 @@ class ForeignKey(Constraint):
 
         :return: SQL statement
         """
+        match = ''
+        if hasattr(self, 'match'):
+            match = " MATCH %s" % self.match.upper()
         actions = ''
         if hasattr(self, 'on_update'):
             actions = " ON UPDATE %s" % self.on_update.upper()
@@ -193,9 +197,9 @@ class ForeignKey(Constraint):
             actions += " INITIALLY DEFERRED"
 
         return "ALTER TABLE %s ADD CONSTRAINT %s FOREIGN KEY (%s) " \
-            "REFERENCES %s (%s)%s" % (
+            "REFERENCES %s (%s)%s%s" % (
             self._table.qualname(), self.name, self.key_columns(),
-            self.references.qualname(), self.ref_columns(), actions)
+            self.references.qualname(), self.ref_columns(), match, actions)
 
     def diff_map(self, infk):
         """Generate SQL to transform an existing foreign key
@@ -262,7 +266,8 @@ class ConstraintDict(DbObjectDict):
                   condeferred AS deferred,
                   confrelid::regclass AS ref_table, confkey AS ref_cols,
                   consrc AS expression, confupdtype AS on_update,
-                  confdeltype AS on_delete, amname AS access_method,
+                  confdeltype AS on_delete, confmatchtype AS match,
+                  amname AS access_method,
                   obj_description(c.oid, 'pg_constraint') AS description
            FROM pg_constraint c
                 JOIN pg_namespace ON (connamespace = pg_namespace.oid)
@@ -284,6 +289,7 @@ class ConstraintDict(DbObjectDict):
                 del constr.ref_table
                 del constr.on_update
                 del constr.on_delete
+                del constr.match
             if constr_type == 'c':
                 self[(sch, tbl, cns)] = CheckConstraint(**constr.__dict__)
             elif constr_type == 'p':
@@ -301,6 +307,10 @@ class ConstraintDict(DbObjectDict):
                     del constr.on_delete
                 else:
                     constr.on_delete = ACTIONS[constr.on_delete]
+                if constr.match == 'u':
+                    del constr.match
+                else:
+                    constr.match = MATCHTYPES[constr.match]
                 reftbl = constr.ref_table
                 (constr.ref_schema, constr.ref_table) = split_schema_obj(
                     reftbl)
@@ -372,6 +382,12 @@ class ConstraintDict(DbObjectDict):
                     fkey.deferrable = True
                 if 'deferred' in val:
                     fkey.deferred = True
+                if 'match' in val:
+                    mat = val['match']
+                    if mat.lower() not in list(MATCHTYPES.values()):
+                        raise ValueError("Invalid match type '%s' for "
+                                         "constraint '%s'" % (mat, cns))
+                    fkey.match = mat
                 try:
                     fkey.keycols = val['columns']
                 except KeyError as exc:

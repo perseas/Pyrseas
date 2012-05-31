@@ -385,6 +385,21 @@ class ForeignKeyToMapTestCase(DatabaseToMapTestCase):
         self.assertTrue(fks['t1_c4_fkey'].get('deferrable'))
         self.assertTrue(fks['t1_c4_fkey'].get('deferred'))
 
+    def test_foreign_key_match(self):
+        "Map a foreign key constraint with a MATCH specification"
+        stmts = ["CREATE TABLE t2 (pc1 INTEGER PRIMARY KEY, pc2 TEXT)",
+                 "CREATE TABLE t1 (c1 INTEGER, "
+                 "c2 INTEGER REFERENCES t2 (pc1) MATCH FULL, c3 TEXT)"]
+        dbmap = self.to_map(stmts)
+        t1map = {'columns': [{'c1': {'type': 'integer'}},
+                             {'c2': {'type': 'integer'}},
+                             {'c3': {'type': 'text'}}],
+                 'foreign_keys': {'t1_c2_fkey': {
+                    'columns': ['c2'], 'match': 'full',
+                    'references': {'schema': 'public', 'table': 't2',
+                                   'columns': ['pc1']}}}}
+        self.assertEqual(dbmap['schema public']['table t1'], t1map)
+
     def test_map_fk_comment(self):
         "Map a foreign key with a comment"
         stmts = ["CREATE TABLE t2 (pc1 INTEGER PRIMARY KEY, pc2 TEXT)",
@@ -554,6 +569,27 @@ class ForeignKeyToSqlTestCase(InputMapToSqlTestCase):
                          "ALTER TABLE t2 ADD CONSTRAINT t2_c23_fkey "
                          "FOREIGN KEY (c23) REFERENCES t1 (c11) "
                          "ON UPDATE CASCADE ON DELETE SET DEFAULT")
+
+    def test_foreign_key_match(self):
+        "Create a foreign key constraint with a MATCH specification"
+        stmts = ["CREATE TABLE t2 (pc1 INTEGER PRIMARY KEY, pc2 TEXT)"]
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+                    'columns': [{'c1': {'type': 'integer'}},
+                                {'c2': {'type': 'integer'}},
+                                {'c3': {'type': 'text'}}],
+                    'foreign_keys': {'t1_c2_fkey': {
+                            'columns': ['c2'], 'match': 'full',
+                            'references': {'schema': 'public', 'table': 't2',
+                                           'columns': ['pc1']}}}},
+                                       'table t2': {
+                    'columns': [{'pc1': {'type': 'integer', 'not_null': True}},
+                                {'pc2': {'type': 'text'}}],
+                    'primary_key': {'t2_pkey': {'columns': ['pc1']}}}})
+        sql = self.to_sql(inmap, stmts)
+        self.assertEqual(fix_indent(sql[1]), "ALTER TABLE t1 ADD CONSTRAINT "
+                         "t1_c2_fkey FOREIGN KEY (c2) REFERENCES t2 (pc1) "
+                         "MATCH FULL")
 
 
 class UniqueConstraintToMapTestCase(DatabaseToMapTestCase):
