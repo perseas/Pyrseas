@@ -61,7 +61,6 @@ def main(host='localhost', port=5432):
                 print("Changes applied", file=sys.stderr)
         if args.output:
             args.output.close()
-        sys.exit(2)
 
 if __name__ == '__main__':
     main()
