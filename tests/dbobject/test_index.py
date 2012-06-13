@@ -19,7 +19,7 @@ class IndexToMapTestCase(DatabaseToMapTestCase):
         dbmap = self.to_map([CREATE_TABLE_STMT, CREATE_STMT])
         expmap = {'columns': [{'c1': {'type': 'integer'}},
                               {'c2': {'type': 'text'}}],
-                  'indexes': {'t1_idx': {'columns': ['c1'],
+                  'indexes': {'t1_idx': {'keys': ['c1'],
                                           'access_method': 'btree'}}}
         self.assertEqual(dbmap['schema public']['table t1'], expmap)
 
@@ -31,7 +31,7 @@ class IndexToMapTestCase(DatabaseToMapTestCase):
         expmap = {'columns': [{'c1': {'type': 'integer'}},
                               {'c2': {'type': 'character(5)'}},
                               {'c3': {'type': 'text'}}],
-                  'indexes': {'t1_idx': {'columns': ['c1', 'c2'],
+                  'indexes': {'t1_idx': {'keys': ['c1', 'c2'],
                                           'unique': True,
                                           'access_method': 'btree'}}}
         self.assertEqual(dbmap['schema public']['table t1'], expmap)
@@ -45,10 +45,10 @@ class IndexToMapTestCase(DatabaseToMapTestCase):
         expmap = {'columns': [{'c1': {'type': 'integer'}},
                               {'c2': {'type': 'character(5)'}},
                               {'c3': {'type': 'tsvector'}}],
-                  'indexes': {'t1_idx_1': {'columns': ['c1', 'c2'],
+                  'indexes': {'t1_idx_1': {'keys': ['c1', 'c2'],
                                             'unique': True,
                                             'access_method': 'btree'},
-                              't1_idx_2': {'columns': ['c3'],
+                              't1_idx_2': {'keys': ['c3'],
                                             'access_method': 'gin'}}}
         self.assertEqual(dbmap['schema public']['table t1'], expmap)
 
@@ -58,8 +58,23 @@ class IndexToMapTestCase(DatabaseToMapTestCase):
         dbmap = self.to_map(stmts)
         expmap = {'columns': [{'c1': {'type': 'integer'}},
                               {'c2': {'type': 'text'}}],
-                  'indexes': {'t1_idx': {'expression': 'lower(c2)',
-                                          'access_method': 'btree'}}}
+                  'indexes': {'t1_idx': {'keys': [
+                        {'lower(c2)': {'type': 'expression'}}],
+                                         'access_method': 'btree'}}}
+        self.assertEqual(dbmap['schema public']['table t1'], expmap)
+
+    def test_index_function_multi(self):
+        "Map an index using a function with multiple columns"
+        stmts = ["CREATE TABLE t1 (c1 integer, c2 text, c3 text)",
+                 "CREATE INDEX t1_idx ON t1 (lower(c2), lower(c3))"]
+        dbmap = self.to_map(stmts)
+        expmap = {'columns': [{'c1': {'type': 'integer'}},
+                              {'c2': {'type': 'text'}},
+                              {'c3': {'type': 'text'}}],
+                  'indexes': {'t1_idx': {
+                    'keys': [{'lower(c2)': {'type': 'expression'}},
+                                {'lower(c3)': {'type': 'expression'}}],
+                    'access_method': 'btree'}}}
         self.assertEqual(dbmap['schema public']['table t1'], expmap)
 
     def test_index_col_opts(self):
@@ -70,10 +85,27 @@ class IndexToMapTestCase(DatabaseToMapTestCase):
         dbmap = self.to_map(stmts)
         expmap = {'columns': [{'c1': {'type': 'cidr'}},
                               {'c2': {'type': 'text'}}],
-                  'indexes': {'t1_idx': {'columns': [
+                  'indexes': {'t1_idx': {'keys': [
                         {'c1': {'opclass': 'cidr_ops', 'nulls': 'first'}},
                         {'c2': {'order': 'desc'}}],
                                          'access_method': 'btree'}}}
+        self.assertEqual(dbmap['schema public']['table t1'], expmap)
+
+    def test_index_mixed(self):
+        "Map a mixed index using functions and a regular column"
+        stmts = ["CREATE TABLE t1 (c1 integer, c2 text, c3 text)",
+                 "CREATE INDEX t1_idx ON t1 (btrim(c3, 'x') NULLS FIRST, c1, "
+                 "lower(c2) DESC)"]
+        dbmap = self.to_map(stmts)
+        expmap = {'columns': [{'c1': {'type': 'integer'}},
+                              {'c2': {'type': 'text'}},
+                              {'c3': {'type': 'text'}}],
+                  'indexes': {'t1_idx': {
+                    'keys': [{"btrim(c3, 'x'::text)": {
+                                'type': 'expression', 'nulls': 'first'}},
+                             'c1', {'lower(c2)': {
+                                'type': 'expression', 'order': 'desc'}}],
+                    'access_method': 'btree'}}}
         self.assertEqual(dbmap['schema public']['table t1'], expmap)
 
     def test_map_index_comment(self):
@@ -93,7 +125,7 @@ class IndexToSqlTestCase(InputMapToSqlTestCase):
                     'columns': [{'c1': {'type': 'integer'}},
                                 {'c2': {'type': 'text'}}],
                     'indexes': {'t1_idx': {
-                            'columns': ['c1'],
+                            'keys': ['c1'],
                             'access_method': 'btree'}}}})
         sql = self.to_sql(inmap)
         self.assertEqual(fix_indent(sql[0]),
@@ -102,6 +134,21 @@ class IndexToSqlTestCase(InputMapToSqlTestCase):
 
     def test_add_index(self):
         "Add a two-column unique index to an existing table"
+        stmts = ["CREATE TABLE t1 (c1 INTEGER NOT NULL, "
+                 "c2 INTEGER NOT NULL, c3 TEXT)"]
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+                    'columns': [
+                        {'c1': {'type': 'integer', 'not_null': True}},
+                        {'c2': {'type': 'integer', 'not_null': True}},
+                        {'c3': {'type': 'text'}}],
+                    'indexes': {'t1_idx': {'keys': ['c2', 'c1'],
+                                           'unique': True}}}})
+        sql = self.to_sql(inmap, stmts)
+        self.assertEqual(sql, ["CREATE UNIQUE INDEX t1_idx ON t1 (c2, c1)"])
+
+    def test_add_index_back_compat(self):
+        "Add a index to an existing table accepting back-compatible spec"
         stmts = ["CREATE TABLE t1 (c1 INTEGER NOT NULL, "
                  "c2 INTEGER NOT NULL, c3 TEXT)"]
         inmap = self.std_map()
@@ -130,8 +177,9 @@ class IndexToSqlTestCase(InputMapToSqlTestCase):
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c1': {'type': 'integer'}},
                                 {'c2': {'type': 'text'}}],
-                    'indexes': {'t1_idx': {'expression': 'lower(c2)',
-                                           'access_method': 'btree'}}}})
+                    'indexes': {'t1_idx': {'keys': [{
+                                'lower(c2)': {'type': 'expression'}}],
+                                'access_method': 'btree'}}}})
         sql = self.to_sql(inmap)
         self.assertEqual(sql[1],
                          "CREATE INDEX t1_idx ON t1 USING btree (lower(c2))")
@@ -142,7 +190,7 @@ class IndexToSqlTestCase(InputMapToSqlTestCase):
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c1': {'type': 'cidr'}},
                                 {'c2': {'type': 'text'}}],
-                    'indexes': {'t1_idx': {'columns': [
+                    'indexes': {'t1_idx': {'keys': [
                                 {'c1': {'opclass': 'cidr_ops',
                                         'nulls': 'first'}}, 'c2'],
                                            'access_method': 'btree'}}}})
@@ -150,19 +198,39 @@ class IndexToSqlTestCase(InputMapToSqlTestCase):
         self.assertEqual(sql[1], "CREATE INDEX t1_idx ON t1 USING btree "
                          "(c1 cidr_ops NULLS FIRST, c2)")
 
-    def test_index_with_comment(self):
-        "Create an index with a comment"
+    def test_create_index_col_opts(self):
+        "Create table and an index with column options"
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+                    'columns': [{'c1': {'type': 'cidr'}},
+                                {'c2': {'type': 'text'}}],
+                    'indexes': {'t1_idx': {'keys': [
+                                {'c1': {'opclass': 'cidr_ops',
+                                        'nulls': 'first'}}, 'c2'],
+                                           'access_method': 'btree'}}}})
+        sql = self.to_sql(inmap)
+        self.assertEqual(sql[1], "CREATE INDEX t1_idx ON t1 USING btree "
+                         "(c1 cidr_ops NULLS FIRST, c2)")
+
+    def test_index_mixed(self):
+        "Create a mixed index using functions and a regular column"
+        stmts = ["CREATE TABLE t1 (c1 integer, c2 text, c3 text)"]
         inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c1': {'type': 'integer'}},
-                                {'c2': {'type': 'text'}}],
-                    'indexes': {'t1_idx': {
-                            'columns': ['c1'], 'access_method': 'btree',
-                            'description': 'Test index t1_idx'}}}})
-        sql = self.to_sql(inmap, [CREATE_TABLE_STMT])
-        self.assertEqual(fix_indent(sql[0]),
-                         "CREATE INDEX t1_idx ON t1 USING btree (c1)")
-        self.assertEqual(sql[1], COMMENT_STMT)
+                                {'c2': {'type': 'text'}},
+                                {'c3': {'type': 'text'}}],
+                    'indexes': {'t1_idx': {'keys': [
+                                {"btrim(c3, 'x'::text)": {
+                                        'type': 'expression',
+                                        'nulls': 'first'}}, 'c1',
+                                {'lower(c2)': {'type': 'expression',
+                                               'order': 'desc'}}],
+                                           'access_method': 'btree'}}}})
+        sql = self.to_sql(inmap, stmts)
+        self.assertEqual(sql[0], "CREATE INDEX t1_idx ON t1 USING btree ("
+                         "btrim(c3, 'x'::text) NULLS FIRST, c1, "
+                         "lower(c2) DESC)")
 
     def test_comment_on_index(self):
         "Create a comment for an existing index"
@@ -172,7 +240,7 @@ class IndexToSqlTestCase(InputMapToSqlTestCase):
                     'columns': [{'c1': {'type': 'integer'}},
                                 {'c2': {'type': 'text'}}],
                     'indexes': {'t1_idx': {
-                            'columns': ['c1'], 'access_method': 'btree',
+                            'keys': ['c1'], 'access_method': 'btree',
                             'description': 'Test index t1_idx'}}}})
         sql = self.to_sql(inmap, stmts)
         self.assertEqual(sql, [COMMENT_STMT])
@@ -185,7 +253,7 @@ class IndexToSqlTestCase(InputMapToSqlTestCase):
                     'columns': [{'c1': {'type': 'integer'}},
                                 {'c2': {'type': 'text'}}],
                     'indexes': {'t1_idx': {
-                            'columns': ['c1'], 'access_method': 'btree'}}}})
+                            'keys': ['c1'], 'access_method': 'btree'}}}})
         sql = self.to_sql(inmap, stmts)
         self.assertEqual(sql, ["COMMENT ON INDEX t1_idx IS NULL"])
 
@@ -197,7 +265,7 @@ class IndexToSqlTestCase(InputMapToSqlTestCase):
                     'columns': [{'c1': {'type': 'integer'}},
                                 {'c2': {'type': 'text'}}],
                     'indexes': {'t1_idx': {
-                            'columns': ['c1'], 'access_method': 'btree',
+                            'keys': ['c1'], 'access_method': 'btree',
                             'description': 'Changed index t1_idx'}}}})
         sql = self.to_sql(inmap, stmts)
         self.assertEqual(sql, [

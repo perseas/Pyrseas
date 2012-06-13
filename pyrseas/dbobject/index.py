@@ -18,13 +18,13 @@ class Index(DbSchemaObject):
     keylist = ['schema', 'table', 'name']
     objtype = "INDEX"
 
-    def key_columns(self):
+    def key_expressions(self):
         """Return comma-separated list of key column names and qualifiers
 
         :return: string
         """
         colspec = []
-        for col in self.columns:
+        for col in self.keys:
             if isinstance(col, str):
                 colspec.append(col)
             else:
@@ -60,9 +60,8 @@ class Index(DbSchemaObject):
         acc = hasattr(self, 'access_method') \
             and 'USING %s ' % self.access_method or ''
         stmts.append("CREATE %sINDEX %s ON %s %s(%s)" % (
-            unq and 'UNIQUE ' or '', quote_id(self.name), quote_id(self.table),
-            acc, hasattr(self, 'columns') and self.key_columns() or
-            self.expression))
+            'UNIQUE ' if unq else '', quote_id(self.name),
+            quote_id(self.table), acc, self.key_expressions()))
         if hasattr(self, 'description'):
             stmts.append(self.comment())
         return stmts
@@ -99,7 +98,7 @@ class IndexDict(DbObjectDict):
         """SELECT nspname AS schema, indrelid::regclass AS table,
                   c.relname AS name, amname AS access_method,
                   indisunique AS unique, indkey AS keycols,
-                  pg_get_expr(indexprs, indrelid) AS expression,
+                  pg_get_expr(indexprs, indrelid) AS keyexprs,
                   pg_get_indexdef(indexrelid) AS defn,
                   obj_description (c.oid, 'pg_class') AS description
            FROM pg_index JOIN pg_class c ON (indexrelid = c.oid)
@@ -119,27 +118,77 @@ class IndexDict(DbObjectDict):
             index.unqualify()
             sch, tbl, idx = index.key()
             sch, tbl = split_schema_obj('%s.%s' % (sch, tbl))
-            if index.keycols != '0':
-                index.columns = []
-                for col in index.defn[index.defn.rfind('(') + 1:-1].split(','):
-                    opts = col.lstrip().split()
-                    nm = opts[0]
-                    extra = {}
-                    for i, opt in enumerate(opts[1:]):
-                        if opt.upper() not in ['ASC', 'DESC', 'NULLS',
-                                               'FIRST', 'LAST']:
-                            extra.update(opclass=opt)
-                            continue
-                        elif opt == 'NULLS':
-                            extra.update(nulls=opts[i + 2].lower())
-                        elif opt == 'DESC':
-                            extra.update(order='desc')
+            keydefs = index.defn[index.defn.find(' USING ') + 7:]
+            keydefs = keydefs[keydefs.find(' (') + 2:-1]
+            # split expressions (result of pg_get_expr)
+            keyexprs = []
+            if hasattr(index, 'keyexprs'):
+                rest = exprs = index.keyexprs
+                del index.keyexprs
+                while len(rest):
+                    loc = rest.find(',')
+                    expr = rest[:loc]
+                    cntopen = expr.count('(')
+                    cntcls = expr.count(')')
+                    if cntopen == cntcls:
+                        keyexprs.append(rest[:loc])
+                        rest = rest[loc + 1:].lstrip()
+                    elif cntcls < cntopen:
+                        loc = rest[loc + 1:].find(',')
+                        if loc == -1:
+                            keyexprs.append(rest)
+                            rest = ''
                         else:
-                            continue
-                    if extra:
-                        index.columns.append({nm: extra})
+                            loc2 = rest[loc + 1:].find(',')
+                            loccls = rest[loc + 1:].find(')')
+                            if loc2 != -1 and loccls < loc2:
+                                keyexprs.append(rest[:loc + loccls + 2])
+                                rest = rest[loc + loccls + 3:].lstrip()
+            # parse the keys
+            i = 0
+            rest = keydefs
+            index.keys = []
+            for col in index.keycols.split():
+                keyopts = []
+                extra = {}
+                if col == '0':
+                    expr = keyexprs[i]
+                    assert(rest.startswith(expr))
+                    key = expr
+                    extra = {'type': 'expression'}
+                    explen = len(expr)
+                    loc = rest[explen:].find(',')
+                    if loc == 0:
+                        keyopts = []
+                        rest = rest[explen + 1:].lstrip()
+                    elif loc == -1:
+                        keyopts = rest[explen:].split()
+                        rest = ''
                     else:
-                        index.columns.append(nm)
+                        keyopts = rest[explen:explen + loc].split()
+                        rest = rest[explen + loc + 1:].lstrip()
+                    i += 1
+                else:
+                    loc = rest.find(',')
+                    key = rest[:loc] if loc != -1 else rest.lstrip()
+                    keyopts = key.split()[1:]
+                    key = key.split()[0]
+                    rest = rest[loc + 1:]
+                rest = rest.lstrip()
+                for j, opt in enumerate(keyopts):
+                    if opt.upper() not in ['ASC', 'DESC', 'NULLS',
+                                           'FIRST', 'LAST']:
+                        extra.update(opclass=opt)
+                        continue
+                    elif opt == 'NULLS':
+                        extra.update(nulls=keyopts[j + 1].lower())
+                    elif opt == 'DESC':
+                        extra.update(order='desc')
+                    else:
+                        continue
+                if extra:
+                    key = {key: extra}
+                index.keys.append(key)
             del index.defn, index.keycols
             self[(sch, tbl, idx)] = index
 
@@ -152,13 +201,12 @@ class IndexDict(DbObjectDict):
         for i in list(inindexes.keys()):
             idx = Index(schema=table.schema, table=table.name, name=i)
             val = inindexes[i]
-            if 'columns' in val:
-                idx.columns = val['columns']
-            elif 'expression' in val:
-                idx.expression = val['expression']
+            if 'keys' in val:
+                idx.keys = val['keys']
+            elif 'columns' in val:
+                idx.keys = val['columns']
             else:
-                raise KeyError("Index '%s' is missing columns or expression"
-                               % i)
+                raise KeyError("Index '%s' is missing keys specification" % i)
             for attr in ['access_method', 'unique']:
                 if attr in val:
                     setattr(idx, attr, val[attr])
