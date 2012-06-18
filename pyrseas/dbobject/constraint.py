@@ -38,9 +38,12 @@ class Constraint(DbSchemaObject):
         Works as is for primary keys and unique constraints but has
         to be overridden for check constraints and foreign keys.
         """
-        stmts = ["ALTER TABLE %s ADD CONSTRAINT %s %s (%s)" % (
+        tblspc = ''
+        if hasattr(self, 'tablespace'):
+            tblspc = " USING INDEX TABLESPACE %s" % self.tablespace
+        stmts = ["ALTER TABLE %s ADD CONSTRAINT %s %s (%s)%s" % (
                 self._table.qualname(), quote_id(self.name),
-                self.objtype, self.key_columns())]
+                self.objtype, self.key_columns(), tblspc)]
         if hasattr(self, 'description'):
             stmts.append(self.comment())
         return stmts
@@ -267,11 +270,12 @@ class ConstraintDict(DbObjectDict):
                   confrelid::regclass AS ref_table, confkey AS ref_cols,
                   consrc AS expression, confupdtype AS on_update,
                   confdeltype AS on_delete, confmatchtype AS match,
-                  amname AS access_method,
+                  amname AS access_method, spcname AS tablespace,
                   obj_description(c.oid, 'pg_constraint') AS description
            FROM pg_constraint c
                 JOIN pg_namespace ON (connamespace = pg_namespace.oid)
-                LEFT JOIN pg_class on (conname = relname)
+                LEFT JOIN pg_class i on (conname = relname)
+                LEFT JOIN pg_tablespace t ON (i.reltablespace = t.oid)
                 LEFT JOIN pg_am on (relam = pg_am.oid)
            WHERE (nspname != 'pg_catalog' AND nspname != 'information_schema')
                  AND conislocal
@@ -355,10 +359,9 @@ class ConstraintDict(DbObjectDict):
             except KeyError as exc:
                 exc.args = ("Constraint '%s' is missing columns" % cns, )
                 raise
-            if 'access_method' in val:
-                pkey.access_method = val['access_method']
-            if 'description' in val:
-                pkey.description = val['description']
+            for attr, value in list(val.items()):
+                if attr in ['access_method', 'tablespace', 'description']:
+                    setattr(pkey, attr, value)
             self[(table.schema, table.name, cns)] = pkey
         if 'foreign_keys' in inconstrs:
             fkeys = inconstrs['foreign_keys']
@@ -428,10 +431,9 @@ class ConstraintDict(DbObjectDict):
                 except KeyError as exc:
                     exc.args = ("Constraint '%s' is missing columns" % cns, )
                     raise
-                if 'access_method' in val:
-                    unq.access_method = val['access_method']
-                if 'description' in val:
-                    unq.description = val['description']
+                for attr, value in list(val.items()):
+                    if attr in ['access_method', 'tablespace', 'description']:
+                        setattr(unq, attr, value)
                 self[(table.schema, table.name, cns)] = unq
 
     def diff_map(self, inconstrs):

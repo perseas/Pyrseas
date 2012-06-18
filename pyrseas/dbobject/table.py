@@ -192,6 +192,8 @@ class Table(DbClass):
             if col:
                 cols.append(col)
         tbl = {'columns': cols}
+        if hasattr(self, 'tablespace'):
+            tbl.update(tablespace=self.tablespace)
         if hasattr(self, 'description'):
             tbl.update(description=self.description)
         if hasattr(self, 'check_constraints'):
@@ -255,8 +257,11 @@ class Table(DbClass):
         inhclause = ''
         if hasattr(self, 'inherits'):
             inhclause = " INHERITS (%s)" % ", ".join(t for t in self.inherits)
-        stmts.append("CREATE TABLE %s (\n%s)%s" % (
-                self.qualname(), ",\n".join(cols), inhclause))
+        tblspc = ''
+        if hasattr(self, 'tablespace'):
+            tblspc = " TABLESPACE %s" % self.tablespace
+        stmts.append("CREATE TABLE %s (\n%s)%s%s" % (
+                self.qualname(), ",\n".join(cols), inhclause, tblspc))
         if hasattr(self, 'description'):
             stmts.append(self.comment())
         for col in self.columns:
@@ -321,6 +326,14 @@ class Table(DbClass):
                 if descr:
                     stmts.append(descr)
 
+        if hasattr(intable, 'tablespace'):
+            if not hasattr(self, 'tablespace') \
+                    or self.tablespace != intable.tablespace:
+                stmts.append(base + "SET TABLESPACE %s"
+                             % quote_id(intable.tablespace))
+        elif hasattr(self, 'tablespace'):
+            stmts.append(base + "SET TABLESPACE pg_default")
+
         stmts.append(self.diff_description(intable))
 
         return stmts
@@ -372,11 +385,13 @@ class ClassDict(DbObjectDict):
     cls = DbClass
     query = \
         """SELECT nspname AS schema, relname AS name, relkind AS kind,
+                  spcname AS tablespace,
                   CASE WHEN relkind = 'v' THEN pg_get_viewdef(c.oid, TRUE)
                        ELSE '' END AS definition,
                   obj_description(c.oid, 'pg_class') AS description
            FROM pg_class c
                 JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
+                LEFT JOIN pg_tablespace t ON (reltablespace = t.oid)
            WHERE relkind in ('r', 'S', 'v')
                  AND (nspname != 'pg_catalog'
                       AND nspname != 'information_schema')
@@ -435,6 +450,8 @@ class ClassDict(DbObjectDict):
                     raise
                 if 'inherits' in intable:
                     table.inherits = intable['inherits']
+                if 'tablespace' in intable:
+                    table.tablespace = intable['tablespace']
                 if 'oldname' in intable:
                     table.oldname = intable['oldname']
                 newdb.constraints.from_map(table, intable)

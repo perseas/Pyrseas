@@ -59,9 +59,12 @@ class Index(DbSchemaObject):
         unq = hasattr(self, 'unique') and self.unique
         acc = hasattr(self, 'access_method') \
             and 'USING %s ' % self.access_method or ''
-        stmts.append("CREATE %sINDEX %s ON %s %s(%s)" % (
+        tblspc = ''
+        if hasattr(self, 'tablespace'):
+            tblspc = '\n    TABLESPACE %s' % self.tablespace
+        stmts.append("CREATE %sINDEX %s ON %s %s(%s)%s" % (
             'UNIQUE ' if unq else '', quote_id(self.name),
-            quote_id(self.table), acc, self.key_expressions()))
+            quote_id(self.table), acc, self.key_expressions(), tblspc))
         if hasattr(self, 'description'):
             stmts.append(self.comment())
         return stmts
@@ -86,6 +89,15 @@ class Index(DbSchemaObject):
             self.unique = inindex.unique
             stmts.append(self.create())
         # TODO: need to deal with changes in keycols
+
+        base = "ALTER INDEX %s\n    " % self.qualname()
+        if hasattr(inindex, 'tablespace'):
+            if not hasattr(self, 'tablespace') \
+                    or self.tablespace != inindex.tablespace:
+                stmts.append(base + "SET TABLESPACE %s"
+                             % quote_id(inindex.tablespace))
+        elif hasattr(self, 'tablespace'):
+            stmts.append(base + "SET TABLESPACE pg_default")
         stmts.append(self.diff_description(inindex))
         return stmts
 
@@ -100,10 +112,12 @@ class IndexDict(DbObjectDict):
                   indisunique AS unique, indkey AS keycols,
                   pg_get_expr(indexprs, indrelid) AS keyexprs,
                   pg_get_indexdef(indexrelid) AS defn,
+                  spcname AS tablespace,
                   obj_description (c.oid, 'pg_class') AS description
            FROM pg_index JOIN pg_class c ON (indexrelid = c.oid)
                 JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
                 JOIN pg_am ON (relam = pg_am.oid)
+                LEFT JOIN pg_tablespace t ON (c.reltablespace = t.oid)
            WHERE NOT indisprimary
                  AND (nspname != 'pg_catalog'
                       AND nspname != 'information_schema')
@@ -123,7 +137,7 @@ class IndexDict(DbObjectDict):
             # split expressions (result of pg_get_expr)
             keyexprs = []
             if hasattr(index, 'keyexprs'):
-                rest = exprs = index.keyexprs
+                rest = index.keyexprs
                 del index.keyexprs
                 while len(rest):
                     loc = rest.find(',')
@@ -207,7 +221,7 @@ class IndexDict(DbObjectDict):
                 idx.keys = val['columns']
             else:
                 raise KeyError("Index '%s' is missing keys specification" % i)
-            for attr in ['access_method', 'unique']:
+            for attr in ['access_method', 'unique', 'tablespace']:
                 if attr in val:
                     setattr(idx, attr, val[attr])
             if not hasattr(idx, 'unique'):
