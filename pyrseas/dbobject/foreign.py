@@ -471,14 +471,13 @@ class UserMappingDict(DbObjectDict):
 
     cls = UserMapping
     query = \
-        """SELECT fdwname AS wrapper, srvname AS server,
+        """SELECT fdwname AS wrapper, s.srvname AS server,
                   CASE umuser WHEN 0 THEN 'PUBLIC' ELSE
-                  pg_get_userbyid(umuser) END AS username,
-                  umoptions AS options
-           FROM pg_user_mapping u
-                JOIN pg_foreign_server s ON (umserver = s.oid)
+                  usename END AS username, umoptions AS options
+           FROM pg_user_mappings u
+                JOIN pg_foreign_server s ON (u.srvid = s.oid)
                 JOIN pg_foreign_data_wrapper w ON (srvfdw = w.oid)
-           ORDER BY fdwname, srvname, umuser"""
+           ORDER BY fdwname, s.srvname, 3"""
 
     def from_map(self, server, inusermaps):
         """Initialize the dictionary of mappings by examining the input map
