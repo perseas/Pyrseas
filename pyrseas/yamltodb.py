@@ -33,7 +33,7 @@ def main(host='localhost', port=5432):
     parser.set_defaults(host=host, port=port, username=os.getenv("USER"))
     args = parser.parse_args()
 
-    pswd = (args.password and getpass.getpass() or '')
+    pswd = (args.password and getpass.getpass() or None)
     db = Database(args.dbname, args.username, pswd, args.host, args.port)
     inmap = yaml.load(args.spec)
     if args.schlist:

@@ -40,7 +40,7 @@ def main(host='localhost', port=5432, schema=None):
                         schema=schema)
     args = parser.parse_args()
 
-    pswd = (args.password and getpass.getpass() or '')
+    pswd = (args.password and getpass.getpass() or None)
     db = Database(args.dbname, args.username, pswd, args.host, args.port)
     dbmap = db.to_map(schemas=args.schemas, tables=args.tables,
                       exclude_schemas=args.excl_schemas,
