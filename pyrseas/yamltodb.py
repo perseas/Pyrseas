@@ -30,7 +30,8 @@ def main(host='localhost', port=5432):
     parser.add_argument('-n', '--schema', dest='schlist', action='append',
                         help="only for named schemas (default all)")
 
-    parser.set_defaults(host=host, port=port, username=os.getenv("USER"))
+    parser.set_defaults(host=host, port=port,
+                        username=os.getenv("PGUSER") or os.getenv("USER"))
     args = parser.parse_args()
 
     pswd = (args.password and getpass.getpass() or None)

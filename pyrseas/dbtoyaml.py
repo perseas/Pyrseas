@@ -36,8 +36,8 @@ def main(host='localhost', port=5432, schema=None):
                         help="do NOT extract the named table(s) "
                        "(default none)")
 
-    parser.set_defaults(host=host, port=port, username=os.getenv("USER"),
-                        schema=schema)
+    parser.set_defaults(host=host, port=port, schema=schema,
+                        username=os.getenv("PGUSER") or os.getenv("USER"))
     args = parser.parse_args()
 
     pswd = (args.password and getpass.getpass() or None)
