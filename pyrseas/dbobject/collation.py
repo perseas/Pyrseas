@@ -62,6 +62,13 @@ class CollationDict(DbObjectDict):
                     coll.description = incoll['description']
             self[(schema.name, cll)] = coll
 
+    def _from_catalog(self):
+        """Initialize the dictionary of collations by querying the catalogs"""
+        if self.dbconn.version < 90100:
+            return
+        for coll in self.fetch():
+            self[coll.key()] = coll
+
     def diff_map(self, incolls):
         """Generate SQL to transform existing collations
 

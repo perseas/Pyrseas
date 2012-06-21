@@ -161,11 +161,12 @@ class PostgresDb(object):
             if obj['relkind'] == 'r':
                 self.execute("DROP TABLE IF EXISTS %s CASCADE" % (obj[0]))
             elif obj['relkind'] == 'S':
-                self.execute("DROP SEQUENCE %s CASCADE" % (obj[0]))
+                self.execute("DROP SEQUENCE IF EXISTS %s CASCADE" % (obj[0]))
             elif obj['relkind'] == 'v':
-                self.execute("DROP VIEW %s CASCADE" % (obj[0]))
+                self.execute("DROP VIEW IF EXISTS %s CASCADE" % (obj[0]))
             elif obj['relkind'] == 'f':
-                self.execute("DROP FOREIGN TABLE %s CASCADE" % (obj[0]))
+                self.execute("DROP FOREIGN TABLE IF EXISTS %s CASCADE" %
+                             (obj[0]))
         self.conn.commit()
 
         # Types (base, composite and enums) and domains
