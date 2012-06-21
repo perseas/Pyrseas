@@ -32,6 +32,7 @@ from pyrseas.dbobject.foreign import ForeignDataWrapperDict
 from pyrseas.dbobject.foreign import ForeignServerDict, UserMappingDict
 from pyrseas.dbobject.foreign import ForeignTableDict
 from pyrseas.dbobject.extension import ExtensionDict
+from pyrseas.dbobject.collation import CollationDict
 
 
 def flatten(lst):
@@ -99,6 +100,7 @@ class Database(object):
             self.usermaps = UserMappingDict(dbconn)
             self.ftables = ForeignTableDict(dbconn)
             self.extensions = ExtensionDict(dbconn)
+            self.collations = CollationDict(dbconn)
 
     def __init__(self, dbname, user=None, pswd=None, host=None, port=None):
         """Initialize the database
@@ -118,7 +120,8 @@ class Database(object):
         db.schemas.link_refs(db.types, db.tables, db.functions, db.operators,
                              db.operfams, db.operclasses, db.conversions,
                              db.tsconfigs, db.tsdicts, db.tsparsers,
-                             db.tstempls, db.ftables, db.extensions)
+                             db.tstempls, db.ftables, db.extensions,
+                             db.collations)
         db.tables.link_refs(db.columns, db.constraints, db.indexes,
                             db.rules, db.triggers)
         db.fdwrappers.link_refs(db.servers)
@@ -134,7 +137,8 @@ class Database(object):
         for objtype in ['types', 'tables', 'constraints', 'indexes',
                         'functions', 'operators', 'operclasses', 'operfams',
                         'rules', 'triggers', 'conversions', 'tstempls',
-                        'tsdicts', 'tsparsers', 'tsconfigs', 'extensions']:
+                        'tsdicts', 'tsparsers', 'tsconfigs', 'extensions',
+                        'collations']:
             objdict = getattr(self.db, objtype)
             for obj in list(objdict.keys()):
                 # obj[0] is the schema name in all these dicts
@@ -287,6 +291,7 @@ class Database(object):
         stmts.append(self.db.tsparsers.diff_map(self.ndb.tsparsers))
         stmts.append(self.db.tsconfigs.diff_map(self.ndb.tsconfigs))
         stmts.append(self.db.casts.diff_map(self.ndb.casts))
+        stmts.append(self.db.collations.diff_map(self.ndb.collations))
         stmts.append(self.db.fdwrappers.diff_map(self.ndb.fdwrappers))
         stmts.append(self.db.servers.diff_map(self.ndb.servers))
         stmts.append(self.db.usermaps.diff_map(self.ndb.usermaps))

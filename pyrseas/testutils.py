@@ -267,6 +267,21 @@ class PostgresDb(object):
             self.execute("DROP CONVERSION IF EXISTS %s CASCADE" % (cnv[0]))
         self.conn.commit()
 
+        # Collations
+        if self.version >= 90100:
+            curs = pgexecute(
+                self.conn,
+                """SELECT collname FROM pg_collation c
+                          JOIN pg_namespace n ON (collnamespace = n.oid)
+                   WHERE nspname NOT IN (
+                         'pg_catalog', 'information_schema')""")
+            colls = curs.fetchall()
+            curs.close()
+            self.conn.rollback()
+            for coll in colls:
+                self.execute("DROP COLLATION IF EXISTS %s CASCADE" % coll[0])
+            self.conn.commit()
+
         # User mappings
         curs = pgexecute(
             self.conn,

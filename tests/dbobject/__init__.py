@@ -25,6 +25,7 @@ from tests.dbobject import test_textsearch
 from tests.dbobject import test_foreign
 from tests.dbobject import test_extension
 from tests.dbobject import test_tablespace
+from tests.dbobject import test_collation
 
 
 def suite():
@@ -51,6 +52,7 @@ def suite():
     tests.addTest(test_foreign.suite())
     tests.addTest(test_extension.suite())
     tests.addTest(test_tablespace.suite())
+    tests.addTest(test_collation.suite())
     return tests
 
 if __name__ == '__main__':

@@ -72,6 +72,7 @@ classes and methods are documented mainly for developer use.
    cast
    language
    schema
+   collation
    conversion
    extension
    function
