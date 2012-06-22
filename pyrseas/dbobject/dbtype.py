@@ -240,6 +240,8 @@ class TypeDict(DbObjectDict):
             elif kind == 'e':
                 del dbtype.type
                 self[(sch, typ)] = Enum(**dbtype.__dict__)
+                if not hasattr(self[(sch, typ)], 'labels'):
+                    self[(sch, typ)].labels = {}
             elif kind == 'c':
                 del dbtype.type
                 self[(sch, typ)] = Composite(**dbtype.__dict__)
