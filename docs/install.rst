@@ -19,8 +19,7 @@ Requirements
 
 Pyrseas provides tools for `PostgreSQL <http://www.postgresql.org>`_,
 so obviously you need **PostgreSQL** to start with.  Pyrseas has been
-tested with PG 8.4 and 9.0 (and with the 9.1 Beta 1), but it probably
-also works against earlier releases, and we'll certainly keep up with
+tested with PG 8.4, 9.0 and 9.1, and we'll certainly keep up with
 future releases.  Please refer to section III, `Server Administration
 <http://www.postgresql.org/docs/current/interactive/admin.html>`_ of
 the PostgreSQL documentation for details on installation, setup and
@@ -28,8 +27,8 @@ the various Linux, Unix and Windows platforms supported.
 
 You will also need **Python**.  Pyrseas has been tested with `Python
 <http://www.python.org>`_ 2.6 and 2.7, but should also work with 2.5.
-It has not been ported to Python 3.x, but we hope to do that in the
-near term. On Linux or \*BSD, Python may already be part of your
+It has also been ported to Python 3.2.
+On Linux or \*BSD, Python may already be part of your
 distribution or may be available as a package.  For Windows and Mac OS
 please refer to the `Python download page
 <http://www.python.org/download/>`_ for installers and instructions.
@@ -161,6 +160,13 @@ example, on Linux do::
 or::
 
  sudo easy_install Pyrseas
+
+.. note:: On FreeBSD, it has been reported that it is necessary to
+          install the Python ``distribute`` package, prior to
+          installing Pyrseas with ``pip``.  In other words, you need
+          to run ``sudo pip install distribute`` before the above
+          ``pip`` command.  This may also be necessary on other BSD
+          variants.
 
 ``Pip`` and ``easy_install`` can also be used in a Python `virtualenv
 <http://www.virtualenv.org/en/latest/>`_ environment, in which case
