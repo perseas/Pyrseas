@@ -50,15 +50,16 @@ class ColumnToSqlTestCase(InputMapToSqlTestCase):
 
     def test_add_column2(self):
         "Add column to a table that has a dropped column"
-        stmts = [CREATE_STMT2, DROP_COL_STMT]
+        stmts = [CREATE_STMT2, "ALTER TABLE t1 DROP COLUMN c2"]
         inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c1': {'type': 'integer'}},
                                 {'c2': {'type': 'text'}},
                                 {'c3': {'type': 'date'}}]}})
         sql = self.to_sql(inmap, stmts)
+        self.assertEqual(len(sql), 1)
         self.assertEqual(fix_indent(sql[0]),
-                         "ALTER TABLE t1 ADD COLUMN c3 date")
+                         "ALTER TABLE t1 ADD COLUMN c2 text")
 
     def test_add_column3(self):
         "No change on a table that has a dropped column"

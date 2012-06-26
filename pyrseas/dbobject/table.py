@@ -307,19 +307,14 @@ class Table(DbClass):
             if hasattr(incol, 'oldname'):
                 assert(self.columns[num].name == incol.oldname)
                 stmts.append(self.columns[num].rename(incol.name))
-            # add new columns
-            if num >= dbcols:
-                (stmt, descr) = incol.add()
-                stmts.append(base + "ADD COLUMN %s" % stmt)
-                if descr:
-                    stmts.append(descr)
             # check existing columns
-            elif self.columns[num].name == incol.name:
+            if num < dbcols and self.columns[num].name == incol.name:
                 (stmt, descr) = self.columns[num].diff_map(incol)
                 if stmt:
                     stmts.append(base + stmt)
                 if descr:
                     stmts.append(descr)
+            # add new columns
             elif incol.name not in colnames:
                 (stmt, descr) = incol.add()
                 stmts.append(base + "ADD COLUMN %s" % stmt)
