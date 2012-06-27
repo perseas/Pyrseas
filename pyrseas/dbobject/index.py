@@ -45,6 +45,8 @@ class Index(DbSchemaObject):
         :return: dictionary
         """
         dct = self._base_map()
+        if dct['access_method'] == 'btree':
+            del dct['access_method']
         return {self.name: dct}
 
     def create(self):
@@ -57,8 +59,9 @@ class Index(DbSchemaObject):
         if pth:
             stmts.append(pth)
         unq = hasattr(self, 'unique') and self.unique
-        acc = hasattr(self, 'access_method') \
-            and 'USING %s ' % self.access_method or ''
+        acc = ''
+        if hasattr(self, 'access_method') and self.access_method != 'btree':
+            acc = 'USING %s ' % self.access_method
         tblspc = ''
         if hasattr(self, 'tablespace'):
             tblspc = '\n    TABLESPACE %s' % self.tablespace
@@ -224,6 +227,8 @@ class IndexDict(DbObjectDict):
             for attr in ['access_method', 'unique', 'tablespace']:
                 if attr in val:
                     setattr(idx, attr, val[attr])
+            if not hasattr(idx, 'access_method'):
+                idx.access_method = 'btree'
             if not hasattr(idx, 'unique'):
                 idx.unique = False
             if 'description' in val:

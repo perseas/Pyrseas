@@ -43,7 +43,6 @@ The output format is as follows::
          type: text
      primary_key:
        t1_pkey:
-         access_method: btree
          columns:
          - c1
      foreign_keys:
@@ -65,7 +64,6 @@ The output format is as follows::
           type: character varying(16)
      primary_key:
        t2_pkey:
-         access_method: btree
          columns:
          - c21
 

@@ -129,6 +129,8 @@ class PrimaryKey(Constraint):
         :return: dictionary
         """
         dct = self._base_map()
+        if dct['access_method'] == 'btree':
+            del dct['access_method']
         del dct['_table']
         dct['columns'] = [dbcols[k - 1] for k in self.keycols]
         del dct['keycols']
@@ -232,6 +234,8 @@ class UniqueConstraint(Constraint):
         :return: dictionary
         """
         dct = self._base_map()
+        if dct['access_method'] == 'btree':
+            del dct['access_method']
         del dct['_table']
         dct['columns'] = []
         dct['columns'] = [dbcols[k - 1] for k in self.keycols]

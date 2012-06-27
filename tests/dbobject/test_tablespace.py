@@ -32,7 +32,6 @@ class ToMapTestCase(DatabaseToMapTestCase):
         expmap = {'columns': [{'c1': {'type': 'integer', 'not_null': True}},
                               {'c2': {'type': 'text'}}],
                   'primary_key': {'t1_pkey': {'columns': ['c1'],
-                                              'access_method': 'btree',
                                               'tablespace': 'ts1'}}}
         self.assertEqual(dbmap['schema public']['table t1'], expmap)
 
@@ -42,7 +41,7 @@ class ToMapTestCase(DatabaseToMapTestCase):
                              "CREATE UNIQUE INDEX t1_idx ON t1 (c1) "
                              "TABLESPACE ts1"])
         expmap = {'t1_idx': {'keys': ['c1'], 'tablespace': 'ts1',
-                             'unique': True, 'access_method': 'btree'}}
+                             'unique': True}}
         self.assertEqual(dbmap['schema public']['table t1']['indexes'], expmap)
 
 
@@ -77,7 +76,6 @@ class ToSqlTestCase(InputMapToSqlTestCase):
                     'columns': [{'c1': {'type': 'integer', 'not_null': True}},
                                {'c2': {'type': 'text'}}],
                     'primary_key': {'t1_pkey': {'columns': ['c1'],
-                                                'access_method': 'btree',
                                                 'tablespace': 'ts2'}},
                     'tablespace': 'ts1'}})
         sql = self.to_sql(inmap)
@@ -94,11 +92,11 @@ class ToSqlTestCase(InputMapToSqlTestCase):
                                {'c2': {'type': 'text'}}],
                     'indexes': {'t1_idx': {
                             'keys': ['c1'], 'tablespace': 'ts2',
-                            'unique': True, 'access_method': 'btree'}},
+                            'unique': True}},
                     'tablespace': 'ts1'}})
         sql = self.to_sql(inmap, [CREATE_TABLE])
         self.assertEqual(fix_indent(sql[0]), "CREATE UNIQUE INDEX t1_idx "
-                         "ON t1 USING btree (c1) TABLESPACE ts2")
+                         "ON t1 (c1) TABLESPACE ts2")
 
     def test_move_index(self):
         "Move a index from one tablespace to another"
@@ -107,8 +105,7 @@ class ToSqlTestCase(InputMapToSqlTestCase):
                     'columns': [{'c1': {'type': 'integer'}},
                                {'c2': {'type': 'text'}}],
                     'indexes': {'t1_idx': {
-                            'keys': ['c1'], 'tablespace': 'ts2',
-                            'access_method': 'btree'}}}})
+                            'keys': ['c1'], 'tablespace': 'ts2'}}}})
         stmts = ["CREATE TABLE t1 (c1 integer, c2 text)",
                  "CREATE INDEX t1_idx ON t1 (c1) TABLESPACE ts1"]
         sql = self.to_sql(inmap, stmts)

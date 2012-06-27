@@ -78,7 +78,7 @@ The map returned by :meth:`to_map` and expected as argument by
       'description': "this is the comment for table t1",
       'primary_key':
          {'t1_prim_key':
-             {'columns': ['c1', 'c2'], 'access_method': 'btree'}
+             {'columns': ['c1', 'c2']}
          },
       'foreign_keys':
          {'t1_fgn_key1':

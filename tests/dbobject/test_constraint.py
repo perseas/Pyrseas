@@ -79,19 +79,16 @@ class PrimaryKeyToMapTestCase(DatabaseToMapTestCase):
 
     map_pkey1 = {'columns': [{'c1': {'type': 'integer', 'not_null': True}},
                              {'c2': {'type': 'text'}}],
-                 'primary_key': {'t1_pkey': {'columns': ['c1'],
-                                             'access_method': 'btree'}}}
+                 'primary_key': {'t1_pkey': {'columns': ['c1']}}}
     map_pkey2 = {'columns': [
             {'c1': {'type': 'integer', 'not_null': True}},
             {'c2': {'type': 'character(5)', 'not_null': True}},
             {'c3': {'type': 'text'}}],
-                 'primary_key': {'t1_pkey': {'columns': ['c2', 'c1'],
-                                             'access_method': 'btree'}}}
+                 'primary_key': {'t1_pkey': {'columns': ['c2', 'c1']}}}
 
     map_pkey3 = {'columns': [{'c1': {'type': 'integer', 'not_null': True}},
                              {'c2': {'type': 'text'}}],
-                 'primary_key': {'t1_prim_key': {'columns': ['c1'],
-                                                 'access_method': 'btree'}}}
+                 'primary_key': {'t1_prim_key': {'columns': ['c1']}}}
 
     def test_primary_key_1(self):
         "Map a table with a single-column primary key"
@@ -145,8 +142,7 @@ class PrimaryKeyToSqlTestCase(InputMapToSqlTestCase):
                     'columns': [{'c1': {'type': 'text'}},
                                 {'c2': {'type': 'integer'}}],
                     'primary_key': {'t1_pkey': {
-                            'columns': ['c2'],
-                            'access_method': 'btree'}}}})
+                            'columns': ['c2']}}}})
         sql = self.to_sql(inmap)
         self.assertEqual(fix_indent(sql[0]),
                          "CREATE TABLE t1 (c1 text, c2 integer)")
@@ -165,8 +161,7 @@ class PrimaryKeyToSqlTestCase(InputMapToSqlTestCase):
                         {'c2': {'type': 'integer', 'not_null': True}},
                         {'c3': {'type': 'text'}}],
                     'primary_key': {'t1_pkey': {
-                            'columns': ['c1', 'c2'],
-                            'access_method': 'btree'}}}})
+                            'columns': ['c1', 'c2']}}}})
         sql = self.to_sql(inmap, stmts)
         self.assertEqual(fix_indent(sql[0]),
                          "ALTER TABLE t1 ADD CONSTRAINT t1_pkey "
@@ -220,8 +215,7 @@ class ForeignKeyToMapTestCase(DatabaseToMapTestCase):
                              {'c3': {'type': 'integer'}},
                              {'c4': {'type': 'date'}},
                              {'c5': {'type': 'text'}}],
-                 'primary_key': {'t1_prim_key': {'columns': ['c1', 'c2'],
-                                                 'access_method': 'btree'}},
+                 'primary_key': {'t1_prim_key': {'columns': ['c1', 'c2']}},
                  'foreign_keys': {'t1_fgn_key1': {
                     'columns': ['c2', 'c3', 'c4'],
                     'references': {'schema': 'public', 'table': 't2',
@@ -310,15 +304,12 @@ class ForeignKeyToMapTestCase(DatabaseToMapTestCase):
         dbmap = self.to_map(stmts)
         t2map = {'columns': [{'pc1': {'type': 'integer', 'not_null': True}},
                              {'pc2': {'type': 'text'}}],
-                 'primary_key': {'t2_pkey': {
-                    'columns': ['pc1'], 'access_method': 'btree'}}}
+                 'primary_key': {'t2_pkey': {'columns': ['pc1']}}}
         t1map = {'table t1': {
                 'columns': [{'c1': {'type': 'integer', 'not_null': True}},
                             {'c2': {'type': 'integer'}},
                             {'c3': {'type': 'text'}}],
-                'primary_key': {'t1_pkey': {
-                        'columns': ['c1'],
-                        'access_method': 'btree'}},
+                'primary_key': {'t1_pkey': {'columns': ['c1']}},
                 'foreign_keys': {'t1_c2_fkey': {
                         'columns': ['c2'],
                         'references': {'schema': 'public', 'table': 't2',
@@ -335,8 +326,7 @@ class ForeignKeyToMapTestCase(DatabaseToMapTestCase):
         dbmap = self.to_map(stmts)
         t1map = {'columns': [{'pc1': {'type': 'integer', 'not_null': True}},
                              {'pc2': {'type': 'text'}}],
-                 'primary_key': {'t1_pkey': {
-                    'columns': ['pc1'], 'access_method': 'btree'}}}
+                 'primary_key': {'t1_pkey': {'columns': ['pc1']}}}
         t2map = {'columns': [{'c1': {'type': 'integer'}},
                              {'c2': {'type': 'integer'}},
                              {'c3': {'type': 'text'}},
@@ -509,16 +499,14 @@ class ForeignKeyToSqlTestCase(InputMapToSqlTestCase):
                         {'c12': {'type': 'integer', 'not_null': True}},
                         {'c13': {'type': 'text'}}],
                              'primary_key': {'t1_pkey': {
-                            'columns': ['c11', 'c12'],
-                            'access_method': 'btree'}}},
+                            'columns': ['c11', 'c12']}}},
                 'table t2': {'columns': [
                         {'c21': {'type': 'integer', 'not_null': True}},
                         {'c22': {'type': 'text'}},
                         {'c23': {'type': 'integer'}},
                         {'c24': {'type': 'integer'}}],
                              'primary_key': {'t2_pkey': {
-                            'columns': ['c21'],
-                            'access_method': 'btree'}},
+                            'columns': ['c21']}},
                              'foreign_keys': {'t2_c23_fkey': {
                             'columns': ['c23', 'c24'],
                             'references': {'columns': ['c11', 'c12'],
@@ -597,19 +585,18 @@ class UniqueConstraintToMapTestCase(DatabaseToMapTestCase):
 
     map_unique1 = {'columns': [{'c1': {'type': 'integer'}},
                                {'c2': {'type': 'text'}}],
-                   'unique_constraints': {'t1_c1_key': {
-                'columns': ['c1'], 'access_method': 'btree'}}}
+                   'unique_constraints': {'t1_c1_key': {'columns': ['c1']}}}
 
     map_unique2 = {'columns': [{'c1': {'type': 'integer'}},
                                {'c2': {'type': 'character(5)'}},
                                {'c3': {'type': 'text'}}],
                    'unique_constraints': {'t1_c1_c2_key': {
-                'columns': ['c1', 'c2'], 'access_method': 'btree'}}}
+                'columns': ['c1', 'c2']}}}
 
     map_unique3 = {'columns': [{'c1': {'type': 'integer'}},
                                {'c2': {'type': 'text'}}],
                    'unique_constraints': {'t1_unique_key': {
-                'columns': ['c1'], 'access_method': 'btree'}}}
+                'columns': ['c1']}}}
 
     def test_unique_1(self):
         "Map a table with a single-column unique constraint"
@@ -629,7 +616,7 @@ class UniqueConstraintToMapTestCase(DatabaseToMapTestCase):
         dbmap = self.to_map(stmts)
         if self.db.version < 90000:
             self.map_unique2.update({'unique_constraints': {'t1_c1_key': {
-                'columns': ['c1', 'c2'], 'access_method': 'btree'}}})
+                            'columns': ['c1', 'c2']}}})
         self.assertEqual(dbmap['schema public']['table t1'], self.map_unique2)
 
     def test_unique_4(self):
@@ -657,8 +644,7 @@ class UniqueConstraintToSqlTestCase(InputMapToSqlTestCase):
                     'columns': [{'c1': {'type': 'integer'}},
                                 {'c2': {'type': 'text'}}],
                     'unique_constraints': {'t1_c1_key': {
-                            'columns': ['c1'],
-                            'access_method': 'btree'}}}})
+                            'columns': ['c1']}}}})
         sql = self.to_sql(inmap)
         self.assertEqual(fix_indent(sql[0]),
                          "CREATE TABLE t1 (c1 integer, c2 text)")
@@ -723,7 +709,7 @@ class ConstraintCommentTestCase(InputMapToSqlTestCase):
                     'columns': [{'c1': {'type': 'text', 'not_null': True}},
                                 {'c2': {'type': 'integer'}}],
                     'primary_key': {'cns1': {
-                            'columns': ['c2'], 'access_method': 'btree',
+                            'columns': ['c2'],
                             'description': 'Test constraint cns1'}}}})
         sql = self.to_sql(inmap, stmts)
         self.assertEqual(sql, [COMMENT_STMT])
@@ -738,8 +724,7 @@ class ConstraintCommentTestCase(InputMapToSqlTestCase):
         inmap['schema public'].update({'table t2': {
                     'columns': [{'c21': {'type': 'integer', 'not_null': True}},
                                 {'c22': {'type': 'text'}}],
-                    'primary_key': {'t2_pkey': {
-                            'columns': ['c21'], 'access_method': 'btree'}}},
+                    'primary_key': {'t2_pkey': {'columns': ['c21']}}},
                                    'table t1': {
                     'columns': [{'c11': {'type': 'integer'}},
                                 {'c12': {'type': 'text'}},
@@ -760,7 +745,7 @@ class ConstraintCommentTestCase(InputMapToSqlTestCase):
                     'columns': [{'c1': {'type': 'integer'}},
                                 {'c2': {'type': 'text'}}],
                     'unique_constraints': {'cns1': {
-                            'columns': ['c1'], 'access_method': 'btree',
+                            'columns': ['c1'],
                             'description': "Changed constraint cns1"}}}})
         sql = self.to_sql(inmap, stmts)
         self.assertEqual(sql, ["COMMENT ON CONSTRAINT cns1 ON t1 IS "
