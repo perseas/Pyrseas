@@ -228,6 +228,8 @@ class IndexDict(DbObjectDict):
                 idx.unique = False
             if 'description' in val:
                 idx.description = val['description']
+            if 'oldname' in val:
+                idx.oldname = val['oldname']
             self[(table.schema, table.name, i)] = idx
 
     def diff_map(self, inindexes):
