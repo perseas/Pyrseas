@@ -71,8 +71,9 @@ class SchemaDict(DbObjectDict):
         """SELECT nspname AS name,
                   obj_description(n.oid, 'pg_namespace') AS description
            FROM pg_namespace n
-           WHERE nspname NOT IN ('information_schema',
-                                 'pg_temp_1', 'pg_toast', 'pg_toast_temp_1')
+           WHERE nspname NOT IN ('information_schema', 'pg_toast')
+                 AND nspname NOT LIKE 'pg_temp\_%'
+                 AND nspname NOT LIKE 'pg_toast_temp\_%'
            ORDER BY nspname"""
 
     def from_map(self, inmap, newdb):
