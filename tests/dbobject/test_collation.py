@@ -33,6 +33,17 @@ class CollationToMapTestCase(DatabaseToMapTestCase):
         self.assertEqual(dbmap['schema public']['collation c1']
                          ['description'], 'Test collation c1')
 
+    def test_map_column_collation(self):
+        "Map a table with a column collation"
+        if self.db.version < 90100:
+            self.skipTest('Only available on PG 9.1')
+        dbmap = self.to_map(
+            [CREATE_STMT, "CREATE TABLE t1 (c1 integer, c2 text COLLATE c1)"])
+        expmap = {'columns': [
+                    {'c1': {'type': 'integer'}},
+                    {'c2': {'type': 'text', 'collation': 'c1'}}]}
+        self.assertEqual(dbmap['schema public']['table t1'], expmap)
+
 
 class CollationToSqlTestCase(InputMapToSqlTestCase):
     """Test SQL generation from input collations"""
@@ -86,6 +97,17 @@ class CollationToSqlTestCase(InputMapToSqlTestCase):
         sql = self.to_sql(inmap)
         self.assertEqual(fix_indent(sql[0]), CREATE_STMT)
         self.assertEqual(sql[1], COMMENT_STMT)
+
+    def test_create_table_column_collation(self):
+        "Create a table with a column with non-default collation"
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+                    'columns': [{'c1': {'type': 'integer', 'not_null': True}},
+                                {'c2': {'type': 'text', 'collation': 'c1'}}]}})
+        sql = self.to_sql(inmap)
+        self.assertEqual(fix_indent(sql[0]),
+                         "CREATE TABLE t1 (c1 integer NOT NULL, "
+                         "c2 text COLLATE c1)")
 
 
 def suite():

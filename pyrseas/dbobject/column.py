@@ -23,6 +23,8 @@ class Column(DbSchemaObject):
             return None
         dct = self._base_map()
         del dct['number'], dct['name'], dct['_table']
+        if 'collation' in dct and dct['collation'] == 'default':
+            del dct['collation']
         if hasattr(self, 'inherited'):
             dct['inherited'] = (self.inherited != 0)
         return {self.name: dct}
@@ -38,6 +40,8 @@ class Column(DbSchemaObject):
         if hasattr(self, 'default'):
             if not self.default.startswith('nextval'):
                 stmt += ' DEFAULT ' + self.default
+        if hasattr(self, 'collation') and self.collation != 'default':
+            stmt += ' COLLATE ' + self.collation
         return (stmt, '' if not hasattr(self, 'description')
                 else self.comment())
 
@@ -122,12 +126,7 @@ class Column(DbSchemaObject):
             stmts.append(base + "DROP DEFAULT")
         return (", ".join(stmts), self.diff_description(incol))
 
-
-class ColumnDict(DbObjectDict):
-    "The collection of columns in tables in a database"
-
-    cls = Column
-    query = \
+QUERY_PRE91 = \
         """SELECT nspname AS schema, relname AS table, attname AS name,
                   attnum AS number, format_type(atttypid, atttypmod) AS type,
                   attnotnull AS not_null, attinhcount AS inherited,
@@ -144,8 +143,33 @@ class ColumnDict(DbObjectDict):
                  AND attnum > 0
            ORDER BY nspname, relname, attnum"""
 
+
+class ColumnDict(DbObjectDict):
+    "The collection of columns in tables in a database"
+
+    cls = Column
+    query = \
+        """SELECT nspname AS schema, relname AS table, attname AS name,
+                  attnum AS number, format_type(atttypid, atttypmod) AS type,
+                  attnotnull AS not_null, attinhcount AS inherited,
+                  pg_get_expr(adbin, adrelid) AS default,
+                  collname AS collation, attisdropped AS dropped,
+                  col_description(c.oid, attnum) AS description
+           FROM pg_attribute JOIN pg_class c ON (attrelid = c.oid)
+                JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
+                LEFT JOIN pg_attrdef ON (attrelid = pg_attrdef.adrelid
+                     AND attnum = pg_attrdef.adnum)
+                LEFT JOIN pg_collation l ON (attcollation = l.oid)
+           WHERE relkind in ('c', 'r', 'f')
+                 AND (nspname != 'pg_catalog'
+                      AND nspname != 'information_schema')
+                 AND attnum > 0
+           ORDER BY nspname, relname, attnum"""
+
     def _from_catalog(self):
         """Initialize the dictionary of columns by querying the catalogs"""
+        if self.dbconn.version < 90100:
+            self.query = QUERY_PRE91
         for col in self.fetch():
             sch, tbl = col.key()
             if (sch, tbl) not in self:
