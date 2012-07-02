@@ -30,6 +30,8 @@ class Index(DbSchemaObject):
             else:
                 clause = list(col.keys())[0]
                 vals = list(col.values())[0]
+                if 'collation' in vals:
+                    clause += ' COLLATE ' + vals['collation']
                 if 'opclass' in vals:
                     clause += ' ' + vals['opclass']
                 if 'order' in vals:
@@ -192,17 +194,23 @@ class IndexDict(DbObjectDict):
                     key = key.split()[0]
                     rest = rest[loc + 1:]
                 rest = rest.lstrip()
+                skipnext = False
                 for j, opt in enumerate(keyopts):
-                    if opt.upper() not in ['ASC', 'DESC', 'NULLS',
+                    if skipnext:
+                        skipnext = False
+                        continue
+                    if opt.upper() not in ['COLLATE', 'ASC', 'DESC', 'NULLS',
                                            'FIRST', 'LAST']:
                         extra.update(opclass=opt)
                         continue
+                    elif opt == 'COLLATE':
+                        extra.update(collation=keyopts[j + 1])
+                        skipnext = True
                     elif opt == 'NULLS':
                         extra.update(nulls=keyopts[j + 1].lower())
+                        skipnext = True
                     elif opt == 'DESC':
                         extra.update(order='desc')
-                    else:
-                        continue
                 if extra:
                     key = {key: extra}
                 index.keys.append(key)

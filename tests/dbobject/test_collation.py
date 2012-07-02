@@ -44,6 +44,19 @@ class CollationToMapTestCase(DatabaseToMapTestCase):
                     {'c2': {'type': 'text', 'collation': 'c1'}}]}
         self.assertEqual(dbmap['schema public']['table t1'], expmap)
 
+    def test_index_collation(self):
+        "Map an index with column collation"
+        if self.db.version < 90100:
+            self.skipTest('Only available on PG 9.1')
+        stmts = [CREATE_STMT, "CREATE TABLE t1 (c1 integer, c2 text)",
+                 "CREATE INDEX t1_idx ON t1 (c2 COLLATE c1)"]
+        dbmap = self.to_map(stmts)
+        expmap = {'columns': [{'c1': {'type': 'integer'}},
+                              {'c2': {'type': 'text'}}],
+                  'indexes': {'t1_idx': {
+                    'keys': [{'c2': {'collation': 'c1'}}]}}}
+        self.assertEqual(dbmap['schema public']['table t1'], expmap)
+
 
 class CollationToSqlTestCase(InputMapToSqlTestCase):
     """Test SQL generation from input collations"""
@@ -100,6 +113,8 @@ class CollationToSqlTestCase(InputMapToSqlTestCase):
 
     def test_create_table_column_collation(self):
         "Create a table with a column with non-default collation"
+        if self.db.version < 90100:
+            self.skipTest('Only available on PG 9.1')
         inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
                     'columns': [{'c1': {'type': 'integer', 'not_null': True}},
@@ -109,10 +124,24 @@ class CollationToSqlTestCase(InputMapToSqlTestCase):
                          "CREATE TABLE t1 (c1 integer NOT NULL, "
                          "c2 text COLLATE c1)")
 
+    def test_create_index_collation(self):
+        "Create an index with column collation"
+        if self.db.version < 90100:
+            self.skipTest('Only available on PG 9.1')
+        stmts = [CREATE_STMT, "CREATE TABLE t1 (c1 integer, c2 text)"]
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+                    'columns': [{'c1': {'type': 'integer'}},
+                                {'c2': {'type': 'text'}}],
+                    'indexes': {'t1_idx': {
+                            'keys': [{'c2': {'collation': 'c1'}}]}}}})
+        sql = self.to_sql(inmap, stmts)
+        self.assertEqual(fix_indent(sql[0]),
+                         "CREATE INDEX t1_idx ON t1 (c2 COLLATE c1)")
+
 
 def suite():
-    tests = unittest.TestLoader().loadTestsFromTestCase(
-        CollationToMapTestCase)
+    tests = unittest.TestLoader().loadTestsFromTestCase(CollationToMapTestCase)
     tests.addTest(unittest.TestLoader().loadTestsFromTestCase(
             CollationToSqlTestCase))
     return tests
