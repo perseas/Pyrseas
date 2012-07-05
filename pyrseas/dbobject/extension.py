@@ -3,16 +3,16 @@
     pyrseas.dbobject.extension
     ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    This module defines two classes: Extension derived from
-    DbSchemaObject, and ExtensionDict derived from DbObjectDict.
+    This module defines two classes: Extension derived from DbObject,
+    and ExtensionDict derived from DbObjectDict.
 """
-from pyrseas.dbobject import DbObjectDict, DbSchemaObject, quote_id
+from pyrseas.dbobject import DbObjectDict, DbObject, quote_id
 
 
-class Extension(DbSchemaObject):
+class Extension(DbObject):
     """An extension"""
 
-    keylist = ['schema', 'name']
+    keylist = ['name']
     objtype = "EXTENSION"
 
     def create(self):
@@ -39,12 +39,12 @@ class ExtensionDict(DbObjectDict):
 
     cls = Extension
     query = \
-        """SELECT nspname AS schema, extname AS name, extversion AS version,
+        """SELECT extname AS name, nspname AS schema, extversion AS version,
                   obj_description(e.oid, 'pg_extension') AS description
            FROM pg_extension e
                 JOIN pg_namespace n ON (extnamespace = n.oid)
            WHERE nspname != 'information_schema'
-           ORDER BY 1, 2"""
+           ORDER BY extname"""
 
     def _from_catalog(self):
         """Initialize the dictionary of extensions by querying the catalogs"""
@@ -53,10 +53,9 @@ class ExtensionDict(DbObjectDict):
         for ext in self.fetch():
             self[ext.key()] = ext
 
-    def from_map(self, schema, inexts):
+    def from_map(self, inexts):
         """Initalize the dictionary of extensions by converting the input map
 
-        :param schema: schema owning the extensions
         :param inexts: YAML map defining the extensions
         """
         for key in list(inexts.keys()):
@@ -64,14 +63,26 @@ class ExtensionDict(DbObjectDict):
                 raise KeyError("Unrecognized object type: %s" % key)
             ext = key[10:]
             inexten = inexts[key]
-            self[(schema.name, ext)] = exten = Extension(
-                schema=schema.name, name=ext)
+            self[ext] = exten = Extension(name=ext)
             for attr, val in list(inexten.items()):
                 setattr(exten, attr, val)
             if 'oldname' in inexten:
                 exten.oldname = inexten['oldname']
             if 'description' in inexten:
                 exten.description = inexten['description']
+
+    def to_map(self):
+        """Convert the extension dictionary to a regular dictionary
+
+        :return: dictionary
+
+        Invokes the `to_map` method of each extension to construct a
+        dictionary of extensions.
+        """
+        extens = {}
+        for ext in list(self.keys()):
+            extens.update(self[ext].to_map())
+        return extens
 
     def diff_map(self, inexts):
         """Generate SQL to transform existing extensions
@@ -85,24 +96,24 @@ class ExtensionDict(DbObjectDict):
         """
         stmts = []
         # check input extensions
-        for (sch, ext) in list(inexts.keys()):
-            inexten = inexts[(sch, ext)]
+        for ext in list(inexts.keys()):
+            inexten = inexts[ext]
             # does it exist in the database?
-            if (sch, ext) not in self:
+            if ext not in self:
                 if not hasattr(inexten, 'oldname'):
                     # create new extension
                     stmts.append(inexten.create())
                 else:
-                    stmts.append(self[(sch, ext)].rename(inexten))
+                    stmts.append(self[ext].rename(inexten))
             else:
                 # check extension objects
-                stmts.append(self[(sch, ext)].diff_map(inexten))
+                stmts.append(self[ext].diff_map(inexten))
 
         # check existing extensions
-        for (sch, ext) in list(self.keys()):
-            exten = self[(sch, ext)]
+        for ext in list(self.keys()):
+            exten = self[ext]
             # if missing, drop them
-            if (sch, ext) not in inexts:
+            if ext not in inexts:
                     stmts.append(exten.drop())
 
         return stmts

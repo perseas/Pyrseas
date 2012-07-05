@@ -76,9 +76,10 @@ class Database(object):
 
             :param dbconn: a DbConnection object
             """
+            self.schemas = SchemaDict(dbconn)
+            self.extensions = ExtensionDict(dbconn)
             self.languages = LanguageDict(dbconn)
             self.casts = CastDict(dbconn)
-            self.schemas = SchemaDict(dbconn)
             self.types = TypeDict(dbconn)
             self.tables = ClassDict(dbconn)
             self.columns = ColumnDict(dbconn)
@@ -99,7 +100,6 @@ class Database(object):
             self.servers = ForeignServerDict(dbconn)
             self.usermaps = UserMappingDict(dbconn)
             self.ftables = ForeignTableDict(dbconn)
-            self.extensions = ExtensionDict(dbconn)
             self.collations = CollationDict(dbconn)
 
     def __init__(self, dbname, user=None, pswd=None, host=None, port=None):
@@ -120,8 +120,7 @@ class Database(object):
         db.schemas.link_refs(db.types, db.tables, db.functions, db.operators,
                              db.operfams, db.operclasses, db.conversions,
                              db.tsconfigs, db.tsdicts, db.tsparsers,
-                             db.tstempls, db.ftables, db.extensions,
-                             db.collations)
+                             db.tstempls, db.ftables, db.collations)
         db.tables.link_refs(db.columns, db.constraints, db.indexes,
                             db.rules, db.triggers)
         db.fdwrappers.link_refs(db.servers)
@@ -176,6 +175,7 @@ class Database(object):
         """
         self.ndb = self.Dicts()
         input_schemas = {}
+        input_extens = {}
         input_langs = {}
         input_casts = {}
         input_fdws = {}
@@ -183,6 +183,8 @@ class Database(object):
         for key in list(input_map.keys()):
             if key.startswith('schema '):
                 input_schemas.update({key: input_map[key]})
+            elif key.startswith('extension '):
+                input_extens.update({key: input_map[key]})
             elif key.startswith('language '):
                 input_langs.update({key: input_map[key]})
             elif key.startswith('cast '):
@@ -193,6 +195,7 @@ class Database(object):
                 input_ums.update({key: input_map[key]})
             else:
                 raise KeyError("Expected typed object, found '%s'" % key)
+        self.ndb.extensions.from_map(input_extens)
         self.ndb.languages.from_map(input_langs)
         self.ndb.schemas.from_map(input_schemas, self.ndb)
         self.ndb.casts.from_map(input_casts, self.ndb)
@@ -215,7 +218,8 @@ class Database(object):
         """
         if not self.db:
             self.from_catalog()
-        dbmap = self.db.languages.to_map()
+        dbmap = self.db.extensions.to_map()
+        dbmap.update(self.db.languages.to_map())
         dbmap.update(self.db.casts.to_map())
         dbmap.update(self.db.fdwrappers.to_map())
         dbmap.update(self.db.schemas.to_map())
@@ -276,10 +280,9 @@ class Database(object):
         if schemas:
             self._trim_objects(schemas)
         self.from_map(input_map)
-        stmts = self.db.languages.diff_map(self.ndb.languages,
-                                           self.dbconn.version)
+        stmts = self.db.extensions.diff_map(self.ndb.extensions)
+        stmts.append(self.db.languages.diff_map(self.ndb.languages))
         stmts.append(self.db.schemas.diff_map(self.ndb.schemas))
-        stmts.append(self.db.extensions.diff_map(self.ndb.extensions))
         stmts.append(self.db.types.diff_map(self.ndb.types))
         stmts.append(self.db.functions.diff_map(self.ndb.functions))
         stmts.append(self.db.operators.diff_map(self.ndb.operators))

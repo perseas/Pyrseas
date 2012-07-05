@@ -45,7 +45,7 @@ class Schema(DbObject):
         for objtypes in ['conversions', 'domains', 'ftables', 'functions',
                          'operators', 'operclasses', 'operfams',  'sequences',
                          'tsconfigs', 'tsdicts', 'tsparsers', 'tstempls',
-                         'types', 'views', 'extensions', 'collations']:
+                         'types', 'views', 'collations']:
             schema[key].update(mapper(self, objtypes))
 
         if hasattr(self, 'description'):
@@ -104,7 +104,6 @@ class SchemaDict(DbObjectDict):
             intsps = {}
             intsts = {}
             inftbs = {}
-            inexts = {}
             incolls = {}
             for key in list(inschema.keys()):
                 if key.startswith('domain '):
@@ -135,8 +134,6 @@ class SchemaDict(DbObjectDict):
                     intscs.update({key: inschema[key]})
                 elif key.startswith('foreign table '):
                     inftbs.update({key: inschema[key]})
-                elif key.startswith('extension '):
-                    inexts.update({key: inschema[key]})
                 elif key.startswith('collation '):
                     incolls.update({key: inschema[key]})
                 elif key == 'oldname':
@@ -145,7 +142,6 @@ class SchemaDict(DbObjectDict):
                     schema.description = inschema[key]
                 else:
                     raise KeyError("Expected typed object, found '%s'" % key)
-            newdb.extensions.from_map(schema, inexts)
             newdb.types.from_map(schema, intypes, newdb)
             newdb.tables.from_map(schema, intables, newdb)
             newdb.functions.from_map(schema, infuncs)
@@ -162,7 +158,7 @@ class SchemaDict(DbObjectDict):
 
     def link_refs(self, dbtypes, dbtables, dbfunctions, dbopers, dbopfams,
                   dbopcls, dbconvs, dbtsconfigs, dbtsdicts, dbtspars,
-                  dbtstmpls, dbftables, dbexts, dbcolls):
+                  dbtstmpls, dbftables, dbcolls):
         """Connect types, tables and functions to their respective schemas
 
         :param dbtypes: dictionary of types and domains
@@ -177,7 +173,6 @@ class SchemaDict(DbObjectDict):
         :param dbtspars: dictionary of text search parsers
         :param dbtstmpls: dictionary of text search templates
         :param dbftables: dictionary of foreign tables
-        :param dbexts: dictionary of extensions
         :param dbcolls: dictionary of collations
 
         Fills in the `domains` dictionary for each schema by
@@ -297,13 +292,6 @@ class SchemaDict(DbObjectDict):
             if not hasattr(schema, 'ftables'):
                 schema.ftables = {}
             schema.ftables.update({ftb: ftbl})
-        for (sch, ext) in list(dbexts.keys()):
-            exten = dbexts[(sch, ext)]
-            assert self[sch]
-            schema = self[sch]
-            if not hasattr(schema, 'extensions'):
-                schema.extensions = {}
-            schema.extensions.update({ext: exten})
         for (sch, cll) in list(dbcolls.keys()):
             coll = dbcolls[(sch, cll)]
             assert self[sch]

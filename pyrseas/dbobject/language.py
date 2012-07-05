@@ -106,11 +106,10 @@ class LanguageDict(DbObjectDict):
             languages.update(self[lng].to_map())
         return languages
 
-    def diff_map(self, inlanguages, dbversion):
+    def diff_map(self, inlanguages):
         """Generate SQL to transform existing languages
 
         :param input_map: a YAML map defining the new languages
-        :param dbversion: DBMS version number
         :return: list of SQL statements
 
         Compares the existing language definitions, as fetched from the
@@ -143,7 +142,8 @@ class LanguageDict(DbObjectDict):
             # if missing, drop it
             if lng not in inlanguages:
                 # special case: plpgsql is installed in 9.0
-                if dbversion >= 90000 and self[lng].name == 'plpgsql':
+                if self.dbconn.version >= 90000 \
+                        and self[lng].name == 'plpgsql':
                     continue
                 self[lng].dropped = True
         return stmts

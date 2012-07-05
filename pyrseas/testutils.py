@@ -403,7 +403,6 @@ class InputMapToSqlTestCase(PyrseasTestCase):
                 and self.db._version < 90100:
             base.update({'language plpgsql': {'trusted': True}})
         if self.db._version >= 90100:
-            base.update({'schema pg_catalog': {'extension plpgsql': {
-                            'description': "PL/pgSQL procedural language"},
-                         'description': 'system catalog schema'}})
+            base.update({'extension plpgsql': {'schema': 'pg_catalog',
+                            'description': "PL/pgSQL procedural language"}})
         return base

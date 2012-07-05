@@ -19,8 +19,9 @@ class ExtensionToMapTestCase(DatabaseToMapTestCase):
         if self.db.version < 90100:
             self.skipTest('Only available on PG 9.1')
         dbmap = self.to_map([CREATE_STMT])
-        self.assertEqual(dbmap['schema public']['extension pg_trgm'],
-                         {'version': '1.0', 'description': TRGM_COMMENT})
+        self.assertEqual(dbmap['extension pg_trgm'], {
+                'schema': 'public', 'version': '1.0',
+                'description': TRGM_COMMENT})
 
     def test_map_no_depends(self):
         "Ensure no dependencies are included when mapping an extension"
@@ -36,9 +37,9 @@ class ExtensionToMapTestCase(DatabaseToMapTestCase):
         if self.db.version < 90100:
             self.skipTest('Only available on PG 9.1')
         dbmap = self.to_map(["CREATE EXTENSION plperl"])
-        self.assertEqual(dbmap['schema pg_catalog']['extension plperl'],
-                         {'version': '1.0',
-                          'description': "PL/Perl procedural language"})
+        self.assertEqual(dbmap['extension plperl'], {
+                'schema': 'pg_catalog', 'version': '1.0',
+                'description': "PL/Perl procedural language"})
         self.assertFalse('language plperl' in dbmap)
 
     def test_map_extension_schema(self):
@@ -46,8 +47,8 @@ class ExtensionToMapTestCase(DatabaseToMapTestCase):
         if self.db.version < 90100:
             self.skipTest('Only available on PG 9.1')
         dbmap = self.to_map(["CREATE SCHEMA s1", CREATE_STMT + " SCHEMA s1"])
-        self.assertEqual(dbmap['schema s1']['extension pg_trgm'],
-                         {'version': '1.0', 'description': TRGM_COMMENT})
+        self.assertEqual(dbmap['extension pg_trgm'], {
+                'schema': 's1', 'version': '1.0', 'description': TRGM_COMMENT})
 
 
 class ExtensionToSqlTestCase(InputMapToSqlTestCase):
@@ -58,14 +59,14 @@ class ExtensionToSqlTestCase(InputMapToSqlTestCase):
         if self.db.version < 90100:
             self.skipTest('Only available on PG 9.1')
         inmap = self.std_map()
-        inmap['schema public'].update({'extension pg_trgm': {}})
+        inmap.update({'extension pg_trgm': {'schema': 'public'}})
         sql = self.to_sql(inmap)
         self.assertEqual(sql, [CREATE_STMT])
 
     def test_bad_extension_map(self):
         "Error creating a extension with a bad map"
         inmap = self.std_map()
-        inmap['schema public'].update({'pg_trgm': {}})
+        inmap.update({'pg_trgm': {'schema': 'public'}})
         self.assertRaises(KeyError, self.to_sql, inmap)
 
     def test_drop_extension(self):
@@ -80,7 +81,7 @@ class ExtensionToSqlTestCase(InputMapToSqlTestCase):
         if self.db.version < 90100:
             self.skipTest('Only available on PG 9.1')
         inmap = self.std_map()
-        inmap.update({'schema s1': {'extension pg_trgm': {'version': '1.0'}}})
+        inmap.update({'extension pg_trgm': {'schema': 's1', 'version': '1.0'}})
         sql = self.to_sql(inmap, ["CREATE SCHEMA s1"])
         self.assertEqual(fix_indent(sql[0]),
                          "CREATE EXTENSION pg_trgm SCHEMA s1 VERSION '1.0'")
@@ -90,8 +91,8 @@ class ExtensionToSqlTestCase(InputMapToSqlTestCase):
         if self.db.version < 90100:
             self.skipTest('Only available on PG 9.1')
         inmap = self.std_map()
-        inmap['schema public'].update({'extension pg_trgm': {
-                    'description': "Trigram extension"}})
+        inmap.update({'extension pg_trgm': {
+                'schema': 'public', 'description': "Trigram extension"}})
         sql = self.to_sql(inmap, [CREATE_STMT])
         self.assertEqual(sql, [
                 "COMMENT ON EXTENSION pg_trgm IS 'Trigram extension'"])
