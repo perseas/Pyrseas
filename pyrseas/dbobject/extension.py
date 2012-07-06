@@ -22,7 +22,7 @@ class Extension(DbObject):
         """
         stmts = []
         opt_clauses = []
-        if self.schema != 'public':
+        if hasattr(self, 'schema') and self.schema != 'public':
             opt_clauses.append("SCHEMA %s" % quote_id(self.schema))
         if hasattr(self, 'version'):
             opt_clauses.append("VERSION '%s'" % self.version)
@@ -53,10 +53,12 @@ class ExtensionDict(DbObjectDict):
         for ext in self.fetch():
             self[ext.key()] = ext
 
-    def from_map(self, inexts):
+    def from_map(self, inexts, langtempls, newdb):
         """Initalize the dictionary of extensions by converting the input map
 
         :param inexts: YAML map defining the extensions
+        :param langtempls: list of language templates
+        :param newdb: dictionary of input database
         """
         for key in list(inexts.keys()):
             if not key.startswith('extension '):
@@ -66,10 +68,9 @@ class ExtensionDict(DbObjectDict):
             self[ext] = exten = Extension(name=ext)
             for attr, val in list(inexten.items()):
                 setattr(exten, attr, val)
-            if 'oldname' in inexten:
-                exten.oldname = inexten['oldname']
-            if 'description' in inexten:
-                exten.description = inexten['description']
+            if exten.name in langtempls:
+                lang = {'language %s' % exten.name: {'_ext': 'e'}}
+                newdb.languages.from_map(lang)
 
     def to_map(self):
         """Convert the extension dictionary to a regular dictionary

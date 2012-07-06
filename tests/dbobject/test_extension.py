@@ -86,6 +86,23 @@ class ExtensionToSqlTestCase(InputMapToSqlTestCase):
         self.assertEqual(fix_indent(sql[0]),
                          "CREATE EXTENSION pg_trgm SCHEMA s1 VERSION '1.0'")
 
+    def test_create_lang_extension(self):
+        "Create a language extension and a function in that language"
+        if self.db.version < 90100:
+            self.skipTest('Only available on PG 9.1')
+        inmap = self.std_map()
+        inmap.update({'extension plperl': {
+                    'description': "PL/Perl procedural language"}})
+        inmap['schema public'].update({'function f1()': {
+                    'language': 'plperl', 'returns': 'text',
+                    'source': "return \"dummy\";"}})
+        sql = self.to_sql(inmap)
+        self.assertEqual(fix_indent(sql[0]), "CREATE EXTENSION plperl")
+        # skip over COMMENT and SET statements
+        self.assertEqual(fix_indent(sql[3]), "CREATE FUNCTION f1() "
+                         "RETURNS text LANGUAGE plperl AS "
+                         "$_$return \"dummy\";$_$")
+
     def test_comment_extension(self):
         "Change the comment for an existing extension"
         if self.db.version < 90100:

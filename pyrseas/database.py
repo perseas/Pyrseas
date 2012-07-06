@@ -163,10 +163,11 @@ class Database(object):
             self.dbconn.conn.close()
         self._link_refs(self.db)
 
-    def from_map(self, input_map):
+    def from_map(self, input_map, langs=None):
         """Populate the new database objects from the input map
 
         :param input_map: a YAML map defining the new database
+        :param langs: list of language templates
 
         The `ndb` holder is populated by various DbObjectDict-derived
         classes by traversing the YAML input map. The objects in the
@@ -195,7 +196,7 @@ class Database(object):
                 input_ums.update({key: input_map[key]})
             else:
                 raise KeyError("Expected typed object, found '%s'" % key)
-        self.ndb.extensions.from_map(input_extens)
+        self.ndb.extensions.from_map(input_extens, langs, self.ndb)
         self.ndb.languages.from_map(input_langs)
         self.ndb.schemas.from_map(input_schemas, self.ndb)
         self.ndb.casts.from_map(input_casts, self.ndb)
@@ -279,7 +280,11 @@ class Database(object):
             self.from_catalog()
         if schemas:
             self._trim_objects(schemas)
-        self.from_map(input_map)
+        langs = None
+        if self.dbconn.version >= 90100:
+            langs = [lang[0] for lang in self.dbconn.fetchall(
+                    "SELECT tmplname FROM pg_pltemplate")]
+        self.from_map(input_map, langs)
         stmts = self.db.extensions.diff_map(self.ndb.extensions)
         stmts.append(self.db.languages.diff_map(self.ndb.languages))
         stmts.append(self.db.schemas.diff_map(self.ndb.schemas))

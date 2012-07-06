@@ -21,6 +21,8 @@ class Language(DbObject):
 
         :return: dictionary
         """
+        if hasattr(self, '_ext'):
+            return {}
         dct = self._base_map()
         if 'functions' in dct:
             del dct['functions']
@@ -31,9 +33,11 @@ class Language(DbObject):
 
         :return: SQL statements
         """
-        stmts = ["CREATE LANGUAGE %s" % quote_id(self.name)]
-        if hasattr(self, 'description'):
-            stmts.append(self.comment())
+        stmts = []
+        if not hasattr(self, '_ext'):
+            stmts.append("CREATE LANGUAGE %s" % quote_id(self.name))
+            if hasattr(self, 'description'):
+                stmts.append(self.comment())
         return stmts
 
 
@@ -42,13 +46,13 @@ class LanguageDict(DbObjectDict):
 
     cls = Language
     query = \
-        """SELECT lanname AS name, lanpltrusted AS trusted,
+        """SELECT lanname AS name, lanpltrusted AS trusted, deptype AS _ext,
                   obj_description(l.oid, 'pg_language') AS description
            FROM pg_language l
+                LEFT JOIN pg_depend d ON (l.oid = d.objid
+                     AND classid = 'pg_language'::regclass
+                     AND refclassid != 'pg_proc'::regclass)
            WHERE lanispl
-             AND l.oid NOT IN (
-                 SELECT objid FROM pg_depend WHERE deptype = 'e'
-                              AND classid = 'pg_language'::regclass)
            ORDER BY lanname"""
 
     def from_map(self, inmap):
@@ -63,11 +67,10 @@ class LanguageDict(DbObjectDict):
             language = self[lng] = Language(name=lng)
             inlanguage = inmap[key]
             if inlanguage:
+                for attr, val in list(inlanguage.items()):
+                    setattr(language, attr, val)
                 if 'oldname' in inlanguage:
-                    language.oldname = inlanguage['oldname']
                     del inlanguage['oldname']
-                if 'description' in inlanguage:
-                    language.description = inlanguage['description']
 
     def link_refs(self, dbfunctions):
         """Connect functions to their respective languages
@@ -122,7 +125,8 @@ class LanguageDict(DbObjectDict):
             inlng = inlanguages[lng]
             # does it exist in the database?
             if lng in self:
-                stmts.append(self[lng].diff_map(inlng))
+                if not hasattr(inlng, '_ext'):
+                    stmts.append(self[lng].diff_map(inlng))
             else:
                 # check for possible RENAME
                 if hasattr(inlng, 'oldname'):
