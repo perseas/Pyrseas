@@ -168,6 +168,13 @@ or::
           ``pip`` command.  This may also be necessary on other BSD
           variants.
 
+.. note:: On Windows 64-bit, it has been reported that it is necessary
+          to obtain unofficial versions of the ``distribute`` and
+          ``PyYAML`` packages, available at `University of California,
+          Irvine <http://www.lfd.uci.edu/~gohlke/pythonlibs/>`_. For a
+          detailed tutorial, see `this post
+          <http://dbadailystuff.com/2012/07/04/install-pyrseas-in-windows/>`_.
+
 ``Pip`` and ``easy_install`` can also be used in a Python `virtualenv
 <http://www.virtualenv.org/en/latest/>`_ environment, in which case
 you *don't* need to prefix the commands with ``sudo``.
