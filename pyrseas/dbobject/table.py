@@ -212,8 +212,8 @@ class Table(DbClass):
                 tbls = dbschemas[k.ref_schema].tables
                 tbl['foreign_keys'].update(self.foreign_keys[k.name].to_map(
                         self.column_names(),
-                        tbls[self.foreign_keys[k.name].ref_table]. \
-                            column_names()))
+                        tbls[self.foreign_keys[k.name].ref_table].
+                        column_names()))
         if hasattr(self, 'unique_constraints'):
             if not 'unique_constraints' in tbl:
                 tbl.update(unique_constraints={})
@@ -315,7 +315,8 @@ class Table(DbClass):
                 if descr:
                     stmts.append(descr)
             # add new columns
-            elif incol.name not in colnames:
+            elif incol.name not in colnames and \
+                    not hasattr(incol, 'inherited'):
                 (stmt, descr) = incol.add()
                 stmts.append(base + "ADD COLUMN %s" % stmt)
                 if descr:
@@ -690,10 +691,10 @@ class ClassDict(DbObjectDict):
         inhstack = []
         for (sch, tbl) in list(self.keys()):
             table = self[(sch, tbl)]
-            if (isinstance(table, Sequence) \
-                    and (hasattr(table, 'owner_table') \
-                             or hasattr(table, 'dependent_table'))) \
-                             or isinstance(table, View):
+            if (isinstance(table, Sequence)
+                    and (hasattr(table, 'owner_table')
+                         or hasattr(table, 'dependent_table'))) \
+                         or isinstance(table, View):
                 continue
             if hasattr(table, 'dropped') and not table.dropped:
                 # next, drop other subordinate objects

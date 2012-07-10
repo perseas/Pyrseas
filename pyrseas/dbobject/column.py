@@ -217,7 +217,8 @@ class ColumnDict(DbObjectDict):
             if (sch, tbl) in list(self.keys()):
                 for col in self[(sch, tbl)]:
                     if col.name not in [c.name for c in incols[(sch, tbl)]] \
-                            and not hasattr(col, 'dropped'):
+                            and not hasattr(col, 'dropped') \
+                            and not hasattr(col, 'inherited'):
                         stmts.append(col.drop())
 
         return stmts

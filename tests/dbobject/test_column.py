@@ -335,6 +335,39 @@ class ColumnToSqlTestCase(InputMapToSqlTestCase):
         self.assertEqual(fix_indent(sql[0]),
                          "ALTER TABLE s1.t1 DROP COLUMN c3")
 
+    def test_inherit_add_parent_column(self):
+        "Add a column to parent table, child should not add as well"
+        stmts = [CREATE_STMT1, "CREATE TABLE t2 (c3 date) INHERITS (t1)"]
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+                    'columns': [{'c1': {'type': 'integer'}},
+                                {'c2': {'type': 'text'}},
+                                {'c4': {'type': 'text'}}]}})
+        inmap['schema public'].update({'table t2': {
+                    'columns': [{'c1': {'type': 'integer', 'inherited': True}},
+                                {'c2': {'type': 'text', 'inherited': True}},
+                                {'c3': {'type': 'date'}},
+                                {'c4': {'type': 'text', 'inherited': True}}],
+                    'inherits': ['t1']}})
+        sql = self.to_sql(inmap, stmts)
+        self.assertEqual(len(sql), 1)
+        self.assertEqual(fix_indent(sql[0]), "ALTER TABLE t1 ADD COLUMN "
+                         "c4 text")
+
+    def test_inherit_drop_parent_column(self):
+        "Drop a column from a parent table, child should not drop as well"
+        stmts = [CREATE_STMT1, "CREATE TABLE t2 (c3 date) INHERITS (t1)"]
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+                    'columns': [{'c1': {'type': 'integer'}}]}})
+        inmap['schema public'].update({'table t2': {
+                    'columns': [{'c1': {'type': 'integer', 'inherited': True}},
+                                {'c3': {'type': 'date'}}],
+                    'inherits': ['t1']}})
+        sql = self.to_sql(inmap, stmts)
+        self.assertEqual(len(sql), 1)
+        self.assertEqual(fix_indent(sql[0]), "ALTER TABLE t1 DROP COLUMN c2")
+
 
 def suite():
     tests = unittest.TestLoader().loadTestsFromTestCase(ColumnToMapTestCase)
