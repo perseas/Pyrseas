@@ -39,7 +39,7 @@ class RuleToMapTestCase(DatabaseToMapTestCase):
         dbmap = self.to_map(stmts)
         expmap = {'r1': {
                 'event': 'delete', 'condition': "(old.c1 < 1000)",
-                'actions': "INSERT INTO t1 (c1, c2) VALUES (" \
+                'actions': "INSERT INTO t1 (c1, c2) VALUES ("
                     "(old.c1 + 1000), old.c2)"}}
         self.assertEqual(dbmap['schema public']['table t1']['rules'], expmap)
 
@@ -103,7 +103,7 @@ class RuleToSqlTestCase(InputMapToSqlTestCase):
                                 {'c2': {'type': 'text'}}],
                     'rules': {'r1': {'event': 'delete',
                                      'condition': "old.c1 < 1000",
-                                     'actions': "INSERT INTO t1 VALUES (" \
+                                     'actions': "INSERT INTO t1 VALUES ("
                                          "old.c1 + 1000, old.c2)"}}}})
         sql = self.to_sql(inmap)
         self.assertEqual(fix_indent(sql[0]), CREATE_TABLE_STMT)
@@ -119,7 +119,7 @@ class RuleToSqlTestCase(InputMapToSqlTestCase):
                                 {'c2': {'type': 'text'}}],
                     'rules': {'r1': {
                             'event': 'update', 'actions':
-                                "(INSERT INTO t1 VALUES (old.c1 + 100); " \
+                                "(INSERT INTO t1 VALUES (old.c1 + 100); "
                                 "INSERT INTO t1 VALUES (old.c1 + 200));)"}}}})
         sql = self.to_sql(inmap)
         self.assertEqual(fix_indent(sql[0]), CREATE_TABLE_STMT)

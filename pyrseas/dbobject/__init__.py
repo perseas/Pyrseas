@@ -42,7 +42,7 @@ def split_schema_obj(obj, sch=None):
     :return: tuple
     """
     qualsch = sch
-    if sch == None:
+    if sch is None:
         qualsch = 'public'
     if '.' in obj:
         (qualsch, obj) = obj.split('.')
