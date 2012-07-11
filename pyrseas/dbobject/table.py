@@ -187,8 +187,8 @@ class Table(DbClass):
         if not hasattr(self, 'columns'):
             return
         cols = []
-        for i in range(len(self.columns)):
-            col = self.columns[i].to_map()
+        for column in self.columns:
+            col = column.to_map()
             if col:
                 cols.append(col)
         tbl = {'columns': cols}

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-    pyrseas.table
-    ~~~~~~~~~~~~~
+    pyrseas.dbobject.type
+    ~~~~~~~~~~~~~~~~~~~~~
 
     This module defines six classes: DbType derived from
     DbSchemaObject, BaseType, Composite, Domain and Enum derived from
@@ -112,7 +112,12 @@ class Composite(DbType):
         """
         if not hasattr(self, 'attributes'):
             return
-        dct = {'attributes': [{att.name: att.type} for att in self.attributes]}
+        attrs = []
+        for attr in self.attributes:
+            att = attr.to_map()
+            if att:
+                attrs.append(att)
+        dct = {'attributes': attrs}
         if hasattr(self, 'description'):
             dct.update(description=self.description)
         return {self.extern_key(): dct}
@@ -128,6 +133,47 @@ class Composite(DbType):
                 self.qualname(), ",\n    ".join(attrs)))
         if hasattr(self, 'description'):
             stmts.append(self.comment())
+        return stmts
+
+    def diff_map(self, intype):
+        """Generate SQL to transform an existing composite type
+
+        :param intype: the new composite type
+        :return: list of SQL statements
+
+        Compares the type to an input type and generates SQL
+        statements to transform it into the one represented by the
+        input.
+        """
+        stmts = []
+        if not hasattr(intype, 'attributes'):
+            raise KeyError("Composite '%s' has no attributes" % intype.name)
+        attrnames = [attr.name for attr in self.attributes
+                    if not hasattr(attr, 'dropped')]
+        dbattrs = len(attrnames)
+
+        base = "ALTER TYPE %s\n    " % (self.qualname())
+        # check input attributes
+        for (num, inattr) in enumerate(intype.attributes):
+            if hasattr(inattr, 'oldname'):
+                assert(self.attributes[num].name == inattr.oldname)
+                stmts.append(self.attributes[num].rename(inattr.name))
+            # check existing attributes
+            if num < dbattrs and self.attributes[num].name == inattr.name:
+                (stmt, descr) = self.attributes[num].diff_map(inattr)
+                if stmt:
+                    stmts.append(base + stmt)
+                if descr:
+                    stmts.append(descr)
+            # add new attributes
+            elif inattr.name not in attrnames:
+                (stmt, descr) = inattr.add()
+                stmts.append(base + "ADD ATTRIBUTE %s" % stmt)
+                if descr:
+                    stmts.append(descr)
+
+        stmts.append(self.diff_description(intype))
+
         return stmts
 
 

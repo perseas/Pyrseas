@@ -22,7 +22,9 @@ class Column(DbSchemaObject):
         if hasattr(self, 'dropped'):
             return None
         dct = self._base_map()
-        del dct['number'], dct['name'], dct['_table']
+        del dct['number'], dct['name']
+        if '_table' in dct:
+            del dct['_table']
         if 'collation' in dct and dct['collation'] == 'default':
             del dct['collation']
         if hasattr(self, 'inherited'):
@@ -64,7 +66,6 @@ class Column(DbSchemaObject):
             (comptype, objtype) = (self._table.objtype, 'COLUMN')
             compname = self._table.qualname()
         else:
-            # TODO: this is only a PG 9.1 feature, so more is required
             (comptype, objtype) = ('TYPE', 'ATTRIBUTE')
             compname = self.table
         return "ALTER %s %s DROP %s %s" % (comptype, compname, objtype,

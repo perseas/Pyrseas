@@ -24,8 +24,9 @@ class CompositeToMapTestCase(DatabaseToMapTestCase):
     def test_composite(self):
         "Map a composite type"
         dbmap = self.to_map([CREATE_COMPOSITE_STMT])
-        expmap = {'attributes': [{'x': 'integer'}, {'y': 'integer'},
-                                 {'z': 'integer'}]}
+        expmap = {'attributes': [{'x': {'type': 'integer'}},
+                                 {'y': {'type': 'integer'}},
+                                 {'z': {'type': 'integer'}}]}
         self.assertEqual(dbmap['schema public']['type t1'], expmap)
 
 
@@ -36,8 +37,9 @@ class CompositeToSqlTestCase(InputMapToSqlTestCase):
         "Create a composite type"
         inmap = self.std_map()
         inmap['schema public'].update({'type t1': {
-                    'attributes': [{'x': 'integer'}, {'y': 'integer'},
-                                   {'z': 'integer'}]}})
+                    'attributes': [{'x': {'type': 'integer'}},
+                                 {'y': {'type': 'integer'}},
+                                 {'z': {'type': 'integer'}}]}})
         sql = self.to_sql(inmap)
         self.assertEqual(fix_indent(sql[0]), CREATE_COMPOSITE_STMT)
 
@@ -51,10 +53,24 @@ class CompositeToSqlTestCase(InputMapToSqlTestCase):
         inmap = self.std_map()
         inmap['schema public'].update({'type t2': {
                     'oldname': 't1',
-                    'attributes': [{'x': 'integer'}, {'y': 'integer'},
-                                   {'z': 'integer'}]}})
+                    'attributes': [{'x': {'type': 'integer'}},
+                                 {'y': {'type': 'integer'}},
+                                 {'z': {'type': 'integer'}}]}})
         sql = self.to_sql(inmap, [CREATE_COMPOSITE_STMT])
         self.assertEqual(sql, ["ALTER TYPE t1 RENAME TO t2"])
+
+    def test_add_attribute(self):
+        "Add an attribute to a composite type"
+        if self.db.version < 90100:
+            self.skipTest('Only available on PG 9.1')
+        inmap = self.std_map()
+        inmap['schema public'].update({'type t1': {
+                    'attributes': [{'x': {'type': 'integer'}},
+                                 {'y': {'type': 'integer'}},
+                                 {'z': {'type': 'integer'}}]}})
+        sql = self.to_sql(inmap, ["CREATE TYPE t1 AS (x integer, y integer)"])
+        self.assertEqual(fix_indent(sql[0]), "ALTER TYPE t1 ADD ATTRIBUTE "
+                         "z integer")
 
 
 class EnumToMapTestCase(DatabaseToMapTestCase):
