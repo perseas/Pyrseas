@@ -77,8 +77,14 @@ class Column(DbSchemaObject):
         :param newname: the new name of the object
         :return: SQL statement
         """
-        stmt = "ALTER TABLE %s RENAME COLUMN %s TO %s" % (
-            self._table.qualname(), self.name, newname)
+        if hasattr(self, '_table'):
+            (comptype, objtype) = (self._table.objtype, 'COLUMN')
+            compname = self._table.qualname()
+        else:
+            (comptype, objtype) = ('TYPE', 'ATTRIBUTE')
+            compname = self.table
+        stmt = "ALTER %s %s RENAME %s %s TO %s" % (
+            comptype, compname, objtype, self.name, newname)
         self.name = newname
         return stmt
 

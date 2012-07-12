@@ -139,6 +139,19 @@ class CollationToSqlTestCase(InputMapToSqlTestCase):
         self.assertEqual(fix_indent(sql[0]),
                          "CREATE INDEX t1_idx ON t1 (c2 COLLATE c1)")
 
+    def test_create_type_attribute_collation(self):
+        "Create a composite type with an attribute with non-default collation"
+        if self.db.version < 90100:
+            self.skipTest('Only available on PG 9.1')
+        inmap = self.std_map()
+        inmap['schema public'].update({'type t1': {
+                    'attributes': [
+                        {'x': {'type': 'integer'}},
+                        {'y': {'type': 'text', 'collation': 'c1'}}]}})
+        sql = self.to_sql(inmap)
+        self.assertEqual(fix_indent(sql[0]), "CREATE TYPE t1 AS (x integer, "
+                         "y text COLLATE c1)")
+
 
 def suite():
     tests = unittest.TestLoader().loadTestsFromTestCase(CollationToMapTestCase)

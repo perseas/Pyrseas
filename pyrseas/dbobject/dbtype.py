@@ -128,9 +128,11 @@ class Composite(DbType):
         :return: SQL statements
         """
         stmts = []
-        attrs = ["%s %s" % (att.name, att.type) for att in self.attributes]
+        attrs = []
+        for att in self.attributes:
+            attrs.append("    " + att.add()[0])
         stmts.append("CREATE TYPE %s AS (%s)" % (
-                self.qualname(), ",\n    ".join(attrs)))
+                self.qualname(), ",\n".join(attrs)))
         if hasattr(self, 'description'):
             stmts.append(self.comment())
         return stmts
