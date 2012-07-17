@@ -26,6 +26,7 @@ from tests.dbobject import test_foreign
 from tests.dbobject import test_extension
 from tests.dbobject import test_tablespace
 from tests.dbobject import test_collation
+from tests.dbobject import test_owner
 
 
 def suite():
@@ -53,6 +54,7 @@ def suite():
     tests.addTest(test_extension.suite())
     tests.addTest(test_tablespace.suite())
     tests.addTest(test_collation.suite())
+    tests.addTest(test_owner.suite())
     return tests
 
 if __name__ == '__main__':

@@ -204,7 +204,7 @@ class Database(object):
         self._link_refs(self.ndb)
 
     def to_map(self, schemas=[], tables=[], exclude_schemas=[],
-            exclude_tables=[]):
+            exclude_tables=[], no_owner=False):
         """Convert the db maps to a single hierarchy suitable for YAML
 
         :param schemas: list of schemas to be output
@@ -215,15 +215,16 @@ class Database(object):
         :param exclude_tables:
             list of tables to be excluded from output, even those listed in
             ``tables``
+        :param no_owner: exclude object owner information
         :return: a YAML-suitable dictionary (without Python objects)
         """
         if not self.db:
             self.from_catalog()
-        dbmap = self.db.extensions.to_map()
-        dbmap.update(self.db.languages.to_map())
+        dbmap = self.db.extensions.to_map(no_owner)
+        dbmap.update(self.db.languages.to_map(no_owner))
         dbmap.update(self.db.casts.to_map())
-        dbmap.update(self.db.fdwrappers.to_map())
-        dbmap.update(self.db.schemas.to_map())
+        dbmap.update(self.db.fdwrappers.to_map(no_owner))
+        dbmap.update(self.db.schemas.to_map(no_owner))
         # trim the map of schemas/tables not selected
 
         if schemas:

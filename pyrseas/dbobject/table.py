@@ -63,14 +63,16 @@ class Sequence(DbClass):
             (sch, self.dependent_table) = split_schema_obj(
                 data[0], self.schema)
 
-    def to_map(self):
+    def to_map(self, no_owner):
         """Convert a sequence definition to a YAML-suitable format
 
+        :param no_owner: exclude sequence owner information
         :return: dictionary
         """
         seq = {}
         for key, val in list(self.__dict__.items()):
-            if key in self.keylist or key == 'dependent_table':
+            if key in self.keylist or key == 'dependent_table' or (
+                    key == 'owner' and no_owner):
                 continue
             if key == 'max_value' and val == MAX_BIGINT:
                 seq[key] = None
@@ -178,10 +180,11 @@ class Table(DbClass):
         """
         return [c.name for c in self.columns]
 
-    def to_map(self, dbschemas):
+    def to_map(self, dbschemas, no_owner):
         """Convert a table to a YAML-suitable format
 
         :param dbschemas: database dictionary of schemas
+        :param no_owner: exclude table owner information
         :return: dictionary
         """
         if not hasattr(self, 'columns'):
@@ -192,10 +195,12 @@ class Table(DbClass):
             if col:
                 cols.append(col)
         tbl = {'columns': cols}
-        if hasattr(self, 'tablespace'):
-            tbl.update(tablespace=self.tablespace)
-        if hasattr(self, 'description'):
-            tbl.update(description=self.description)
+        attrlist = ['description', 'tablespace']
+        if not no_owner:
+            attrlist.append('owner')
+        for attr in attrlist:
+            if hasattr(self, attr):
+                tbl.update({attr: getattr(self, attr)})
         if hasattr(self, 'check_constraints'):
             if not 'check_constraints' in tbl:
                 tbl.update(check_constraints={})
@@ -381,11 +386,12 @@ class ClassDict(DbObjectDict):
     cls = DbClass
     query = \
         """SELECT nspname AS schema, relname AS name, relkind AS kind,
-                  spcname AS tablespace,
+                  spcname AS tablespace, rolname AS owner,
                   CASE WHEN relkind = 'v' THEN pg_get_viewdef(c.oid, TRUE)
                        ELSE '' END AS definition,
                   obj_description(c.oid, 'pg_class') AS description
            FROM pg_class c
+                JOIN pg_roles r ON (r.oid = relowner)
                 JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
                 LEFT JOIN pg_tablespace t ON (reltablespace = t.oid)
            WHERE relkind in ('r', 'S', 'v')

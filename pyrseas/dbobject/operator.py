@@ -77,7 +77,7 @@ class OperatorDict(DbObjectDict):
 
     cls = Operator
     query = \
-        """SELECT nspname AS schema, oprname AS name,
+        """SELECT nspname AS schema, oprname AS name, rolname AS owner,
                   oprleft::regtype AS leftarg, oprright::regtype AS rightarg,
                   oprcode::regproc AS procedure, oprcom::regoper AS commutator,
                   oprnegate::regoper AS negator, oprrest::regproc AS restrict,
@@ -85,6 +85,7 @@ class OperatorDict(DbObjectDict):
                   oprcanmerge AS merges,
                   obj_description(o.oid, 'pg_operator') AS description
            FROM pg_operator o
+                JOIN pg_roles r ON (r.oid = oprowner)
                 JOIN pg_namespace n ON (oprnamespace = n.oid)
            WHERE (nspname != 'pg_catalog' AND nspname != 'information_schema')
              AND o.oid NOT IN (

@@ -19,6 +19,8 @@ def main(host='localhost', port=5432, schema=None):
     parser = ArgumentParser(parents=[parent_parser()],
                             description="Extract the schema of a PostgreSQL "
                             "database in YAML format")
+    parser.add_argument('-O', '--no-owner', action='store_true',
+                        help='exclude object ownership information')
     group = parser.add_argument_group("Object inclusion/exclusion options",
                                       "(each can be given multiple times)")
     group.add_argument('-n', '--schema', metavar='SCHEMA', dest='schemas',
@@ -44,7 +46,8 @@ def main(host='localhost', port=5432, schema=None):
     db = Database(args.dbname, args.username, pswd, args.host, args.port)
     dbmap = db.to_map(schemas=args.schemas, tables=args.tables,
                       exclude_schemas=args.excl_schemas,
-                      exclude_tables=args.excl_tables)
+                      exclude_tables=args.excl_tables,
+                      no_owner=args.no_owner)
 
     print(yaml.dump(dbmap, default_flow_style=False),
           file=args.output or sys.stdout)

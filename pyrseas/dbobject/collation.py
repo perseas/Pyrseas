@@ -34,10 +34,11 @@ class CollationDict(DbObjectDict):
 
     cls = Collation
     query = \
-        """SELECT nspname AS schema, collname AS name,
+        """SELECT nspname AS schema, collname AS name, rolname AS owner,
                   collcollate AS lc_collate, collctype AS lc_ctype,
                   obj_description(c.oid, 'pg_collation') AS description
            FROM pg_collation c
+                JOIN pg_roles r ON (r.oid = collowner)
                 JOIN pg_namespace n ON (collnamespace = n.oid)
            WHERE (nspname != 'pg_catalog' AND nspname != 'information_schema')
            ORDER BY nspname, collname"""

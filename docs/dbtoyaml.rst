@@ -25,6 +25,7 @@ also be compatible with JSON tools.
 The output format is as follows::
 
  schema public:
+   owner: postgres
    table t1:
      check_constraints:
        check_expr: (c2 > 123)
@@ -41,10 +42,6 @@ The output format is as follows::
          type: boolean
      - c4:
          type: text
-     primary_key:
-       t1_pkey:
-         columns:
-         - c1
      foreign_keys:
        t1_c2_fkey:
          columns:
@@ -54,7 +51,13 @@ The output format is as follows::
            - c21
            schema: s1 
            table: t2
+     owner: alice
+     primary_key:
+       t1_pkey:
+         columns:
+         - c1
  schema s1:
+   owner: bob
    table t2:
      columns:
      - c21:
@@ -62,6 +65,7 @@ The output format is as follows::
           type: integer
      - c22:
           type: character varying(16)
+     owner: bob
      primary_key:
        t2_pkey:
          columns:
@@ -103,13 +107,20 @@ dbname
     Does not extract schema matching `schema`. This can be given more
     than once to exclude several schemas.
 
+-O, ---no-owner
+
+    Do not output object ownership information.  By default, as seen
+    in the sample output above, database objects (schemas, tables,
+    etc.) that can be owned by some user, are shown with an "owner:
+    *username*" element.  The ``-O`` switch suppresses all those
+    lines.
+
 -t `table`, ---table= `table`
 
     Extract only tables matching `table`.  Multiple tables can be
     extracted by using multiple ``-t`` switches.  Note that selecting
     a table may cause other objects, such as an owned sequence, to be
     extracted as well
-
 
 -T `table`, ---exclude-table= `table`
 

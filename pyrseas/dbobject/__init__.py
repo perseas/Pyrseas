@@ -133,19 +133,23 @@ class DbObject(object):
         """
         return quote_id(self.__dict__[self.keylist[0]])
 
-    def _base_map(self):
+    def _base_map(self, no_owner=False):
         """Return a base map, i.e., copy of attributes excluding keys
 
+        :param no_owner: exclude object owner information
         :return: dictionary
         """
         dct = self.__dict__.copy()
         for key in self.keylist:
             del dct[key]
+        if no_owner and hasattr(self, 'owner'):
+            del dct['owner']
         return dct
 
-    def to_map(self):
+    def to_map(self, no_owner=False):
         """Convert an object to a YAML-suitable format
 
+        :param no_owner: exclude object owner information
         :return: dictionary
 
         This base implementation simply copies the internal Python
@@ -153,7 +157,7 @@ class DbObject(object):
         returns a new dictionary using the :meth:`extern_key` result
         as the key.
         """
-        return {self.extern_key(): self._base_map()}
+        return {self.extern_key(): self._base_map(no_owner)}
 
     def _comment_text(self):
         """Return the text for the SQL COMMENT statement

@@ -17,12 +17,12 @@ class TSConfiguration(DbSchemaObject):
     keylist = ['schema', 'name']
     objtype = "TEXT SEARCH CONFIGURATION"
 
-    def to_map(self):
+    def to_map(self, no_owner):
         """Convert a text search configuration to a YAML-suitable format
 
         :return: dictionary
         """
-        dct = self._base_map()
+        dct = self._base_map(no_owner)
         if '.' in self.parser:
             (sch, pars) = self.parser.split('.')
             if sch == self.schema:
@@ -48,10 +48,11 @@ class TSConfigurationDict(DbObjectDict):
 
     cls = TSConfiguration
     query = \
-        """SELECT nc.nspname AS schema, cfgname AS name,
+        """SELECT nc.nspname AS schema, cfgname AS name, rolname AS owner,
                   np.nspname || '.' || prsname AS parser,
                   obj_description(c.oid, 'pg_ts_config') AS description
            FROM pg_ts_config c
+                JOIN pg_roles r ON (r.oid = cfgowner)
                 JOIN pg_ts_parser p ON (cfgparser = p.oid)
                 JOIN pg_namespace nc ON (cfgnamespace = nc.oid)
                 JOIN pg_namespace np ON (prsnamespace = np.oid)
@@ -147,10 +148,11 @@ class TSDictionaryDict(DbObjectDict):
 
     cls = TSDictionary
     query = \
-        """SELECT nspname AS schema, dictname AS name,
+        """SELECT nspname AS schema, dictname AS name, rolname AS owner,
                   tmplname AS template, dictinitoption AS options,
                   obj_description(d.oid, 'pg_ts_dict') AS description
            FROM pg_ts_dict d JOIN pg_ts_template t ON (dicttemplate = t.oid)
+                JOIN pg_roles r ON (r.oid = dictowner)
                 JOIN pg_namespace n ON (dictnamespace = n.oid)
            WHERE (nspname != 'pg_catalog' AND nspname != 'information_schema')
            ORDER BY nspname, dictname"""

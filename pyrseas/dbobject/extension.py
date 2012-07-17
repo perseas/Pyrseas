@@ -40,8 +40,10 @@ class ExtensionDict(DbObjectDict):
     cls = Extension
     query = \
         """SELECT extname AS name, nspname AS schema, extversion AS version,
+                  rolname AS owner,
                   obj_description(e.oid, 'pg_extension') AS description
            FROM pg_extension e
+                JOIN pg_roles r ON (r.oid = extowner)
                 JOIN pg_namespace n ON (extnamespace = n.oid)
            WHERE nspname != 'information_schema'
            ORDER BY extname"""
@@ -72,9 +74,10 @@ class ExtensionDict(DbObjectDict):
                 lang = {'language %s' % exten.name: {'_ext': 'e'}}
                 newdb.languages.from_map(lang)
 
-    def to_map(self):
+    def to_map(self, no_owner):
         """Convert the extension dictionary to a regular dictionary
 
+        :param no_owner: exclude extension owner information
         :return: dictionary
 
         Invokes the `to_map` method of each extension to construct a
@@ -82,7 +85,7 @@ class ExtensionDict(DbObjectDict):
         """
         extens = {}
         for ext in list(self.keys()):
-            extens.update(self[ext].to_map())
+            extens.update(self[ext].to_map(no_owner))
         return extens
 
     def diff_map(self, inexts):

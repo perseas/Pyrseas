@@ -41,12 +41,13 @@ class DbType(DbSchemaObject):
 class BaseType(DbType):
     """A composite type"""
 
-    def to_map(self):
+    def to_map(self, no_owner):
         """Convert a type to a YAML-suitable format
 
+        :param no_owner: exclude type owner information
         :return: dictionary
         """
-        dct = self._base_map()
+        dct = self._base_map(no_owner)
         del dct['dep_funcs']
         if self.internallength < 0:
             dct['internallength'] = 'variable'
@@ -105,9 +106,10 @@ class BaseType(DbType):
 class Composite(DbType):
     """A composite type"""
 
-    def to_map(self):
+    def to_map(self, no_owner):
         """Convert a type to a YAML-suitable format
 
+        :param no_owner: exclude type owner information
         :return: dictionary
         """
         if not hasattr(self, 'attributes'):
@@ -118,6 +120,8 @@ class Composite(DbType):
             if att:
                 attrs.append(att)
         dct = {'attributes': attrs}
+        if not no_owner and hasattr(self, 'owner'):
+            dct.update(owner=self.owner)
         if hasattr(self, 'description'):
             dct.update(description=self.description)
         return {self.extern_key(): dct}
@@ -201,12 +205,13 @@ class Domain(DbType):
 
     objtype = "DOMAIN"
 
-    def to_map(self):
+    def to_map(self, no_owner):
         """Convert a domain to a YAML-suitable format
 
+        :param no_owner: exclude domain owner information
         :return: dictionary
         """
-        dct = self._base_map()
+        dct = self._base_map(no_owner)
         if hasattr(self, 'check_constraints'):
             if not 'check_constraints' in dct:
                 dct.update(check_constraints={})
@@ -248,7 +253,7 @@ class TypeDict(DbObjectDict):
                   format_type(typbasetype, typtypmod) AS type,
                   typnotnull AS not_null, typdefault AS default,
                   ARRAY(SELECT enumlabel FROM pg_enum e WHERE t.oid = enumtypid
-                  ORDER BY e.oid) AS labels,
+                  ORDER BY e.oid) AS labels, rolname AS owner,
                   typinput::regproc AS input, typoutput::regproc AS output,
                   typreceive::regproc AS receive, typsend::regproc AS send,
                   typmodin::regproc AS typmod_in,
@@ -259,6 +264,7 @@ class TypeDict(DbObjectDict):
                   typcategory AS category, typispreferred AS preferred,
                   obj_description(t.oid, 'pg_type') AS description
            FROM pg_type t
+                JOIN pg_roles r ON (r.oid = typowner)
                 JOIN pg_namespace n ON (typnamespace = n.oid)
                 LEFT JOIN pg_class c ON (typrelid = c.oid)
            WHERE typisdefined AND (typtype in ('d', 'e')

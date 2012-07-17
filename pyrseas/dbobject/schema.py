@@ -19,27 +19,28 @@ class Schema(DbObject):
     keylist = ['name']
     objtype = 'SCHEMA'
 
-    def to_map(self, dbschemas):
+    def to_map(self, dbschemas, no_owner):
         """Convert tables, etc., dictionaries to a YAML-suitable format
 
         :param dbschemas: dictionary of schemas
+        :param no_owner: exclude schema owner information
         :return: dictionary
         """
         key = self.extern_key()
-        schema = {key: {}}
+        schema = {key: {} if no_owner else {'owner': self.owner}}
 
         def mapper(schema, objtypes):
             mappeddict = {}
             if hasattr(schema, objtypes):
                 schemadict = getattr(schema, objtypes)
                 for objkey in list(schemadict.keys()):
-                    mappeddict.update(schemadict[objkey].to_map())
+                    mappeddict.update(schemadict[objkey].to_map(no_owner))
             return mappeddict
 
         if hasattr(self, 'tables'):
             tbls = {}
             for tbl in list(self.tables.keys()):
-                tbls.update(self.tables[tbl].to_map(dbschemas))
+                tbls.update(self.tables[tbl].to_map(dbschemas, no_owner))
             schema[key].update(tbls)
 
         for objtypes in ['conversions', 'domains', 'ftables', 'functions',
@@ -68,9 +69,10 @@ class SchemaDict(DbObjectDict):
 
     cls = Schema
     query = \
-        """SELECT nspname AS name,
+        """SELECT nspname AS name, rolname AS owner,
                   obj_description(n.oid, 'pg_namespace') AS description
            FROM pg_namespace n
+                JOIN pg_roles r ON (r.oid = nspowner)
            WHERE nspname NOT IN ('information_schema', 'pg_toast')
                  AND nspname NOT LIKE 'pg_temp\_%'
                  AND nspname NOT LIKE 'pg_toast_temp\_%'
@@ -300,7 +302,7 @@ class SchemaDict(DbObjectDict):
                 schema.collations = {}
             schema.collations.update({cll: coll})
 
-    def to_map(self):
+    def to_map(self, no_owner=False):
         """Convert the schema dictionary to a regular dictionary
 
         :return: dictionary
@@ -310,7 +312,7 @@ class SchemaDict(DbObjectDict):
         """
         schemas = {}
         for sch in list(self.keys()):
-            schemas.update(self[sch].to_map(self))
+            schemas.update(self[sch].to_map(self, no_owner))
         return schemas
 
     def diff_map(self, inschemas):

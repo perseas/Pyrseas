@@ -31,12 +31,12 @@ class OperatorClass(DbSchemaObject):
         """
         return "%s USING %s" % (self.qualname(), self.index_method)
 
-    def to_map(self):
+    def to_map(self, no_owner):
         """Convert operator class to a YAML-suitable format
 
         :return: dictionary
         """
-        dct = self._base_map()
+        dct = self._base_map(no_owner)
         if self.name == self.family:
             del dct['family']
         return {self.extern_key(): dct}
@@ -71,12 +71,13 @@ class OperatorClassDict(DbObjectDict):
 
     cls = OperatorClass
     query = \
-        """SELECT nspname AS schema, opcname AS name,
+        """SELECT nspname AS schema, opcname AS name, rolname AS owner,
                   amname AS index_method, opfname AS family,
                   opcintype::regtype AS type, opcdefault AS default,
                   opckeytype::regtype AS storage,
                   obj_description(o.oid, 'pg_opclass') AS description
            FROM pg_opclass o JOIN pg_am a ON (opcmethod = a.oid)
+                JOIN pg_roles r ON (r.oid = opcowner)
                 JOIN pg_opfamily f ON (opcfamily = f.oid)
                 JOIN pg_namespace n ON (opcnamespace = n.oid)
            WHERE (nspname != 'pg_catalog' AND nspname != 'information_schema')

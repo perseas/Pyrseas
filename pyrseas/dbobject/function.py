@@ -38,12 +38,13 @@ class Function(Proc):
 
     objtype = "FUNCTION"
 
-    def to_map(self):
+    def to_map(self, no_owner):
         """Convert a function to a YAML-suitable format
 
+        :param no_owner: exclude function owner information
         :return: dictionary
         """
-        dct = self._base_map()
+        dct = self._base_map(no_owner)
         if self.volatility == 'v':
             del dct['volatility']
         else:
@@ -136,12 +137,13 @@ class Aggregate(Proc):
 
     objtype = "AGGREGATE"
 
-    def to_map(self):
+    def to_map(self, no_owner):
         """Convert an agggregate to a YAML-suitable format
 
+        :param no_owner: exclude aggregate owner information
         :return: dictionary
         """
-        dct = self._base_map()
+        dct = self._base_map(no_owner)
         del dct['language']
         return {self.extern_key(): dct}
 
@@ -177,6 +179,7 @@ class ProcDict(DbObjectDict):
         """SELECT nspname AS schema, proname AS name,
                   pg_get_function_arguments(p.oid) AS arguments,
                   pg_get_function_result(p.oid) AS returns,
+                  rolname AS owner,
                   l.lanname AS language, provolatile AS volatility,
                   proisstrict AS strict, proisagg, prosrc AS source,
                   probin::text AS obj_file,
@@ -188,6 +191,7 @@ class ProcDict(DbObjectDict):
                   obj_description(p.oid, 'pg_proc') AS description,
                   prorows::integer AS rows
            FROM pg_proc p
+                JOIN pg_roles r ON (r.oid = proowner)
                 JOIN pg_namespace n ON (pronamespace = n.oid)
                 JOIN pg_language l ON (prolang = l.oid)
                 LEFT JOIN pg_aggregate a ON (p.oid = aggfnoid)

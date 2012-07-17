@@ -78,17 +78,18 @@ class ForeignDataWrapper(DbObjectWithOptions):
 
     objtype = "FOREIGN DATA WRAPPER"
 
-    def to_map(self):
+    def to_map(self, no_owner):
         """Convert wrappers and subsidiary objects to a YAML-suitable format
 
+        :param no_owner: exclude object owner information
         :return: dictionary
         """
         key = self.extern_key()
-        wrapper = {key: self._base_map()}
+        wrapper = {key: self._base_map(no_owner)}
         if hasattr(self, 'servers'):
             srvs = {}
             for srv in list(self.servers.keys()):
-                srvs.update(self.servers[srv].to_map())
+                srvs.update(self.servers[srv].to_map(no_owner))
             wrapper[key].update(srvs)
             del wrapper[key]['servers']
         return wrapper
@@ -125,10 +126,11 @@ class ForeignDataWrapper(DbObjectWithOptions):
 QUERY_PRE91 = \
         """SELECT fdwname AS name, CASE WHEN fdwvalidator = 0 THEN NULL
                     ELSE fdwvalidator::regproc END AS validator,
-                    fdwoptions AS options,
+                    fdwoptions AS options, rolname AS owner,
                   obj_description(w.oid, 'pg_foreign_data_wrapper') AS
                       description
            FROM pg_foreign_data_wrapper w
+                JOIN pg_roles r ON (r.oid = fdwowner)
            ORDER BY fdwname"""
 
 
@@ -141,10 +143,11 @@ class ForeignDataWrapperDict(DbObjectDict):
                       ELSE fdwhandler::regproc END AS handler,
                   CASE WHEN fdwvalidator = 0 THEN NULL
                       ELSE fdwvalidator::regproc END AS validator,
-                  fdwoptions AS options,
+                  fdwoptions AS options, rolname AS owner,
                   obj_description(w.oid, 'pg_foreign_data_wrapper') AS
                       description
            FROM pg_foreign_data_wrapper w
+                JOIN pg_roles r ON (r.oid = fdwowner)
            ORDER BY fdwname"""
 
     def _from_catalog(self):
@@ -192,9 +195,10 @@ class ForeignDataWrapperDict(DbObjectDict):
                 wrapper.servers = {}
             wrapper.servers.update({srv: dbserver})
 
-    def to_map(self):
+    def to_map(self, no_owner):
         """Convert the wrapper dictionary to a regular dictionary
 
+        :param no_owner: exclude wrapper owner information
         :return: dictionary
 
         Invokes the `to_map` method of each wrapper to construct a
@@ -202,7 +206,7 @@ class ForeignDataWrapperDict(DbObjectDict):
         """
         wrappers = {}
         for fdw in list(self.keys()):
-            wrappers.update(self[fdw].to_map())
+            wrappers.update(self[fdw].to_map(no_owner))
         return wrappers
 
     def diff_map(self, inwrappers):
@@ -268,13 +272,14 @@ class ForeignServer(DbObjectWithOptions):
         """
         return quote_id(self.name)
 
-    def to_map(self):
+    def to_map(self, no_owner):
         """Convert servers and subsidiary objects to a YAML-suitable format
 
+        :param no_owner: exclude server owner information
         :return: dictionary
         """
         key = self.extern_key()
-        server = {key: self._base_map()}
+        server = {key: self._base_map(no_owner)}
         if hasattr(self, 'usermaps'):
             umaps = {}
             for umap in list(self.usermaps.keys()):
@@ -322,8 +327,10 @@ class ForeignServerDict(DbObjectDict):
     query = \
         """SELECT fdwname AS wrapper, srvname AS name, srvtype AS type,
                   srvversion AS version, srvoptions AS options,
+                  rolname AS owner,
                   obj_description(s.oid, 'pg_foreign_server') AS description
            FROM pg_foreign_server s
+                JOIN pg_roles r ON (r.oid = srvowner)
                 JOIN pg_foreign_data_wrapper w ON (srvfdw = w.oid)
            ORDER BY fdwname, srvname"""
 
@@ -555,9 +562,10 @@ class ForeignTable(DbObjectWithOptions, Table):
 
     objtype = "FOREIGN TABLE"
 
-    def to_map(self):
+    def to_map(self, no_owner):
         """Convert a foreign table to a YAML-suitable format
 
+        :param no_owner: exclude table owner information
         :return: dictionary
         """
         if not hasattr(self, 'columns'):
@@ -568,10 +576,12 @@ class ForeignTable(DbObjectWithOptions, Table):
             if col:
                 cols.append(col)
         tbl = {'columns': cols, 'server': self.server}
-        if hasattr(self, 'options'):
-            tbl.update(options=self.options)
-        if hasattr(self, 'description'):
-            tbl.update(description=self.description)
+        attrlist = ['options', 'description']
+        if not no_owner:
+            attrlist.append('owner')
+        for attr in attrlist:
+            if hasattr(self, attr):
+                tbl.update({attr: getattr(self, attr)})
 
         return {self.extern_key(): tbl}
 
@@ -621,9 +631,10 @@ class ForeignTableDict(ClassDict):
     cls = ForeignTable
     query = \
         """SELECT nspname AS schema, relname AS name, srvname AS server,
-                  ftoptions AS options,
+                  ftoptions AS options, rolname AS owner,
                   obj_description(c.oid, 'pg_class') AS description
            FROM pg_class c JOIN pg_foreign_table f ON (ftrelid = c.oid)
+                JOIN pg_roles r ON (r.oid = relowner)
                 JOIN pg_foreign_server s ON (ftserver = s.oid)
                 JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
            WHERE relkind = 'f'
