@@ -9,7 +9,7 @@
     derived from DbObjectDict.
 """
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
-from pyrseas.dbobject import quote_id, split_schema_obj
+from pyrseas.dbobject import quote_id, split_schema_obj, commentable
 
 
 ACTIONS = {'r': 'restrict', 'c': 'cascade', 'n': 'set null',
@@ -30,6 +30,7 @@ class Constraint(DbSchemaObject):
         """
         return ", ".join([quote_id(col) for col in self.keycols])
 
+    @commentable
     def add(self):
         """Return string to add the constraint via ALTER TABLE
 
@@ -41,12 +42,9 @@ class Constraint(DbSchemaObject):
         tblspc = ''
         if hasattr(self, 'tablespace'):
             tblspc = " USING INDEX TABLESPACE %s" % self.tablespace
-        stmts = ["ALTER TABLE %s ADD CONSTRAINT %s %s (%s)%s" % (
+        return ["ALTER TABLE %s ADD CONSTRAINT %s %s (%s)%s" % (
                 self._table.qualname(), quote_id(self.name),
                 self.objtype, self.key_columns(), tblspc)]
-        if hasattr(self, 'description'):
-            stmts.append(self.comment())
-        return stmts
 
     def drop(self):
         """Return string to drop the constraint via ALTER TABLE
@@ -89,17 +87,15 @@ class CheckConstraint(Constraint):
             del dct['keycols']
         return {self.name: dct}
 
+    @commentable
     def add(self):
         """Return string to add the CHECK constraint via ALTER TABLE
 
         :return: SQL statement
         """
-        stmts = ["ALTER TABLE %s ADD CONSTRAINT %s %s (%s)" % (
+        return ["ALTER TABLE %s ADD CONSTRAINT %s %s (%s)" % (
                 self._table.qualname(), self.name, self.objtype,
                 self.expression)]
-        if hasattr(self, 'description'):
-            stmts.append(self.comment())
-        return stmts
 
     def diff_map(self, inchk):
         """Generate SQL to transform an existing CHECK constraint
@@ -183,6 +179,7 @@ class ForeignKey(Constraint):
         del dct['ref_table'], dct['ref_cols']
         return {self.name: dct}
 
+    @commentable
     def add(self):
         """Return string to add the foreign key via ALTER TABLE
 

@@ -6,7 +6,7 @@
     This module defines two classes: OperatorClass derived from
     DbSchemaObject and OperatorClassDict derived from DbObjectDict.
 """
-from pyrseas.dbobject import DbObjectDict, DbSchemaObject
+from pyrseas.dbobject import DbObjectDict, DbSchemaObject, commentable
 
 
 class OperatorClass(DbSchemaObject):
@@ -41,12 +41,12 @@ class OperatorClass(DbSchemaObject):
             del dct['family']
         return {self.extern_key(): dct}
 
+    @commentable
     def create(self):
         """Return SQL statements to CREATE the operator class
 
         :return: SQL statements
         """
-        stmts = []
         dflt = ''
         if hasattr(self, 'default') and self.default:
             dflt = "DEFAULT "
@@ -57,13 +57,10 @@ class OperatorClass(DbSchemaObject):
             clauses.append("FUNCTION %d %s" % (supp, func))
         if hasattr(self, 'storage'):
             clauses.append("STORAGE %s" % self.storage)
-        stmts.append("CREATE OPERATOR CLASS %s\n    %sFOR TYPE %s USING %s "
+        return ["CREATE OPERATOR CLASS %s\n    %sFOR TYPE %s USING %s "
                      "AS\n    %s" % (
                 self.qualname(), dflt, self.type, self.index_method,
-                ',\n    ' .join(clauses)))
-        if hasattr(self, 'description'):
-            stmts.append(self.comment())
-        return stmts
+                ',\n    ' .join(clauses))]
 
 
 class OperatorClassDict(DbObjectDict):

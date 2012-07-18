@@ -6,7 +6,8 @@
     This defines two classes, Rule and RuleDict, derived from
     DbSchemaObject and DbObjectDict, respectively.
 """
-from pyrseas.dbobject import DbObjectDict, DbSchemaObject, quote_id
+from pyrseas.dbobject import DbObjectDict, DbSchemaObject
+from pyrseas.dbobject import quote_id, commentable
 
 
 class Rule(DbSchemaObject):
@@ -31,23 +32,20 @@ class Rule(DbSchemaObject):
         del dct['_table']
         return {self.name: dct}
 
+    @commentable
     def create(self):
         """Return SQL statements to CREATE the rule
 
         :return: SQL statements
         """
-        stmts = []
         where = instead = ''
         if hasattr(self, 'condition'):
             where = ' WHERE %s' % self.condition
         if hasattr(self, 'instead'):
             instead = 'INSTEAD '
-        stmts.append("CREATE RULE %s AS ON %s\n    TO %s%s\n    DO %s%s" % (
+        return ["CREATE RULE %s AS ON %s\n    TO %s%s\n    DO %s%s" % (
                 quote_id(self.name), self.event.upper(),
-                self._table.qualname(), where, instead, self.actions))
-        if hasattr(self, 'description'):
-            stmts.append(self.comment())
-        return stmts
+                self._table.qualname(), where, instead, self.actions)]
 
 
 class RuleDict(DbObjectDict):

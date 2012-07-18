@@ -8,7 +8,7 @@
     TSConfigurationDict, TSDictionaryDict, TSParserDict and
     TSTemplateDict derived from DbObjectDict.
 """
-from pyrseas.dbobject import DbObjectDict, DbSchemaObject
+from pyrseas.dbobject import DbObjectDict, DbSchemaObject, commentable
 
 
 class TSConfiguration(DbSchemaObject):
@@ -29,6 +29,7 @@ class TSConfiguration(DbSchemaObject):
                 dct['parser'] = pars
         return {self.extern_key(): dct}
 
+    @commentable
     def create(self):
         """Return SQL statements to CREATE the configuration
 
@@ -36,11 +37,8 @@ class TSConfiguration(DbSchemaObject):
         """
         clauses = []
         clauses.append("PARSER = %s" % self.parser)
-        stmts = ["CREATE TEXT SEARCH CONFIGURATION %s (\n    %s)" % (
+        return ["CREATE TEXT SEARCH CONFIGURATION %s (\n    %s)" % (
                 self.qualname(), ',\n    '.join(clauses))]
-        if hasattr(self, 'description'):
-            stmts.append(self.comment())
-        return stmts
 
 
 class TSConfigurationDict(DbObjectDict):
@@ -127,6 +125,7 @@ class TSDictionary(DbSchemaObject):
     keylist = ['schema', 'name']
     objtype = "TEXT SEARCH DICTIONARY"
 
+    @commentable
     def create(self):
         """Return SQL statements to CREATE the dictionary
 
@@ -136,11 +135,8 @@ class TSDictionary(DbSchemaObject):
         clauses.append("TEMPLATE = %s" % self.template)
         if hasattr(self, 'options'):
             clauses.append(self.options)
-        stmts = ["CREATE TEXT SEARCH DICTIONARY %s (\n    %s)" % (
+        return ["CREATE TEXT SEARCH DICTIONARY %s (\n    %s)" % (
                 self.qualname(), ',\n    '.join(clauses))]
-        if hasattr(self, 'description'):
-            stmts.append(self.comment())
-        return stmts
 
 
 class TSDictionaryDict(DbObjectDict):
@@ -224,6 +220,7 @@ class TSParser(DbSchemaObject):
     keylist = ['schema', 'name']
     objtype = "TEXT SEARCH PARSER"
 
+    @commentable
     def create(self):
         """Return SQL statements to CREATE the parser
 
@@ -234,11 +231,8 @@ class TSParser(DbSchemaObject):
             clauses.append("%s = %s" % (attr.upper(), getattr(self, attr)))
         if hasattr(self, 'headline'):
             clauses.append("HEADLINE = %s" % self.headline)
-        stmts = ["CREATE TEXT SEARCH PARSER %s (\n    %s)" % (
+        return ["CREATE TEXT SEARCH PARSER %s (\n    %s)" % (
                 self.qualname(), ',\n    '.join(clauses))]
-        if hasattr(self, 'description'):
-            stmts.append(self.comment())
-        return stmts
 
 
 class TSParserDict(DbObjectDict):
@@ -323,6 +317,7 @@ class TSTemplate(DbSchemaObject):
     keylist = ['schema', 'name']
     objtype = "TEXT SEARCH TEMPLATE"
 
+    @commentable
     def create(self):
         """Return SQL statements to CREATE the template
 
@@ -332,11 +327,8 @@ class TSTemplate(DbSchemaObject):
         if hasattr(self, 'init'):
             clauses.append("INIT = %s" % self.init)
         clauses.append("LEXIZE = %s" % self.lexize)
-        stmts = ["CREATE TEXT SEARCH TEMPLATE %s (\n    %s)" % (
+        return ["CREATE TEXT SEARCH TEMPLATE %s (\n    %s)" % (
                 self.qualname(), ',\n    '.join(clauses))]
-        if hasattr(self, 'description'):
-            stmts.append(self.comment())
-        return stmts
 
 
 class TSTemplateDict(DbObjectDict):

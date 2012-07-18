@@ -10,7 +10,7 @@
     ForeignTable derived from DbObjectWithOptions and Table, and
     ForeignTableDict derived from ClassDict.
 """
-from pyrseas.dbobject import DbObjectDict, DbObject, quote_id
+from pyrseas.dbobject import DbObjectDict, DbObject, quote_id, commentable
 from pyrseas.dbobject.table import ClassDict, Table
 
 
@@ -94,6 +94,7 @@ class ForeignDataWrapper(DbObjectWithOptions):
             del wrapper[key]['servers']
         return wrapper
 
+    @commentable
     def create(self):
         """Return SQL statements to CREATE the data wrapper
 
@@ -105,12 +106,9 @@ class ForeignDataWrapper(DbObjectWithOptions):
                 clauses.append("%s %s" % (fnc.upper(), getattr(self, fnc)))
         if hasattr(self, 'options'):
             clauses.append(self.options_clause())
-        stmts = ["CREATE FOREIGN DATA WRAPPER %s%s" % (
+        return ["CREATE FOREIGN DATA WRAPPER %s%s" % (
                 quote_id(self.name),
                 clauses and '\n    ' + ',\n    '.join(clauses) or '')]
-        if hasattr(self, 'description'):
-            stmts.append(self.comment())
-        return stmts
 
     def diff_map(self, inwrapper):
         """Generate SQL to transform an existing wrapper
@@ -288,6 +286,7 @@ class ForeignServer(DbObjectWithOptions):
             del server[key]['usermaps']
         return server
 
+    @commentable
     def create(self):
         """Return SQL statements to CREATE the server
 
@@ -300,14 +299,11 @@ class ForeignServer(DbObjectWithOptions):
                 clauses.append("%s '%s'" % (opt.upper(), getattr(self, opt)))
         if hasattr(self, 'options'):
             options.append(self.options_clause())
-        stmts = ["CREATE SERVER %s%s\n    FOREIGN DATA WRAPPER %s%s" % (
+        return ["CREATE SERVER %s%s\n    FOREIGN DATA WRAPPER %s%s" % (
                 quote_id(self.name),
                 clauses and ' ' + ' '.join(clauses) or '',
                 quote_id(self.wrapper),
                 options and '\n    ' + ',\n    '.join(options) or '')]
-        if hasattr(self, 'description'):
-            stmts.append(self.comment())
-        return stmts
 
     def diff_map(self, inserver):
         """Generate SQL to transform an existing server
@@ -466,11 +462,10 @@ class UserMapping(DbObjectWithOptions):
         options = []
         if hasattr(self, 'options'):
             options.append(self.options_clause())
-        stmts = ["CREATE USER MAPPING FOR %s\n    SERVER %s%s" % (
+        return ["CREATE USER MAPPING FOR %s\n    SERVER %s%s" % (
                 self.username == 'PUBLIC' and 'PUBLIC' or
                 quote_id(self.username), quote_id(self.server),
                 options and '\n    ' + ',\n    '.join(options) or '')]
-        return stmts
 
 
 class UserMappingDict(DbObjectDict):

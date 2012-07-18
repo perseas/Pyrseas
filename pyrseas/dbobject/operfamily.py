@@ -6,7 +6,7 @@
     This module defines two classes: OperatorFamily derived from
     DbSchemaObject and OperatorFamilyDict derived from DbObjectDict.
 """
-from pyrseas.dbobject import DbObjectDict, DbSchemaObject
+from pyrseas.dbobject import DbObjectDict, DbSchemaObject, commentable
 
 
 class OperatorFamily(DbSchemaObject):
@@ -31,17 +31,14 @@ class OperatorFamily(DbSchemaObject):
         """
         return "%s USING %s" % (self.qualname(), self.index_method)
 
+    @commentable
     def create(self):
         """Return SQL statements to CREATE the operator family
 
         :return: SQL statements
         """
-        stmts = []
-        stmts.append("CREATE OPERATOR FAMILY %s USING %s" % (
-                self.qualname(), self.index_method))
-        if hasattr(self, 'description'):
-            stmts.append(self.comment())
-        return stmts
+        return ["CREATE OPERATOR FAMILY %s USING %s" % (
+                self.qualname(), self.index_method)]
 
 
 class OperatorFamilyDict(DbObjectDict):

@@ -10,7 +10,7 @@
 import sys
 
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
-from pyrseas.dbobject import quote_id, split_schema_obj
+from pyrseas.dbobject import quote_id, split_schema_obj, commentable
 from pyrseas.dbobject.constraint import CheckConstraint, PrimaryKey
 from pyrseas.dbobject.constraint import ForeignKey, UniqueConstraint
 
@@ -91,26 +91,23 @@ class Sequence(DbClass):
                         seq[key] = str(val)
         return {self.extern_key(): seq}
 
+    @commentable
     def create(self):
         """Return a SQL statement to CREATE the sequence
 
         :return: SQL statements
         """
-        stmts = []
         maxval = self.max_value and ("MAXVALUE %d" % self.max_value) \
             or "NO MAXVALUE"
         minval = self.min_value and ("MINVALUE %d" % self.min_value) \
             or "NO MINVALUE"
-        stmts.append("""CREATE SEQUENCE %s
+        return ["""CREATE SEQUENCE %s
     START WITH %d
     INCREMENT BY %d
     %s
     %s
     CACHE %d""" % (self.qualname(), self.start_value, self.increment_by,
-                   maxval, minval, self.cache_value))
-        if hasattr(self, 'description'):
-            stmts.append(self.comment())
-        return stmts
+                   maxval, minval, self.cache_value)]
 
     def add_owner(self):
         """Return statement to ALTER the sequence to indicate its owner table
@@ -348,20 +345,17 @@ class View(DbClass):
 
     objtype = "VIEW"
 
+    @commentable
     def create(self, newdefn=None):
         """Return SQL statements to CREATE the table
 
         :return: SQL statements
         """
-        stmts = []
         defn = newdefn or self.definition
         if defn[-1:] == ';':
             defn = defn[:-1]
-        stmts.append("CREATE%s VIEW %s AS\n   %s" % (
-                newdefn and " OR REPLACE" or '', self.qualname(), defn))
-        if hasattr(self, 'description'):
-            stmts.append(self.comment())
-        return stmts
+        return ["CREATE%s VIEW %s AS\n   %s" % (
+                newdefn and " OR REPLACE" or '', self.qualname(), defn)]
 
     def diff_map(self, inview):
         """Generate SQL to transform an existing view

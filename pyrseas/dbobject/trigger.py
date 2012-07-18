@@ -6,8 +6,8 @@
     This module defines two classes: Trigger derived from
     DbSchemaObject, and TriggerDict derived from DbObjectDict.
 """
-from pyrseas.dbobject import DbObjectDict, DbSchemaObject, quote_id
-
+from pyrseas.dbobject import DbObjectDict, DbSchemaObject
+from pyrseas.dbobject import quote_id, commentable
 
 EXEC_PROC = 'EXECUTE PROCEDURE '
 EVENT_TYPES = ['INSERT', 'UPDATE', 'DELETE', 'TRUNCATE']
@@ -38,6 +38,7 @@ class Trigger(DbSchemaObject):
                               for k in self.columns.split()]
         return {self.name: dct}
 
+    @commentable
     def create(self):
         """Return SQL statements to CREATE the trigger
 
@@ -60,14 +61,11 @@ class Trigger(DbSchemaObject):
         cond = ''
         if hasattr(self, 'condition'):
             cond = "\n    WHEN (%s)" % self.condition
-        stmts.append("CREATE %sTRIGGER %s\n    %s %s ON %s%s\n    FOR EACH %s"
+        return ["CREATE %sTRIGGER %s\n    %s %s ON %s%s\n    FOR EACH %s"
                      "%s\n    EXECUTE PROCEDURE %s" % (
                 constr, quote_id(self.name), self.timing.upper(), evts,
                 self._table.qualname(), defer,
-                self.level.upper(), cond, self.procedure))
-        if hasattr(self, 'description'):
-            stmts.append(self.comment())
-        return stmts
+                self.level.upper(), cond, self.procedure)]
 
 
 QUERY_PRE90 = \

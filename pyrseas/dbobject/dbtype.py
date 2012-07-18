@@ -8,7 +8,7 @@
     DbType, and DbTypeDict derived from DbObjectDict.
 """
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
-from pyrseas.dbobject.schema import split_schema_obj
+from pyrseas.dbobject import split_schema_obj, commentable
 from pyrseas.dbobject.constraint import CheckConstraint
 
 
@@ -57,6 +57,7 @@ class BaseType(DbType):
             del dct['delimiter']
         return {self.extern_key(): dct}
 
+    @commentable
     def create(self):
         """Return SQL statements to CREATE the base type
 
@@ -88,8 +89,6 @@ class BaseType(DbType):
                      "\n    OUTPUT = %s%s%s)" % (
                 self.qualname(), self.input, self.output,
                 opt_clauses and ',\n    ' or '', ',\n    '.join(opt_clauses)))
-        if hasattr(self, 'description'):
-            stmts.append(self.comment())
         return stmts
 
     def drop(self):
@@ -126,20 +125,17 @@ class Composite(DbType):
             dct.update(description=self.description)
         return {self.extern_key(): dct}
 
+    @commentable
     def create(self):
         """Return SQL statements to CREATE the composite type
 
         :return: SQL statements
         """
-        stmts = []
         attrs = []
         for att in self.attributes:
             attrs.append("    " + att.add()[0])
-        stmts.append("CREATE TYPE %s AS (%s)" % (
-                self.qualname(), ",\n".join(attrs)))
-        if hasattr(self, 'description'):
-            stmts.append(self.comment())
-        return stmts
+        return ["CREATE TYPE %s AS (%s)" % (
+                self.qualname(), ",\n".join(attrs))]
 
     def diff_map(self, intype):
         """Generate SQL to transform an existing composite type
@@ -186,18 +182,15 @@ class Composite(DbType):
 class Enum(DbType):
     "An enumerated type definition"
 
+    @commentable
     def create(self):
         """Return SQL statements to CREATE the enum
 
         :return: SQL statements
         """
-        stmts = []
         lbls = ["'%s'" % lbl for lbl in self.labels]
-        stmts.append("CREATE TYPE %s AS ENUM (%s)" % (
-                self.qualname(), ",\n    ".join(lbls)))
-        if hasattr(self, 'description'):
-            stmts.append(self.comment())
-        return stmts
+        return ["CREATE TYPE %s AS ENUM (%s)" % (
+                self.qualname(), ",\n    ".join(lbls))]
 
 
 class Domain(DbType):
@@ -221,12 +214,12 @@ class Domain(DbType):
 
         return {self.extern_key(): dct}
 
+    @commentable
     def create(self):
         """Return SQL statements to CREATE the domain
 
         :return: SQL statements
         """
-        stmts = []
         create = "CREATE DOMAIN %s AS %s" % (self.qualname(), self.type)
         if hasattr(self, 'not_null'):
             create += ' NOT NULL'
@@ -238,10 +231,7 @@ class Domain(DbType):
                 cnslist.append(" CONSTRAINT %s CHECK (%s)" % (
                     cns.name, cns.expression))
             create += ", ".join(cnslist)
-        stmts.append(create)
-        if hasattr(self, 'description'):
-            stmts.append(self.comment())
-        return stmts
+        return [create]
 
 
 class TypeDict(DbObjectDict):

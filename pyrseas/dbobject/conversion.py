@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-    pyrseas.conversion
-    ~~~~~~~~~~~~~~~~~~
+    pyrseas.dbobject.conversion
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     This defines two classes, Conversion and ConversionDict, derived from
     DbSchemaObject and DbObjectDict, respectively.
 """
-from pyrseas.dbobject import DbObjectDict, DbSchemaObject
+from pyrseas.dbobject import DbObjectDict, DbSchemaObject, commentable
 
 
 class Conversion(DbSchemaObject):
@@ -15,21 +15,18 @@ class Conversion(DbSchemaObject):
     keylist = ['schema', 'name']
     objtype = "CONVERSION"
 
+    @commentable
     def create(self):
         """Return SQL statements to CREATE the conversion
 
         :return: SQL statements
         """
-        stmts = []
         dflt = ''
         if hasattr(self, 'default') and self.default:
             dflt = 'DEFAULT '
-        stmts.append("CREATE %sCONVERSION %s\n    FOR '%s' TO '%s' FROM %s" % (
+        return ["CREATE %sCONVERSION %s\n    FOR '%s' TO '%s' FROM %s" % (
                 dflt, self.qualname(), self.source_encoding,
-                self.dest_encoding, self.function))
-        if hasattr(self, 'description'):
-            stmts.append(self.comment())
-        return stmts
+                self.dest_encoding, self.function)]
 
 
 class ConversionDict(DbObjectDict):

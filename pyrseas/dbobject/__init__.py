@@ -53,6 +53,16 @@ def split_schema_obj(obj, sch=None):
     return (sch, obj)
 
 
+def commentable(func):
+    """Decorator to add comments to various objects"""
+    def add_comment(obj, *args, **kwargs):
+        stmts = func(obj, *args, **kwargs)
+        if hasattr(obj, 'description'):
+            stmts.append(obj.comment())
+        return stmts
+    return add_comment
+
+
 class DbObject(object):
     "A single object in a database catalog, e.g., a schema, a table, a column"
 

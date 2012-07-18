@@ -7,7 +7,7 @@
     from DbSchemaObject and DbObjectDict, respectively.
 """
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
-from pyrseas.dbobject import quote_id, split_schema_obj
+from pyrseas.dbobject import quote_id, split_schema_obj, commentable
 
 
 class Index(DbSchemaObject):
@@ -51,6 +51,7 @@ class Index(DbSchemaObject):
             del dct['access_method']
         return {self.name: dct}
 
+    @commentable
     def create(self):
         """Return a SQL statement to CREATE the index
 
@@ -70,8 +71,6 @@ class Index(DbSchemaObject):
         stmts.append("CREATE %sINDEX %s ON %s %s(%s)%s" % (
             'UNIQUE ' if unq else '', quote_id(self.name),
             quote_id(self.table), acc, self.key_expressions(), tblspc))
-        if hasattr(self, 'description'):
-            stmts.append(self.comment())
         return stmts
 
     def diff_map(self, inindex):

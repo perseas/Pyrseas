@@ -6,7 +6,7 @@
     This module defines two classes: Cast derived from DbObject and
     CastDict derived from DbObjectDict.
 """
-from pyrseas.dbobject import DbObject, DbObjectDict
+from pyrseas.dbobject import DbObject, DbObjectDict, commentable
 
 
 CONTEXTS = {'a': 'assignment', 'e': 'explicit', 'i': 'implicit'}
@@ -44,12 +44,12 @@ class Cast(DbObject):
         dct['method'] = METHODS[self.method]
         return {self.extern_key(): dct}
 
+    @commentable
     def create(self):
         """Return SQL statements to CREATE the cast
 
         :return: SQL statements
         """
-        stmts = []
         with_clause = "\n    WITH"
         if hasattr(self, 'function'):
             with_clause += " FUNCTION %s" % self.function
@@ -62,11 +62,8 @@ class Cast(DbObject):
             as_clause = "\n    AS ASSIGNMENT"
         elif self.context == 'i':
             as_clause = "\n    AS IMPLICIT"
-        stmts.append("CREATE CAST (%s AS %s)%s%s" % (
-                self.source, self.target, with_clause, as_clause))
-        if hasattr(self, 'description'):
-            stmts.append(self.comment())
-        return stmts
+        return ["CREATE CAST (%s AS %s)%s%s" % (
+                self.source, self.target, with_clause, as_clause)]
 
 
 class CastDict(DbObjectDict):

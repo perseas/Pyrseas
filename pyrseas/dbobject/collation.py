@@ -6,7 +6,7 @@
     This defines two classes, Collation and CollationDict, derived from
     DbSchemaObject and DbObjectDict, respectively.
 """
-from pyrseas.dbobject import DbObjectDict, DbSchemaObject
+from pyrseas.dbobject import DbObjectDict, DbSchemaObject, commentable
 
 
 class Collation(DbSchemaObject):
@@ -15,18 +15,15 @@ class Collation(DbSchemaObject):
     keylist = ['schema', 'name']
     objtype = "COLLATION"
 
+    @commentable
     def create(self):
         """Return SQL statements to CREATE the collation
 
         :return: SQL statements
         """
-        stmts = []
-        stmts.append("CREATE COLLATION %s (\n    LC_COLLATE = '%s',"
-                     "\n    LC_CTYPE = '%s')" % (
-                self.qualname(), self.lc_collate, self.lc_ctype))
-        if hasattr(self, 'description'):
-            stmts.append(self.comment())
-        return stmts
+        return ["CREATE COLLATION %s (\n    LC_COLLATE = '%s',"
+                "\n    LC_CTYPE = '%s')" % (
+                self.qualname(), self.lc_collate, self.lc_ctype)]
 
 
 class CollationDict(DbObjectDict):

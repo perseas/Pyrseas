@@ -6,7 +6,8 @@
     This module defines two classes: Operator derived from
     DbSchemaObject and OperatorDict derived from DbObjectDict.
 """
-from pyrseas.dbobject import DbObjectDict, DbSchemaObject, quote_id
+from pyrseas.dbobject import DbObjectDict, DbSchemaObject
+from pyrseas.dbobject import quote_id, commentable
 
 
 class Operator(DbSchemaObject):
@@ -41,12 +42,12 @@ class Operator(DbSchemaObject):
         """
         return "%s(%s, %s)" % (self.qualname(), self.leftarg, self.rightarg)
 
+    @commentable
     def create(self):
         """Return SQL statements to CREATE or REPLACE the operator
 
         :return: SQL statements
         """
-        stmts = []
         opt_clauses = []
         if self.leftarg != 'NONE':
             opt_clauses.append("LEFTARG = %s" % self.leftarg)
@@ -64,12 +65,9 @@ class Operator(DbSchemaObject):
             opt_clauses.append("HASHES")
         if hasattr(self, 'merges') and self.merges:
             opt_clauses.append("MERGES")
-        stmts.append("CREATE OPERATOR %s (\n    PROCEDURE = %s%s%s)" % (
+        return ["CREATE OPERATOR %s (\n    PROCEDURE = %s%s%s)" % (
                 self.qualname(), self.procedure,
-                ',\n    ' if opt_clauses else '', ',\n    '.join(opt_clauses)))
-        if hasattr(self, 'description'):
-            stmts.append(self.comment())
-        return stmts
+                ',\n    ' if opt_clauses else '', ',\n    '.join(opt_clauses))]
 
 
 class OperatorDict(DbObjectDict):

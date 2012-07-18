@@ -6,7 +6,8 @@
     This module defines two classes: Extension derived from DbObject,
     and ExtensionDict derived from DbObjectDict.
 """
-from pyrseas.dbobject import DbObjectDict, DbObject, quote_id
+from pyrseas.dbobject import DbObjectDict, DbObject
+from pyrseas.dbobject import quote_id, commentable
 
 
 class Extension(DbObject):
@@ -15,23 +16,20 @@ class Extension(DbObject):
     keylist = ['name']
     objtype = "EXTENSION"
 
+    @commentable
     def create(self):
         """Return SQL statements to CREATE the extension
 
         :return: SQL statements
         """
-        stmts = []
         opt_clauses = []
         if hasattr(self, 'schema') and self.schema != 'public':
             opt_clauses.append("SCHEMA %s" % quote_id(self.schema))
         if hasattr(self, 'version'):
             opt_clauses.append("VERSION '%s'" % self.version)
-        stmts.append("CREATE EXTENSION %s%s" % (
+        return ["CREATE EXTENSION %s%s" % (
                 quote_id(self.name), ('\n    ' + '\n    '.join(opt_clauses))
-                if opt_clauses else ''))
-        if hasattr(self, 'description'):
-            stmts.append(self.comment())
-        return stmts
+                if opt_clauses else '')]
 
 
 class ExtensionDict(DbObjectDict):

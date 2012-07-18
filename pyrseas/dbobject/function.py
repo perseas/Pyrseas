@@ -7,7 +7,7 @@
     DbSchemaObject, Function and Aggregate derived from Proc, and
     FunctionDict derived from DbObjectDict.
 """
-from pyrseas.dbobject import DbObjectDict, DbSchemaObject
+from pyrseas.dbobject import DbObjectDict, DbSchemaObject, commentable
 
 
 VOLATILITY_TYPES = {'i': 'immutable', 's': 'stable', 'v': 'volatile'}
@@ -68,6 +68,7 @@ class Function(Proc):
                 del dct['rows']
         return {self.extern_key(): dct}
 
+    @commentable
     def create(self, newsrc=None, basetype=False):
         """Return SQL statements to CREATE or REPLACE the function
 
@@ -110,8 +111,6 @@ class Function(Proc):
                 newsrc and " OR REPLACE" or '', self.qualname(),
                 self.arguments, self.returns, self.language, volat, strict,
                 secdef, cost, rows, src))
-        if hasattr(self, 'description'):
-            stmts.append(self.comment())
         return stmts
 
     def diff_map(self, infunction):
@@ -147,12 +146,12 @@ class Aggregate(Proc):
         del dct['language']
         return {self.extern_key(): dct}
 
+    @commentable
     def create(self):
         """Return SQL statements to CREATE the aggregate
 
         :return: SQL statements
         """
-        stmts = []
         opt_clauses = []
         if hasattr(self, 'finalfunc'):
             ffname = self.finalfunc[:self.finalfunc.index('(')]
@@ -161,14 +160,11 @@ class Aggregate(Proc):
             opt_clauses.append("INITCOND = '%s'" % self.initcond)
         if hasattr(self, 'sortop'):
             opt_clauses.append("SORTOP = %s" % self.sortop)
-        stmts.append("CREATE AGGREGATE %s(%s) (\n    SFUNC = %s,"
+        return ["CREATE AGGREGATE %s(%s) (\n    SFUNC = %s,"
                      "\n    STYPE = %s%s%s)" % (
                 self.qualname(),
                 self.arguments, self.sfunc, self.stype,
-                opt_clauses and ',\n    ' or '', ',\n    '.join(opt_clauses)))
-        if hasattr(self, 'description'):
-            stmts.append(self.comment())
-        return stmts
+                opt_clauses and ',\n    ' or '', ',\n    '.join(opt_clauses))]
 
 
 class ProcDict(DbObjectDict):
