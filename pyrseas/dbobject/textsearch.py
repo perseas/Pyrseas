@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
 """
-    pyrseas.textsearch
-    ~~~~~~~~~~~~~~~~~~
+    pyrseas.dbobject.textsearch
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     This defines eight classes: TSConfiguration, TSDictionary,
     TSParser and TSTemplate derived from DbSchemaObject, and
     TSConfigurationDict, TSDictionaryDict, TSParserDict and
     TSTemplateDict derived from DbObjectDict.
 """
-from pyrseas.dbobject import DbObjectDict, DbSchemaObject, commentable
+from pyrseas.dbobject import DbObjectDict, DbSchemaObject
+from pyrseas.dbobject import commentable, ownable
 
 
 class TSConfiguration(DbSchemaObject):
@@ -30,6 +31,7 @@ class TSConfiguration(DbSchemaObject):
         return {self.extern_key(): dct}
 
     @commentable
+    @ownable
     def create(self):
         """Return SQL statements to CREATE the configuration
 
@@ -126,6 +128,7 @@ class TSDictionary(DbSchemaObject):
     objtype = "TEXT SEARCH DICTIONARY"
 
     @commentable
+    @ownable
     def create(self):
         """Return SQL statements to CREATE the dictionary
 
@@ -221,6 +224,7 @@ class TSParser(DbSchemaObject):
     objtype = "TEXT SEARCH PARSER"
 
     @commentable
+    @ownable
     def create(self):
         """Return SQL statements to CREATE the parser
 

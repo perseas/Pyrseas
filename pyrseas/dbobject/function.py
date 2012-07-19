@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 """
-    pyrseas.function
-    ~~~~~~~~~~~~~~~~
+    pyrseas.dbobject.function
+    ~~~~~~~~~~~~~~~~~~~~~~~~~
 
     This module defines four classes: Proc derived from
     DbSchemaObject, Function and Aggregate derived from Proc, and
     FunctionDict derived from DbObjectDict.
 """
-from pyrseas.dbobject import DbObjectDict, DbSchemaObject, commentable
+from pyrseas.dbobject import DbObjectDict, DbSchemaObject
+from pyrseas.dbobject import commentable, ownable
 
 
 VOLATILITY_TYPES = {'i': 'immutable', 's': 'stable', 'v': 'volatile'}
@@ -69,6 +70,7 @@ class Function(Proc):
         return {self.extern_key(): dct}
 
     @commentable
+    @ownable
     def create(self, newsrc=None, basetype=False):
         """Return SQL statements to CREATE or REPLACE the function
 
@@ -147,6 +149,7 @@ class Aggregate(Proc):
         return {self.extern_key(): dct}
 
     @commentable
+    @ownable
     def create(self):
         """Return SQL statements to CREATE the aggregate
 

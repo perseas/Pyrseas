@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-    pyrseas.table
-    ~~~~~~~~~~~~~
+    pyrseas.dbobject.table
+    ~~~~~~~~~~~~~~~~~~~~~~
 
     This module defines four classes: DbClass derived from
     DbSchemaObject, Sequence and Table derived from DbClass, and
@@ -10,7 +10,7 @@
 import sys
 
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
-from pyrseas.dbobject import quote_id, split_schema_obj, commentable
+from pyrseas.dbobject import quote_id, split_schema_obj, commentable, ownable
 from pyrseas.dbobject.constraint import CheckConstraint, PrimaryKey
 from pyrseas.dbobject.constraint import ForeignKey, UniqueConstraint
 
@@ -92,6 +92,7 @@ class Sequence(DbClass):
         return {self.extern_key(): seq}
 
     @commentable
+    @ownable
     def create(self):
         """Return a SQL statement to CREATE the sequence
 
@@ -264,6 +265,8 @@ class Table(DbClass):
             tblspc = " TABLESPACE %s" % self.tablespace
         stmts.append("CREATE TABLE %s (\n%s)%s%s" % (
                 self.qualname(), ",\n".join(cols), inhclause, tblspc))
+        if hasattr(self, 'owner'):
+            stmts.append(self.alter_owner())
         if hasattr(self, 'description'):
             stmts.append(self.comment())
         for col in self.columns:
@@ -346,6 +349,7 @@ class View(DbClass):
     objtype = "VIEW"
 
     @commentable
+    @ownable
     def create(self, newdefn=None):
         """Return SQL statements to CREATE the table
 
@@ -444,12 +448,10 @@ class ClassDict(DbObjectDict):
                 except KeyError as exc:
                     exc.args = ("Table '%s' has no columns" % key, )
                     raise
-                if 'inherits' in intable:
-                    table.inherits = intable['inherits']
-                if 'tablespace' in intable:
-                    table.tablespace = intable['tablespace']
-                if 'oldname' in intable:
-                    table.oldname = intable['oldname']
+                for attr in ['inherits', 'owner', 'tablespace', 'oldname',
+                             'description']:
+                    if attr in intable:
+                        setattr(table, attr, intable[attr])
                 newdb.constraints.from_map(table, intable)
                 if 'indexes' in intable:
                     newdb.indexes.from_map(table, intable['indexes'])
@@ -457,8 +459,6 @@ class ClassDict(DbObjectDict):
                     newdb.rules.from_map(table, intable['rules'])
                 if 'triggers' in intable:
                     newdb.triggers.from_map(table, intable['triggers'])
-                if 'description' in intable:
-                    table.description = intable['description']
             elif objtype == 'sequence':
                 self[(schema.name, key)] = seq = Sequence(
                     schema=schema.name, name=key)
@@ -467,8 +467,6 @@ class ClassDict(DbObjectDict):
                     raise ValueError("Sequence '%s' has no specification" % k)
                 for attr, val in list(inseq.items()):
                     setattr(seq, attr, val)
-                if 'oldname' in inseq:
-                    seq.oldname = inseq['oldname']
             elif objtype == 'view':
                 self[(schema.name, key)] = view = View(
                     schema=schema.name, name=key)
@@ -477,8 +475,6 @@ class ClassDict(DbObjectDict):
                     raise ValueError("View '%s' has no specification" % k)
                 for attr, val in list(inview.items()):
                     setattr(view, attr, val)
-                if 'oldname' in inview:
-                    view.oldname = inview['oldname']
             else:
                 raise KeyError("Unrecognized object type: %s" % k)
 

@@ -10,7 +10,8 @@
     ForeignTable derived from DbObjectWithOptions and Table, and
     ForeignTableDict derived from ClassDict.
 """
-from pyrseas.dbobject import DbObjectDict, DbObject, quote_id, commentable
+from pyrseas.dbobject import DbObjectDict, DbObject
+from pyrseas.dbobject import quote_id, commentable, ownable
 from pyrseas.dbobject.table import ClassDict, Table
 
 
@@ -95,6 +96,7 @@ class ForeignDataWrapper(DbObjectWithOptions):
         return wrapper
 
     @commentable
+    @ownable
     def create(self):
         """Return SQL statements to CREATE the data wrapper
 
@@ -287,6 +289,7 @@ class ForeignServer(DbObjectWithOptions):
         return server
 
     @commentable
+    @ownable
     def create(self):
         """Return SQL statements to CREATE the server
 
@@ -595,6 +598,8 @@ class ForeignTable(DbObjectWithOptions, Table):
         stmts.append("CREATE FOREIGN TABLE %s (\n%s)\n    SERVER %s%s" % (
                 self.qualname(), ",\n".join(cols), self.server,
                 options and '\n    ' + ',\n    '.join(options) or ''))
+        if hasattr(self, 'owner'):
+            stmts.append(self.alter_owner())
         if hasattr(self, 'description'):
             stmts.append(self.comment())
         for col in self.columns:

@@ -8,7 +8,7 @@
     DbType, and DbTypeDict derived from DbObjectDict.
 """
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
-from pyrseas.dbobject import split_schema_obj, commentable
+from pyrseas.dbobject import split_schema_obj, commentable, ownable
 from pyrseas.dbobject.constraint import CheckConstraint
 
 
@@ -58,6 +58,7 @@ class BaseType(DbType):
         return {self.extern_key(): dct}
 
     @commentable
+    @ownable
     def create(self):
         """Return SQL statements to CREATE the base type
 
@@ -126,6 +127,7 @@ class Composite(DbType):
         return {self.extern_key(): dct}
 
     @commentable
+    @ownable
     def create(self):
         """Return SQL statements to CREATE the composite type
 
@@ -183,6 +185,7 @@ class Enum(DbType):
     "An enumerated type definition"
 
     @commentable
+    @ownable
     def create(self):
         """Return SQL statements to CREATE the enum
 
@@ -215,6 +218,7 @@ class Domain(DbType):
         return {self.extern_key(): dct}
 
     @commentable
+    @ownable
     def create(self):
         """Return SQL statements to CREATE the domain
 

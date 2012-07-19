@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-    pyrseas.operator
-    ~~~~~~~~~~~~~~~~
+    pyrseas.dbobject.operator
+    ~~~~~~~~~~~~~~~~~~~~~~~~~
 
     This module defines two classes: Operator derived from
     DbSchemaObject and OperatorDict derived from DbObjectDict.
 """
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
-from pyrseas.dbobject import quote_id, commentable
+from pyrseas.dbobject import quote_id, commentable, ownable
 
 
 class Operator(DbSchemaObject):
@@ -43,6 +43,7 @@ class Operator(DbSchemaObject):
         return "%s(%s, %s)" % (self.qualname(), self.leftarg, self.rightarg)
 
     @commentable
+    @ownable
     def create(self):
         """Return SQL statements to CREATE or REPLACE the operator
 

@@ -6,7 +6,8 @@
     This defines two classes, Conversion and ConversionDict, derived from
     DbSchemaObject and DbObjectDict, respectively.
 """
-from pyrseas.dbobject import DbObjectDict, DbSchemaObject, commentable
+from pyrseas.dbobject import DbObjectDict, DbSchemaObject
+from pyrseas.dbobject import commentable, ownable
 
 
 class Conversion(DbSchemaObject):
@@ -16,6 +17,7 @@ class Conversion(DbSchemaObject):
     objtype = "CONVERSION"
 
     @commentable
+    @ownable
     def create(self):
         """Return SQL statements to CREATE the conversion
 

@@ -33,6 +33,8 @@ uniquely identify each object instance within the database.
 
 .. automethod:: DbObject.comment
 
+.. automethod:: DbObject.alter_owner
+
 .. automethod:: DbObject.drop
 
 .. automethod:: DbObject.rename

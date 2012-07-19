@@ -63,6 +63,16 @@ def commentable(func):
     return add_comment
 
 
+def ownable(func):
+    """Decorator to add ALTER OWNER to various objects"""
+    def add_alter(obj, *args, **kwargs):
+        stmts = func(obj, *args, **kwargs)
+        if hasattr(obj, 'owner'):
+            stmts.append(obj.alter_owner())
+        return stmts
+    return add_alter
+
+
 class DbObject(object):
     "A single object in a database catalog, e.g., a schema, a table, a column"
 
@@ -136,10 +146,11 @@ class DbObject(object):
 
         :return: string
 
-        This is used by :meth:`comment` and :meth:`drop` to generate
-        SQL syntax referring to the object.  It does not include the
-        object type, but it may include (in overriden methods) other
-        elements, e.g., the arguments to a function.
+        This is used by :meth:`comment`, :meth:`alter_owner` and
+        :meth:`drop` to generate SQL syntax referring to the object.
+        It does not include the object type, but it may include (in
+        overriden methods) other elements, e.g., the arguments to a
+        function.
         """
         return quote_id(self.__dict__[self.keylist[0]])
 
@@ -186,6 +197,14 @@ class DbObject(object):
         """
         return "COMMENT ON %s %s IS %s" % (
             self.objtype, self.identifier(), self._comment_text())
+
+    def alter_owner(self):
+        """Return ALTER statement to set the OWNER of an object
+
+        :return: SQL statement
+        """
+        return "ALTER %s %s OWNER TO %s" % (
+            self.objtype, self.identifier(), self.owner)
 
     def drop(self):
         """Return SQL statement to DROP the object

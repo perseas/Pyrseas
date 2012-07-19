@@ -7,7 +7,7 @@
     DbObject and DbObjectDict, respectively.
 """
 from pyrseas.dbobject import DbObjectDict, DbObject
-from pyrseas.dbobject import quote_id, split_schema_obj, commentable
+from pyrseas.dbobject import quote_id, split_schema_obj, commentable, ownable
 from pyrseas.dbobject.dbtype import BaseType, Composite, Domain, Enum
 from pyrseas.dbobject.table import Table, Sequence, View
 
@@ -54,6 +54,7 @@ class Schema(DbObject):
         return schema
 
     @commentable
+    @ownable
     def create(self):
         """Return SQL statements to CREATE the schema
 

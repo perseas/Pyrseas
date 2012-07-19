@@ -44,7 +44,6 @@ class Trigger(DbSchemaObject):
 
         :return: SQL statements
         """
-        stmts = []
         constr = defer = ''
         if hasattr(self, 'constraint') and self.constraint:
             constr = "CONSTRAINT "
