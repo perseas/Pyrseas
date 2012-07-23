@@ -260,7 +260,8 @@ class Database(object):
 
         # special case for pg_catalog schema
         if 'schema pg_catalog' in dbmap and \
-                len(dbmap['schema pg_catalog']) == 1 and \
+                len(dbmap['schema pg_catalog']) == 2 and \
+                'owner' in dbmap['schema pg_catalog'] and \
                 'description' in dbmap['schema pg_catalog']:
             del dbmap['schema pg_catalog']
         return dbmap
