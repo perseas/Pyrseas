@@ -84,6 +84,16 @@ class OwnerToSqlTestCase(InputMapToSqlTestCase):
         self.assertEqual(sql[3], "COMMENT ON FUNCTION s1.f1() IS "
                          "'Test function'")
 
+    def test_change_table_owner(self):
+        "Change the owner of a table"
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+                    'columns': [{'c1': {'type': 'integer'}},
+                                {'c2': {'type': 'text'}}],
+                    'owner': 'someuser'}})
+        sql = self.to_sql(inmap, [CREATE_TABLE])
+        self.assertEqual(sql[0], "ALTER TABLE t1 OWNER TO someuser")
+
 
 def suite():
     tests = unittest.TestLoader().loadTestsFromTestCase(OwnerToMapTestCase)

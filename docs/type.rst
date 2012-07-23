@@ -64,6 +64,8 @@ and represents a standalone `composite type
 
 .. automethod:: Composite.create
 
+.. automethod:: Composite.diff_map
+
 Enum
 ----
 
@@ -86,8 +88,6 @@ represents a domain.
 .. automethod:: Domain.to_map
 
 .. automethod:: Domain.create
-
-.. automethod:: Domain.diff_map
 
 Type Dictionary
 ---------------

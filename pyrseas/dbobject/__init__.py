@@ -198,13 +198,13 @@ class DbObject(object):
         return "COMMENT ON %s %s IS %s" % (
             self.objtype, self.identifier(), self._comment_text())
 
-    def alter_owner(self):
+    def alter_owner(self, owner=None):
         """Return ALTER statement to set the OWNER of an object
 
         :return: SQL statement
         """
         return "ALTER %s %s OWNER TO %s" % (
-            self.objtype, self.identifier(), self.owner)
+            self.objtype, self.identifier(), owner or self.owner)
 
     def drop(self):
         """Return SQL statement to DROP the object
@@ -229,9 +229,13 @@ class DbObject(object):
 
         Compares the object to an input object and generates SQL
         statements to transform it into the one represented by the
-        input.  This base implementation simply deals with comments.
+        input.  This base implementation simply deals with owners and
+        comments.
         """
         stmts = []
+        if hasattr(inobj, 'owner') and hasattr(self, 'owner'):
+            if inobj.owner != self.owner:
+                stmts.append(self.alter_owner(inobj.owner))
         stmts.append(self.diff_description(inobj))
         return stmts
 

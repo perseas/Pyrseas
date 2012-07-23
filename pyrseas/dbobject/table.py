@@ -156,6 +156,10 @@ class Sequence(DbClass):
             stmt += " CACHE %d" % inseq.cache_value
         if stmt:
             stmts.append("ALTER SEQUENCE %s" % self.qualname() + stmt)
+
+        if hasattr(inseq, 'owner'):
+            if inseq.owner != self.owner:
+                stmts.append(self.alter_owner(inseq.owner))
         stmts.append(self.diff_description(inseq))
         return stmts
 
@@ -327,6 +331,9 @@ class Table(DbClass):
                 if descr:
                     stmts.append(descr)
 
+        if hasattr(intable, 'owner'):
+            if intable.owner != self.owner:
+                stmts.append(self.alter_owner(intable.owner))
         if hasattr(intable, 'tablespace'):
             if not hasattr(self, 'tablespace') \
                     or self.tablespace != intable.tablespace:
@@ -374,6 +381,9 @@ class View(DbClass):
         stmts = []
         if self.definition != inview.definition:
             stmts.append(self.create(inview.definition))
+        if hasattr(inview, 'owner'):
+            if inview.owner != self.owner:
+                stmts.append(self.alter_owner(inview.owner))
         stmts.append(self.diff_description(inview))
         return stmts
 

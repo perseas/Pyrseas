@@ -129,6 +129,9 @@ class Function(Proc):
         if hasattr(self, 'source') and hasattr(infunction, 'source'):
             if self.source != infunction.source:
                 stmts.append(self.create(infunction.source))
+        if hasattr(infunction, 'owner'):
+            if infunction.owner != self.owner:
+                stmts.append(self.alter_owner(infunction.owner))
         stmts.append(self.diff_description(infunction))
         return stmts
 

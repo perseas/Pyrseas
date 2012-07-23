@@ -23,20 +23,6 @@ class DbType(DbSchemaObject):
     keylist = ['schema', 'name']
     objtype = "TYPE"
 
-    def diff_map(self, intype):
-        """Generate SQL to transform an existing type
-
-        :param intype: a YAML map defining the new type
-        :return: list of SQL statements
-
-        Compares the domain to an input type and generates SQL
-        statements to transform it into the one represented by the
-        input.
-        """
-        stmts = []
-        stmts.append(self.diff_description(intype))
-        return stmts
-
 
 class BaseType(DbType):
     """A composite type"""
@@ -176,6 +162,9 @@ class Composite(DbType):
                 if descr:
                     stmts.append(descr)
 
+        if hasattr(intype, 'owner'):
+            if intype.owner != self.owner:
+                stmts.append(self.alter_owner(intype.owner))
         stmts.append(self.diff_description(intype))
 
         return stmts

@@ -119,6 +119,9 @@ class ForeignDataWrapper(DbObjectWithOptions):
         :return: list of SQL statements
         """
         stmts = super(ForeignDataWrapper, self).diff_map(inwrapper)
+        if hasattr(inwrapper, 'owner'):
+            if inwrapper.owner != self.owner:
+                stmts.append(self.alter_owner(inwrapper.owner))
         stmts.append(self.diff_description(inwrapper))
         return stmts
 
@@ -315,6 +318,9 @@ class ForeignServer(DbObjectWithOptions):
         :return: list of SQL statements
         """
         stmts = super(ForeignServer, self).diff_map(inserver)
+        if hasattr(inserver, 'owner'):
+            if inserver.owner != self.owner:
+                stmts.append(self.alter_owner(inserver.owner))
         stmts.append(self.diff_description(inserver))
         return stmts
 
@@ -621,6 +627,9 @@ class ForeignTable(DbObjectWithOptions, Table):
         :return: list of SQL statements
         """
         stmts = super(ForeignTable, self).diff_map(intable)
+        if hasattr(intable, 'owner'):
+            if intable.owner != self.owner:
+                stmts.append(self.alter_owner(intable.owner))
         stmts.append(self.diff_description(intable))
         return stmts
 
