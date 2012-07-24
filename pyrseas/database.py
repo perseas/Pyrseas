@@ -259,11 +259,14 @@ class Database(object):
                         del dbmap[sch]
 
         # special case for pg_catalog schema
-        if 'schema pg_catalog' in dbmap and \
-                len(dbmap['schema pg_catalog']) == 2 and \
-                'owner' in dbmap['schema pg_catalog'] and \
-                'description' in dbmap['schema pg_catalog']:
-            del dbmap['schema pg_catalog']
+        if 'schema pg_catalog' in dbmap:
+            if len(dbmap['schema pg_catalog']) == 1:
+                if no_owner and 'description' in dbmap['schema pg_catalog']:
+                    del dbmap['schema pg_catalog']
+            elif len(dbmap['schema pg_catalog']) == 2:
+                if not no_owner and 'owner' in dbmap['schema pg_catalog'] \
+                        and 'description' in dbmap['schema pg_catalog']:
+                    del dbmap['schema pg_catalog']
         return dbmap
 
     def diff_map(self, input_map, schemas=[]):
