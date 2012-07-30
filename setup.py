@@ -9,7 +9,7 @@ from setuptools import setup
 setup(
     name='Pyrseas',
     version='0.5.0',
-    packages=['pyrseas', 'pyrseas.dbobject'],
+    packages=['pyrseas', 'pyrseas.dbobject', 'pyrseas.lib'],
     entry_points={
         'console_scripts': [
             'dbtoyaml = pyrseas.dbtoyaml:main',
