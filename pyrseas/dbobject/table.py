@@ -27,6 +27,7 @@ class Sequence(DbClass):
     "A sequence generator definition"
 
     objtype = "SEQUENCE"
+    allprivs = 'rwU'
 
     def get_attrs(self, dbconn):
         """Get the attributes for the sequence
@@ -63,18 +64,22 @@ class Sequence(DbClass):
             (sch, self.dependent_table) = split_schema_obj(
                 data[0], self.schema)
 
-    def to_map(self, no_owner):
+    def to_map(self, no_owner, no_privs):
         """Convert a sequence definition to a YAML-suitable format
 
         :param no_owner: exclude sequence owner information
+        :param no_privs: exclude privilege information
         :return: dictionary
         """
         seq = {}
         for key, val in list(self.__dict__.items()):
             if key in self.keylist or key == 'dependent_table' or (
-                    key == 'owner' and no_owner):
+                key == 'owner' and no_owner) or (
+                key == 'privileges' and no_privs):
                 continue
-            if key == 'max_value' and val == MAX_BIGINT:
+            if key == 'privileges':
+                seq[key] = self.map_privs()
+            elif key == 'max_value' and val == MAX_BIGINT:
                 seq[key] = None
             elif key == 'min_value' and val == 1:
                 seq[key] = None
@@ -89,6 +94,7 @@ class Sequence(DbClass):
                         seq[key] = int(val)
                     else:
                         seq[key] = str(val)
+
         return {self.extern_key(): seq}
 
     @commentable
@@ -174,6 +180,7 @@ class Table(DbClass):
     """
 
     objtype = "TABLE"
+    allprivs = 'arwdDxt'
 
     def column_names(self):
         """Return a list of column names in the table
@@ -182,11 +189,12 @@ class Table(DbClass):
         """
         return [c.name for c in self.columns]
 
-    def to_map(self, dbschemas, no_owner):
+    def to_map(self, dbschemas, no_owner, no_privs):
         """Convert a table to a YAML-suitable format
 
         :param dbschemas: database dictionary of schemas
         :param no_owner: exclude table owner information
+        :param no_privs: exclude privilege information
         :return: dictionary
         """
         if not hasattr(self, 'columns'):
@@ -246,6 +254,8 @@ class Table(DbClass):
                 tbl['triggers'] = {}
             for k in list(self.triggers.values()):
                 tbl['triggers'].update(self.triggers[k.name].to_map())
+        if not no_privs and hasattr(self, 'privileges'):
+            tbl.update({'privileges': self.map_privs()})
 
         return {self.extern_key(): tbl}
 
@@ -354,6 +364,7 @@ class View(DbClass):
     """
 
     objtype = "VIEW"
+    allprivs = 'arwdDxt'
 
     @commentable
     @ownable
@@ -395,6 +406,7 @@ class ClassDict(DbObjectDict):
     query = \
         """SELECT nspname AS schema, relname AS name, relkind AS kind,
                   spcname AS tablespace, rolname AS owner,
+                  array_to_string(relacl, ',') AS privileges,
                   CASE WHEN relkind = 'v' THEN pg_get_viewdef(c.oid, TRUE)
                        ELSE '' END AS definition,
                   obj_description(c.oid, 'pg_class') AS description
@@ -417,6 +429,8 @@ class ClassDict(DbObjectDict):
         """Initialize the dictionary of tables by querying the catalogs"""
         for table in self.fetch():
             sch, tbl = table.key()
+            if hasattr(table, 'privileges'):
+                table.privileges = table.privileges.split(',')
             kind = table.kind
             del table.kind
             if kind == 'r':

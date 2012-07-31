@@ -39,10 +39,11 @@ class Function(Proc):
 
     objtype = "FUNCTION"
 
-    def to_map(self, no_owner):
+    def to_map(self, no_owner, no_privs):
         """Convert a function to a YAML-suitable format
 
         :param no_owner: exclude function owner information
+        :param no_privs: exclude privilege information
         :return: dictionary
         """
         dct = self._base_map(no_owner)
@@ -67,6 +68,12 @@ class Function(Proc):
         if hasattr(self, 'rows') and self.rows != 0:
             if self.rows == 1000:
                 del dct['rows']
+        if hasattr(self, 'privileges'):
+            if no_privs:
+                del dct['privileges']
+            else:
+                dct['privileges'] = self.map_privs()
+
         return {self.extern_key(): dct}
 
     @commentable
@@ -141,13 +148,14 @@ class Aggregate(Proc):
 
     objtype = "AGGREGATE"
 
-    def to_map(self, no_owner):
+    def to_map(self, no_owner, no_privs):
         """Convert an agggregate to a YAML-suitable format
 
         :param no_owner: exclude aggregate owner information
+        :param no_privs: exclude privilege information
         :return: dictionary
         """
-        dct = self._base_map(no_owner)
+        dct = self._base_map(no_owner, no_privs)
         del dct['language']
         return {self.extern_key(): dct}
 
@@ -181,7 +189,7 @@ class ProcDict(DbObjectDict):
         """SELECT nspname AS schema, proname AS name,
                   pg_get_function_arguments(p.oid) AS arguments,
                   pg_get_function_result(p.oid) AS returns,
-                  rolname AS owner,
+                  rolname AS owner, array_to_string(proacl, ',') AS privileges,
                   l.lanname AS language, provolatile AS volatility,
                   proisstrict AS strict, proisagg, prosrc AS source,
                   probin::text AS obj_file,
@@ -206,6 +214,8 @@ class ProcDict(DbObjectDict):
     def _from_catalog(self):
         """Initialize the dictionary of procedures by querying the catalogs"""
         for proc in self.fetch():
+            if hasattr(proc, 'privileges'):
+                proc.privileges = proc.privileges.split(',')
             sch, prc, arg = proc.key()
             if hasattr(proc, 'proisagg'):
                 del proc.proisagg

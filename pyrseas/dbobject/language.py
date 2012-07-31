@@ -16,7 +16,7 @@ class Language(DbObject):
     keylist = ['name']
     objtype = "LANGUAGE"
 
-    def to_map(self, no_owner):
+    def to_map(self, no_owner, no_privs):
         """Convert language to a YAML-suitable format
 
         :param no_owner: exclude language owner information
@@ -24,7 +24,7 @@ class Language(DbObject):
         """
         if hasattr(self, '_ext'):
             return {}
-        dct = self._base_map(no_owner)
+        dct = self._base_map(no_owner, no_privs)
         if 'functions' in dct:
             del dct['functions']
         return {self.extern_key(): dct}
@@ -50,7 +50,7 @@ class LanguageDict(DbObjectDict):
     cls = Language
     query = \
         """SELECT lanname AS name, lanpltrusted AS trusted, deptype AS _ext,
-                  rolname AS owner,
+                  rolname AS owner, array_to_string(lanacl, ',') AS privileges,
                   obj_description(l.oid, 'pg_language') AS description
            FROM pg_language l
                 JOIN pg_roles r ON (r.oid = lanowner)
@@ -101,10 +101,11 @@ class LanguageDict(DbObjectDict):
                     language.functions = {}
                 language.functions.update({fnc: func})
 
-    def to_map(self, no_owner):
+    def to_map(self, no_owner, no_privs):
         """Convert the language dictionary to a regular dictionary
 
         :param no_owner: exclude language owner information
+        :param no_privs: exclude privilege information
         :return: dictionary
 
         Invokes the `to_map` method of each language to construct a
@@ -112,7 +113,7 @@ class LanguageDict(DbObjectDict):
         """
         languages = {}
         for lng in list(self.keys()):
-            languages.update(self[lng].to_map(no_owner))
+            languages.update(self[lng].to_map(no_owner, no_privs))
         return languages
 
     def diff_map(self, inlanguages):

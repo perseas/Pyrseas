@@ -364,19 +364,23 @@ class PyrseasTestCase(TestCase):
 class DatabaseToMapTestCase(PyrseasTestCase):
     """Base class for "database to map" test cases"""
 
-    def to_map(self, stmts, schemas=None, tables=None, no_owner=True):
+    def to_map(self, stmts, schemas=None, tables=None, no_owner=True,
+               no_privs=True):
         """Execute statements and return a database map.
 
         :param stmts: list of SQL statements to execute
         :param schemas: list of schemas to map
         :param tables: list of tables to map
+        :param no_owner: exclude object owner information
+        :param no_privs: exclude privilege information
         :return: possibly trimmed map of database
         """
         for stmt in stmts:
             self.db.execute(stmt)
         self.db.conn.commit()
         db = self.database()
-        return db.to_map(schemas=schemas, tables=tables, no_owner=no_owner)
+        return db.to_map(schemas=schemas, tables=tables, no_owner=no_owner,
+                         no_privs=no_privs)
 
 
 class InputMapToSqlTestCase(PyrseasTestCase):

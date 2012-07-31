@@ -204,7 +204,7 @@ class Database(object):
         self._link_refs(self.ndb)
 
     def to_map(self, schemas=[], tables=[], exclude_schemas=[],
-            exclude_tables=[], no_owner=False):
+            exclude_tables=[], no_owner=False, no_privs=False):
         """Convert the db maps to a single hierarchy suitable for YAML
 
         :param schemas: list of schemas to be output
@@ -216,15 +216,16 @@ class Database(object):
             list of tables to be excluded from output, even those listed in
             ``tables``
         :param no_owner: exclude object owner information
+        :param no_privs: exclude privilege information
         :return: a YAML-suitable dictionary (without Python objects)
         """
         if not self.db:
             self.from_catalog()
         dbmap = self.db.extensions.to_map(no_owner)
-        dbmap.update(self.db.languages.to_map(no_owner))
+        dbmap.update(self.db.languages.to_map(no_owner, no_privs))
         dbmap.update(self.db.casts.to_map())
-        dbmap.update(self.db.fdwrappers.to_map(no_owner))
-        dbmap.update(self.db.schemas.to_map(no_owner))
+        dbmap.update(self.db.fdwrappers.to_map(no_owner, no_privs))
+        dbmap.update(self.db.schemas.to_map(no_owner, no_privs))
         # trim the map of schemas/tables not selected
 
         if schemas:
@@ -260,13 +261,9 @@ class Database(object):
 
         # special case for pg_catalog schema
         if 'schema pg_catalog' in dbmap:
-            if len(dbmap['schema pg_catalog']) == 1:
-                if no_owner and 'description' in dbmap['schema pg_catalog']:
-                    del dbmap['schema pg_catalog']
-            elif len(dbmap['schema pg_catalog']) == 2:
-                if not no_owner and 'owner' in dbmap['schema pg_catalog'] \
-                        and 'description' in dbmap['schema pg_catalog']:
-                    del dbmap['schema pg_catalog']
+            if not [k for k in list(dbmap['schema pg_catalog'].keys()) if
+                     k not in ('description', 'owner', 'privileges')]:
+                del dbmap['schema pg_catalog']
         return dbmap
 
     def diff_map(self, input_map, schemas=[]):

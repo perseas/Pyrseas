@@ -21,6 +21,8 @@ def main(host='localhost', port=5432, schema=None):
                             "database in YAML format")
     parser.add_argument('-O', '--no-owner', action='store_true',
                         help='exclude object ownership information')
+    parser.add_argument('-x', '--no-privileges', action='store_true',
+                        help='exclude privilege (GRANT/REVOKE) information')
     group = parser.add_argument_group("Object inclusion/exclusion options",
                                       "(each can be given multiple times)")
     group.add_argument('-n', '--schema', metavar='SCHEMA', dest='schemas',
@@ -47,7 +49,7 @@ def main(host='localhost', port=5432, schema=None):
     dbmap = db.to_map(schemas=args.schemas, tables=args.tables,
                       exclude_schemas=args.excl_schemas,
                       exclude_tables=args.excl_tables,
-                      no_owner=args.no_owner)
+                      no_owner=args.no_owner, no_privs=args.no_privileges)
 
     print(yaml.dump(dbmap, default_flow_style=False),
           file=args.output or sys.stdout)

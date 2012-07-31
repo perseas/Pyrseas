@@ -12,6 +12,9 @@ import string
 
 VALID_FIRST_CHARS = string.ascii_lowercase + '_'
 VALID_CHARS = string.ascii_lowercase + string.digits + '_$'
+PRIVCODES = {'a': 'insert', 'r': 'select', 'w': 'update', 'd': 'delete',
+             'D': 'truncate', 'x': 'references', 't': 'trigger',
+             'X': 'execute', 'U': 'usage', 'C': 'create'}
 
 
 def quote_id(name):
@@ -89,6 +92,8 @@ class DbObject(object):
     also used by :meth:`extern_key` in lowercase form.
     """
 
+    allprivs = ''
+
     def __init__(self, **attrs):
         """Initialize the catalog object from a dictionary of attributes
 
@@ -154,10 +159,11 @@ class DbObject(object):
         """
         return quote_id(self.__dict__[self.keylist[0]])
 
-    def _base_map(self, no_owner=False):
+    def _base_map(self, no_owner=False, no_privs=False):
         """Return a base map, i.e., copy of attributes excluding keys
 
         :param no_owner: exclude object owner information
+        :param no_privs: exclude privilege information
         :return: dictionary
         """
         dct = self.__dict__.copy()
@@ -165,12 +171,18 @@ class DbObject(object):
             del dct[key]
         if no_owner and hasattr(self, 'owner'):
             del dct['owner']
+        if hasattr(self, 'privileges'):
+            if no_privs:
+                del dct['privileges']
+            else:
+                dct['privileges'] = self.map_privs()
         return dct
 
-    def to_map(self, no_owner=False):
+    def to_map(self, no_owner=False, no_privs=False):
         """Convert an object to a YAML-suitable format
 
         :param no_owner: exclude object owner information
+        :param no_privs: exclude privilege information
         :return: dictionary
 
         This base implementation simply copies the internal Python
@@ -178,7 +190,33 @@ class DbObject(object):
         returns a new dictionary using the :meth:`extern_key` result
         as the key.
         """
-        return {self.extern_key(): self._base_map(no_owner)}
+        return {self.extern_key(): self._base_map(no_owner, no_privs)}
+
+    def map_privs(self):
+        """Return a list of access privileges on the current object
+
+        :return: list
+        """
+        privlist = []
+        for prv in self.privileges:
+            (usr, prvgrant) = prv.split('=')
+            if usr == '':
+                usr = 'PUBLIC'
+            (privcodes, grantor) = prvgrant.split('/')
+            privs = []
+            if privcodes == self.allprivs:
+                privs = ['all']
+            else:
+                for code in sorted(PRIVCODES.keys()):
+                    if code in privcodes:
+                        priv = PRIVCODES[code]
+                        if code + '*' in privcodes:
+                            priv = {priv: {'grantable': True}}
+                        privs.append(priv)
+            if grantor != self.owner:
+                privs = {'privs': privs, 'grantor': grantor}
+            privlist.append({usr: privs})
+        return privlist
 
     def _comment_text(self):
         """Return the text for the SQL COMMENT statement
@@ -347,6 +385,8 @@ class DbObjectDict(dict):
         This is may be overriden by derived classes as needed.
         """
         for obj in self.fetch():
+            if hasattr(obj, 'privileges'):
+                obj.privileges = obj.privileges.split(',')
             self[obj.key()] = obj
 
     def fetch(self):

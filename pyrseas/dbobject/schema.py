@@ -18,12 +18,14 @@ class Schema(DbObject):
 
     keylist = ['name']
     objtype = 'SCHEMA'
+    allprivs = 'UC'
 
-    def to_map(self, dbschemas, no_owner):
+    def to_map(self, dbschemas, no_owner, no_privs):
         """Convert tables, etc., dictionaries to a YAML-suitable format
 
         :param dbschemas: dictionary of schemas
         :param no_owner: exclude schema owner information
+        :param no_privs: exclude privilege information
         :return: dictionary
         """
         key = self.extern_key()
@@ -37,18 +39,33 @@ class Schema(DbObject):
                     mappeddict.update(schemadict[objkey].to_map(no_owner))
             return mappeddict
 
+        def mapper2(schema, objtypes):
+            mappeddict = {}
+            if hasattr(schema, objtypes):
+                schemadict = getattr(schema, objtypes)
+                for objkey in list(schemadict.keys()):
+                    mappeddict.update(schemadict[objkey].to_map(
+                            no_owner, no_privs))
+            return mappeddict
+
         if hasattr(self, 'tables'):
             tbls = {}
             for tbl in list(self.tables.keys()):
-                tbls.update(self.tables[tbl].to_map(dbschemas, no_owner))
+                tbls.update(self.tables[tbl].to_map(
+                        dbschemas, no_owner, no_privs))
             schema[key].update(tbls)
 
-        for objtypes in ['conversions', 'domains', 'ftables', 'functions',
-                         'operators', 'operclasses', 'operfams',  'sequences',
+        for objtypes in ['conversions', 'domains',
+                         'operators', 'operclasses', 'operfams',
                          'tsconfigs', 'tsdicts', 'tsparsers', 'tstempls',
-                         'types', 'views', 'collations']:
+                         'types', 'collations']:
             schema[key].update(mapper(self, objtypes))
 
+        for objtypes in [ 'ftables', 'functions', 'sequences', 'views']:
+            schema[key].update(mapper2(self, objtypes))
+
+        if not no_privs and hasattr(self, 'privileges'):
+            schema[key].update({'privileges': self.map_privs()})
         if hasattr(self, 'description'):
             schema[key].update(description=self.description)
         return schema
@@ -69,6 +86,7 @@ class SchemaDict(DbObjectDict):
     cls = Schema
     query = \
         """SELECT nspname AS name, rolname AS owner,
+                  array_to_string(nspacl, ',') AS privileges,
                   obj_description(n.oid, 'pg_namespace') AS description
            FROM pg_namespace n
                 JOIN pg_roles r ON (r.oid = nspowner)
@@ -301,9 +319,11 @@ class SchemaDict(DbObjectDict):
                 schema.collations = {}
             schema.collations.update({cll: coll})
 
-    def to_map(self, no_owner=False):
+    def to_map(self, no_owner=False, no_privs=False):
         """Convert the schema dictionary to a regular dictionary
 
+        :param no_owner: exclude object owner information
+        :param no_privs: exclude privilege information
         :return: dictionary
 
         Invokes the `to_map` method of each schema to construct a
@@ -311,7 +331,7 @@ class SchemaDict(DbObjectDict):
         """
         schemas = {}
         for sch in list(self.keys()):
-            schemas.update(self[sch].to_map(self, no_owner))
+            schemas.update(self[sch].to_map(self, no_owner, no_privs))
         return schemas
 
     def diff_map(self, inschemas):

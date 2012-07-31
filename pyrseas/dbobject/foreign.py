@@ -79,18 +79,19 @@ class ForeignDataWrapper(DbObjectWithOptions):
 
     objtype = "FOREIGN DATA WRAPPER"
 
-    def to_map(self, no_owner):
+    def to_map(self, no_owner, no_privs):
         """Convert wrappers and subsidiary objects to a YAML-suitable format
 
         :param no_owner: exclude object owner information
+        :param no_privs: exclude privilege information
         :return: dictionary
         """
         key = self.extern_key()
-        wrapper = {key: self._base_map(no_owner)}
+        wrapper = {key: self._base_map(no_owner, no_privs)}
         if hasattr(self, 'servers'):
             srvs = {}
             for srv in list(self.servers.keys()):
-                srvs.update(self.servers[srv].to_map(no_owner))
+                srvs.update(self.servers[srv].to_map(no_owner, no_privs))
             wrapper[key].update(srvs)
             del wrapper[key]['servers']
         return wrapper
@@ -130,6 +131,7 @@ QUERY_PRE91 = \
         """SELECT fdwname AS name, CASE WHEN fdwvalidator = 0 THEN NULL
                     ELSE fdwvalidator::regproc END AS validator,
                     fdwoptions AS options, rolname AS owner,
+                  array_to_string(fdwacl, ',') AS privileges,
                   obj_description(w.oid, 'pg_foreign_data_wrapper') AS
                       description
            FROM pg_foreign_data_wrapper w
@@ -147,6 +149,7 @@ class ForeignDataWrapperDict(DbObjectDict):
                   CASE WHEN fdwvalidator = 0 THEN NULL
                       ELSE fdwvalidator::regproc END AS validator,
                   fdwoptions AS options, rolname AS owner,
+                  array_to_string(fdwacl, ',') AS privileges,
                   obj_description(w.oid, 'pg_foreign_data_wrapper') AS
                       description
            FROM pg_foreign_data_wrapper w
@@ -198,10 +201,11 @@ class ForeignDataWrapperDict(DbObjectDict):
                 wrapper.servers = {}
             wrapper.servers.update({srv: dbserver})
 
-    def to_map(self, no_owner):
+    def to_map(self, no_owner, no_privs):
         """Convert the wrapper dictionary to a regular dictionary
 
         :param no_owner: exclude wrapper owner information
+        :param no_privs: exclude privilege information
         :return: dictionary
 
         Invokes the `to_map` method of each wrapper to construct a
@@ -209,7 +213,7 @@ class ForeignDataWrapperDict(DbObjectDict):
         """
         wrappers = {}
         for fdw in list(self.keys()):
-            wrappers.update(self[fdw].to_map(no_owner))
+            wrappers.update(self[fdw].to_map(no_owner, no_privs))
         return wrappers
 
     def diff_map(self, inwrappers):
@@ -275,14 +279,15 @@ class ForeignServer(DbObjectWithOptions):
         """
         return quote_id(self.name)
 
-    def to_map(self, no_owner):
+    def to_map(self, no_owner, no_privs):
         """Convert servers and subsidiary objects to a YAML-suitable format
 
         :param no_owner: exclude server owner information
+        :param no_privs: exclude privilege information
         :return: dictionary
         """
         key = self.extern_key()
-        server = {key: self._base_map(no_owner)}
+        server = {key: self._base_map(no_owner, no_privs)}
         if hasattr(self, 'usermaps'):
             umaps = {}
             for umap in list(self.usermaps.keys()):
@@ -332,7 +337,7 @@ class ForeignServerDict(DbObjectDict):
     query = \
         """SELECT fdwname AS wrapper, srvname AS name, srvtype AS type,
                   srvversion AS version, srvoptions AS options,
-                  rolname AS owner,
+                  rolname AS owner, array_to_string(srvacl, ',') AS privileges,
                   obj_description(s.oid, 'pg_foreign_server') AS description
            FROM pg_foreign_server s
                 JOIN pg_roles r ON (r.oid = srvowner)
@@ -364,9 +369,11 @@ class ForeignServerDict(DbObjectDict):
                 if 'description' in inserv:
                     serv.description = inserv['description']
 
-    def to_map(self):
+    def to_map(self, no_owner, no_privs):
         """Convert the server dictionary to a regular dictionary
 
+        :param no_owner: exclude server owner information
+        :param no_privs: exclude privilege information
         :return: dictionary
 
         Invokes the `to_map` method of each server to construct a
@@ -374,7 +381,7 @@ class ForeignServerDict(DbObjectDict):
         """
         servers = {}
         for srv in list(self.keys()):
-            servers.update(self[srv].to_map())
+            servers.update(self[srv].to_map(no_owner, no_privs))
         return servers
 
     def link_refs(self, dbusermaps):
@@ -566,10 +573,11 @@ class ForeignTable(DbObjectWithOptions, Table):
 
     objtype = "FOREIGN TABLE"
 
-    def to_map(self, no_owner):
+    def to_map(self, no_owner, no_privs):
         """Convert a foreign table to a YAML-suitable format
 
         :param no_owner: exclude table owner information
+        :param no_privs: exclude privilege information
         :return: dictionary
         """
         if not hasattr(self, 'columns'):
@@ -586,6 +594,8 @@ class ForeignTable(DbObjectWithOptions, Table):
         for attr in attrlist:
             if hasattr(self, attr):
                 tbl.update({attr: getattr(self, attr)})
+        if not no_privs and hasattr(self, 'privileges'):
+            tbl.update({'privileges': self.map_privs()})
 
         return {self.extern_key(): tbl}
 
@@ -641,6 +651,7 @@ class ForeignTableDict(ClassDict):
     query = \
         """SELECT nspname AS schema, relname AS name, srvname AS server,
                   ftoptions AS options, rolname AS owner,
+                  array_to_string(relacl, ',') AS privileges,
                   obj_description(c.oid, 'pg_class') AS description
            FROM pg_class c JOIN pg_foreign_table f ON (ftrelid = c.oid)
                 JOIN pg_roles r ON (r.oid = relowner)
@@ -656,6 +667,8 @@ class ForeignTableDict(ClassDict):
         if self.dbconn.version < 90100:
             return
         for tbl in self.fetch():
+            if hasattr(tbl, 'privileges'):
+                tbl.privileges = tbl.privileges.split(',')
             self[tbl.key()] = tbl
 
     def from_map(self, schema, inobjs, newdb):

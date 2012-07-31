@@ -31,6 +31,8 @@ uniquely identify each object instance within the database.
 
 .. automethod:: DbObject.to_map
 
+.. automethod:: DbObject.map_privs
+
 .. automethod:: DbObject.comment
 
 .. automethod:: DbObject.alter_owner

@@ -26,6 +26,11 @@ The output format is as follows::
 
  schema public:
    owner: postgres
+   privileges:
+   - postgres:
+     - all
+   - PUBLIC:
+     - all
    table t1:
      check_constraints:
        check_expr: (c2 > 123)
@@ -58,6 +63,11 @@ The output format is as follows::
          - c1
  schema s1:
    owner: bob
+   privileges:
+   - bob:
+     - all
+   - alice:
+     - all
    table t2:
      columns:
      - c21:
@@ -70,16 +80,39 @@ The output format is as follows::
        t2_pkey:
          columns:
          - c21
+     privileges:
+     - bob:
+       - all
+     - PUBLIC:
+       - select
+     - alice:
+       - insert:
+           grantable: true
+       - delete:
+           grantable: true
+       - update:
+           grantable: true
+     - carol:
+         grantor: alice
+         privs:
+         - insert
+
 
 The above should be mostly self-explanatory. The example database has
-two tables, named ``t1`` and ``t2``, the first in the ``public``
-schema and the second in a schema named ``s1``. The ``columns:``
-specifications directly under each table list each column in that
-table, in the same order as shown by PostgreSQL. The specifications
-``primary_key:``, ``foreign_keys:`` and ``check_constraints:`` define
-PRIMARY KEY, FOREIGN KEY and CHECK constraints for a given
-table. Additional specifications (not shown) define unique constraints
-and indexes.
+two tables, named ``t1`` and ``t2``, the first --owned by user
+'alice'-- in the ``public`` schema and the second --owned by user
+'bob'-- in a schema named ``s1`` (also owned by 'bob').
+The ``columns:`` specifications directly under each table list each
+column in that table, in the same order as shown by PostgreSQL. The
+specifications ``primary_key:``, ``foreign_keys:`` and
+``check_constraints:`` define PRIMARY KEY, FOREIGN KEY and CHECK
+constraints for a given table. Additional specifications (not shown)
+define unique constraints and indexes.
+
+User 'bob' has granted all privileges to 'alice' on the ``s1`` schema.
+On table ``t2``, he also granted SELECT to PUBLIC; INSERT, UPDATE and
+DELETE to 'alice' with GRANT OPTION; and she has in turn granted
+INSERT to user 'carol'.
 
 :program:`dbtoyaml` currently supports extracting information about
 nearly all types of PostgreSQL database objects.  See :ref:`api-ref`
@@ -127,6 +160,12 @@ dbname
     Do not extract tables matching `table`.  Multiple tables can be
     excluded by using multiple ``-T`` switches.
 
+-x, ---no-privileges
+
+    Do not output access privilege information.  By default, as seen
+    in the sample output above, if specific GRANTs have been issued on
+    various objects (schemas, tables, etc.), the privileges are shown
+    under each object.  The ``-x`` switch suppresses all those lines.
 
 Examples
 --------
