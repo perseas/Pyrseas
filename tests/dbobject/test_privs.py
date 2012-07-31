@@ -44,6 +44,23 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
                         {'references': {'grantable': True}}]}]}
         self.assertEqual(dbmap['schema public']['table t1'], expmap)
 
+    def test_map_column(self):
+        "Map a table with GRANTs on column"
+        self.maxDiff = None
+        stmts = [CREATE_TABLE, "GRANT SELECT ON t1 TO PUBLIC",
+                 "GRANT INSERT (c1, c2) ON t1 TO user1",
+                 "GRANT INSERT (c2), UPDATE (c2) ON t1 TO user2"]
+        dbmap = self.to_map(stmts, no_privs=False)
+        expmap = {'columns': [{'c1': {'type': 'integer',
+                                      'privileges': [{'user1': ['insert']}]}},
+                              {'c2': {'type': 'text',
+                                      'privileges': [{'user1': ['insert']},
+                                                     {'user2': [
+                                        'insert', 'update']}]}}],
+                  'privileges': [{self.db.user: ['all']},
+                                 {'PUBLIC': ['select']}]}
+        self.assertEqual(dbmap['schema public']['table t1'], expmap)
+
     def test_map_sequence(self):
         "Map a sequence with various GRANTs"
         stmts = ["CREATE SEQUENCE seq1",

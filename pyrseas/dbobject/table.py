@@ -201,7 +201,7 @@ class Table(DbClass):
             return
         cols = []
         for column in self.columns:
-            col = column.to_map()
+            col = column.to_map(no_privs)
             if col:
                 cols.append(col)
         tbl = {'columns': cols}

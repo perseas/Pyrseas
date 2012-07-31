@@ -13,15 +13,17 @@ class Column(DbSchemaObject):
     "A table column definition"
 
     keylist = ['schema', 'table']
+    allprivs = 'arwx'
 
-    def to_map(self):
+    def to_map(self, no_privs):
         """Convert a column to a YAML-suitable format
 
+        :param no_privs: exclude privilege information
         :return: dictionary
         """
         if hasattr(self, 'dropped'):
             return None
-        dct = self._base_map()
+        dct = self._base_map(False, no_privs)
         del dct['number'], dct['name']
         if '_table' in dct:
             del dct['_table']
@@ -139,6 +141,7 @@ QUERY_PRE91 = \
                   attnotnull AS not_null, attinhcount AS inherited,
                   pg_get_expr(adbin, adrelid) AS default,
                   attisdropped AS dropped,
+                  array_to_string(attacl, ',') AS privileges,
                   col_description(c.oid, attnum) AS description
            FROM pg_attribute JOIN pg_class c ON (attrelid = c.oid)
                 JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
@@ -161,6 +164,7 @@ class ColumnDict(DbObjectDict):
                   attnotnull AS not_null, attinhcount AS inherited,
                   pg_get_expr(adbin, adrelid) AS default,
                   collname AS collation, attisdropped AS dropped,
+                  array_to_string(attacl, ',') AS privileges,
                   col_description(c.oid, attnum) AS description
            FROM pg_attribute JOIN pg_class c ON (attrelid = c.oid)
                 JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
@@ -178,6 +182,8 @@ class ColumnDict(DbObjectDict):
         if self.dbconn.version < 90100:
             self.query = QUERY_PRE91
         for col in self.fetch():
+            if hasattr(col, 'privileges'):
+                col.privileges = col.privileges.split(',')
             sch, tbl = col.key()
             if (sch, tbl) not in self:
                 self[(sch, tbl)] = []

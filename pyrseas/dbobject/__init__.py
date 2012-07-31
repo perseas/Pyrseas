@@ -213,8 +213,9 @@ class DbObject(object):
                         if code + '*' in privcodes:
                             priv = {priv: {'grantable': True}}
                         privs.append(priv)
-            if grantor != self.owner:
-                privs = {'privs': privs, 'grantor': grantor}
+            if hasattr(self, 'owner'):
+                if grantor != self.owner:
+                    privs = {'privs': privs, 'grantor': grantor}
             privlist.append({usr: privs})
         return privlist
 

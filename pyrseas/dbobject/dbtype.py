@@ -102,7 +102,7 @@ class Composite(DbType):
             return
         attrs = []
         for attr in self.attributes:
-            att = attr.to_map()
+            att = attr.to_map(False)
             if att:
                 attrs.append(att)
         dct = {'attributes': attrs}

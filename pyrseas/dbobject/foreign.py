@@ -584,7 +584,7 @@ class ForeignTable(DbObjectWithOptions, Table):
             return
         cols = []
         for i in range(len(self.columns)):
-            col = self.columns[i].to_map()
+            col = self.columns[i].to_map(no_privs)
             if col:
                 cols.append(col)
         tbl = {'columns': cols, 'server': self.server}
