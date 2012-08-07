@@ -61,7 +61,7 @@ class Schema(DbObject):
                          'types', 'collations']:
             schema[key].update(mapper(self, objtypes))
 
-        for objtypes in [ 'ftables', 'functions', 'sequences', 'views']:
+        for objtypes in ['ftables', 'functions', 'sequences', 'views']:
             schema[key].update(mapper2(self, objtypes))
 
         if not no_privs and hasattr(self, 'privileges'):

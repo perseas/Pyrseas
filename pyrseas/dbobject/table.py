@@ -10,9 +10,11 @@
 import sys
 
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
-from pyrseas.dbobject import quote_id, split_schema_obj, commentable, ownable
+from pyrseas.dbobject import quote_id, split_schema_obj
+from pyrseas.dbobject import commentable, ownable, grantable
 from pyrseas.dbobject.constraint import CheckConstraint, PrimaryKey
 from pyrseas.dbobject.constraint import ForeignKey, UniqueConstraint
+from pyrseas.dbobject.privileges import privileges_from_map
 
 MAX_BIGINT = 9223372036854775807
 
@@ -21,13 +23,18 @@ class DbClass(DbSchemaObject):
     """A table, sequence or view"""
 
     keylist = ['schema', 'name']
+    privobjtype = "TABLE"
 
 
 class Sequence(DbClass):
     "A sequence generator definition"
 
     objtype = "SEQUENCE"
-    allprivs = 'rwU'
+    privobjtype = "SEQUENCE"
+
+    @property
+    def allprivs(self):
+        return 'rwU'
 
     def get_attrs(self, dbconn):
         """Get the attributes for the sequence
@@ -98,6 +105,7 @@ class Sequence(DbClass):
         return {self.extern_key(): seq}
 
     @commentable
+    @grantable
     @ownable
     def create(self):
         """Return a SQL statement to CREATE the sequence
@@ -180,7 +188,10 @@ class Table(DbClass):
     """
 
     objtype = "TABLE"
-    allprivs = 'arwdDxt'
+
+    @property
+    def allprivs(self):
+        return 'arwdDxt'
 
     def column_names(self):
         """Return a list of column names in the table
@@ -259,6 +270,7 @@ class Table(DbClass):
 
         return {self.extern_key(): tbl}
 
+    @grantable
     def create(self):
         """Return SQL statements to CREATE the table
 
@@ -364,9 +376,13 @@ class View(DbClass):
     """
 
     objtype = "VIEW"
-    allprivs = 'arwdDxt'
+
+    @property
+    def allprivs(self):
+        return 'arwdDxt'
 
     @commentable
+    @grantable
     @ownable
     def create(self, newdefn=None):
         """Return SQL statements to CREATE the table
@@ -458,13 +474,14 @@ class ClassDict(DbObjectDict):
         :param newdb: collection of dictionaries defining the database
         """
         for k in list(inobjs.keys()):
+            inobj = inobjs[k]
             (objtype, spc, key) = k.partition(' ')
             if spc != ' ' or objtype not in ['table', 'sequence', 'view']:
                 raise KeyError("Unrecognized object type: %s" % k)
             if objtype == 'table':
                 self[(schema.name, key)] = table = Table(
                     schema=schema.name, name=key)
-                intable = inobjs[k]
+                intable = inobj
                 if not intable:
                     raise ValueError("Table '%s' has no specification" % k)
                 try:
@@ -486,7 +503,7 @@ class ClassDict(DbObjectDict):
             elif objtype == 'sequence':
                 self[(schema.name, key)] = seq = Sequence(
                     schema=schema.name, name=key)
-                inseq = inobjs[k]
+                inseq = inobj
                 if not inseq:
                     raise ValueError("Sequence '%s' has no specification" % k)
                 for attr, val in list(inseq.items()):
@@ -494,13 +511,21 @@ class ClassDict(DbObjectDict):
             elif objtype == 'view':
                 self[(schema.name, key)] = view = View(
                     schema=schema.name, name=key)
-                inview = inobjs[k]
+                inview = inobj
                 if not inview:
                     raise ValueError("View '%s' has no specification" % k)
                 for attr, val in list(inview.items()):
                     setattr(view, attr, val)
             else:
                 raise KeyError("Unrecognized object type: %s" % k)
+            obj = self[(schema.name, key)]
+            if 'privileges' in inobj:
+                    if not hasattr(obj, 'owner'):
+                        raise ValueError("%s '%s' has privileges but no "
+                                         "owner information" %
+                                         obj.objtype.capital(), table.name)
+                    obj.privileges = privileges_from_map(
+                        inobj['privileges'], obj.allprivs, obj.owner)
 
     def link_refs(self, dbcolumns, dbconstrs, dbindexes, dbrules, dbtriggers):
         """Connect columns, constraints, etc. to their respective tables

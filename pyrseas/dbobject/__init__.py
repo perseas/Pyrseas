@@ -9,12 +9,11 @@
 """
 import string
 
+from pyrseas.dbobject.privileges import privileges_to_map, add_grant
+
 
 VALID_FIRST_CHARS = string.ascii_lowercase + '_'
 VALID_CHARS = string.ascii_lowercase + string.digits + '_$'
-PRIVCODES = {'a': 'insert', 'r': 'select', 'w': 'update', 'd': 'delete',
-             'D': 'truncate', 'x': 'references', 't': 'trigger',
-             'X': 'execute', 'U': 'usage', 'C': 'create'}
 
 
 def quote_id(name):
@@ -64,6 +63,17 @@ def commentable(func):
             stmts.append(obj.comment())
         return stmts
     return add_comment
+
+
+def grantable(func):
+    """Decorator to add GRANT to various objects"""
+    def grant(obj, *args, **kwargs):
+        stmts = func(obj, *args, **kwargs)
+        if hasattr(obj, 'privileges'):
+            for priv in obj.privileges:
+                stmts.append(add_grant(obj, priv))
+        return stmts
+    return grant
 
 
 def ownable(func):
@@ -198,25 +208,9 @@ class DbObject(object):
         :return: list
         """
         privlist = []
+        owner = self.owner if hasattr(self, 'owner') else ''
         for prv in self.privileges:
-            (usr, prvgrant) = prv.split('=')
-            if usr == '':
-                usr = 'PUBLIC'
-            (privcodes, grantor) = prvgrant.split('/')
-            privs = []
-            if privcodes == self.allprivs:
-                privs = ['all']
-            else:
-                for code in sorted(PRIVCODES.keys()):
-                    if code in privcodes:
-                        priv = PRIVCODES[code]
-                        if code + '*' in privcodes:
-                            priv = {priv: {'grantable': True}}
-                        privs.append(priv)
-            if hasattr(self, 'owner'):
-                if grantor != self.owner:
-                    privs = {'privs': privs, 'grantor': grantor}
-            privlist.append({usr: privs})
+            privlist.append(privileges_to_map(prv, self.allprivs, owner))
         return privlist
 
     def _comment_text(self):

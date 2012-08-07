@@ -9,6 +9,7 @@ should have been previously defined.
 import unittest
 
 from pyrseas.testutils import DatabaseToMapTestCase
+from pyrseas.testutils import InputMapToSqlTestCase, fix_indent
 
 CREATE_TABLE = "CREATE TABLE t1 (c1 integer, c2 text)"
 SOURCE1 = "SELECT 'dummy'::text"
@@ -147,8 +148,66 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
         self.assertEqual(dbmap['schema public']['foreign table ft1'], expmap)
 
 
+class PrivilegeToSqlTestCase(InputMapToSqlTestCase):
+    """Test SQL generation of privilege information (GRANTs)"""
+
+    def test_create_table(self):
+        "Create a table with various privileges"
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+                    'columns': [{'c1': {'type': 'integer'}},
+                                {'c2': {'type': 'text'}}],
+                    'owner': self.db.user,
+                    'privileges': [{self.db.user: ['all']},
+                                   {'PUBLIC': ['select']},
+                                   {'user1': ['insert', 'update']},
+                                   {'user2': [
+                                {'trigger': {'grantable': True}},
+                                {'references': {'grantable': True}}]}]}})
+        sql = self.to_sql(inmap)
+        # sql[0] = CREATE TABLE
+        # sql[1] = ALTER TABLE OWNER
+        self.assertEqual(sql[2], "GRANT ALL ON TABLE t1 TO %s" % self.db.user)
+        self.assertEqual(sql[3], "GRANT SELECT ON TABLE t1 TO PUBLIC")
+        self.assertEqual(sql[4], "GRANT INSERT, UPDATE ON TABLE t1 TO user1")
+        self.assertEqual(sql[5], "GRANT TRIGGER, REFERENCES ON TABLE t1 "
+                         "TO user2 WITH GRANT OPTION")
+
+    def test_create_sequence(self):
+        "Create a sequence with some privileges"
+        inmap = self.std_map()
+        inmap['schema public'].update({'sequence seq1': {
+                    'start_value': 1, 'increment_by': 1, 'max_value': None,
+                    'min_value': None, 'cache_value': 1,
+                    'owner': self.db.user,
+                    'privileges': [{self.db.user: ['all']},
+                                   {'PUBLIC': ['select']}]}})
+        sql = self.to_sql(inmap)
+        # sql[0] = CREATE SEQUENCE
+        # sql[1] = ALTER SEQUENCE OWNER
+        self.assertEqual(sql[2], "GRANT ALL ON SEQUENCE seq1 TO %s" %
+                         self.db.user)
+        self.assertEqual(sql[3], "GRANT SELECT ON SEQUENCE seq1 TO PUBLIC")
+
+    def test_create_view(self):
+        "Create a view with some privileges"
+        inmap = self.std_map()
+        inmap['schema public'].update({'view v1': {
+                    'definition': " SELECT now()::date AS today;",
+                    'owner': self.db.user,
+                    'privileges': [{self.db.user: ['all']},
+                                   {'user1': ['select']}]}})
+        sql = self.to_sql(inmap)
+        # sql[0] = CREATE VIEW
+        # sql[1] = ALTER VIEW OWNER
+        self.assertEqual(sql[2], "GRANT ALL ON TABLE v1 TO %s" % self.db.user)
+        self.assertEqual(sql[3], "GRANT SELECT ON TABLE v1 TO user1")
+
+
 def suite():
     tests = unittest.TestLoader().loadTestsFromTestCase(PrivilegeToMapTestCase)
+    tests.addTest(unittest.TestLoader().loadTestsFromTestCase(
+            PrivilegeToSqlTestCase))
     return tests
 
 if __name__ == '__main__':
