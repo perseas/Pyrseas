@@ -7,9 +7,11 @@
     DbObject and DbObjectDict, respectively.
 """
 from pyrseas.dbobject import DbObjectDict, DbObject
-from pyrseas.dbobject import quote_id, split_schema_obj, commentable, ownable
+from pyrseas.dbobject import quote_id, split_schema_obj
+from pyrseas.dbobject import commentable, ownable, grantable
 from pyrseas.dbobject.dbtype import BaseType, Composite, Domain, Enum
 from pyrseas.dbobject.table import Table, Sequence, View
+from pyrseas.dbobject.privileges import privileges_from_map
 
 
 class Schema(DbObject):
@@ -18,7 +20,10 @@ class Schema(DbObject):
 
     keylist = ['name']
     objtype = 'SCHEMA'
-    allprivs = 'UC'
+
+    @property
+    def allprivs(self):
+        return 'UC'
 
     def to_map(self, dbschemas, no_owner, no_privs):
         """Convert tables, etc., dictionaries to a YAML-suitable format
@@ -71,6 +76,7 @@ class Schema(DbObject):
         return schema
 
     @commentable
+    @grantable
     @ownable
     def create(self):
         """Return SQL statements to CREATE the schema
@@ -155,10 +161,11 @@ class SchemaDict(DbObjectDict):
                     inftbs.update({key: inschema[key]})
                 elif key.startswith('collation '):
                     incolls.update({key: inschema[key]})
-                elif key == 'oldname':
-                    schema.oldname = inschema[key]
-                elif key == 'description':
-                    schema.description = inschema[key]
+                elif key in ['oldname', 'owner', 'description']:
+                    setattr(schema, key, inschema[key])
+                elif key == 'privileges':
+                    schema.privileges = privileges_from_map(
+                        inschema[key], schema.allprivs, schema.owner)
                 else:
                     raise KeyError("Expected typed object, found '%s'" % key)
             newdb.types.from_map(schema, intypes, newdb)

@@ -23,14 +23,12 @@ class DbClass(DbSchemaObject):
     """A table, sequence or view"""
 
     keylist = ['schema', 'name']
-    privobjtype = "TABLE"
 
 
 class Sequence(DbClass):
     "A sequence generator definition"
 
     objtype = "SEQUENCE"
-    privobjtype = "SEQUENCE"
 
     @property
     def allprivs(self):
@@ -376,6 +374,7 @@ class View(DbClass):
     """
 
     objtype = "VIEW"
+    privobjtype = "TABLE"
 
     @property
     def allprivs(self):

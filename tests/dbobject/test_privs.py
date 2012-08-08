@@ -15,6 +15,8 @@ CREATE_TABLE = "CREATE TABLE t1 (c1 integer, c2 text)"
 SOURCE1 = "SELECT 'dummy'::text"
 CREATE_FUNC = "CREATE FUNCTION f1() RETURNS text LANGUAGE sql IMMUTABLE AS " \
     "$_$%s$_$" % SOURCE1
+CREATE_FDW = "CREATE FOREIGN DATA WRAPPER fdw1"
+CREATE_FS = "CREATE SERVER fs1 FOREIGN DATA WRAPPER fdw1"
 
 
 class PrivilegeToMapTestCase(DatabaseToMapTestCase):
@@ -112,7 +114,7 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
 
     def test_map_fd_wrapper(self):
         "Map a foreign data wrapper with a GRANT"
-        stmts = ["CREATE FOREIGN DATA WRAPPER fdw1",
+        stmts = [CREATE_FDW,
                  "GRANT USAGE ON FOREIGN DATA WRAPPER fdw1 TO PUBLIC"]
         dbmap = self.to_map(stmts, no_privs=False)
         expmap = {'privileges': [{self.db.user: ['usage']},
@@ -121,8 +123,7 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
 
     def test_map_server(self):
         "Map a foreign server with a GRANT"
-        stmts = ["CREATE FOREIGN DATA WRAPPER fdw1",
-                 "CREATE SERVER fs1 FOREIGN DATA WRAPPER fdw1",
+        stmts = [CREATE_FDW, CREATE_FS,
                  "GRANT USAGE ON FOREIGN SERVER fs1 TO user1"]
         dbmap = self.to_map(stmts, no_privs=False)
         expmap = {'privileges': [{self.db.user: ['usage']},
@@ -134,8 +135,7 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
         "Map a foreign table with various GRANTs"
         if self.db.version < 90100:
             self.skipTest('Only available on PG 9.1')
-        stmts = ["CREATE FOREIGN DATA WRAPPER fdw1",
-                 "CREATE SERVER fs1 FOREIGN DATA WRAPPER fdw1",
+        stmts = [CREATE_FDW, CREATE_FS,
                  "CREATE FOREIGN TABLE ft1 (c1 integer, c2 text) SERVER fs1",
                  "GRANT SELECT ON ft1 TO PUBLIC",
                  "GRANT INSERT, UPDATE ON ft1 TO user1"]
@@ -150,6 +150,19 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
 
 class PrivilegeToSqlTestCase(InputMapToSqlTestCase):
     """Test SQL generation of privilege information (GRANTs)"""
+
+    def test_create_schema(self):
+        "Create a schema with various privileges"
+        inmap = self.std_map()
+        inmap.update({'schema s1': {
+                    'owner': self.db.user,
+                    'privileges': [{self.db.user: ['all']},
+                                   {'PUBLIC': ['usage', 'create']}]}})
+        sql = self.to_sql(inmap)
+        # sql[0] = CREATE SCHEMA
+        # sql[1] = ALTER SCHEMA OWNER
+        self.assertEqual(sql[2], "GRANT ALL ON SCHEMA s1 TO %s" % self.db.user)
+        self.assertEqual(sql[3], "GRANT ALL ON SCHEMA s1 TO PUBLIC")
 
     def test_create_table(self):
         "Create a table with various privileges"
@@ -202,6 +215,72 @@ class PrivilegeToSqlTestCase(InputMapToSqlTestCase):
         # sql[1] = ALTER VIEW OWNER
         self.assertEqual(sql[2], "GRANT ALL ON TABLE v1 TO %s" % self.db.user)
         self.assertEqual(sql[3], "GRANT SELECT ON TABLE v1 TO user1")
+
+    def test_create_function(self):
+        "Create a function with some privileges"
+        inmap = self.std_map()
+        inmap['schema public'].update({'function f1()': {
+                    'language': 'sql', 'returns': 'text',
+                    'source': SOURCE1, 'volatility': 'immutable',
+                    'owner': self.db.user,
+                    'privileges': [{self.db.user: ['all']},
+                                   {'PUBLIC': ['execute']}]}})
+        sql = self.to_sql(inmap)
+        # sql[0] = SET check_function_bodies
+        # sql[1] = CREATE FUNCTION
+        # sql[2] = ALTER FUNCTION OWNER
+        self.assertEqual(sql[3], "GRANT EXECUTE ON FUNCTION f1() TO %s" %
+                         self.db.user)
+        self.assertEqual(sql[4], "GRANT EXECUTE ON FUNCTION f1() TO PUBLIC")
+
+    def test_create_fd_wrapper(self):
+        "Create a foreign data wrapper with some privileges"
+        inmap = self.std_map()
+        inmap.update({'foreign data wrapper fdw1': {
+                    'owner': self.db.user,
+                    'privileges': [{self.db.user: ['all']},
+                                   {'PUBLIC': ['usage']}]}})
+        sql = self.to_sql(inmap)
+        # sql[0] = CREATE FDW
+        # sql[1] = ALTER FDW OWNER
+        self.assertEqual(sql[2], "GRANT USAGE ON FOREIGN DATA WRAPPER fdw1 "
+                         "TO %s" % self.db.user)
+        self.assertEqual(sql[3], "GRANT USAGE ON FOREIGN DATA WRAPPER fdw1 "
+                         "TO PUBLIC")
+
+    def test_create_server(self):
+        "Create a foreign server with some privileges"
+        inmap = self.std_map()
+        inmap.update({'foreign data wrapper fdw1': {'server fs1': {
+                    'owner': self.db.user,
+                    'privileges': [{self.db.user: ['all']},
+                                   {'user2': ['usage']}]}}})
+        sql = self.to_sql(inmap, [CREATE_FDW])
+        # sql[0] = CREATE SERVER
+        # sql[1] = ALTER SERVER OWNER
+        self.assertEqual(sql[2], "GRANT USAGE ON FOREIGN SERVER fs1 TO %s" %
+                         self.db.user)
+        self.assertEqual(sql[3], "GRANT USAGE ON FOREIGN SERVER fs1 TO user2")
+
+    def test_create_foreign_table(self):
+        "Create a foreign table with some privileges"
+        if self.db.version < 90100:
+            self.skipTest('Only available on PG 9.1')
+        inmap = self.std_map()
+        inmap.update({'foreign data wrapper fdw1': {'server fs1': {}}})
+        inmap['schema public'].update({'foreign table ft1': {
+                    'columns': [{'c1': {'type': 'integer'}},
+                                {'c2': {'type': 'text'}}], 'server': 'fs1',
+                    'owner': self.db.user,
+                    'privileges': [{self.db.user: ['all']},
+                                   {'PUBLIC': ['select']},
+                                   {'user1': ['insert', 'update']}]}})
+        sql = self.to_sql(inmap, [CREATE_FDW, CREATE_FS])
+        # sql[0] = CREATE TABLE
+        # sql[1] = ALTER TABLE OWNER
+        self.assertEqual(sql[2], "GRANT ALL ON TABLE ft1 TO %s" % self.db.user)
+        self.assertEqual(sql[3], "GRANT SELECT ON TABLE ft1 TO PUBLIC")
+        self.assertEqual(sql[4], "GRANT INSERT, UPDATE ON TABLE ft1 TO user1")
 
 
 def suite():

@@ -11,8 +11,9 @@
     ForeignTableDict derived from ClassDict.
 """
 from pyrseas.dbobject import DbObjectDict, DbObject
-from pyrseas.dbobject import quote_id, commentable, ownable
+from pyrseas.dbobject import quote_id, commentable, ownable, grantable
 from pyrseas.dbobject.table import ClassDict, Table
+from pyrseas.dbobject.privileges import privileges_from_map
 
 
 class DbObjectWithOptions(DbObject):
@@ -79,6 +80,10 @@ class ForeignDataWrapper(DbObjectWithOptions):
 
     objtype = "FOREIGN DATA WRAPPER"
 
+    @property
+    def allprivs(self):
+        return 'U'
+
     def to_map(self, no_owner, no_privs):
         """Convert wrappers and subsidiary objects to a YAML-suitable format
 
@@ -97,6 +102,7 @@ class ForeignDataWrapper(DbObjectWithOptions):
         return wrapper
 
     @commentable
+    @grantable
     @ownable
     def create(self):
         """Return SQL statements to CREATE the data wrapper
@@ -178,12 +184,12 @@ class ForeignDataWrapperDict(DbObjectDict):
             for key in list(inwrapper.keys()):
                 if key.startswith('server '):
                     inservs.update({key: inwrapper[key]})
-                elif key == 'oldname':
-                    wrapper.oldname = inwrapper[key]
-                elif key == 'description':
-                    wrapper.description = inwrapper[key]
-                elif key in ['handler', 'validator', 'options']:
+                elif key in ['handler', 'validator', 'options', 'owner',
+                             'oldname', 'description']:
                     setattr(wrapper, key, inwrapper[key])
+                elif key == 'privileges':
+                    wrapper.privileges = privileges_from_map(
+                        inwrapper[key], wrapper.allprivs, wrapper.owner)
                 else:
                     raise KeyError("Expected typed object, found '%s'" % key)
             newdb.servers.from_map(wrapper, inservs, newdb)
@@ -270,7 +276,12 @@ class ForeignServer(DbObjectWithOptions):
     """A foreign server definition"""
 
     objtype = "SERVER"
+    privobjtype = "FOREIGN SERVER"
     keylist = ['wrapper', 'name']
+
+    @property
+    def allprivs(self):
+        return 'U'
 
     def identifier(self):
         """Returns a full identifier for the foreign server
@@ -297,6 +308,7 @@ class ForeignServer(DbObjectWithOptions):
         return server
 
     @commentable
+    @grantable
     @ownable
     def create(self):
         """Return SQL statements to CREATE the server
@@ -364,10 +376,10 @@ class ForeignServerDict(DbObjectDict):
                 if 'user mappings' in inserv:
                     newdb.usermaps.from_map(serv, inserv['user mappings'])
                 if 'oldname' in inserv:
-                    serv.oldname = inserv['oldname']
                     del inserv['oldname']
-                if 'description' in inserv:
-                    serv.description = inserv['description']
+                if 'privileges' in inserv:
+                    serv.privileges = privileges_from_map(
+                        inserv['privileges'], serv.allprivs, serv.owner)
 
     def to_map(self, no_owner, no_privs):
         """Convert the server dictionary to a regular dictionary
@@ -511,7 +523,6 @@ class UserMappingDict(DbObjectDict):
                 for attr, val in list(inusermap.items()):
                     setattr(usermap, attr, val)
                 if 'oldname' in inusermap:
-                    usermap.oldname = inusermap['oldname']
                     del inusermap['oldname']
             self[(server.wrapper, server.name, key)] = usermap
 
@@ -572,6 +583,7 @@ class ForeignTable(DbObjectWithOptions, Table):
     """A foreign table definition"""
 
     objtype = "FOREIGN TABLE"
+    privobjtype = "TABLE"
 
     def to_map(self, no_owner, no_privs):
         """Convert a foreign table to a YAML-suitable format
@@ -599,6 +611,7 @@ class ForeignTable(DbObjectWithOptions, Table):
 
         return {self.extern_key(): tbl}
 
+    @grantable
     def create(self):
         """Return SQL statements to CREATE the foreign table
 
@@ -693,11 +706,12 @@ class ForeignTableDict(ClassDict):
             except KeyError as exc:
                 exc.args = ("Foreign table '%s' has no columns" % ftb, )
                 raise
-            for attr in ['server', 'options']:
+            for attr in ['server', 'options', 'owner', 'description']:
                 if attr in inftable:
                     setattr(ftable, attr, inftable[attr])
-            if 'description' in inftable:
-                ftable.description = inftable['description']
+            if 'privileges' in inftable:
+                ftable.privileges = privileges_from_map(
+                    inftable['privileges'], ftable.allprivs, ftable.owner)
 
     def link_refs(self, dbcolumns):
         """Connect columns to their respective foreign tables

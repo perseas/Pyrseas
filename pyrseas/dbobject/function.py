@@ -8,7 +8,8 @@
     FunctionDict derived from DbObjectDict.
 """
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
-from pyrseas.dbobject import commentable, ownable
+from pyrseas.dbobject import commentable, ownable, grantable
+from pyrseas.dbobject.privileges import privileges_from_map
 
 
 VOLATILITY_TYPES = {'i': 'immutable', 's': 'stable', 'v': 'volatile'}
@@ -18,6 +19,10 @@ class Proc(DbSchemaObject):
     """A procedure such as a FUNCTION or an AGGREGATE"""
 
     keylist = ['schema', 'name', 'arguments']
+
+    @property
+    def allprivs(self):
+        return 'X'
 
     def extern_key(self):
         """Return the key to be used in external maps for this function
@@ -77,6 +82,7 @@ class Function(Proc):
         return {self.extern_key(): dct}
 
     @commentable
+    @grantable
     @ownable
     def create(self, newsrc=None, basetype=False):
         """Return SQL statements to CREATE or REPLACE the function
@@ -160,6 +166,7 @@ class Aggregate(Proc):
         return {self.extern_key(): dct}
 
     @commentable
+    @grantable
     @ownable
     def create(self):
         """Return SQL statements to CREATE the aggregate
@@ -266,10 +273,9 @@ class ProcDict(DbObjectDict):
                 if (src and obj) or not (src or obj):
                     raise ValueError("Function '%s': either source or "
                                      "obj_file must be specified" % fnc)
-            if 'oldname' in infunc:
-                func.oldname = infunc['oldname']
-            if 'description' in infunc:
-                func.description = infunc['description']
+            if 'privileges' in infunc:
+                func.privileges = privileges_from_map(
+                    infunc['privileges'], func.allprivs, func.owner)
 
     def diff_map(self, infuncs):
         """Generate SQL to transform existing functions

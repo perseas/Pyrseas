@@ -40,7 +40,7 @@ def privileges_to_map(privspec, allprivs, owner):
     """
     (usr, privcodes, grantor) = _split_privs(privspec)
     privs = []
-    if privcodes == allprivs:
+    if privcodes == allprivs and len(allprivs) > 1:
         privs = ['all']
     else:
         for code in sorted(PRIVCODES.keys()):
@@ -101,7 +101,7 @@ def add_grant(obj, privspec):
     (usr, privcodes, grantor) = _split_privs(privspec)
     privs = []
     wgo = []
-    if privcodes == obj.allprivs:
+    if privcodes == obj.allprivs and len(obj.allprivs) > 1:
         privs = ['ALL']
     else:
         for code in sorted(PRIVCODES.keys()):
@@ -111,10 +111,13 @@ def add_grant(obj, privspec):
                     wgo.append(priv.upper())
                 else:
                     privs.append(priv.upper())
+    objtype = obj.objtype
+    if hasattr(obj, 'privobjtype'):
+        objtype = obj.privobjtype
     if privs:
         stmts.append("GRANT %s ON %s %s TO %s" % (
-                ', '.join(privs), obj.privobjtype, obj.name, usr))
+                ', '.join(privs), objtype, obj.identifier(), usr))
     if wgo:
         stmts.append("GRANT %s ON %s %s TO %s WITH GRANT OPTION" % (
-                ', '.join(wgo), obj.privobjtype, obj.name, usr))
+                ', '.join(wgo), objtype, obj.identifier(), usr))
     return stmts
