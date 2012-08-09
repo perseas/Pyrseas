@@ -86,6 +86,21 @@ class Schema(DbObject):
         return ["CREATE SCHEMA %s" % quote_id(self.name)]
 
 
+PREFIXES = {'domain ': 'types', 'type': 'types', 'table ': 'tables',
+            'view ': 'tables', 'sequence ': 'tables',
+            'function ': 'functions', 'aggregate ': 'functions',
+            'operator family ': 'operfams', 'operator class ': 'operclasses',
+            'conversion ': 'conversions', 'text search dictionary ': 'tsdicts',
+            'text search template ': 'tstempls',
+            'text search parser ': 'tsparsers',
+            'text search configuration ': 'tsconfigs',
+            'foreign table ': 'ftables', 'collation ': 'collations'}
+SCHOBJS1 = ['types', 'tables', 'ftables']
+SCHOBJS2 = ['collations', 'conversions', 'functions', 'operators',
+            'operclasses', 'operfams', 'tsconfigs', 'tsdicts', 'tsparsers',
+            'tstempls']
+
+
 class SchemaDict(DbObjectDict):
     "The collection of schemas in a database.  Minimally, the 'public' schema."
 
@@ -117,70 +132,43 @@ class SchemaDict(DbObjectDict):
                 raise KeyError("Unrecognized object type: %s" % key)
             schema = self[sch] = Schema(name=sch)
             inschema = inmap[key]
-            intypes = {}
-            intables = {}
-            infuncs = {}
-            inopers = {}
-            inopcls = {}
-            inopfams = {}
-            inconvs = {}
-            intscs = {}
-            intsds = {}
-            intsps = {}
-            intsts = {}
-            inftbs = {}
-            incolls = {}
+            objdict = {}
             for key in list(inschema.keys()):
-                if key.startswith('domain '):
-                    intypes.update({key: inschema[key]})
-                elif key.startswith('type '):
-                    intypes.update({key: inschema[key]})
-                elif key.startswith('table ') or key.startswith('view ') \
-                        or key.startswith('sequence '):
-                    intables.update({key: inschema[key]})
-                elif key.startswith('function ') \
-                        or key.startswith('aggregate '):
-                    infuncs.update({key: inschema[key]})
-                elif key.startswith('operator family'):
-                    inopfams.update({key: inschema[key]})
-                elif key.startswith('operator class'):
-                    inopcls.update({key: inschema[key]})
-                elif key.startswith('operator '):
-                    inopers.update({key: inschema[key]})
-                elif key.startswith('conversion '):
-                    inconvs.update({key: inschema[key]})
-                elif key.startswith('text search dictionary '):
-                    intsds.update({key: inschema[key]})
-                elif key.startswith('text search template '):
-                    intsts.update({key: inschema[key]})
-                elif key.startswith('text search parser '):
-                    intsps.update({key: inschema[key]})
-                elif key.startswith('text search configuration '):
-                    intscs.update({key: inschema[key]})
-                elif key.startswith('foreign table '):
-                    inftbs.update({key: inschema[key]})
-                elif key.startswith('collation '):
-                    incolls.update({key: inschema[key]})
+                mapped = False
+                for prefix in list(PREFIXES.keys()):
+                    if key.startswith(prefix):
+                        otype = PREFIXES[prefix]
+                        if otype not in objdict:
+                            objdict[otype] = {}
+                        objdict[otype].update({key: inschema[key]})
+                        mapped = True
+                        break
+                # Needs separate processing because it overlaps
+                # operator classes and operator families
+                if not mapped and key.startswith('operator '):
+                    otype = 'operators'
+                    if otype not in objdict:
+                        objdict[otype] = {}
+                    objdict[otype].update({key: inschema[key]})
+                    mapped = True
                 elif key in ['oldname', 'owner', 'description']:
                     setattr(schema, key, inschema[key])
+                    mapped = True
                 elif key == 'privileges':
                     schema.privileges = privileges_from_map(
                         inschema[key], schema.allprivs, schema.owner)
-                else:
+                    mapped = True
+                if not mapped:
                     raise KeyError("Expected typed object, found '%s'" % key)
-            newdb.types.from_map(schema, intypes, newdb)
-            newdb.tables.from_map(schema, intables, newdb)
-            newdb.functions.from_map(schema, infuncs)
-            newdb.operators.from_map(schema, inopers)
-            newdb.operclasses.from_map(schema, inopcls)
-            newdb.operfams.from_map(schema, inopfams)
-            newdb.conversions.from_map(schema, inconvs)
-            newdb.tsdicts.from_map(schema, intsds)
-            newdb.tstempls.from_map(schema, intsts)
-            newdb.tsparsers.from_map(schema, intsps)
-            newdb.tsconfigs.from_map(schema, intscs)
-            newdb.ftables.from_map(schema, inftbs, newdb)
-            newdb.collations.from_map(schema, incolls)
+
+            for objtype in SCHOBJS1:
+                if objtype in objdict:
+                    subobjs = getattr(newdb, objtype)
+                    subobjs.from_map(schema, objdict[objtype], newdb)
+            for objtype in SCHOBJS2:
+                if objtype in objdict:
+                    subobjs = getattr(newdb, objtype)
+                    subobjs.from_map(schema, objdict[objtype])
 
     def link_refs(self, dbtypes, dbtables, dbfunctions, dbopers, dbopfams,
                   dbopcls, dbconvs, dbtsconfigs, dbtsdicts, dbtspars,
