@@ -195,42 +195,31 @@ class SchemaDict(DbObjectDict):
         traversing the `dbtables` dictionary. Fills in the `functions`
         dictionary by traversing the `dbfunctions` dictionary.
         """
+        def link_one(sch, objtype, objkeys, obj):
+            schema = self[sch]
+            if not hasattr(schema, objtype):
+                setattr(schema, objtype, {})
+            objdict = getattr(schema, objtype)
+            objdict.update({objkeys: obj})
+
         for (sch, typ) in list(dbtypes.keys()):
             dbtype = dbtypes[(sch, typ)]
-            assert self[sch]
-            schema = self[sch]
             if isinstance(dbtype, Domain):
-                if not hasattr(schema, 'domains'):
-                    schema.domains = {}
-                schema.domains.update({typ: dbtypes[(sch, typ)]})
+                link_one(sch, 'domains', typ, dbtype)
             elif isinstance(dbtype, Enum) or isinstance(dbtype, Composite) \
                     or isinstance(dbtype, BaseType):
-                if not hasattr(schema, 'types'):
-                    schema.types = {}
-                schema.types.update({typ: dbtypes[(sch, typ)]})
+                link_one(sch,'types', typ, dbtype)
         for (sch, tbl) in list(dbtables.keys()):
             table = dbtables[(sch, tbl)]
-            assert self[sch]
-            schema = self[sch]
             if isinstance(table, Table):
-                if not hasattr(schema, 'tables'):
-                    schema.tables = {}
-                schema.tables.update({tbl: table})
+                link_one(sch, 'tables', tbl, table)
             elif isinstance(table, Sequence):
-                if not hasattr(schema, 'sequences'):
-                    schema.sequences = {}
-                schema.sequences.update({tbl: table})
+                link_one(sch, 'sequences', tbl, table)
             elif isinstance(table, View):
-                if not hasattr(schema, 'views'):
-                    schema.views = {}
-                schema.views.update({tbl: table})
+                link_one(sch, 'views', tbl, table)
         for (sch, fnc, arg) in list(dbfunctions.keys()):
             func = dbfunctions[(sch, fnc, arg)]
-            assert self[sch]
-            schema = self[sch]
-            if not hasattr(schema, 'functions'):
-                schema.functions = {}
-            schema.functions.update({(fnc, arg): func})
+            link_one(sch, 'functions', (fnc, arg), func)
             if hasattr(func, 'returns'):
                 rettype = func.returns
                 if rettype.upper().startswith("SETOF "):
@@ -245,74 +234,34 @@ class SchemaDict(DbObjectDict):
                     deptbl.dependent_funcs.append(func)
         for (sch, opr, lft, rgt) in list(dbopers.keys()):
             oper = dbopers[(sch, opr, lft, rgt)]
-            assert self[sch]
-            schema = self[sch]
-            if not hasattr(schema, 'operators'):
-                schema.operators = {}
-            schema.operators.update({(opr, lft, rgt): oper})
+            link_one(sch, 'operators', (opr, lft, rgt), oper)
         for (sch, opc, idx) in list(dbopcls.keys()):
             opcl = dbopcls[(sch, opc, idx)]
-            assert self[sch]
-            schema = self[sch]
-            if not hasattr(schema, 'operclasses'):
-                schema.operclasses = {}
-            schema.operclasses.update({(opc, idx): opcl})
+            link_one(sch, 'operclasses', (opc, idx), opcl)
         for (sch, opf, idx) in list(dbopfams.keys()):
             opfam = dbopfams[(sch, opf, idx)]
-            assert self[sch]
-            schema = self[sch]
-            if not hasattr(schema, 'operfams'):
-                schema.operfams = {}
-            schema.operfams.update({(opf, idx): opfam})
+            link_one(sch, 'operfams', (opf, idx), opfam)
         for (sch, cnv) in list(dbconvs.keys()):
             conv = dbconvs[(sch, cnv)]
-            assert self[sch]
-            schema = self[sch]
-            if not hasattr(schema, 'conversions'):
-                schema.conversions = {}
-            schema.conversions.update({cnv: conv})
+            link_one(sch, 'conversions', cnv, conv)
         for (sch, tsc) in list(dbtsconfigs.keys()):
             tscfg = dbtsconfigs[(sch, tsc)]
-            assert self[sch]
-            schema = self[sch]
-            if not hasattr(schema, 'tsconfigs'):
-                schema.tsconfigs = {}
-            schema.tsconfigs.update({tsc: tscfg})
+            link_one(sch, 'tsconfigs', tsc, tscfg)
         for (sch, tsd) in list(dbtsdicts.keys()):
             tsdict = dbtsdicts[(sch, tsd)]
-            assert self[sch]
-            schema = self[sch]
-            if not hasattr(schema, 'tsdicts'):
-                schema.tsdicts = {}
-            schema.tsdicts.update({tsd: tsdict})
+            link_one(sch, 'tsdicts', tsd, tsdict)
         for (sch, tsp) in list(dbtspars.keys()):
             tspar = dbtspars[(sch, tsp)]
-            assert self[sch]
-            schema = self[sch]
-            if not hasattr(schema, 'tsparsers'):
-                schema.tsparsers = {}
-            schema.tsparsers.update({tsp: tspar})
+            link_one(sch, 'tsparsers', tsp, tspar)
         for (sch, tst) in list(dbtstmpls.keys()):
             tstmpl = dbtstmpls[(sch, tst)]
-            assert self[sch]
-            schema = self[sch]
-            if not hasattr(schema, 'tstempls'):
-                schema.tstempls = {}
-            schema.tstempls.update({tst: tstmpl})
+            link_one(sch, 'tstempls', tst, tstmpl)
         for (sch, ftb) in list(dbftables.keys()):
             ftbl = dbftables[(sch, ftb)]
-            assert self[sch]
-            schema = self[sch]
-            if not hasattr(schema, 'ftables'):
-                schema.ftables = {}
-            schema.ftables.update({ftb: ftbl})
+            link_one(sch, 'ftables', ftb, ftbl)
         for (sch, cll) in list(dbcolls.keys()):
             coll = dbcolls[(sch, cll)]
-            assert self[sch]
-            schema = self[sch]
-            if not hasattr(schema, 'collations'):
-                schema.collations = {}
-            schema.collations.update({cll: coll})
+            link_one(sch, 'collations', cll, coll)
 
     def to_map(self, no_owner=False, no_privs=False):
         """Convert the schema dictionary to a regular dictionary
