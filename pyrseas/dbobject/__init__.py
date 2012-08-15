@@ -9,7 +9,8 @@
 """
 import string
 
-from pyrseas.dbobject.privileges import privileges_to_map, add_grant
+from pyrseas.dbobject.privileges import privileges_to_map
+from pyrseas.dbobject.privileges import add_grant, add_revoke, diff_privs
 
 
 VALID_FIRST_CHARS = string.ascii_lowercase + '_'
@@ -269,7 +270,20 @@ class DbObject(object):
         if hasattr(inobj, 'owner') and hasattr(self, 'owner'):
             if inobj.owner != self.owner:
                 stmts.append(self.alter_owner(inobj.owner))
+        stmts.append(self.diff_privileges(inobj))
         stmts.append(self.diff_description(inobj))
+        return stmts
+
+    def diff_privileges(self, inobj):
+        """Generate SQL statements to grant or revoke privileges
+
+        :param inobj: a YAML map defining the input object
+        :return: list of SQL statements
+        """
+        stmts = []
+        currprivs = self.privileges if hasattr(self, 'privileges') else {}
+        newprivs = inobj.privileges if hasattr(inobj, 'privileges') else {}
+        stmts.append(diff_privs(self, currprivs, inobj, newprivs))
         return stmts
 
     def diff_description(self, inobj):

@@ -172,6 +172,7 @@ class Sequence(DbClass):
         if hasattr(inseq, 'owner'):
             if inseq.owner != self.owner:
                 stmts.append(self.alter_owner(inseq.owner))
+        stmts.append(self.diff_privileges(inseq))
         stmts.append(self.diff_description(inseq))
         return stmts
 
@@ -354,6 +355,7 @@ class Table(DbClass):
         if hasattr(intable, 'owner'):
             if intable.owner != self.owner:
                 stmts.append(self.alter_owner(intable.owner))
+        stmts.append(self.diff_privileges(intable))
         if hasattr(intable, 'tablespace'):
             if not hasattr(self, 'tablespace') \
                     or self.tablespace != intable.tablespace:
@@ -410,6 +412,7 @@ class View(DbClass):
         if hasattr(inview, 'owner'):
             if inview.owner != self.owner:
                 stmts.append(self.alter_owner(inview.owner))
+        stmts.append(self.diff_privileges(inview))
         stmts.append(self.diff_description(inview))
         return stmts
 

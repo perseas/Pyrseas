@@ -58,6 +58,7 @@ TEST_HOST = os.environ.get("PYRSEAS_TEST_HOST", None)
 TEST_PORT = os.environ.get("PYRSEAS_TEST_PORT", None)
 ADMIN_DB = os.environ.get("PYRSEAS_ADMIN_DB", 'postgres')
 CREATE_DDL = "CREATE DATABASE %s TEMPLATE = template0"
+PG_OWNER = 'postgres'
 
 
 class PostgresDb(object):
@@ -402,7 +403,10 @@ class InputMapToSqlTestCase(PyrseasTestCase):
 
     def std_map(self, plpgsql_installed=False):
         "Return a standard schema map for the default database"
-        base = {'schema public': {'description': 'standard public schema'}}
+        base = {'schema public': {
+                'owner': PG_OWNER,
+                'privileges': [{PG_OWNER: ['all']}, {'PUBLIC': ['all']}],
+                'description': 'standard public schema'}}
         if (self.db._version >= 90000 or plpgsql_installed) \
                 and self.db._version < 90100:
             base.update({'language plpgsql': {'trusted': True}})

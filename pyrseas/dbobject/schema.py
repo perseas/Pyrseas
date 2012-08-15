@@ -208,7 +208,7 @@ class SchemaDict(DbObjectDict):
                 link_one(sch, 'domains', typ, dbtype)
             elif isinstance(dbtype, Enum) or isinstance(dbtype, Composite) \
                     or isinstance(dbtype, BaseType):
-                link_one(sch,'types', typ, dbtype)
+                link_one(sch, 'types', typ, dbtype)
         for (sch, tbl) in list(dbtables.keys()):
             table = dbtables[(sch, tbl)]
             if isinstance(table, Table):

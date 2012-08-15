@@ -145,6 +145,7 @@ class Function(Proc):
         if hasattr(infunction, 'owner'):
             if infunction.owner != self.owner:
                 stmts.append(self.alter_owner(infunction.owner))
+        stmts.append(self.diff_privileges(infunction))
         stmts.append(self.diff_description(infunction))
         return stmts
 
