@@ -1,3 +1,39 @@
+0.6.0beta (16-Aug-2012)
+
+  * Added support for:
+
+    - EXTENSIONs
+    - COLLATIONs
+    - OWNER information
+    - Access privileges (GRANT and REVOKE)
+    - TABLESPACEs for tables, primary keys and indexes
+    - MATCH attributes for foreign keys (#34)
+    - ALTER composite TYPE ADD/DROP/RENAME ATTRIBUTE
+    - ENUMs with no labels (#31)
+
+  * Correctly support index functions/expressions (#3).
+
+  * Fix DbConnection exception handling under Python 3 (#25).
+
+  * dbtoyaml
+
+    - Fix -t option to output sequences owned by table and the schema
+      description.
+    - Use pg_user_mappings view to allow usage by non-superusers.
+
+  * yamltodb
+
+    - Schema-qualify table when dropping columns (#26).
+    - Correct column drop/add case in middle of table (#8).
+    - Fix adding and dropping of columns in inherited tables (#33).
+    - Enable renaming of indexes (#38).
+    - Ignore all temp schemas (#37)
+
+  * dbtoyaml/yamltodb
+
+    - Give PGUSER precedence over USER environment variable.
+
+
 0.5.0 (10-Mar-2012)
 
   * Added support for:
