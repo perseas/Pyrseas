@@ -7,3 +7,4 @@ docs/_build
 Pyrseas.egg-info
 .coverage
 htmlcov
+.tox
