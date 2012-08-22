@@ -25,11 +25,12 @@ def _split_privs(privspec):
     return (usr, privcodes, grantor)
 
 
-def _expand_priv_lists(obj, privcodes):
+def _expand_priv_lists(obj, privcodes, subobj):
     """Convert privilege code strings to expanded lists
 
     :param obj: the object on which the privilege is granted
-    :privcodes: string of privilege codes
+    :param privcodes: string of privilege codes
+    :param subobj: sub-object name (e.g., column name)
     :return: tuple of lists with decoded privileges
     """
     privs = []
@@ -37,13 +38,15 @@ def _expand_priv_lists(obj, privcodes):
     if privcodes == obj.allprivs and len(obj.allprivs) > 1:
         privs = ['ALL']
     else:
+        if subobj:
+            subobj = ' (%s)' % subobj
         for code in sorted(PRIVCODES.keys()):
             if code in privcodes:
-                priv = PRIVCODES[code]
+                priv = PRIVCODES[code].upper() + subobj
                 if code + '*' in privcodes:
-                    wgo.append(priv.upper())
+                    wgo.append(priv)
                 else:
-                    privs.append(priv.upper())
+                    privs.append(priv)
     return (privs, wgo)
 
 
@@ -112,15 +115,16 @@ def privileges_from_map(privlist, allprivs, owner):
     return retlist
 
 
-def add_grant(obj, privspec):
+def add_grant(obj, privspec, subobj=''):
     """Return GRANT statements on the object based on the privilege spec
 
     :param obj: the object on which the privilege is granted
     :param privspec: the privilege specification (aclitem)
+    :param subobj: sub-object name (e.g., column name)
     :return: list of GRANT statements
     """
     (usr, privcodes, grantor) = _split_privs(privspec)
-    (privs, wgo) = _expand_priv_lists(obj, privcodes)
+    (privs, wgo) = _expand_priv_lists(obj, privcodes, subobj)
     objtype = obj.objtype
     if hasattr(obj, 'privobjtype'):
         objtype = obj.privobjtype
@@ -134,15 +138,16 @@ def add_grant(obj, privspec):
     return stmts
 
 
-def add_revoke(obj, privspec):
+def add_revoke(obj, privspec, subobj=''):
     """Return REVOKE statements on the object based on the privilege spec
 
     :param obj: the object on which the privilege is to be revoked
     :param privspec: the privilege specification (aclitem)
+    :param subobj: sub-object name (e.g., column name)
     :return: list of REVOKE statements
     """
     (usr, privcodes, grantor) = _split_privs(privspec)
-    (privs, wgo) = _expand_priv_lists(obj, privcodes)
+    (privs, wgo) = _expand_priv_lists(obj, privcodes, subobj)
     objtype = obj.objtype
     if hasattr(obj, 'privobjtype'):
         objtype = obj.privobjtype
@@ -156,13 +161,14 @@ def add_revoke(obj, privspec):
     return stmts
 
 
-def diff_privs(currobj, currlist, newobj, newlist):
+def diff_privs(currobj, currlist, newobj, newlist, subobj=''):
     """Return GRANT or REVOKE statements to adjust object privileges
 
     :param currobj: current object
     :param currlist: list of current privileges
     :param newobj: new object
     :param newlist: list of new privileges
+    :param subobj: sub-object (e.g., column name)
     :return: list of GRANT and REVOKE statements
     """
     def rejoin(privdict, usr, grantor):
@@ -180,12 +186,16 @@ def diff_privs(currobj, currlist, newobj, newlist):
         newprivs[(usr, grantor)] = privcodes
     for (usr, gtor) in list(currprivs.keys()):
         if (usr, gtor) not in newprivs:
-            stmts.append(add_revoke(currobj, rejoin(currprivs, usr, gtor)))
+            stmts.append(add_revoke(currobj, rejoin(currprivs, usr, gtor),
+                                    subobj))
     for (usr, gtor) in list(newprivs.keys()):
         if (usr, gtor) not in currprivs:
-            stmts.append(add_grant(newobj, rejoin(newprivs, usr, gtor)))
+            stmts.append(add_grant(newobj, rejoin(newprivs, usr, gtor),
+                                   subobj))
         else:
             if currprivs[(usr, gtor)] != newprivs[(usr, gtor)]:
-                stmts.append(add_revoke(currobj, rejoin(currprivs, usr, gtor)))
-                stmts.append(add_grant(newobj, rejoin(newprivs, usr, gtor)))
+                stmts.append(add_revoke(currobj, rejoin(currprivs, usr, gtor),
+                                        subobj))
+                stmts.append(add_grant(newobj, rejoin(newprivs, usr, gtor),
+                                       subobj))
     return stmts

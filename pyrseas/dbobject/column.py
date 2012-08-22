@@ -6,7 +6,10 @@
     This module defines two classes: Column derived from
     DbSchemaObject and ColumnDict derived from DbObjectDict.
 """
-from pyrseas.dbobject import DbObjectDict, DbSchemaObject, quote_id
+from pyrseas.dbobject import DbObjectDict, DbSchemaObject
+from pyrseas.dbobject import quote_id, grantable
+from pyrseas.dbobject.privileges import privileges_from_map, add_grant
+from pyrseas.dbobject.privileges import diff_privs
 
 
 class Column(DbSchemaObject):
@@ -48,6 +51,30 @@ class Column(DbSchemaObject):
             stmt += ' COLLATE ' + self.collation
         return (stmt, '' if not hasattr(self, 'description')
                 else self.comment())
+
+    def add_privs(self):
+        """Generate SQL statements to grant privileges on new column
+
+        :return: list of SQL statements
+        """
+        stmts = []
+        if hasattr(self, 'privileges'):
+            for priv in self.privileges:
+                stmts.append(add_grant(self._table, priv, self.name))
+        return stmts
+
+    def diff_privileges(self, incol):
+        """Generate SQL statements to grant or revoke privileges
+
+        :param incol: a YAML map defining the input column
+        :return: list of SQL statements
+        """
+        stmts = []
+        currprivs = self.privileges if hasattr(self, 'privileges') else {}
+        newprivs = incol.privileges if hasattr(incol, 'privileges') else {}
+        stmts.append(diff_privs(self._table, currprivs, incol._table, newprivs,
+                                self.name))
+        return stmts
 
     def comment(self):
         """Return a SQL COMMENT statement for the column
@@ -199,14 +226,22 @@ class ColumnDict(DbObjectDict):
             raise ValueError("Table '%s' has no columns" % table.name)
         cols = self[(table.schema, table.name)] = []
 
-        for col in incols:
-            for key in list(col.keys()):
-                if isinstance(col[key], dict):
-                    arg = col[key]
+        for incol in incols:
+            for key in list(incol.keys()):
+                if isinstance(incol[key], dict):
+                    arg = incol[key]
                 else:
-                    arg = {'type': col[key]}
-                cols.append(Column(schema=table.schema, table=table.name,
-                                   name=key, **arg))
+                    arg = {'type': incol[key]}
+                col = Column(schema=table.schema, table=table.name, name=key,
+                             **arg)
+                if hasattr(col, 'privileges'):
+                    if not hasattr(table, 'owner'):
+                        raise ValueError("Column '%s.%s' has privileges but "
+                                         "no owner information" % (
+                                table.name, key))
+                    col.privileges = privileges_from_map(
+                                col.privileges, col.allprivs, table.owner)
+                cols.append(col)
 
     def diff_map(self, incols):
         """Generate SQL to transform existing columns

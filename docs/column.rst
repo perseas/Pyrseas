@@ -25,6 +25,10 @@ attribute is also present but is not made visible externally.
 
 .. automethod:: Column.add
 
+.. automethod:: Column.add_privs
+
+.. automethod:: Column.diff_privileges
+
 .. automethod:: Column.comment
 
 .. automethod:: Column.drop

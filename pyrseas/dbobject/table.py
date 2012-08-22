@@ -14,7 +14,7 @@ from pyrseas.dbobject import quote_id, split_schema_obj
 from pyrseas.dbobject import commentable, ownable, grantable
 from pyrseas.dbobject.constraint import CheckConstraint, PrimaryKey
 from pyrseas.dbobject.constraint import ForeignKey, UniqueConstraint
-from pyrseas.dbobject.privileges import privileges_from_map
+from pyrseas.dbobject.privileges import privileges_from_map, add_grant
 
 MAX_BIGINT = 9223372036854775807
 
@@ -269,7 +269,6 @@ class Table(DbClass):
 
         return {self.extern_key(): tbl}
 
-    @grantable
     def create(self):
         """Return SQL statements to CREATE the table
 
@@ -279,9 +278,11 @@ class Table(DbClass):
         if hasattr(self, 'created'):
             return stmts
         cols = []
+        colprivs = []
         for col in self.columns:
             if not (hasattr(col, 'inherited') and col.inherited):
                 cols.append("    " + col.add()[0])
+            colprivs.append(col.add_privs())
         inhclause = ''
         if hasattr(self, 'inherits'):
             inhclause = " INHERITS (%s)" % ", ".join(t for t in self.inherits)
@@ -292,6 +293,11 @@ class Table(DbClass):
                 self.qualname(), ",\n".join(cols), inhclause, tblspc))
         if hasattr(self, 'owner'):
             stmts.append(self.alter_owner())
+        if hasattr(self, 'privileges'):
+            for priv in self.privileges:
+                stmts.append(add_grant(self, priv))
+        if colprivs:
+            stmts.append(colprivs)
         if hasattr(self, 'description'):
             stmts.append(self.comment())
         for col in self.columns:
@@ -331,6 +337,7 @@ class Table(DbClass):
                     if not hasattr(col, 'dropped')]
         dbcols = len(colnames)
 
+        colprivs = []
         base = "ALTER %s %s\n    " % (self.objtype, self.qualname())
         # check input columns
         for (num, incol) in enumerate(intable.columns):
@@ -342,6 +349,7 @@ class Table(DbClass):
                 (stmt, descr) = self.columns[num].diff_map(incol)
                 if stmt:
                     stmts.append(base + stmt)
+                colprivs.append(self.columns[num].diff_privileges(incol))
                 if descr:
                     stmts.append(descr)
             # add new columns
@@ -349,6 +357,7 @@ class Table(DbClass):
                     not hasattr(incol, 'inherited'):
                 (stmt, descr) = incol.add()
                 stmts.append(base + "ADD COLUMN %s" % stmt)
+                colprivs.append(incol.add_privs())
                 if descr:
                     stmts.append(descr)
 
@@ -356,6 +365,8 @@ class Table(DbClass):
             if intable.owner != self.owner:
                 stmts.append(self.alter_owner(intable.owner))
         stmts.append(self.diff_privileges(intable))
+        if colprivs:
+            stmts.append(colprivs)
         if hasattr(intable, 'tablespace'):
             if not hasattr(self, 'tablespace') \
                     or self.tablespace != intable.tablespace:
@@ -486,15 +497,15 @@ class ClassDict(DbObjectDict):
                 intable = inobj
                 if not intable:
                     raise ValueError("Table '%s' has no specification" % k)
+                for attr in ['inherits', 'owner', 'tablespace', 'oldname',
+                             'description']:
+                    if attr in intable:
+                        setattr(table, attr, intable[attr])
                 try:
                     newdb.columns.from_map(table, intable['columns'])
                 except KeyError as exc:
                     exc.args = ("Table '%s' has no columns" % key, )
                     raise
-                for attr in ['inherits', 'owner', 'tablespace', 'oldname',
-                             'description']:
-                    if attr in intable:
-                        setattr(table, attr, intable[attr])
                 newdb.constraints.from_map(table, intable)
                 if 'indexes' in intable:
                     newdb.indexes.from_map(table, intable['indexes'])
