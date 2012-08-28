@@ -288,9 +288,9 @@ class PostgresDb(object):
         curs = pgexecute(
             self.conn,
             """SELECT CASE umuser WHEN 0 THEN 'PUBLIC' ELSE
-                  pg_get_userbyid(umuser) END AS username, srvname
-               FROM pg_user_mapping u
-                  JOIN pg_foreign_server s ON (umserver = s.oid)""")
+                  pg_get_userbyid(umuser) END AS username, s.srvname
+               FROM pg_user_mappings u
+                  JOIN pg_foreign_server s ON (srvid = s.oid)""")
         umaps = curs.fetchall()
         curs.close()
         self.conn.rollback()
@@ -344,6 +344,14 @@ class PostgresDb(object):
         curs.close()
         return row and True
 
+    def is_superuser(self):
+        "Is current user a superuser?"
+        curs = pgexecute(self.conn, "SELECT 1 FROM pg_roles WHERE rolsuper "
+                         "AND rolname = CURRENT_USER ")
+        row = curs.fetchone()
+        curs.close()
+        return row and True
+
 
 class PyrseasTestCase(TestCase):
     """Base class for most test cases"""
@@ -365,8 +373,10 @@ class PyrseasTestCase(TestCase):
 class DatabaseToMapTestCase(PyrseasTestCase):
     """Base class for "database to map" test cases"""
 
+    superuser = False
+
     def to_map(self, stmts, schemas=None, tables=None, no_owner=True,
-               no_privs=True):
+               no_privs=True, superuser=False):
         """Execute statements and return a database map.
 
         :param stmts: list of SQL statements to execute
@@ -376,6 +386,8 @@ class DatabaseToMapTestCase(PyrseasTestCase):
         :param no_privs: exclude privilege information
         :return: possibly trimmed map of database
         """
+        if (self.superuser or superuser) and not self.db.is_superuser():
+            self.skipTest("Must be a superuser to run this test")
         for stmt in stmts:
             self.db.execute(stmt)
         self.db.conn.commit()
@@ -387,13 +399,17 @@ class DatabaseToMapTestCase(PyrseasTestCase):
 class InputMapToSqlTestCase(PyrseasTestCase):
     """Base class for "input map to SQL" test cases"""
 
-    def to_sql(self, inmap, stmts=None):
+    superuser = False
+
+    def to_sql(self, inmap, stmts=None, superuser=False):
         """Execute statements and compare database to input map.
 
         :param inmap: dictionary defining target database
         :param stmts: list of SQL database setup statements
         :return: list of SQL statements
         """
+        if (self.superuser or superuser) and not self.db.is_superuser():
+            self.skipTest("Must be a superuser to run this test")
         if stmts:
             for stmt in stmts:
                 self.db.execute(stmt)

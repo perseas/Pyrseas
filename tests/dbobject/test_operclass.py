@@ -34,6 +34,8 @@ COMMENT_STMT = "COMMENT ON OPERATOR CLASS oc1 USING btree IS " \
 class OperatorClassToMapTestCase(DatabaseToMapTestCase):
     """Test mapping of existing operator classes"""
 
+    superuser = True
+
     def test_map_operclass(self):
         "Map an operator class"
         dbmap = self.to_map([CREATE_STMT])
@@ -85,7 +87,7 @@ class OperatorClassToSqlTestCase(InputMapToSqlTestCase):
                     'type': 'myint', 'operators': {
                         1: '<(myint,myint)', 3: '=(myint,myint)'},
                     'functions': {1: 'btmyintcmp(myint,myint)'}}})
-        sql = self.to_sql(inmap, [CREATE_TYPE_STMT])
+        sql = self.to_sql(inmap, [CREATE_TYPE_STMT], superuser=True)
         self.assertEqual(fix_indent(sql[0]),
                          CREATE_STMT_LONG.replace(' FOR ', ' DEFAULT FOR ')
                          .replace('integer', 'myint').replace('int4', 'myint'))
@@ -106,7 +108,7 @@ class OperatorClassToSqlTestCase(InputMapToSqlTestCase):
 
     def test_drop_operclass(self):
         "Drop an existing operator"
-        sql = self.to_sql(self.std_map(), [CREATE_STMT])
+        sql = self.to_sql(self.std_map(), [CREATE_STMT], superuser=True)
         self.assertEqual(sql, ["DROP OPERATOR CLASS oc1 USING btree",
                                  "DROP OPERATOR FAMILY oc1 USING btree"])
 
@@ -131,7 +133,7 @@ class OperatorClassToSqlTestCase(InputMapToSqlTestCase):
                         1: '<(integer,integer)', 3: '=(integer,integer)'},
                     'functions': {1: 'btint4cmp(integer,integer)'}},
                                        'operator family oc1 using btree': {}})
-        sql = self.to_sql(inmap, [CREATE_STMT])
+        sql = self.to_sql(inmap, [CREATE_STMT], superuser=True)
         self.assertEqual(sql, [COMMENT_STMT])
 
     def test_drop_operclass_comment(self):
@@ -143,7 +145,7 @@ class OperatorClassToSqlTestCase(InputMapToSqlTestCase):
                         1: '<(integer,integer)', 3: '=(integer,integer)'},
                     'functions': {1: 'btint4cmp(integer,integer)'}},
                                        'operator family oc1 using btree': {}})
-        sql = self.to_sql(inmap, stmts)
+        sql = self.to_sql(inmap, stmts, superuser=True)
         self.assertEqual(sql, [
                 "COMMENT ON OPERATOR CLASS oc1 USING btree IS NULL"])
 
@@ -157,7 +159,7 @@ class OperatorClassToSqlTestCase(InputMapToSqlTestCase):
                         1: '<(integer,integer)', 3: '=(integer,integer)'},
                     'functions': {1: 'btint4cmp(integer,integer)'}},
                                        'operator family oc1 using btree': {}})
-        sql = self.to_sql(inmap, stmts)
+        sql = self.to_sql(inmap, stmts, superuser=True)
         self.assertEqual(sql, [
                 "COMMENT ON OPERATOR CLASS oc1 USING btree IS "
                 "'Changed operator class oc1'"])

@@ -25,7 +25,8 @@ class LanguageToMapTestCase(DatabaseToMapTestCase):
         "Map a language with a comment"
         if self.db.version >= 90100:
             self.skipTest('Only available before PG 9.1')
-        dbmap = self.to_map([DROP_STMT, CREATE_STMT, COMMENT_STMT])
+        dbmap = self.to_map([DROP_STMT, CREATE_STMT, COMMENT_STMT],
+                            superuser=True)
         self.assertEqual(dbmap['language plperl']['description'],
                          'Test language PL/Perl')
 

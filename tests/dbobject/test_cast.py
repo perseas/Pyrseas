@@ -22,7 +22,7 @@ class CastToMapTestCase(DatabaseToMapTestCase):
 
     def test_map_cast_function(self):
         "Map a cast with a function"
-        dbmap = self.to_map([CREATE_FUNC, CREATE_STMT1])
+        dbmap = self.to_map([CREATE_FUNC, CREATE_STMT1], superuser=True)
         expmap = {'function': 'int2_bool(smallint)', 'context': 'explicit',
                   'method': 'function'}
         self.assertEqual(dbmap['cast (smallint as boolean)'], expmap)
@@ -35,7 +35,8 @@ class CastToMapTestCase(DatabaseToMapTestCase):
 
     def test_map_cast_comment(self):
         "Map a cast comment"
-        dbmap = self.to_map([CREATE_FUNC, CREATE_STMT1, COMMENT_STMT])
+        dbmap = self.to_map([CREATE_FUNC, CREATE_STMT1, COMMENT_STMT],
+                            superuser=True)
         self.assertEqual(dbmap['cast (smallint as boolean)']['description'],
                          'Test cast 1')
 
@@ -87,7 +88,7 @@ class CastToSqlTestCase(InputMapToSqlTestCase):
     def test_drop_cast(self):
         "Drop an existing cast"
         stmts = [DROP_STMT, CREATE_FUNC, CREATE_STMT1]
-        sql = self.to_sql(self.std_map(), stmts)
+        sql = self.to_sql(self.std_map(), stmts, superuser=True)
         self.assertEqual(sql[0], "DROP CAST (smallint AS boolean)")
 
     def test_cast_with_comment(self):
@@ -116,7 +117,7 @@ class CastToSqlTestCase(InputMapToSqlTestCase):
         inmap['schema public'].update({'function int2_bool(smallint)': {
                     'returns': 'boolean', 'language': 'sql',
                     'immutable': True, 'source': SOURCE}})
-        sql = self.to_sql(inmap, stmts)
+        sql = self.to_sql(inmap, stmts, superuser=True)
         self.assertEqual(sql, [COMMENT_STMT])
 
     def test_drop_cast_comment(self):
@@ -129,7 +130,7 @@ class CastToSqlTestCase(InputMapToSqlTestCase):
         inmap['schema public'].update({'function int2_bool(smallint)': {
                     'returns': 'boolean', 'language': 'sql',
                     'immutable': True, 'source': SOURCE}})
-        sql = self.to_sql(inmap, stmts)
+        sql = self.to_sql(inmap, stmts, superuser=True)
         self.assertEqual(sql, [
                 "COMMENT ON CAST (smallint AS boolean) IS NULL"])
 
@@ -144,7 +145,7 @@ class CastToSqlTestCase(InputMapToSqlTestCase):
         inmap['schema public'].update({'function int2_bool(smallint)': {
                     'returns': 'boolean', 'language': 'sql',
                     'immutable': True, 'source': SOURCE}})
-        sql = self.to_sql(inmap, stmts)
+        sql = self.to_sql(inmap, stmts, superuser=True)
         self.assertEqual(sql, [
                 "COMMENT ON CAST (smallint AS boolean) IS 'Changed cast 1'"])
 

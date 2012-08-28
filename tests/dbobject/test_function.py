@@ -76,7 +76,7 @@ class FunctionToMapTestCase(DatabaseToMapTestCase):
         # NOTE 2: Needs superuser privilege
         stmts = ["CREATE FUNCTION autoinc() RETURNS trigger "
                  "AS '$libdir/autoinc' LANGUAGE c"]
-        dbmap = self.to_map(stmts)
+        dbmap = self.to_map(stmts, superuser=True)
         expmap = {'language': 'c', 'obj_file': '$libdir/autoinc',
                   'link_symbol': 'autoinc', 'returns': 'trigger'}
         self.assertEqual(dbmap['schema public']['function autoinc()'], expmap)

@@ -14,6 +14,8 @@ TRGM_COMMENT = "text similarity measurement and index searching based on " \
 class ExtensionToMapTestCase(DatabaseToMapTestCase):
     """Test mapping of existing extensions"""
 
+    superuser = True
+
     def test_map_extension(self):
         "Map an existing extension"
         if self.db.version < 90100:
@@ -73,7 +75,7 @@ class ExtensionToSqlTestCase(InputMapToSqlTestCase):
         if self.db.version < 90100:
             self.skipTest('Only available on PG 9.1')
         "Drop an existing extension"
-        sql = self.to_sql(self.std_map(), [CREATE_STMT])
+        sql = self.to_sql(self.std_map(), [CREATE_STMT], superuser=True)
         self.assertEqual(sql, ["DROP EXTENSION pg_trgm"])
 
     def test_create_extension_schema(self):
@@ -110,7 +112,7 @@ class ExtensionToSqlTestCase(InputMapToSqlTestCase):
         inmap = self.std_map()
         inmap.update({'extension pg_trgm': {
                 'schema': 'public', 'description': "Trigram extension"}})
-        sql = self.to_sql(inmap, [CREATE_STMT])
+        sql = self.to_sql(inmap, [CREATE_STMT], superuser=True)
         self.assertEqual(sql, [
                 "COMMENT ON EXTENSION pg_trgm IS 'Trigram extension'"])
 

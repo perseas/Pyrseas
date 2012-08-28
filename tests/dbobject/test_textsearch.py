@@ -30,9 +30,14 @@ COMMENT_TST_STMT = "COMMENT ON TEXT SEARCH TEMPLATE tst1 IS " \
 class TextSearchConfigToMapTestCase(DatabaseToMapTestCase):
     """Test mapping of existing text search configurations"""
 
+    superuser = True
+
     def tearDown(self):
-        self.db.execute(DROP_TSC_STMT)
-        self.db.execute_commit(DROP_TSP_STMT)
+        if self.db.is_superuser():
+            self.db.execute(DROP_TSC_STMT)
+            self.db.execute_commit(DROP_TSP_STMT)
+        else:
+            self.db.execute_commit(DROP_TSC_STMT)
         self.db.close()
 
     def test_map_ts_config(self):
@@ -70,8 +75,11 @@ class TextSearchConfigToSqlTestCase(InputMapToSqlTestCase):
     """Test SQL generation for input text search configurations"""
 
     def tearDown(self):
-        self.db.execute(DROP_TSC_STMT)
-        self.db.execute_commit(DROP_TSP_STMT)
+        if self.db.is_superuser():
+            self.db.execute(DROP_TSC_STMT)
+            self.db.execute_commit(DROP_TSP_STMT)
+        else:
+            self.db.execute_commit(DROP_TSC_STMT)
         self.db.close()
 
     def test_create_ts_config(self):
@@ -107,7 +115,7 @@ class TextSearchConfigToSqlTestCase(InputMapToSqlTestCase):
     def test_drop_ts_config(self):
         "Drop an existing text search configuration"
         stmts = [CREATE_TSP_STMT, CREATE_TSC_STMT]
-        sql = self.to_sql(self.std_map(), stmts)
+        sql = self.to_sql(self.std_map(), stmts, superuser=True)
         self.assertEqual(sql[0], "DROP TEXT SEARCH PARSER tsp1")
         self.assertEqual(sql[1], "DROP TEXT SEARCH CONFIGURATION tsc1")
 
@@ -122,7 +130,7 @@ class TextSearchConfigToSqlTestCase(InputMapToSqlTestCase):
                     'start': 'prsd_start', 'gettoken': 'prsd_nexttoken',
                     'end': 'prsd_end', 'lextypes': 'prsd_lextype',
                     'headline': 'prsd_headline'}})
-        sql = self.to_sql(inmap, stmts)
+        sql = self.to_sql(inmap, stmts, superuser=True)
         self.assertEqual(sql, [COMMENT_TSC_STMT])
 
 
@@ -188,9 +196,12 @@ class TextSearchDictToSqlTestCase(InputMapToSqlTestCase):
 class TextSearchParserToMapTestCase(DatabaseToMapTestCase):
     """Test mapping of existing text search parsers"""
 
+    superuser = True
+
     def tearDown(self):
-        self.db.execute_commit(DROP_TSP_STMT)
-        self.db.close()
+        if self.db.is_superuser():
+            self.db.execute_commit(DROP_TSP_STMT)
+            self.db.close()
 
     def test_map_ts_parser(self):
         "Map an existing text search parser"
@@ -213,8 +224,9 @@ class TextSearchParserToSqlTestCase(InputMapToSqlTestCase):
     """Test SQL generation for input text search parsers"""
 
     def tearDown(self):
-        self.db.execute_commit(DROP_TSP_STMT)
-        self.db.close()
+        if self.db.is_superuser():
+            self.db.execute_commit(DROP_TSP_STMT)
+            self.db.close()
 
     def test_create_ts_parser(self):
         "Create a text search parser that didn't exist"
@@ -236,7 +248,7 @@ class TextSearchParserToSqlTestCase(InputMapToSqlTestCase):
 
     def test_drop_ts_parser(self):
         "Drop an existing text search parser"
-        sql = self.to_sql(self.std_map(), [CREATE_TSP_STMT])
+        sql = self.to_sql(self.std_map(), [CREATE_TSP_STMT], superuser=True)
         self.assertEqual(sql, ["DROP TEXT SEARCH PARSER tsp1"])
 
     def test_comment_on_ts_parser(self):
@@ -247,12 +259,14 @@ class TextSearchParserToSqlTestCase(InputMapToSqlTestCase):
                 'end': 'prsd_end', 'lextypes': 'prsd_lextype',
                 'headline': 'prsd_headline',
                 'description': "Test parser tsp1"}})
-        sql = self.to_sql(inmap, [CREATE_TSP_STMT])
+        sql = self.to_sql(inmap, [CREATE_TSP_STMT], superuser=True)
         self.assertEqual(sql, [COMMENT_TSP_STMT])
 
 
 class TextSearchTemplateToMapTestCase(DatabaseToMapTestCase):
     """Test mapping of existing text search templates"""
+
+    superuser = True
 
     def test_map_ts_template(self):
         "Map an existing text search template"
@@ -272,15 +286,16 @@ class TextSearchTemplateToSqlTestCase(InputMapToSqlTestCase):
     """Test SQL generation for input text search templates"""
 
     def tearDown(self):
-        self.db.execute_commit(DROP_TST_STMT)
-        self.db.close()
+        if self.db.is_superuser():
+            self.db.execute_commit(DROP_TST_STMT)
+            self.db.close()
 
     def test_create_ts_template(self):
         "Create a text search template that didn't exist"
         inmap = self.std_map()
         inmap['schema public'].update({'text search template tst1': {
                     'init': 'dsimple_init', 'lexize': 'dsimple_lexize'}})
-        sql = self.to_sql(inmap, [DROP_TST_STMT])
+        sql = self.to_sql(inmap, [DROP_TST_STMT], superuser=True)
         self.assertEqual(fix_indent(sql[0]), CREATE_TST_STMT)
 
     def test_bad_map_ts_template(self):
@@ -292,7 +307,7 @@ class TextSearchTemplateToSqlTestCase(InputMapToSqlTestCase):
 
     def test_drop_ts_template(self):
         "Drop an existing text search template"
-        sql = self.to_sql(self.std_map(), [CREATE_TST_STMT])
+        sql = self.to_sql(self.std_map(), [CREATE_TST_STMT], superuser=True)
         self.assertEqual(sql, ["DROP TEXT SEARCH TEMPLATE tst1"])
 
     def test_comment_on_ts_template(self):
@@ -301,7 +316,7 @@ class TextSearchTemplateToSqlTestCase(InputMapToSqlTestCase):
         inmap['schema public'].update({'text search template tst1': {
                     'init': 'dsimple_init', 'lexize': 'dsimple_lexize',
                     'description': "Test template tst1"}})
-        sql = self.to_sql(inmap, [CREATE_TST_STMT])
+        sql = self.to_sql(inmap, [CREATE_TST_STMT], superuser=True)
         self.assertEqual(sql, [COMMENT_TST_STMT])
 
 

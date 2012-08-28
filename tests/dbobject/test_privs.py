@@ -117,7 +117,7 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
         "Map a foreign data wrapper with a GRANT"
         stmts = [CREATE_FDW,
                  "GRANT USAGE ON FOREIGN DATA WRAPPER fdw1 TO PUBLIC"]
-        dbmap = self.to_map(stmts, no_privs=False)
+        dbmap = self.to_map(stmts, no_privs=False, superuser=True)
         expmap = {'privileges': [{self.db.user: ['usage']},
                                  {'PUBLIC': ['usage']}]}
         self.assertEqual(dbmap['foreign data wrapper fdw1'], expmap)
@@ -126,7 +126,7 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
         "Map a foreign server with a GRANT"
         stmts = [CREATE_FDW, CREATE_FS,
                  "GRANT USAGE ON FOREIGN SERVER fs1 TO user1"]
-        dbmap = self.to_map(stmts, no_privs=False)
+        dbmap = self.to_map(stmts, no_privs=False, superuser=True)
         expmap = {'privileges': [{self.db.user: ['usage']},
                                  {'user1': ['usage']}]}
         self.assertEqual(dbmap['foreign data wrapper fdw1']['server fs1'],
@@ -140,7 +140,7 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
                  "CREATE FOREIGN TABLE ft1 (c1 integer, c2 text) SERVER fs1",
                  "GRANT SELECT ON ft1 TO PUBLIC",
                  "GRANT INSERT, UPDATE ON ft1 TO user1"]
-        dbmap = self.to_map(stmts, no_privs=False)
+        dbmap = self.to_map(stmts, no_privs=False, superuser=True)
         expmap = {'columns': [{'c1': {'type': 'integer'}},
                               {'c2': {'type': 'text'}}], 'server': 'fs1',
                   'privileges': [{self.db.user: ['all']},
@@ -416,7 +416,7 @@ class PrivilegeToSqlTestCase(InputMapToSqlTestCase):
                     'owner': self.db.user,
                     'privileges': [{self.db.user: ['all']},
                                    {'PUBLIC': ['usage']}]}})
-        sql = self.to_sql(inmap, [CREATE_FDW])
+        sql = self.to_sql(inmap, [CREATE_FDW], superuser=True)
         self.assertEqual(len(sql), 2)
         sql = sorted(sql)
         # assumes self.db.user > PUBLIC
@@ -432,7 +432,7 @@ class PrivilegeToSqlTestCase(InputMapToSqlTestCase):
                     'owner': self.db.user,
                     'privileges': [{self.db.user: ['all']},
                                    {'user2': ['usage']}]}}})
-        sql = self.to_sql(inmap, [CREATE_FDW])
+        sql = self.to_sql(inmap, [CREATE_FDW], superuser=True)
         # sql[0] = CREATE SERVER
         # sql[1] = ALTER SERVER OWNER
         self.assertEqual(sql[2], "GRANT USAGE ON FOREIGN SERVER fs1 TO %s" %
@@ -446,7 +446,7 @@ class PrivilegeToSqlTestCase(InputMapToSqlTestCase):
                     'owner': self.db.user,
                     'privileges': [{self.db.user: ['all']},
                                    {'user2': ['usage']}]}}})
-        sql = self.to_sql(inmap, [CREATE_FDW, CREATE_FS])
+        sql = self.to_sql(inmap, [CREATE_FDW, CREATE_FS], superuser=True)
         self.assertEqual(len(sql), 2)
         sql = sorted(sql)
         self.assertEqual(sql[0], "GRANT USAGE ON FOREIGN SERVER fs1 TO %s" %
@@ -466,7 +466,7 @@ class PrivilegeToSqlTestCase(InputMapToSqlTestCase):
                     'privileges': [{self.db.user: ['all']},
                                    {'PUBLIC': ['select']},
                                    {'user1': ['insert', 'update']}]}})
-        sql = self.to_sql(inmap, [CREATE_FDW, CREATE_FS])
+        sql = self.to_sql(inmap, [CREATE_FDW, CREATE_FS], superuser=True)
         # sql[0] = CREATE TABLE
         # sql[1] = ALTER TABLE OWNER
         self.assertEqual(sql[2], "GRANT ALL ON TABLE ft1 TO %s" % self.db.user)
@@ -488,7 +488,8 @@ class PrivilegeToSqlTestCase(InputMapToSqlTestCase):
                                    {'user1': ['insert', 'update']}]}})
         sql = self.to_sql(inmap, [
                 CREATE_FDW, CREATE_FS,
-                "CREATE FOREIGN TABLE ft1 (c1 integer, c2 text) SERVER fs1"])
+                "CREATE FOREIGN TABLE ft1 (c1 integer, c2 text) SERVER fs1"],
+                          superuser=True)
         self.assertEqual(len(sql), 3)
         sql = sorted(sql)
         self.assertEqual(sql[0], "GRANT ALL ON TABLE ft1 TO %s" % self.db.user)

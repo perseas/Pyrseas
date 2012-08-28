@@ -145,6 +145,8 @@ class EnumToSqlTestCase(InputMapToSqlTestCase):
 class BaseTypeToMapTestCase(DatabaseToMapTestCase):
     """Test mapping of created base type types"""
 
+    superuser = True
+
     def test_base_type(self):
         "Map a base type"
         stmts = [CREATE_SHELL_STMT, CREATE_FUNC_IN, CREATE_FUNC_OUT,
@@ -196,7 +198,7 @@ class BaseTypeToSqlTestCase(InputMapToSqlTestCase):
         "Drop an existing base type"
         stmts = [CREATE_SHELL_STMT, CREATE_FUNC_IN, CREATE_FUNC_OUT,
                  CREATE_TYPE_STMT]
-        sql = self.to_sql(self.std_map(), stmts)
+        sql = self.to_sql(self.std_map(), stmts, superuser=True)
         self.assertEqual(sql, ["DROP TYPE t1 CASCADE"])
 
 

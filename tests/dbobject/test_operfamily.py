@@ -15,6 +15,8 @@ COMMENT_STMT = "COMMENT ON OPERATOR FAMILY of1 USING btree IS " \
 class OperatorFamilyToMapTestCase(DatabaseToMapTestCase):
     """Test mapping of existing operators"""
 
+    superuser = True
+
     def test_map_operfam(self):
         "Map an operator family"
         dbmap = self.to_map([CREATE_STMT])
@@ -49,7 +51,7 @@ class OperatorFamilyToSqlTestCase(InputMapToSqlTestCase):
 
     def test_drop_operfam(self):
         "Drop an existing operator family"
-        sql = self.to_sql(self.std_map(), [CREATE_STMT])
+        sql = self.to_sql(self.std_map(), [CREATE_STMT], superuser=True)
         self.assertEqual(sql, ["DROP OPERATOR FAMILY of1 USING btree"])
 
     def test_operfam_with_comment(self):
@@ -68,7 +70,7 @@ class OperatorFamilyToSqlTestCase(InputMapToSqlTestCase):
         inmap['schema public'].update({
                 'operator family of1 using btree': {
                     'description': 'Test operator family of1'}})
-        sql = self.to_sql(inmap, [CREATE_STMT])
+        sql = self.to_sql(inmap, [CREATE_STMT], superuser=True)
         self.assertEqual(sql, [COMMENT_STMT])
 
     def test_drop_operfam_comment(self):
@@ -77,7 +79,7 @@ class OperatorFamilyToSqlTestCase(InputMapToSqlTestCase):
         inmap = self.std_map()
         inmap['schema public'].update({
                 'operator family of1 using btree': {}})
-        sql = self.to_sql(inmap, stmts)
+        sql = self.to_sql(inmap, stmts, superuser=True)
         self.assertEqual(sql, [
                 "COMMENT ON OPERATOR FAMILY of1 USING btree IS NULL"])
 
@@ -88,7 +90,7 @@ class OperatorFamilyToSqlTestCase(InputMapToSqlTestCase):
         inmap['schema public'].update({
                 'operator family of1 using btree': {
                     'description': 'Changed operator family of1'}})
-        sql = self.to_sql(inmap, stmts)
+        sql = self.to_sql(inmap, stmts, superuser=True)
         self.assertEqual(sql, [
                 "COMMENT ON OPERATOR FAMILY of1 USING btree IS "
                 "'Changed operator family of1'"])

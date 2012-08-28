@@ -21,6 +21,8 @@ COMMENT_FS_STMT = "COMMENT ON SERVER fs1 IS 'Test server fs1'"
 class ForeignDataWrapperToMapTestCase(DatabaseToMapTestCase):
     """Test mapping of existing foreign data wrappers"""
 
+    superuser = True
+
     def test_map_fd_wrapper(self):
         "Map an existing foreign data wrapper"
         dbmap = self.to_map([CREATE_FDW_STMT])
@@ -87,7 +89,7 @@ class ForeignDataWrapperToSqlTestCase(InputMapToSqlTestCase):
 
     def test_drop_fd_wrapper(self):
         "Drop an existing foreign data wrapper"
-        sql = self.to_sql(self.std_map(), [CREATE_FDW_STMT])
+        sql = self.to_sql(self.std_map(), [CREATE_FDW_STMT], superuser=True)
         self.assertEqual(sql[0], "DROP FOREIGN DATA WRAPPER fdw1")
 
     def test_alter_wrapper_options(self):
@@ -96,7 +98,7 @@ class ForeignDataWrapperToSqlTestCase(InputMapToSqlTestCase):
         inmap = self.std_map()
         inmap.update({'foreign data wrapper fdw1': {
                     'options': ['opt1=valX', 'opt3=valY']}})
-        sql = self.to_sql(inmap, stmts)
+        sql = self.to_sql(inmap, stmts, superuser=True)
         self.assertEqual(fix_indent(sql[0]),
                          "ALTER FOREIGN DATA WRAPPER fdw1 OPTIONS "
                          "(SET opt1 'valX', opt3 'valY', DROP opt2)")
@@ -106,12 +108,14 @@ class ForeignDataWrapperToSqlTestCase(InputMapToSqlTestCase):
         inmap = self.std_map()
         inmap.update({'foreign data wrapper fdw1': {
                     'description': "Test foreign data wrapper fdw1"}})
-        sql = self.to_sql(inmap, [CREATE_FDW_STMT])
+        sql = self.to_sql(inmap, [CREATE_FDW_STMT], superuser=True)
         self.assertEqual(sql[0], COMMENT_FDW_STMT)
 
 
 class ForeignServerToMapTestCase(DatabaseToMapTestCase):
     """Test mapping of existing foreign servers"""
+
+    superuser = True
 
     def test_map_server(self):
         "Map an existing foreign server"
@@ -154,7 +158,7 @@ class ForeignServerToSqlTestCase(InputMapToSqlTestCase):
         "Create a foreign server that didn't exist"
         inmap = self.std_map()
         inmap.update({'foreign data wrapper fdw1': {'server fs1': {}}})
-        sql = self.to_sql(inmap, [CREATE_FDW_STMT])
+        sql = self.to_sql(inmap, [CREATE_FDW_STMT], superuser=True)
         self.assertEqual(fix_indent(sql[0]), CREATE_FS_STMT)
 
     def test_create_wrapper_server(self):
@@ -170,7 +174,7 @@ class ForeignServerToSqlTestCase(InputMapToSqlTestCase):
         inmap = self.std_map()
         inmap.update({'foreign data wrapper fdw1': {'server fs1': {
                             'type': 'test', 'version': '1.0'}}})
-        sql = self.to_sql(inmap, [CREATE_FDW_STMT])
+        sql = self.to_sql(inmap, [CREATE_FDW_STMT], superuser=True)
         self.assertEqual(fix_indent(sql[0]),
             "CREATE SERVER fs1 TYPE 'test' VERSION '1.0' "
             "FOREIGN DATA WRAPPER fdw1")
@@ -180,7 +184,7 @@ class ForeignServerToSqlTestCase(InputMapToSqlTestCase):
         inmap = self.std_map()
         inmap.update({'foreign data wrapper fdw1': {'server fs1': {
                             'options': ['dbname=test']}}})
-        sql = self.to_sql(inmap, [CREATE_FDW_STMT])
+        sql = self.to_sql(inmap, [CREATE_FDW_STMT], superuser=True)
         self.assertEqual(fix_indent(sql[0]),
             "CREATE SERVER fs1 FOREIGN DATA WRAPPER fdw1 "
             "OPTIONS (dbname 'test')")
@@ -196,7 +200,7 @@ class ForeignServerToSqlTestCase(InputMapToSqlTestCase):
         stmts = [CREATE_FDW_STMT, CREATE_FS_STMT]
         inmap = self.std_map()
         inmap.update({'foreign data wrapper fdw1': {}})
-        sql = self.to_sql(inmap, stmts)
+        sql = self.to_sql(inmap, stmts, superuser=True)
         self.assertEqual(sql[0], "DROP SERVER fs1")
 
     def test_add_server_options(self):
@@ -205,13 +209,14 @@ class ForeignServerToSqlTestCase(InputMapToSqlTestCase):
         inmap = self.std_map()
         inmap.update({'foreign data wrapper fdw1': {'server fs1': {
                             'options': ['opt1=valA', 'opt2=valB']}}})
-        sql = self.to_sql(inmap, stmts)
+        sql = self.to_sql(inmap, stmts, superuser=True)
         self.assertEqual(fix_indent(sql[0]),
             "ALTER SERVER fs1 OPTIONS (opt1 'valA', opt2 'valB')")
 
     def test_drop_server_wrapper(self):
         "Drop an existing foreign data wrapper and its server"
-        sql = self.to_sql(self.std_map(), [CREATE_FDW_STMT, CREATE_FS_STMT])
+        sql = self.to_sql(self.std_map(), [CREATE_FDW_STMT, CREATE_FS_STMT],
+                          superuser=True)
         self.assertEqual(sql[0], "DROP SERVER fs1")
         self.assertEqual(sql[1], "DROP FOREIGN DATA WRAPPER fdw1")
 
@@ -221,12 +226,14 @@ class ForeignServerToSqlTestCase(InputMapToSqlTestCase):
         inmap = self.std_map()
         inmap.update({'foreign data wrapper fdw1': {'server fs1': {
                                 'description': "Test server fs1"}}})
-        sql = self.to_sql(inmap, stmts)
+        sql = self.to_sql(inmap, stmts, superuser=True)
         self.assertEqual(sql, [COMMENT_FS_STMT])
 
 
 class UserMappingToMapTestCase(DatabaseToMapTestCase):
     """Test mapping of existing user mappings"""
+
+    superuser = True
 
     def test_map_user_mapping(self):
         "Map an existing user mapping"
@@ -254,7 +261,7 @@ class UserMappingToSqlTestCase(InputMapToSqlTestCase):
         inmap = self.std_map()
         inmap.update({'foreign data wrapper fdw1': {'server fs1': {
                         'user mappings': {'PUBLIC': {}}}}})
-        sql = self.to_sql(inmap, stmts)
+        sql = self.to_sql(inmap, stmts, superuser=True)
         self.assertEqual(fix_indent(sql[0]), CREATE_UM_STMT)
 
     def test_create_wrapper_server_mapping(self):
@@ -274,14 +281,14 @@ class UserMappingToSqlTestCase(InputMapToSqlTestCase):
         inmap.update({'foreign data wrapper fdw1': {'server fs1': {
                         'user mappings': {'PUBLIC': {
                                 'options': ['user=john', 'password=doe']}}}}})
-        sql = self.to_sql(inmap, stmts)
+        sql = self.to_sql(inmap, stmts, superuser=True)
         self.assertEqual(fix_indent(sql[0]), CREATE_UM_STMT +
                          " OPTIONS (user 'john', password 'doe')")
 
     def test_drop_user_mapping(self):
         "Drop an existing user mapping"
         stmts = [CREATE_FDW_STMT, CREATE_FS_STMT, CREATE_UM_STMT]
-        sql = self.to_sql(self.std_map(), stmts)
+        sql = self.to_sql(self.std_map(), stmts, superuser=True)
         self.assertEqual(sql[0], "DROP USER MAPPING FOR PUBLIC SERVER fs1")
 
     def test_drop_user_mapping_options(self):
@@ -291,7 +298,7 @@ class UserMappingToSqlTestCase(InputMapToSqlTestCase):
         inmap = self.std_map()
         inmap.update({'foreign data wrapper fdw1': {'server fs1': {
                         'user mappings': {'PUBLIC': {}}}}})
-        sql = self.to_sql(inmap, stmts)
+        sql = self.to_sql(inmap, stmts, superuser=True)
         self.assertEqual(fix_indent(sql[0]),
                          "ALTER USER MAPPING FOR PUBLIC SERVER fs1 "
                          "OPTIONS (DROP opt1, DROP opt2)")
@@ -299,6 +306,8 @@ class UserMappingToSqlTestCase(InputMapToSqlTestCase):
 
 class ForeignTableToMapTestCase(DatabaseToMapTestCase):
     """Test mapping of existing foreign tables"""
+
+    superuser = True
 
     def test_map_foreign_table(self):
         "Map an existing foreign table"
@@ -325,6 +334,8 @@ class ForeignTableToMapTestCase(DatabaseToMapTestCase):
 
 class ForeignTableToSqlTestCase(InputMapToSqlTestCase):
     """Test SQL generation for input foreign tables"""
+
+    superuser = True
 
     def test_create_foreign_table(self):
         "Create a foreign table that didn't exist"
