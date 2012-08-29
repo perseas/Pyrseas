@@ -196,14 +196,20 @@ class PostgresDb(object):
         # Functions
         curs = pgexecute(
             self.conn,
-            """SELECT p.oid::regprocedure
+            """SELECT proisagg, p.oid::regprocedure AS proc
                FROM pg_proc p JOIN pg_namespace n ON (pronamespace = n.oid)
-               WHERE nspname NOT IN ('pg_catalog', 'information_schema')""")
+               WHERE nspname NOT IN ('pg_catalog', 'information_schema')
+               ORDER BY 1, 2""")
         funcs = curs.fetchall()
         curs.close()
         self.conn.rollback()
         for func in funcs:
-            self.execute("DROP FUNCTION IF EXISTS %s CASCADE" % (func[0]))
+            if func['proisagg']:
+                self.execute("DROP AGGREGATE IF EXISTS %s CASCADE" % (
+                        func['proc']))
+            else:
+                self.execute("DROP FUNCTION IF EXISTS %s CASCADE" % (
+                        func['proc']))
         self.conn.commit()
 
         # Languages
