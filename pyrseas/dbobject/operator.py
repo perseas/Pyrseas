@@ -78,9 +78,9 @@ class OperatorDict(DbObjectDict):
     query = \
         """SELECT nspname AS schema, oprname AS name, rolname AS owner,
                   oprleft::regtype AS leftarg, oprright::regtype AS rightarg,
-                  oprcode::regproc AS procedure, oprcom::regoper AS commutator,
-                  oprnegate::regoper AS negator, oprrest::regproc AS restrict,
-                  oprjoin::regproc AS join, oprcanhash AS hashes,
+                  oprcode AS procedure, oprcom::regoper AS commutator,
+                  oprnegate::regoper AS negator, oprrest AS restrict,
+                  oprjoin AS join, oprcanhash AS hashes,
                   oprcanmerge AS merges,
                   obj_description(o.oid, 'pg_operator') AS description
            FROM pg_operator o

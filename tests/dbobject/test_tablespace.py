@@ -2,6 +2,8 @@
 """Test tablespaces
 
 These tests require the existence of tablespaces ts1 and ts2.
+They should be owned by the user running the tests or the user should
+have been granted CREATE (or ALL) privileges on the tablespaces.
 """
 
 import unittest
