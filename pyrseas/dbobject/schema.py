@@ -133,7 +133,7 @@ class SchemaDict(DbObjectDict):
             schema = self[sch] = Schema(name=sch)
             inschema = inmap[key]
             objdict = {}
-            for key in list(inschema.keys()):
+            for key in sorted(inschema.keys()):
                 mapped = False
                 for prefix in list(PREFIXES.keys()):
                     if key.startswith(prefix):
