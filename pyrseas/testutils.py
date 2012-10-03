@@ -2,6 +2,7 @@
 """Utility functions and classes for testing Pyrseas"""
 
 import os
+import getpass
 from unittest import TestCase
 
 from psycopg2 import connect
@@ -53,7 +54,7 @@ def pgexecute_auto(dbconn, query):
 
 
 TEST_DBNAME = os.environ.get("PYRSEAS_TEST_DB", 'pyrseas_testdb')
-TEST_USER = os.environ.get("PYRSEAS_TEST_USER", os.getenv("USER"))
+TEST_USER = os.environ.get("PYRSEAS_TEST_USER", getpass.getuser())
 TEST_HOST = os.environ.get("PYRSEAS_TEST_HOST", None)
 TEST_PORT = os.environ.get("PYRSEAS_TEST_PORT", None)
 ADMIN_DB = os.environ.get("PYRSEAS_ADMIN_DB", 'postgres')
