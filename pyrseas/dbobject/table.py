@@ -215,7 +215,7 @@ class Table(DbClass):
             if col:
                 cols.append(col)
         tbl = {'columns': cols}
-        attrlist = ['description', 'tablespace']
+        attrlist = ['description', 'tablespace', 'unlogged']
         if not no_owner:
             attrlist.append('owner')
         for attr in attrlist:
@@ -283,14 +283,18 @@ class Table(DbClass):
             if not (hasattr(col, 'inherited') and col.inherited):
                 cols.append("    " + col.add()[0])
             colprivs.append(col.add_privs())
+        unlogged = ''
+        if hasattr(self, 'unlogged') and self.unlogged:
+            unlogged = 'UNLOGGED '
         inhclause = ''
         if hasattr(self, 'inherits'):
             inhclause = " INHERITS (%s)" % ", ".join(t for t in self.inherits)
         tblspc = ''
         if hasattr(self, 'tablespace'):
             tblspc = " TABLESPACE %s" % self.tablespace
-        stmts.append("CREATE TABLE %s (\n%s)%s%s" % (
-                self.qualname(), ",\n".join(cols), inhclause, tblspc))
+        stmts.append("CREATE %sTABLE %s (\n%s)%s%s" % (
+                unlogged, self.qualname(), ",\n".join(cols), inhclause,
+                tblspc))
         if hasattr(self, 'owner'):
             stmts.append(self.alter_owner())
         if hasattr(self, 'privileges'):
@@ -428,12 +432,30 @@ class View(DbClass):
         return stmts
 
 
+QUERY_PRE91 = \
+        """SELECT nspname AS schema, relname AS name, relkind AS kind,
+                  spcname AS tablespace, rolname AS owner,
+                  array_to_string(relacl, ',') AS privileges,
+                  CASE WHEN relkind = 'v' THEN pg_get_viewdef(c.oid, TRUE)
+                       ELSE '' END AS definition,
+                  obj_description(c.oid, 'pg_class') AS description
+           FROM pg_class c
+                JOIN pg_roles r ON (r.oid = relowner)
+                JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
+                LEFT JOIN pg_tablespace t ON (reltablespace = t.oid)
+           WHERE relkind in ('r', 'S', 'v')
+                 AND (nspname != 'pg_catalog'
+                      AND nspname != 'information_schema')
+           ORDER BY nspname, relname"""
+
+
 class ClassDict(DbObjectDict):
     "The collection of tables and similar objects in a database"
 
     cls = DbClass
     query = \
         """SELECT nspname AS schema, relname AS name, relkind AS kind,
+                  relpersistence AS persistence,
                   spcname AS tablespace, rolname AS owner,
                   array_to_string(relacl, ',') AS privileges,
                   CASE WHEN relkind = 'v' THEN pg_get_viewdef(c.oid, TRUE)
@@ -456,10 +478,16 @@ class ClassDict(DbObjectDict):
 
     def _from_catalog(self):
         """Initialize the dictionary of tables by querying the catalogs"""
+        if self.dbconn.version < 90100:
+            self.query = QUERY_PRE91
         for table in self.fetch():
             sch, tbl = table.key()
             if hasattr(table, 'privileges'):
                 table.privileges = table.privileges.split(',')
+            if hasattr(table, 'persistence'):
+                if table.persistence == 'u':
+                    table.unlogged = True
+                del table.persistence
             kind = table.kind
             del table.kind
             if kind == 'r':
@@ -498,7 +526,7 @@ class ClassDict(DbObjectDict):
                 if not intable:
                     raise ValueError("Table '%s' has no specification" % k)
                 for attr in ['inherits', 'owner', 'tablespace', 'oldname',
-                             'description']:
+                             'description', 'unlogged']:
                     if attr in intable:
                         setattr(table, attr, intable[attr])
                 try:

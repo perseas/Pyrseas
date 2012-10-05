@@ -62,6 +62,16 @@ class TableToMapTestCase(DatabaseToMapTestCase):
                   'inherits': ['t1', 't2']}
         self.assertEqual(dbmap['schema public']['table t3'], expmap)
 
+    def test_unlogged_table(self):
+        "Map an unlogged table"
+        if self.db.version < 90100:
+            self.skipTest('Only available on PG 9.1')
+        dbmap = self.to_map(["CREATE UNLOGGED TABLE t1 (c1 integer, c2 text)"])
+        expmap = {'columns': [{'c1': {'type': 'integer'}},
+                              {'c2': {'type': 'text'}}],
+                  'unlogged': True}
+        self.assertEqual(dbmap['schema public']['table t1'], expmap)
+
     def test_map_table_within_schema(self):
         "Map a schema and a table within it"
         stmts = ["CREATE SCHEMA s1",
@@ -149,6 +159,16 @@ class TableToSqlTestCase(InputMapToSqlTestCase):
                   "CREATE TABLE s1.t1 (c1 integer, c2 text)"]
         for i in range(len(expsql)):
             self.assertEqual(fix_indent(sql[i]), expsql[i])
+
+    def test_unlogged_table(self):
+        "Create an unlogged table"
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+                    'columns': [{'c1': {'type': 'integer'}},
+                               {'c2': {'type': 'text'}}], 'unlogged': True}})
+        sql = self.to_sql(inmap)
+        self.assertEqual(fix_indent(sql[0]),
+                         "CREATE UNLOGGED TABLE t1 (c1 integer, c2 text)")
 
 
 class TableCommentToSqlTestCase(InputMapToSqlTestCase):
