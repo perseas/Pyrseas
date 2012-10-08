@@ -103,13 +103,15 @@ class Function(Proc):
             src = "$$%s$$" % (newsrc or self.source)
         else:
             src = "$_$%s$_$" % (newsrc or self.source)
-        volat = strict = secdef = cost = rows = ''
+        volat = strict = secdef = cost = rows = config = ''
         if hasattr(self, 'volatility'):
             volat = ' ' + VOLATILITY_TYPES[self.volatility].upper()
         if hasattr(self, 'strict') and self.strict:
             strict = ' STRICT'
         if hasattr(self, 'security_definer') and self.security_definer:
             secdef = ' SECURITY DEFINER'
+        if hasattr(self, 'configuration'):
+            config = ' SET %s' % self.configuration[0]
         if hasattr(self, 'cost') and self.cost != 0:
             if self.language in ['c', 'internal']:
                 if self.cost != 1:
@@ -122,10 +124,10 @@ class Function(Proc):
                 rows = " ROWS %s" % self.rows
 
         stmts.append("CREATE%s FUNCTION %s(%s) RETURNS %s\n    LANGUAGE %s"
-                     "%s%s%s%s%s\n    AS %s" % (
+                     "%s%s%s%s%s%s\n    AS %s" % (
                 newsrc and " OR REPLACE" or '', self.qualname(),
                 self.arguments, self.returns, self.language, volat, strict,
-                secdef, cost, rows, src))
+                secdef, cost, rows, config, src))
         return stmts
 
     def diff_map(self, infunction):
@@ -200,7 +202,7 @@ class ProcDict(DbObjectDict):
                   rolname AS owner, array_to_string(proacl, ',') AS privileges,
                   l.lanname AS language, provolatile AS volatility,
                   proisstrict AS strict, proisagg, prosrc AS source,
-                  probin::text AS obj_file,
+                  probin::text AS obj_file, proconfig AS configuration,
                   prosecdef AS security_definer, procost AS cost,
                   aggtransfn::regprocedure AS sfunc,
                   aggtranstype::regtype AS stype,

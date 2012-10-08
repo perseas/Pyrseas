@@ -81,6 +81,16 @@ class FunctionToMapTestCase(DatabaseToMapTestCase):
                   'link_symbol': 'autoinc', 'returns': 'trigger'}
         self.assertEqual(dbmap['schema public']['function autoinc()'], expmap)
 
+    def test_map_function_config(self):
+        "Map a function with a configuration parameter"
+        stmts = ["CREATE FUNCTION f1() RETURNS date LANGUAGE sql SET "
+                 "datestyle to postgres, dmy AS $_$SELECT CURRENT_DATE$_$"]
+        dbmap = self.to_map(stmts)
+        expmap = {'language': 'sql', 'returns': 'date',
+                  'configuration': ['DateStyle=postgres, dmy'],
+                  'source': "SELECT CURRENT_DATE"}
+        self.assertEqual(dbmap['schema public']['function f1()'], expmap)
+
     def test_map_function_comment(self):
         "Map a function comment"
         dbmap = self.to_map([CREATE_STMT2, COMMENT_STMT])
@@ -174,6 +184,19 @@ class FunctionToSqlTestCase(InputMapToSqlTestCase):
         self.assertEqual(fix_indent(sql[1]), "CREATE FUNCTION autoinc() "
                          "RETURNS trigger LANGUAGE c AS '$libdir/autoinc', "
                          "'autoinc'")
+
+    def test_create_function_config(self):
+        "Create a function with a configuration parameter"
+        inmap = self.std_map()
+        inmap['schema public'].update({'function f1()': {
+                    'language': 'sql', 'returns': 'date',
+                    'configuration': ['DateStyle=postgres, dmy'],
+                    'source': "SELECT CURRENT_DATE"}})
+        sql = self.to_sql(inmap)
+        self.assertEqual(fix_indent(sql[1]),
+                         "CREATE FUNCTION f1() RETURNS date LANGUAGE sql "
+                         "SET DateStyle=postgres, dmy AS "
+                         "$_$SELECT CURRENT_DATE$_$")
 
     def test_create_function_in_schema(self):
         "Create a function within a non-public schema"
