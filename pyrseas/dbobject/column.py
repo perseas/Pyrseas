@@ -30,6 +30,8 @@ class Column(DbSchemaObject):
         del dct['number'], dct['name']
         if '_table' in dct:
             del dct['_table']
+        if '_type' in dct:
+            del dct['_type']
         if 'collation' in dct and dct['collation'] == 'default':
             del dct['collation']
         if hasattr(self, 'inherited'):
@@ -94,9 +96,11 @@ class Column(DbSchemaObject):
         if hasattr(self, '_table'):
             (comptype, objtype) = (self._table.objtype, 'COLUMN')
             compname = self._table.qualname()
-        else:
+        elif hasattr(self, '_type'):
             (comptype, objtype) = ('TYPE', 'ATTRIBUTE')
-            compname = self.table
+            compname = self._type.qualname()
+        else:
+            raise TypeError("Cannot determine type of %s", self.name)
         return "ALTER %s %s DROP %s %s" % (comptype, compname, objtype,
                                            self.name)
 
@@ -109,9 +113,11 @@ class Column(DbSchemaObject):
         if hasattr(self, '_table'):
             (comptype, objtype) = (self._table.objtype, 'COLUMN')
             compname = self._table.qualname()
-        else:
+        elif hasattr(self, '_type'):
             (comptype, objtype) = ('TYPE', 'ATTRIBUTE')
-            compname = self.table
+            compname = self._type.qualname()
+        else:
+            raise TypeError("Cannot determine type of %s", self.name)
         stmt = "ALTER %s %s RENAME %s %s TO %s" % (
             comptype, compname, objtype, self.name, newname)
         self.name = newname
@@ -161,6 +167,7 @@ class Column(DbSchemaObject):
         if hasattr(self, 'default') and not hasattr(incol, 'default'):
             stmts.append(base + "DROP DEFAULT")
         return (", ".join(stmts), self.diff_description(incol))
+
 
 QUERY_PRE91 = \
         """SELECT nspname AS schema, relname AS table, attname AS name,

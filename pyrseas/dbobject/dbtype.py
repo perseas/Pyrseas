@@ -355,6 +355,8 @@ class TypeDict(DbObjectDict):
             if (sch, typ) in self:
                 assert isinstance(self[(sch, typ)], Composite)
                 self[(sch, typ)].attributes = dbcolumns[(sch, typ)]
+                for attr in dbcolumns[(sch, typ)]:
+                    attr._type = self[(sch, typ)]
         for (sch, typ, cns) in list(dbconstrs.keys()):
             constr = dbconstrs[(sch, typ, cns)]
             if not hasattr(constr, 'target') or constr.target != 'd':

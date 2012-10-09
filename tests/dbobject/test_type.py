@@ -93,6 +93,20 @@ class CompositeToSqlTestCase(InputMapToSqlTestCase):
         sql = self.to_sql(inmap, [CREATE_COMPOSITE_STMT])
         self.assertEqual(fix_indent(sql[0]), "ALTER TYPE t1 DROP ATTRIBUTE y")
 
+    def test_drop_attribute_schema(self):
+        "Drop an attribute from a composite type within a non-public schema"
+        if self.db.version < 90100:
+            self.skipTest('Only available on PG 9.1')
+        inmap = self.std_map()
+        inmap.update({'schema s1': {'type t1': {
+                        'attributes': [{'x': {'type': 'integer'}},
+                                       {'z': {'type': 'integer'}}]}}})
+        sql = self.to_sql(inmap, [
+                "CREATE SCHEMA s1",
+                "CREATE TYPE s1.t1 AS (x integer, y integer, z integer)"])
+        self.assertEqual(fix_indent(sql[0]),
+                         "ALTER TYPE s1.t1 DROP ATTRIBUTE y")
+
     def test_rename_attribute(self):
         "Rename an attribute of a composite type"
         if self.db.version < 90100:
