@@ -59,17 +59,28 @@ class IndexToMapTestCase(DatabaseToMapTestCase):
                         {'lower(c2)': {'type': 'expression'}}]}}}
         self.assertEqual(dbmap['schema public']['table t1'], expmap)
 
-    def test_index_function_multi(self):
-        "Map an index using a function with multiple columns"
-        stmts = ["CREATE TABLE t1 (c1 integer, c2 text, c3 text)",
-                 "CREATE INDEX t1_idx ON t1 (lower(c2), lower(c3))"]
+    def test_index_function_complex(self):
+        "Map indexes using nested functions and complex arguments"
+        stmts = ["CREATE TABLE t1 (c1 integer, c2 text, c3 date)",
+                 "CREATE INDEX t1_idx1 ON t1 (substring(c2 from position("
+                 "'_begin' in c2)), substring(c2 from position('_end' in "
+                 "c2)))",
+                 "CREATE INDEX t1_idx2 ON t1 (extract(month from c3), "
+                 "extract(day from c3))"]
         dbmap = self.to_map(stmts)
         expmap = {'columns': [{'c1': {'type': 'integer'}},
                               {'c2': {'type': 'text'}},
-                              {'c3': {'type': 'text'}}],
-                  'indexes': {'t1_idx': {
-                    'keys': [{'lower(c2)': {'type': 'expression'}},
-                             {'lower(c3)': {'type': 'expression'}}]}}}
+                              {'c3': {'type': 'date'}}],
+                  'indexes': {'t1_idx1': {
+                    'keys': [{'"substring"(c2, "position"(c2, \'_begin\''
+                              '::text))': {'type': 'expression'}},
+                             {'"substring"(c2, "position"(c2, \'_end\''
+                              '::text))': {'type': 'expression'}}]},
+                              't1_idx2': {
+                    'keys': [{"date_part('month'::text, c3)": {
+                                'type': 'expression'}},
+                             {"date_part('day'::text, c3)": {
+                                'type': 'expression'}}]}}}
         self.assertEqual(dbmap['schema public']['table t1'], expmap)
 
     def test_index_col_opts(self):

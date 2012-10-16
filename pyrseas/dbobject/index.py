@@ -10,6 +10,27 @@ from pyrseas.dbobject import DbObjectDict, DbSchemaObject
 from pyrseas.dbobject import quote_id, split_schema_obj, commentable
 
 
+def split_exprs(idx_exprs):
+    "Helper function to split index expressions from pg_get_expr()"
+    keyexprs = []
+    nopen = nclose = beg = curr = 0
+    for c in idx_exprs:
+        curr += 1
+        if c == '(':
+            nopen += 1
+        elif c == ')':
+            nclose += 1
+            if nopen > 0 and nopen == nclose:
+                if idx_exprs[beg] == ',':
+                    beg += 1
+                if idx_exprs[beg] == ' ':
+                    beg += 1
+                keyexprs.append(idx_exprs[beg:curr])
+                beg = curr
+                nopen = nclose = 0
+    return keyexprs
+
+
 class Index(DbSchemaObject):
     """A physical index definition, other than a primary key or unique
     constraint index.
@@ -139,29 +160,9 @@ class IndexDict(DbObjectDict):
             keydefs = index.defn[index.defn.find(' USING ') + 7:]
             keydefs = keydefs[keydefs.find(' (') + 2:-1]
             # split expressions (result of pg_get_expr)
-            keyexprs = []
             if hasattr(index, 'keyexprs'):
-                rest = index.keyexprs
+                keyexprs = split_exprs(index.keyexprs)
                 del index.keyexprs
-                while len(rest):
-                    loc = rest.find(',')
-                    expr = rest[:loc]
-                    cntopen = expr.count('(')
-                    cntcls = expr.count(')')
-                    if cntopen == cntcls:
-                        keyexprs.append(rest[:loc])
-                        rest = rest[loc + 1:].lstrip()
-                    elif cntcls < cntopen:
-                        loc = rest[loc + 1:].find(',')
-                        if loc == -1:
-                            keyexprs.append(rest)
-                            rest = ''
-                        else:
-                            loc2 = rest[loc + 1:].find(',')
-                            loccls = rest[loc + 1:].find(')')
-                            if loc2 != -1 and loccls < loc2:
-                                keyexprs.append(rest[:loc + loccls + 2])
-                                rest = rest[loc + loccls + 3:].lstrip()
             # parse the keys
             i = 0
             rest = keydefs
