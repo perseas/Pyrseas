@@ -172,6 +172,8 @@ class IndexDict(DbObjectDict):
                 extra = {}
                 if col == '0':
                     expr = keyexprs[i]
+                    if rest and rest[0] == '(':
+                        expr = '(' + expr + ')'
                     assert(rest.startswith(expr))
                     key = expr
                     extra = {'type': 'expression'}

@@ -97,10 +97,12 @@ class IndexToMapTestCase(DatabaseToMapTestCase):
         self.assertEqual(dbmap['schema public']['table t1'], expmap)
 
     def test_index_mixed(self):
-        "Map a mixed index using functions and a regular column"
+        "Map indexes using functions, a regular column and expressions"
         stmts = ["CREATE TABLE t1 (c1 integer, c2 text, c3 text)",
                  "CREATE INDEX t1_idx ON t1 (btrim(c3, 'x') NULLS FIRST, c1, "
-                 "lower(c2) DESC)"]
+                 "lower(c2) DESC)",
+                 "CREATE INDEX t1_idx2 ON t1 ((c2 || ', ' || c3), "
+                 "(c3 || ' ' || c2))"]
         dbmap = self.to_map(stmts)
         expmap = {'columns': [{'c1': {'type': 'integer'}},
                               {'c2': {'type': 'text'}},
@@ -109,7 +111,12 @@ class IndexToMapTestCase(DatabaseToMapTestCase):
                     'keys': [{"btrim(c3, 'x'::text)": {
                                 'type': 'expression', 'nulls': 'first'}},
                              'c1', {'lower(c2)': {
-                                'type': 'expression', 'order': 'desc'}}]}}}
+                                'type': 'expression', 'order': 'desc'}}]},
+                              't1_idx2': {
+                    'keys': [{"(((c2 || ', '::text) || c3))": {
+                                'type': 'expression'}},
+                             {"(((c3 || ' '::text) || c2))": {
+                                'type': 'expression'}}]}}}
         self.assertEqual(dbmap['schema public']['table t1'], expmap)
 
     def test_map_index_comment(self):
@@ -199,7 +206,7 @@ class IndexToSqlTestCase(InputMapToSqlTestCase):
                          "(c1 cidr_ops NULLS FIRST, c2)")
 
     def test_index_mixed(self):
-        "Create a mixed index using functions and a regular column"
+        "Create indexes using functions, a regular column and expressions"
         stmts = ["CREATE TABLE t1 (c1 integer, c2 text, c3 text)"]
         inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
@@ -211,11 +218,19 @@ class IndexToSqlTestCase(InputMapToSqlTestCase):
                                         'type': 'expression',
                                         'nulls': 'first'}}, 'c1',
                                 {'lower(c2)': {'type': 'expression',
-                                               'order': 'desc'}}]}}}})
-        sql = self.to_sql(inmap, stmts)
+                                               'order': 'desc'}}]},
+                                't1_idx2': {'keys': [
+                                {"(((c2 || ', '::text) || c3))": {
+                                        'type': 'expression'}},
+                                {"(((c3 || ' '::text) || c2))": {
+                                        'type': 'expression'}}]}}}})
+        sql = sorted(self.to_sql(inmap, stmts))
         self.assertEqual(sql[0], "CREATE INDEX t1_idx ON t1 ("
                          "btrim(c3, 'x'::text) NULLS FIRST, c1, "
                          "lower(c2) DESC)")
+        self.assertEqual(sql[1], "CREATE INDEX t1_idx2 ON t1 ("
+                         "(((c2 || ', '::text) || c3)), "
+                         "(((c3 || ' '::text) || c2)))")
 
     def test_comment_on_index(self):
         "Create a comment for an existing index"
