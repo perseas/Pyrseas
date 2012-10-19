@@ -3,14 +3,19 @@
 
 These tests require that the locale fr_FR.utf8 be installed.
 """
-
+import sys
 import unittest
 
 from pyrseas.testutils import DatabaseToMapTestCase
 from pyrseas.testutils import InputMapToSqlTestCase, fix_indent
 
-CREATE_STMT = "CREATE COLLATION c1 (LC_COLLATE = 'fr_FR.utf8', " \
-    "LC_CTYPE = 'fr_FR.utf8')"
+if sys.platform == 'win32':
+    COLL = 'French_France.1252'
+else:
+    COLL = 'fr_FR.utf8'
+
+CREATE_STMT = "CREATE COLLATION c1 (LC_COLLATE = '%s', LC_CTYPE = '%s')" % (
+    COLL, COLL)
 COMMENT_STMT = "COMMENT ON COLLATION c1 IS 'Test collation c1'"
 
 
@@ -22,7 +27,7 @@ class CollationToMapTestCase(DatabaseToMapTestCase):
         if self.db.version < 90100:
             self.skipTest('Only available on PG 9.1')
         dbmap = self.to_map([CREATE_STMT])
-        expmap = {'lc_collate': 'fr_FR.utf8', 'lc_ctype': 'fr_FR.utf8'}
+        expmap = {'lc_collate': COLL, 'lc_ctype': COLL}
         self.assertEqual(dbmap['schema public']['collation c1'], expmap)
 
     def test_map_collation_comment(self):
@@ -67,7 +72,7 @@ class CollationToSqlTestCase(InputMapToSqlTestCase):
             self.skipTest('Only available on PG 9.1')
         inmap = self.std_map()
         inmap['schema public'].update({'collation c1': {
-                    'lc_collate': 'fr_FR.utf8', 'lc_ctype': 'fr_FR.utf8'}})
+                    'lc_collate': COLL, 'lc_ctype': COLL}})
         sql = self.to_sql(inmap)
         self.assertEqual(fix_indent(sql[0]), CREATE_STMT)
 
@@ -77,11 +82,11 @@ class CollationToSqlTestCase(InputMapToSqlTestCase):
             self.skipTest('Only available on PG 9.1')
         inmap = self.std_map()
         inmap.update({'schema s1': {'collation c1': {
-                    'lc_collate': 'fr_FR.utf8', 'lc_ctype': 'fr_FR.utf8'}}})
+                    'lc_collate': COLL, 'lc_ctype': COLL}}})
         sql = self.to_sql(inmap, ["CREATE SCHEMA s1"])
         self.assertEqual(fix_indent(sql[0]),
-                         "CREATE COLLATION s1.c1 (LC_COLLATE = 'fr_FR.utf8', "
-                         "LC_CTYPE = 'fr_FR.utf8')")
+                         "CREATE COLLATION s1.c1 (LC_COLLATE = '%s', "
+                         "LC_CTYPE = '%s')" % (COLL, COLL))
 
     def test_bad_collation_map(self):
         "Error creating a collation with a bad map"
@@ -89,7 +94,7 @@ class CollationToSqlTestCase(InputMapToSqlTestCase):
             self.skipTest('Only available on PG 9.1')
         inmap = self.std_map()
         inmap['schema public'].update({'c1': {
-                    'lc_collate': 'fr_FR.utf8', 'lc_ctype': 'fr_FR.utf8'}})
+                    'lc_collate': COLL, 'lc_ctype': COLL}})
         self.assertRaises(KeyError, self.to_sql, inmap)
 
     def test_drop_collation(self):
@@ -106,7 +111,7 @@ class CollationToSqlTestCase(InputMapToSqlTestCase):
         inmap = self.std_map()
         inmap['schema public'].update({'collation c1': {
                     'description': 'Test collation c1',
-                    'lc_collate': 'fr_FR.utf8', 'lc_ctype': 'fr_FR.utf8'}})
+                    'lc_collate': COLL, 'lc_ctype': COLL}})
         sql = self.to_sql(inmap)
         self.assertEqual(fix_indent(sql[0]), CREATE_STMT)
         self.assertEqual(sql[1], COMMENT_STMT)
