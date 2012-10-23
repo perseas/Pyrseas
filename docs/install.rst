@@ -19,7 +19,7 @@ Requirements
 
 Pyrseas provides tools for `PostgreSQL <http://www.postgresql.org>`_,
 so obviously you need **PostgreSQL** to start with.  Pyrseas has been
-tested with PG 8.4, 9.0 and 9.1, and we'll certainly keep up with
+tested with PG 8.4, 9.0, 9.1 and 9.2, and we'll certainly keep up with
 future releases.  Please refer to section III, `Server Administration
 <http://www.postgresql.org/docs/current/interactive/admin.html>`_ of
 the PostgreSQL documentation for details on installation, setup and
@@ -51,6 +51,8 @@ The Pyrseas utilities rely on **PyYAML**, a `YAML <http://yaml.org>`_
 library.  This may be available as a package for your operating system
 or it can be downloaded from the `Python Package Index
 <http://pypi.python.org/pypi/PyYAML/>`_.
+
+.. _download:
 
 Downloading
 -----------
@@ -146,6 +148,8 @@ That will install the Pyrseas utilities in the ``Scripts`` folder of
 your Python installation.  The source and bytecode files will go in
 the ``site-packages`` folder, e.g.,
 ``C:\Python27\Lib\site-packages\pyrseas``.
+
+.. _installers:
 
 Python Installers
 ~~~~~~~~~~~~~~~~~

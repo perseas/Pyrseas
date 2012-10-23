@@ -41,7 +41,7 @@ Version Control
 ---------------
 
 The case for implementing a tool to facilitate version control over
-SQL databases has been made in a couple of blog posts: `Version
+SQL databases was made in a couple of blog posts: `Version
 Control, Part 1: Pre-SQL
 <http://pyrseas.wordpress.com/2011/02/01/version-control-part-i-pre-sql/>`_
 and `Version Control, Part 2: SQL Databases
@@ -91,8 +91,7 @@ Pyrseas like the hero.
 
 .. [#] The common English name for Perseas is Perseus and the Ancient
    Greek name is Perseos. However, in modern Greek Περσέας_ is the
-   more common spelling for the mythical hero. The project would be
-   Πυρσέας or ΠΥΡΣΕΑΣ in Greek.
+   more common spelling for the mythical hero.
 
 .. _Περσέας: http://en.wiktionary.org/wiki/%CE%A0%CE%B5%CF%81%CF%83%CE%AD%CE%B1%CF%82
 

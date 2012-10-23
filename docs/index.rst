@@ -42,6 +42,7 @@ Contents
 
    overview
    install
+   devel
    testing
    issues
 .. toctree::
