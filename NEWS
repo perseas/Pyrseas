@@ -1,4 +1,4 @@
-0.6.0beta (16-Aug-2012)
+0.6.0 (26-Oct-12)
 
   * Added support for:
 
@@ -10,8 +10,14 @@
     - MATCH attributes for foreign keys (#34)
     - ALTER composite TYPE ADD/DROP/RENAME ATTRIBUTE
     - ENUMs with no labels (#31)
+    - UNLOGGED tables (#45)
+    - CREATE FUNCTION SET configuration_parameter (#46)
+    - PostgreSQL 9.2
 
-  * Correctly support index functions/expressions (#3).
+  * Correctly support index functions/expressions (#3, #44).
+
+  * Schema-qualify composite types when dropping or renaming
+    attributes (#47)
 
   * Fix DbConnection exception handling under Python 3 (#25).
 
@@ -32,6 +38,19 @@
   * dbtoyaml/yamltodb
 
     - Give PGUSER precedence over USER environment variable.
+
+  * Testing
+
+    - Added support, via Tox, for testing against multiple
+      PostgreSQL/Python combinations
+
+    - Changes and documentation for testing on Microsoft Windows
+
+
+
+0.6.0beta (16-Aug-2012)
+
+  See 0.6.0 above.
 
 
 0.5.0 (10-Mar-2012)
