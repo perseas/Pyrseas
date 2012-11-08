@@ -437,3 +437,70 @@ class InputMapToSqlTestCase(PyrseasTestCase):
             base.update({'extension plpgsql': {'schema': 'pg_catalog',
                             'description': "PL/pgSQL procedural language"}})
         return base
+
+
+import tempfile
+import glob
+import subprocess
+
+TEST_DBNAME_SRC = os.environ.get("PYRSEAS_TEST_DB_SRC", 'pyrseas_testdb_src')
+
+
+class DbMigrateTestCase(TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.srcdb = PostgresDb(TEST_DBNAME_SRC, TEST_USER, TEST_HOST,
+                                TEST_PORT)
+        cls.srcdb.connect()
+        cls.srcdb.clear()
+        cls.db = PostgresDb(TEST_DBNAME, TEST_USER, TEST_HOST, TEST_PORT)
+        cls.db.connect()
+        cls.db.clear()
+        progdir = os.path.abspath(os.path.dirname(__file__))
+        cls.dbtoyaml = os.path.join(progdir, 'dbtoyaml.py')
+        cls.yamltodb = os.path.join(progdir, 'yamltodb.py')
+        cls.tmpdir = tempfile.gettempdir()
+
+    @classmethod
+    def remove_tempfiles(cls, prefix):
+        for tfile in glob.glob(os.path.join(cls.tmpdir, prefix + '*')):
+            os.remove(tfile)
+
+    def execute_script(self, path, scriptname):
+        scriptfile = os.path.join(os.path.abspath(os.path.dirname(path)),
+                                  scriptname)
+        lines = []
+        with open(scriptfile, 'r') as fd:
+            lines = [line.strip() for line in fd if line != '\n' and
+                     not line.startswith('--')]
+        self.srcdb.execute_commit(' '.join(lines))
+
+    def tempfile_path(self, filename):
+        return os.path.join(self.tmpdir, filename)
+
+    def _db_params(self):
+        return (self.db.host or 'localhost',
+                '-p', '%d' % (self.db.port or 5432), '-U', self.db.user)
+
+    def run_pg_dump(self, dumpfile, srcdb=False):
+        v = self.srcdb._version
+        pg_dumpver = "pg_dump%d%d" % (v / 10000, (v - v / 10000 * 10000) / 100)
+        dbname = self.srcdb.name if srcdb else self.db.name
+        args = [pg_dumpver, '-h']
+        args.extend(self._db_params())
+        args.extend(['-s', '-f', dumpfile, dbname])
+        subprocess.call(args)
+
+    def create_yaml(self, yamlfile, srcdb=False):
+        dbname = self.srcdb.name if srcdb else self.db.name
+        args = [self.dbtoyaml, '-H']
+        args.extend(self._db_params())
+        args.extend(['-o', yamlfile, dbname])
+        subprocess.call(args)
+
+    def migrate_target(self, yamlfile, outfile):
+        args = [self.yamltodb, '-H']
+        args.extend(self._db_params())
+        args.extend(['-u', '-o', outfile, self.db.name, yamlfile])
+        subprocess.call(args)
