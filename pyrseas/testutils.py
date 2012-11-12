@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Utility functions and classes for testing Pyrseas"""
 
+import sys
 import os
 import getpass
 from unittest import TestCase
@@ -483,9 +484,17 @@ class DbMigrateTestCase(TestCase):
         return (self.db.host or 'localhost',
                 '-p', '%d' % (self.db.port or 5432), '-U', self.db.user)
 
+    def lines(self, the_file):
+        with open(the_file) as f:
+            lines = f.readlines()
+        return lines
+
     def run_pg_dump(self, dumpfile, srcdb=False):
         v = self.srcdb._version
-        pg_dumpver = "pg_dump%d%d" % (v / 10000, (v - v / 10000 * 10000) / 100)
+        pg_dumpver = "pg_dump%d%d" % (v // 10000,
+                                      (v - v // 10000 * 10000) // 100)
+        if sys.platform == 'win32':
+            pg_dumpver += '.bat'
         dbname = self.srcdb.name if srcdb else self.db.name
         args = [pg_dumpver, '-h']
         args.extend(self._db_params())
@@ -495,12 +504,16 @@ class DbMigrateTestCase(TestCase):
     def create_yaml(self, yamlfile, srcdb=False):
         dbname = self.srcdb.name if srcdb else self.db.name
         args = [self.dbtoyaml, '-H']
+        if sys.platform == 'win32':
+            args.insert(0, 'python')
         args.extend(self._db_params())
         args.extend(['-o', yamlfile, dbname])
         subprocess.call(args)
 
     def migrate_target(self, yamlfile, outfile):
         args = [self.yamltodb, '-H']
+        if sys.platform == 'win32':
+            args.insert(0, 'python')
         args.extend(self._db_params())
         args.extend(['-u', '-o', outfile, self.db.name, yamlfile])
         subprocess.call(args)

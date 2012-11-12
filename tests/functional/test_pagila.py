@@ -15,7 +15,7 @@ class PagilaTestCase(DbMigrateTestCase):
 
     @classmethod
     def tearDown(cls):
-        #cls.remove_tempfiles('pagila')
+        cls.remove_tempfiles('pagila')
         cls.remove_tempfiles('empty')
 
     def test_pagila(self):
@@ -56,8 +56,7 @@ class PagilaTestCase(DbMigrateTestCase):
         # order of triggers requires special handling
         adds = []
         subs = []
-        for line in unified_diff(open(srcdump).readlines(),
-                                 open(targdump).readlines()):
+        for line in unified_diff(self.lines(srcdump), self.lines(targdump)):
             if line == '--- \n' or line == '+++ \n' or line.startswith('@@'):
                 continue
             if line[:1] == '+':
@@ -68,7 +67,7 @@ class PagilaTestCase(DbMigrateTestCase):
         for i, line in enumerate(sorted(adds)):
             self.assertEqual(line, subs[i])
         # diff pagila-src.yaml against pagila.yaml
-        self.assertEqual(open(srcyaml).readlines(), open(targyaml).readlines())
+        self.assertEqual(self.lines(srcyaml), self.lines(targyaml))
 
         # Undo the changes
         self.migrate_target(emptyyaml, targsql)
@@ -80,11 +79,9 @@ class PagilaTestCase(DbMigrateTestCase):
         self.create_yaml(targyaml)
 
         # diff empty.dump against pagila.dump
-        self.assertEqual(open(emptydump).readlines(),
-                         open(targdump).readlines())
+        self.assertEqual(self.lines(emptydump), self.lines(targdump))
         # diff empty.yaml against pagila.yaml
-        self.assertEqual(open(emptyyaml).readlines(),
-                         open(targyaml).readlines())
+        self.assertEqual(self.lines(emptyyaml), self.lines(targyaml))
 
 
 def suite():

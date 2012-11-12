@@ -47,9 +47,9 @@ class AutodocTestCase(DbMigrateTestCase):
         self.create_yaml(targyaml)
 
         # diff autodoc-src.dump against autodoc.dump
-        self.assertEqual(open(srcdump).readlines(), open(targdump).readlines())
+        self.assertEqual(self.lines(srcdump), self.lines(targdump))
         # diff autodoc-src.yaml against autodoc.yaml
-        self.assertEqual(open(srcyaml).readlines(), open(targyaml).readlines())
+        self.assertEqual(self.lines(srcyaml), self.lines(targyaml))
 
         # Undo the changes
         self.migrate_target(emptyyaml, targsql)
@@ -61,11 +61,9 @@ class AutodocTestCase(DbMigrateTestCase):
         self.create_yaml(targyaml)
 
         # diff empty.dump against autodoc.dump
-        self.assertEqual(open(emptydump).readlines(),
-                         open(targdump).readlines())
+        self.assertEqual(self.lines(emptydump), self.lines(targdump))
         # diff empty.yaml against autodoc.yaml
-        self.assertEqual(open(emptyyaml).readlines(),
-                         open(targyaml).readlines())
+        self.assertEqual(self.lines(emptyyaml), self.lines(targyaml))
 
 
 def suite():
