@@ -9,6 +9,7 @@
 """
 import string
 
+from pyrseas.yamlutil import MultiLineStr
 from pyrseas.dbobject.privileges import privileges_to_map
 from pyrseas.dbobject.privileges import add_grant, add_revoke, diff_privs
 
@@ -110,10 +111,20 @@ class DbObject(object):
 
         :param attrs: the dictionary of attributes
 
-        Non-key attributes without a value are discarded.
+        Non-key attributes without a value are discarded. Values that
+        are multi-line strings are treated specially so that YAML will
+        output them in block style.
         """
         for key, val in list(attrs.items()):
             if val or key in self.keylist:
+                if key in ['definition', 'description', 'source'] and \
+                        isinstance(val, str) and '\n' in val:
+                    newval = []
+                    for line in val.split('\n'):
+                        if line and line[-1] in (' ', '\t'):
+                            line = line.rstrip()
+                        newval.append(line)
+                    val = MultiLineStr('\n'.join(newval))
                 setattr(self, key, val)
 
     def extern_key(self):
