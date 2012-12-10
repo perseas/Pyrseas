@@ -14,6 +14,18 @@ from pyrseas.database import Database
 from pyrseas.cmdargs import parent_parser
 
 
+class Opts(object):
+    "Object inclusion/exclusion options"
+
+    def __init__(self, args):
+        self.schemas = args.schemas
+        self.excl_schemas = args.excl_schemas
+        self.tables = args.tables
+        self.excl_tables = args.excl_tables
+        self.no_owner = args.no_owner
+        self.no_privs = args.no_privs
+
+
 def main(host='localhost', port=5432, schema=None):
     """Convert database table specifications to YAML."""
     parser = ArgumentParser(parents=[parent_parser()],
@@ -22,6 +34,7 @@ def main(host='localhost', port=5432, schema=None):
     parser.add_argument('-O', '--no-owner', action='store_true',
                         help='exclude object ownership information')
     parser.add_argument('-x', '--no-privileges', action='store_true',
+                        dest='no_privs',
                         help='exclude privilege (GRANT/REVOKE) information')
     group = parser.add_argument_group("Object inclusion/exclusion options",
                                       "(each can be given multiple times)")
@@ -46,10 +59,7 @@ def main(host='localhost', port=5432, schema=None):
 
     pswd = (args.password and getpass.getpass() or None)
     db = Database(args.dbname, args.username, pswd, args.host, args.port)
-    dbmap = db.to_map(schemas=args.schemas, tables=args.tables,
-                      exclude_schemas=args.excl_schemas,
-                      exclude_tables=args.excl_tables,
-                      no_owner=args.no_owner, no_privs=args.no_privileges)
+    dbmap = db.to_map(Opts(args))
 
     print(yaml.dump(dbmap, default_flow_style=False),
           file=args.output or sys.stdout)

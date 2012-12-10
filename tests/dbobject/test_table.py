@@ -94,9 +94,10 @@ class TableToMapTestCase(DatabaseToMapTestCase):
         self.assertTrue('table t3' not in dbmap['schema public'])
 
     def test_map_table_sequence(self):
-        "Map two tables out of three present"
+        "Map sequence if owned by a table"
         stmts = [CREATE_STMT, "CREATE TABLE t2 (c1 integer, c2 text)",
-                 "CREATE SEQUENCE seq1", "ALTER SEQUENCE seq1 OWNED BY t2.c1"]
+                 "CREATE SEQUENCE seq1", "ALTER SEQUENCE seq1 OWNED BY t2.c1",
+                 "CREATE SEQUENCE seq2"]
         dbmap = self.to_map(stmts, None, ['t2'])
         self.db.execute_commit("DROP SEQUENCE seq1")
         expmap = {'columns': [{'c1': {'type': 'integer'}},
@@ -104,6 +105,7 @@ class TableToMapTestCase(DatabaseToMapTestCase):
         self.assertTrue('table t1' not in dbmap['schema public'])
         self.assertEqual(dbmap['schema public']['table t2'], expmap)
         self.assertTrue('sequence seq1' in dbmap['schema public'])
+        self.assertFalse('sequence seq2' in dbmap['schema public'])
 
 
 class TableToSqlTestCase(InputMapToSqlTestCase):

@@ -27,7 +27,9 @@ class SchemaToMapTestCase(DatabaseToMapTestCase):
         "Map a single schema when three schemas exist"
         stmts = [CREATE_STMT, "CREATE SCHEMA s2", "CREATE SCHEMA s3"]
         dbmap = self.to_map(stmts, ['s2'])
+        self.assertTrue('schema s1' not in dbmap)
         self.assertEqual(dbmap['schema s2'], {})
+        self.assertTrue('schema s3' not in dbmap)
 
 
 class SchemaToSqlTestCase(InputMapToSqlTestCase):

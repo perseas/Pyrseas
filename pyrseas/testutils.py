@@ -383,7 +383,7 @@ class DatabaseToMapTestCase(PyrseasTestCase):
 
     superuser = False
 
-    def to_map(self, stmts, schemas=None, tables=None, no_owner=True,
+    def to_map(self, stmts, schemas=[], tables=[], no_owner=True,
                no_privs=True, superuser=False):
         """Execute statements and return a database map.
 
@@ -400,8 +400,15 @@ class DatabaseToMapTestCase(PyrseasTestCase):
             self.db.execute(stmt)
         self.db.conn.commit()
         db = self.database()
-        return db.to_map(schemas=schemas, tables=tables, no_owner=no_owner,
-                         no_privs=no_privs)
+
+        class Opts:
+            pass
+        opts = Opts()
+        opts.schemas = schemas
+        opts.tables = tables
+        opts.no_owner = no_owner
+        opts.no_privs = no_privs
+        return db.to_map(opts)
 
 
 class InputMapToSqlTestCase(PyrseasTestCase):

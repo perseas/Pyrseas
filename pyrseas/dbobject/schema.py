@@ -25,18 +25,40 @@ class Schema(DbObject):
     def allprivs(self):
         return 'UC'
 
-    def to_map(self, dbschemas, no_owner, no_privs):
+    def to_map(self, dbschemas, opts):
         """Convert tables, etc., dictionaries to a YAML-suitable format
 
         :param dbschemas: dictionary of schemas
-        :param no_owner: exclude schema owner information
-        :param no_privs: exclude privilege information
+        :param opts: options to include/exclude schemas/tables, etc.
         :return: dictionary
         """
         key = self.extern_key()
+        no_owner = opts.no_owner
+        no_privs = opts.no_privs
         schema = {key: {} if no_owner else {'owner': self.owner}}
+        seltbls = getattr(opts, 'tables', [])
+
+        if hasattr(self, 'tables'):
+            tbls = {}
+            for tbl in list(self.tables.keys()):
+                if not seltbls or tbl in seltbls:
+                    tbls.update(self.tables[tbl].to_map(dbschemas, opts))
+            schema[key].update(tbls)
 
         def mapper(schema, objtypes):
+            mappeddict = {}
+            if hasattr(schema, objtypes):
+                schemadict = getattr(schema, objtypes)
+                for objkey in list(schemadict.keys()):
+                    if objtypes == 'sequences' or (
+                        not seltbls or objkey in seltbls):
+                        mappeddict.update(schemadict[objkey].to_map(opts))
+            return mappeddict
+
+        for objtypes in ['ftables', 'sequences', 'views']:
+            schema[key].update(mapper(self, objtypes))
+
+        def mapper2(schema, objtypes):
             mappeddict = {}
             if hasattr(schema, objtypes):
                 schemadict = getattr(schema, objtypes)
@@ -44,30 +66,19 @@ class Schema(DbObject):
                     mappeddict.update(schemadict[objkey].to_map(no_owner))
             return mappeddict
 
-        def mapper2(schema, objtypes):
-            mappeddict = {}
-            if hasattr(schema, objtypes):
-                schemadict = getattr(schema, objtypes)
-                for objkey in list(schemadict.keys()):
-                    mappeddict.update(schemadict[objkey].to_map(
+        if hasattr(opts, 'tables') and not opts.tables or \
+                not hasattr(opts, 'tables'):
+            for objtypes in ['conversions', 'domains',
+                             'operators', 'operclasses', 'operfams',
+                             'tsconfigs', 'tsdicts', 'tsparsers', 'tstempls',
+                             'types', 'collations']:
+                schema[key].update(mapper2(self, objtypes))
+            if hasattr(self, 'functions'):
+                funcs = {}
+                for fnc in list(self.functions.keys()):
+                    funcs.update(self.functions[fnc].to_map(
                             no_owner, no_privs))
-            return mappeddict
-
-        if hasattr(self, 'tables'):
-            tbls = {}
-            for tbl in list(self.tables.keys()):
-                tbls.update(self.tables[tbl].to_map(
-                        dbschemas, no_owner, no_privs))
-            schema[key].update(tbls)
-
-        for objtypes in ['conversions', 'domains',
-                         'operators', 'operclasses', 'operfams',
-                         'tsconfigs', 'tsdicts', 'tsparsers', 'tstempls',
-                         'types', 'collations']:
-            schema[key].update(mapper(self, objtypes))
-
-        for objtypes in ['ftables', 'functions', 'sequences', 'views']:
-            schema[key].update(mapper2(self, objtypes))
+                schema[key].update(funcs)
 
         if not no_privs and hasattr(self, 'privileges'):
             schema[key].update({'privileges': self.map_privs()})
@@ -263,19 +274,32 @@ class SchemaDict(DbObjectDict):
             coll = dbcolls[(sch, cll)]
             link_one(sch, 'collations', cll, coll)
 
-    def to_map(self, no_owner=False, no_privs=False):
+    def to_map(self, opts):
         """Convert the schema dictionary to a regular dictionary
 
-        :param no_owner: exclude object owner information
-        :param no_privs: exclude privilege information
+        :param opts: options to include/exclude schemas/tables, etc.
         :return: dictionary
 
         Invokes the `to_map` method of each schema to construct a
         dictionary of schemas.
         """
         schemas = {}
+        selschs = getattr(opts, 'schemas', [])
         for sch in list(self.keys()):
-            schemas.update(self[sch].to_map(self, no_owner, no_privs))
+            if not selschs or sch in selschs:
+                schemas.update(self[sch].to_map(self, opts))
+        if hasattr(opts, 'excl_schemas') and opts.excl_schemas:
+            schemakeys = set('schema ' + sch for sch in opts.excl_schemas)
+            for sch in list(schemas.keys()):
+                if sch in schemakeys:
+                    del schemas[sch]
+
+        # special case for pg_catalog schema
+        if 'schema pg_catalog' in schemas:
+            if not [k for k in list(schemas['schema pg_catalog'].keys()) if
+                     k not in ('description', 'owner', 'privileges')]:
+                del schemas['schema pg_catalog']
+
         return schemas
 
     def diff_map(self, inschemas):

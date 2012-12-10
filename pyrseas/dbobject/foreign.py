@@ -585,28 +585,30 @@ class ForeignTable(DbObjectWithOptions, Table):
     objtype = "FOREIGN TABLE"
     privobjtype = "TABLE"
 
-    def to_map(self, no_owner, no_privs):
+    def to_map(self, opts):
         """Convert a foreign table to a YAML-suitable format
 
-        :param no_owner: exclude table owner information
-        :param no_privs: exclude privilege information
+        :param opts: options to include/exclude tables, etc.
         :return: dictionary
         """
+        if hasattr(opts, 'excl_tables') and opts.excl_tables \
+                and self.name in opts.excl_tables:
+            return {}
         if not hasattr(self, 'columns'):
-            return
+            return {}
         cols = []
         for i in range(len(self.columns)):
-            col = self.columns[i].to_map(no_privs)
+            col = self.columns[i].to_map(opts.no_privs)
             if col:
                 cols.append(col)
         tbl = {'columns': cols, 'server': self.server}
         attrlist = ['options', 'description']
-        if not no_owner:
+        if not opts.no_owner:
             attrlist.append('owner')
         for attr in attrlist:
             if hasattr(self, attr):
                 tbl.update({attr: getattr(self, attr)})
-        if not no_privs and hasattr(self, 'privileges'):
+        if not opts.no_privs and hasattr(self, 'privileges'):
             tbl.update({'privileges': self.map_privs()})
 
         return {self.extern_key(): tbl}

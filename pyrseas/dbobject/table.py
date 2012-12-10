@@ -69,18 +69,24 @@ class Sequence(DbClass):
             (sch, self.dependent_table) = split_schema_obj(
                 data[0], self.schema)
 
-    def to_map(self, no_owner, no_privs):
+    def to_map(self, opts):
         """Convert a sequence definition to a YAML-suitable format
 
-        :param no_owner: exclude sequence owner information
-        :param no_privs: exclude privilege information
+        :param opts: options to include/exclude tables, etc.
         :return: dictionary
         """
+        if hasattr(opts, 'tables') and opts.tables and \
+                (self.name not in opts.tables and
+                 not hasattr(self, 'owner_table') or
+                 self.owner_table not in opts.tables) or (
+                    hasattr(opts, 'excl_tables') and opts.excl_tables
+                    and self.name in opts.excl_tables):
+            return {}
         seq = {}
         for key, val in list(self.__dict__.items()):
             if key in self.keylist or key == 'dependent_table' or (
-                key == 'owner' and no_owner) or (
-                key == 'privileges' and no_privs):
+                key == 'owner' and opts.no_owner) or (
+                key == 'privileges' and opts.no_privs):
                 continue
             if key == 'privileges':
                 seq[key] = self.map_privs()
@@ -199,24 +205,26 @@ class Table(DbClass):
         """
         return [c.name for c in self.columns]
 
-    def to_map(self, dbschemas, no_owner, no_privs):
+    def to_map(self, dbschemas, opts):
         """Convert a table to a YAML-suitable format
 
         :param dbschemas: database dictionary of schemas
-        :param no_owner: exclude table owner information
-        :param no_privs: exclude privilege information
+        :param opts: options to include/exclude tables, etc.
         :return: dictionary
         """
+        if hasattr(opts, 'excl_tables') and opts.excl_tables \
+                and self.name in opts.excl_tables:
+            return {}
         if not hasattr(self, 'columns'):
-            return
+            return {}
         cols = []
         for column in self.columns:
-            col = column.to_map(no_privs)
+            col = column.to_map(opts.no_privs)
             if col:
                 cols.append(col)
         tbl = {'columns': cols}
         attrlist = ['description', 'tablespace', 'unlogged']
-        if not no_owner:
+        if not opts.no_owner:
             attrlist.append('owner')
         for attr in attrlist:
             if hasattr(self, attr):
@@ -264,7 +272,7 @@ class Table(DbClass):
                 tbl['triggers'] = {}
             for k in list(self.triggers.values()):
                 tbl['triggers'].update(self.triggers[k.name].to_map())
-        if not no_privs and hasattr(self, 'privileges'):
+        if not opts.no_privs and hasattr(self, 'privileges'):
             tbl.update({'privileges': self.map_privs()})
 
         return {self.extern_key(): tbl}
@@ -396,6 +404,18 @@ class View(DbClass):
     @property
     def allprivs(self):
         return 'arwdDxt'
+
+    def to_map(self, opts):
+        """Convert a view to a YAML-suitable format
+
+        :param opts: options to include/exclude tables, etc.
+        :return: dictionary
+        """
+        if hasattr(opts, 'excl_tables') and opts.excl_tables \
+                and self.name in opts.excl_tables:
+            return {}
+        return {self.extern_key():
+                    self._base_map(opts.no_owner, opts.no_privs)}
 
     @commentable
     @grantable

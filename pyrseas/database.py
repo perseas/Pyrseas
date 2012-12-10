@@ -203,67 +203,20 @@ class Database(object):
         self.ndb.fdwrappers.from_map(input_fdws, self.ndb)
         self._link_refs(self.ndb)
 
-    def to_map(self, schemas=[], tables=[], exclude_schemas=[],
-            exclude_tables=[], no_owner=False, no_privs=False):
+    def to_map(self, opts):
         """Convert the db maps to a single hierarchy suitable for YAML
 
-        :param schemas: list of schemas to be output
-        :param tables: list of tables to be output
-        :param exclude_schemas:
-            list of schemas to be excluded from output, even those listed in
-            ``schemas``
-        :param exclude_tables:
-            list of tables to be excluded from output, even those listed in
-            ``tables``
-        :param no_owner: exclude object owner information
-        :param no_privs: exclude privilege information
+        :param opts: options to include or exclude various objects
         :return: a YAML-suitable dictionary (without Python objects)
         """
         if not self.db:
             self.from_catalog()
-        dbmap = self.db.extensions.to_map(no_owner)
-        dbmap.update(self.db.languages.to_map(no_owner, no_privs))
+        dbmap = self.db.extensions.to_map(opts.no_owner)
+        dbmap.update(self.db.languages.to_map(opts.no_owner, opts.no_privs))
         dbmap.update(self.db.casts.to_map())
-        dbmap.update(self.db.fdwrappers.to_map(no_owner, no_privs))
-        dbmap.update(self.db.schemas.to_map(no_owner, no_privs))
-        # trim the map of schemas/tables not selected
+        dbmap.update(self.db.fdwrappers.to_map(opts.no_owner, opts.no_privs))
+        dbmap.update(self.db.schemas.to_map(opts))
 
-        if schemas:
-            schemakeys = set('schema ' + sch for sch in schemas)
-            for sch in list(dbmap.keys()):
-                if sch not in schemakeys:
-                    del dbmap[sch]
-
-        if exclude_schemas:
-            schemakeys = set('schema ' + sch for sch in exclude_schemas)
-            for sch in list(dbmap.keys()):
-                if sch in schemakeys:
-                    del dbmap[sch]
-
-        if tables or exclude_tables:
-            ktablist = ['table ' + tbl for tbl in tables]
-            exktablist = ['table ' + tbl for tbl in exclude_tables]
-            for sch in list(dbmap.keys()):
-                if sch.startswith('schema '):
-                    for key in list(dbmap[sch].keys()):
-                        if key == 'description':
-                            continue
-                        if key.startswith('sequence '):
-                            if 'owner_table' in dbmap[sch][key] and \
-                                    dbmap[sch][key]['owner_table'] in tables:
-                                continue
-                        if exktablist and key in exktablist:
-                            del dbmap[sch][key]
-                        if ktablist and key not in ktablist:
-                            del dbmap[sch][key]
-                    if not dbmap[sch]:
-                        del dbmap[sch]
-
-        # special case for pg_catalog schema
-        if 'schema pg_catalog' in dbmap:
-            if not [k for k in list(dbmap['schema pg_catalog'].keys()) if
-                     k not in ('description', 'owner', 'privileges')]:
-                del dbmap['schema pg_catalog']
         return dbmap
 
     def diff_map(self, input_map, schemas=[]):
