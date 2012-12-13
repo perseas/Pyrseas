@@ -213,9 +213,8 @@ class Table(DbClass):
         :return: dictionary
         """
         if hasattr(opts, 'excl_tables') and opts.excl_tables \
-                and self.name in opts.excl_tables:
-            return {}
-        if not hasattr(self, 'columns'):
+                and self.name in opts.excl_tables or \
+                not hasattr(self, 'columns'):
             return {}
         cols = []
         for column in self.columns:

@@ -32,23 +32,27 @@ class Schema(DbObject):
         :param opts: options to include/exclude schemas/tables, etc.
         :return: dictionary
         """
-        key = self.extern_key()
         no_owner = opts.no_owner
         no_privs = opts.no_privs
-        schema = {key: {} if no_owner else {'owner': self.owner}}
-        seltbls = getattr(opts, 'tables', [])
+        schbase = {} if no_owner else {'owner': self.owner}
+        if not no_privs and hasattr(self, 'privileges'):
+            schbase.update({'privileges': self.map_privs()})
+        if hasattr(self, 'description'):
+            schbase.update(description=self.description)
 
+        schobjs = {}
+        seltbls = getattr(opts, 'tables', [])
         if hasattr(self, 'tables'):
             tbls = {}
             for tbl in list(self.tables.keys()):
                 if not seltbls or tbl in seltbls:
                     tbls.update(self.tables[tbl].to_map(dbschemas, opts))
-            schema[key].update(tbls)
+            schobjs.update(tbls)
 
-        def mapper(schema, objtypes):
+        def mapper(objtypes):
             mappeddict = {}
-            if hasattr(schema, objtypes):
-                schemadict = getattr(schema, objtypes)
+            if hasattr(self, objtypes):
+                schemadict = getattr(self, objtypes)
                 for objkey in list(schemadict.keys()):
                     if objtypes == 'sequences' or (
                         not seltbls or objkey in seltbls):
@@ -56,12 +60,12 @@ class Schema(DbObject):
             return mappeddict
 
         for objtypes in ['ftables', 'sequences', 'views']:
-            schema[key].update(mapper(self, objtypes))
+            schobjs.update(mapper(objtypes))
 
-        def mapper2(schema, objtypes):
+        def mapper2(objtypes):
             mappeddict = {}
-            if hasattr(schema, objtypes):
-                schemadict = getattr(schema, objtypes)
+            if hasattr(self, objtypes):
+                schemadict = getattr(self, objtypes)
                 for objkey in list(schemadict.keys()):
                     mappeddict.update(schemadict[objkey].to_map(no_owner))
             return mappeddict
@@ -72,19 +76,20 @@ class Schema(DbObject):
                              'operators', 'operclasses', 'operfams',
                              'tsconfigs', 'tsdicts', 'tsparsers', 'tstempls',
                              'types', 'collations']:
-                schema[key].update(mapper2(self, objtypes))
+                schobjs.update(mapper2(objtypes))
             if hasattr(self, 'functions'):
                 funcs = {}
                 for fnc in list(self.functions.keys()):
                     funcs.update(self.functions[fnc].to_map(
                             no_owner, no_privs))
-                schema[key].update(funcs)
+                schobjs.update(funcs)
 
-        if not no_privs and hasattr(self, 'privileges'):
-            schema[key].update({'privileges': self.map_privs()})
-        if hasattr(self, 'description'):
-            schema[key].update(description=self.description)
-        return schema
+        # special case for pg_catalog schema
+        if self.name == 'pg_catalog' and not schobjs:
+            return {}
+
+        schobjs.update(schbase)
+        return {self.extern_key(): schobjs}
 
     @commentable
     @grantable
@@ -287,18 +292,10 @@ class SchemaDict(DbObjectDict):
         selschs = getattr(opts, 'schemas', [])
         for sch in list(self.keys()):
             if not selschs or sch in selschs:
+                if hasattr(opts, 'excl_schemas') and opts.excl_schemas \
+                        and sch in opts.excl_schemas:
+                    continue
                 schemas.update(self[sch].to_map(self, opts))
-        if hasattr(opts, 'excl_schemas') and opts.excl_schemas:
-            schemakeys = set('schema ' + sch for sch in opts.excl_schemas)
-            for sch in list(schemas.keys()):
-                if sch in schemakeys:
-                    del schemas[sch]
-
-        # special case for pg_catalog schema
-        if 'schema pg_catalog' in schemas:
-            if not [k for k in list(schemas['schema pg_catalog'].keys()) if
-                     k not in ('description', 'owner', 'privileges')]:
-                del schemas['schema pg_catalog']
 
         return schemas
 

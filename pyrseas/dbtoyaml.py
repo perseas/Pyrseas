@@ -14,18 +14,6 @@ from pyrseas.database import Database
 from pyrseas.cmdargs import parent_parser
 
 
-class Opts(object):
-    "Object inclusion/exclusion options"
-
-    def __init__(self, args):
-        self.schemas = args.schemas
-        self.excl_schemas = args.excl_schemas
-        self.tables = args.tables
-        self.excl_tables = args.excl_tables
-        self.no_owner = args.no_owner
-        self.no_privs = args.no_privs
-
-
 def main(host='localhost', port=5432, schema=None):
     """Convert database table specifications to YAML."""
     parser = ArgumentParser(parents=[parent_parser()],
@@ -59,11 +47,10 @@ def main(host='localhost', port=5432, schema=None):
 
     pswd = (args.password and getpass.getpass() or None)
     db = Database(args.dbname, args.username, pswd, args.host, args.port)
-    dbmap = db.to_map(Opts(args))
+    dbmap = db.to_map(args)
 
     print(yaml.dump(dbmap, default_flow_style=False),
           file=args.output or sys.stdout)
-
     if args.output:
         args.output.close()
 
