@@ -41,7 +41,7 @@ class BaseType(DbType):
         dct['storage'] = STORAGE_TYPES[self.storage]
         if self.delimiter == ',':
             del dct['delimiter']
-        return {self.extern_key(): dct}
+        return dct
 
     @commentable
     @ownable
@@ -110,7 +110,7 @@ class Composite(DbType):
             dct.update(owner=self.owner)
         if hasattr(self, 'description'):
             dct.update(description=self.description)
-        return {self.extern_key(): dct}
+        return dct
 
     @commentable
     @ownable
@@ -204,7 +204,7 @@ class Domain(DbType):
                 dct['check_constraints'].update(
                     self.check_constraints[cns.name].to_map(None))
 
-        return {self.extern_key(): dct}
+        return dct
 
     @commentable
     @ownable

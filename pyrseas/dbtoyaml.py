@@ -19,6 +19,8 @@ def main(host='localhost', port=5432, schema=None):
     parser = ArgumentParser(parents=[parent_parser()],
                             description="Extract the schema of a PostgreSQL "
                             "database in YAML format")
+    parser.add_argument('-d', '--directory',
+                        help='root directory for output')
     parser.add_argument('-O', '--no-owner', action='store_true',
                         help='exclude object ownership information')
     parser.add_argument('-x', '--no-privileges', action='store_true',
@@ -44,13 +46,17 @@ def main(host='localhost', port=5432, schema=None):
     parser.set_defaults(host=host, port=port, schema=schema,
                         username=os.getenv("PGUSER") or os.getenv("USER"))
     args = parser.parse_args()
+    if args.directory and args.output:
+        parser.error("Cannot specify both directory and file output")
 
     pswd = (args.password and getpass.getpass() or None)
     db = Database(args.dbname, args.username, pswd, args.host, args.port)
     dbmap = db.to_map(args)
 
-    print(yaml.dump(dbmap, default_flow_style=False),
-          file=args.output or sys.stdout)
+    if not args.directory:
+        print(yaml.dump(dbmap, default_flow_style=False),
+              file=args.output or sys.stdout)
+
     if args.output:
         args.output.close()
 

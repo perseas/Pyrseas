@@ -10,6 +10,10 @@
     ForeignTable derived from DbObjectWithOptions and Table, and
     ForeignTableDict derived from ClassDict.
 """
+import os
+
+import yaml
+
 from pyrseas.dbobject import DbObjectDict, DbObject
 from pyrseas.dbobject import quote_id, commentable, ownable, grantable
 from pyrseas.dbobject.table import ClassDict, Table
@@ -91,14 +95,13 @@ class ForeignDataWrapper(DbObjectWithOptions):
         :param no_privs: exclude privilege information
         :return: dictionary
         """
-        key = self.extern_key()
-        wrapper = {key: self._base_map(no_owner, no_privs)}
+        wrapper = self._base_map(no_owner, no_privs)
         if hasattr(self, 'servers'):
             srvs = {}
             for srv in list(self.servers.keys()):
                 srvs.update(self.servers[srv].to_map(no_owner, no_privs))
-            wrapper[key].update(srvs)
-            del wrapper[key]['servers']
+            wrapper.update(srvs)
+            del wrapper['servers']
         return wrapper
 
     @commentable
@@ -207,19 +210,26 @@ class ForeignDataWrapperDict(DbObjectDict):
                 wrapper.servers = {}
             wrapper.servers.update({srv: dbserver})
 
-    def to_map(self, no_owner, no_privs):
+    def to_map(self, opts):
         """Convert the wrapper dictionary to a regular dictionary
 
-        :param no_owner: exclude wrapper owner information
-        :param no_privs: exclude privilege information
+        :param opts: options to include/exclude information, etc.
         :return: dictionary
 
         Invokes the `to_map` method of each wrapper to construct a
         dictionary of foreign data wrappers.
         """
         wrappers = {}
-        for fdw in list(self.keys()):
-            wrappers.update(self[fdw].to_map(no_owner, no_privs))
+        for fdwkey in list(self.keys()):
+            fdw = self[fdwkey]
+            fdwmap = {fdw.extern_key():
+                          fdw.to_map(opts.no_owner, opts.no_privs)}
+            if opts.directory:
+                with open(os.path.join(
+                        opts.directory, fdw.extern_filename()), 'w') as f:
+                    f.write(yaml.dump(fdwmap))
+            else:
+                wrappers.update(fdwmap)
         return wrappers
 
     def diff_map(self, inwrappers):
@@ -302,7 +312,7 @@ class ForeignServer(DbObjectWithOptions):
         if hasattr(self, 'usermaps'):
             umaps = {}
             for umap in list(self.usermaps.keys()):
-                umaps.update(self.usermaps[umap].to_map())
+                umaps.update({umap: self.usermaps[umap].to_map()})
             server[key]['user mappings'] = umaps
             del server[key]['usermaps']
         return server
@@ -611,7 +621,7 @@ class ForeignTable(DbObjectWithOptions, Table):
         if not opts.no_privs and hasattr(self, 'privileges'):
             tbl.update({'privileges': self.map_privs()})
 
-        return {self.extern_key(): tbl}
+        return tbl
 
     @grantable
     def create(self):

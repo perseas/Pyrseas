@@ -81,7 +81,7 @@ class Sequence(DbClass):
                  self.owner_table not in opts.tables) or (
                     hasattr(opts, 'excl_tables') and opts.excl_tables
                     and self.name in opts.excl_tables):
-            return {}
+            return None
         seq = {}
         for key, val in list(self.__dict__.items()):
             if key in self.keylist or key == 'dependent_table' or (
@@ -106,7 +106,7 @@ class Sequence(DbClass):
                     else:
                         seq[key] = str(val)
 
-        return {self.extern_key(): seq}
+        return seq
 
     @commentable
     @grantable
@@ -215,7 +215,7 @@ class Table(DbClass):
         if hasattr(opts, 'excl_tables') and opts.excl_tables \
                 and self.name in opts.excl_tables or \
                 not hasattr(self, 'columns'):
-            return {}
+            return None
         cols = []
         for column in self.columns:
             col = column.to_map(opts.no_privs)
@@ -274,7 +274,7 @@ class Table(DbClass):
         if not opts.no_privs and hasattr(self, 'privileges'):
             tbl.update({'privileges': self.map_privs()})
 
-        return {self.extern_key(): tbl}
+        return tbl
 
     def create(self):
         """Return SQL statements to CREATE the table
@@ -412,9 +412,8 @@ class View(DbClass):
         """
         if hasattr(opts, 'excl_tables') and opts.excl_tables \
                 and self.name in opts.excl_tables:
-            return {}
-        return {self.extern_key():
-                    self._base_map(opts.no_owner, opts.no_privs)}
+            return None
+        return self._base_map(opts.no_owner, opts.no_privs)
 
     @commentable
     @grantable

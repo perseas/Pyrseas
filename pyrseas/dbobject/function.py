@@ -79,7 +79,7 @@ class Function(Proc):
             else:
                 dct['privileges'] = self.map_privs()
 
-        return {self.extern_key(): dct}
+        return dct
 
     @commentable
     @grantable
@@ -166,7 +166,7 @@ class Aggregate(Proc):
         """
         dct = self._base_map(no_owner, no_privs)
         del dct['language']
-        return {self.extern_key(): dct}
+        return dct
 
     @commentable
     @grantable

@@ -6,6 +6,10 @@
     This defines two classes, Schema and SchemaDict, derived from
     DbObject and DbObjectDict, respectively.
 """
+import os
+
+import yaml
+
 from pyrseas.dbobject import DbObjectDict, DbObject
 from pyrseas.dbobject import quote_id, split_schema_obj
 from pyrseas.dbobject import commentable, ownable, grantable
@@ -25,6 +29,13 @@ class Schema(DbObject):
     def allprivs(self):
         return 'UC'
 
+    def extern_dir(self, root='.'):
+        """Return the path to a directory to hold the schema objects.
+
+        :return: directory path
+        """
+        return os.path.join(root, "%s.%s" % (self.objtype.lower(), self.name))
+
     def to_map(self, dbschemas, opts):
         """Convert tables, etc., dictionaries to a YAML-suitable format
 
@@ -40,35 +51,32 @@ class Schema(DbObject):
         if hasattr(self, 'description'):
             schbase.update(description=self.description)
 
-        schobjs = {}
+        schobjs = []
         seltbls = getattr(opts, 'tables', [])
         if hasattr(self, 'tables'):
-            tbls = {}
-            for tbl in list(self.tables.keys()):
-                if not seltbls or tbl in seltbls:
-                    tbls.update(self.tables[tbl].to_map(dbschemas, opts))
-            schobjs.update(tbls)
+            for objkey in list(self.tables.keys()):
+                if not seltbls or objkey in seltbls:
+                    obj = self.tables[objkey]
+                    schobjs.append((obj, obj.to_map(dbschemas, opts)))
 
         def mapper(objtypes):
-            mappeddict = {}
             if hasattr(self, objtypes):
                 schemadict = getattr(self, objtypes)
                 for objkey in list(schemadict.keys()):
                     if objtypes == 'sequences' or (
                         not seltbls or objkey in seltbls):
-                        mappeddict.update(schemadict[objkey].to_map(opts))
-            return mappeddict
+                        obj = schemadict[objkey]
+                        schobjs.append((obj, obj.to_map(opts)))
 
         for objtypes in ['ftables', 'sequences', 'views']:
-            schobjs.update(mapper(objtypes))
+            mapper(objtypes)
 
         def mapper2(objtypes):
-            mappeddict = {}
             if hasattr(self, objtypes):
                 schemadict = getattr(self, objtypes)
                 for objkey in list(schemadict.keys()):
-                    mappeddict.update(schemadict[objkey].to_map(no_owner))
-            return mappeddict
+                    obj = schemadict[objkey]
+                    schobjs.append((obj, obj.to_map(no_owner)))
 
         if hasattr(opts, 'tables') and not opts.tables or \
                 not hasattr(opts, 'tables'):
@@ -76,20 +84,37 @@ class Schema(DbObject):
                              'operators', 'operclasses', 'operfams',
                              'tsconfigs', 'tsdicts', 'tsparsers', 'tstempls',
                              'types', 'collations']:
-                schobjs.update(mapper2(objtypes))
+                mapper2(objtypes)
             if hasattr(self, 'functions'):
-                funcs = {}
-                for fnc in list(self.functions.keys()):
-                    funcs.update(self.functions[fnc].to_map(
-                            no_owner, no_privs))
-                schobjs.update(funcs)
+                for objkey in list(self.functions.keys()):
+                    obj = self.functions[objkey]
+                    schobjs.append((obj, obj.to_map(no_owner, no_privs)))
 
         # special case for pg_catalog schema
         if self.name == 'pg_catalog' and not schobjs:
             return {}
 
-        schobjs.update(schbase)
-        return {self.extern_key(): schobjs}
+        if opts.directory:
+            dir = self.extern_dir(opts.directory)
+            if not os.path.exists(dir):
+                os.mkdir(dir)
+            for obj, objmap in schobjs:
+                if objmap is not None:
+                    with open(os.path.join(
+                            dir, obj.extern_filename()), 'w') as f:
+                        f.write(yaml.dump({obj.extern_key(): objmap},
+                                          default_flow_style=False))
+            if schbase:
+                with open(os.path.join(opts.directory,
+                          self.extern_filename()), 'w') as f:
+                    f.write(yaml.dump({self.extern_key(): schbase},
+                                      default_flow_style=False))
+            return {}
+
+        schmap = {obj.extern_key(): objmap for obj, objmap in schobjs
+                  if objmap is not None}
+        schmap.update(schbase)
+        return {self.extern_key(): schmap}
 
     @commentable
     @grantable

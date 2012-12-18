@@ -40,7 +40,7 @@ class OperatorClass(DbSchemaObject):
         dct = self._base_map(no_owner)
         if self.name == self.family:
             del dct['family']
-        return {self.extern_key(): dct}
+        return dct
 
     @commentable
     @ownable

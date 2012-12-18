@@ -1,11 +1,15 @@
 # -*- coding: utf-8 -*-
 """
-    pyrseas.cast
-    ~~~~~~~~~~~~
+    pyrseas.dbobject.cast
+    ~~~~~~~~~~~~~~~~~~~~~
 
     This module defines two classes: Cast derived from DbObject and
     CastDict derived from DbObjectDict.
 """
+import os
+
+import yaml
+
 from pyrseas.dbobject import DbObject, DbObjectDict, commentable
 
 
@@ -42,7 +46,7 @@ class Cast(DbObject):
         dct = self._base_map()
         dct['context'] = CONTEXTS[self.context]
         dct['method'] = METHODS[self.method]
-        return {self.extern_key(): dct}
+        return dct
 
     @commentable
     def create(self):
@@ -89,17 +93,25 @@ class CastDict(DbObjectDict):
               OR (castfunc != 0 AND substring(pn.nspname for 3) != 'pg_')
            ORDER BY castsource, casttarget"""
 
-    def to_map(self):
+    def to_map(self,  opts):
         """Convert the cast dictionary to a regular dictionary
 
+        :param opts: options to include/exclude information, etc.
         :return: dictionary
 
         Invokes the `to_map` method of each cast to construct a
         dictionary of casts.
         """
         casts = {}
-        for cst in list(self.keys()):
-            casts.update(self[cst].to_map())
+        for cstkey in list(self.keys()):
+            cst = self[cstkey]
+            cstmap = {cst.extern_key(): cst.to_map()}
+            if opts.directory:
+                with open(os.path.join(
+                        opts.directory, cst.extern_filename()), 'w') as f:
+                    f.write(yaml.dump(cstmap))
+            else:
+                casts.update(cstmap)
         return casts
 
     def from_map(self, incasts, newdb):

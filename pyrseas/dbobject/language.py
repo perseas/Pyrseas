@@ -6,6 +6,10 @@
     This defines two classes, Language and LanguageDict, derived from
     DbObject and DbObjectDict, respectively.
 """
+import os
+
+import yaml
+
 from pyrseas.dbobject import DbObjectDict, DbObject, quote_id
 from pyrseas.dbobject.function import Function
 
@@ -23,11 +27,11 @@ class Language(DbObject):
         :return: dictionary
         """
         if hasattr(self, '_ext'):
-            return {}
+            return None
         dct = self._base_map(no_owner, no_privs)
         if 'functions' in dct:
             del dct['functions']
-        return {self.extern_key(): dct}
+        return dct
 
     def create(self):
         """Return SQL statements to CREATE the language
@@ -101,19 +105,28 @@ class LanguageDict(DbObjectDict):
                     language.functions = {}
                 language.functions.update({fnc: func})
 
-    def to_map(self, no_owner, no_privs):
+    def to_map(self, opts):
         """Convert the language dictionary to a regular dictionary
 
-        :param no_owner: exclude language owner information
-        :param no_privs: exclude privilege information
+        :param opts: options to include/exclude information, etc.
         :return: dictionary
 
         Invokes the `to_map` method of each language to construct a
         dictionary of languages.
         """
         languages = {}
-        for lng in list(self.keys()):
-            languages.update(self[lng].to_map(no_owner, no_privs))
+        for lngkey in list(self.keys()):
+            lng = self[lngkey]
+            lngdict = lng.to_map(opts.no_owner, opts.no_privs)
+            if lngdict is not None:
+                lngmap = {lng.extern_key(): lngdict}
+                if opts.directory:
+                    with open(os.path.join(
+                            opts.directory, lng.extern_filename()), 'w') as f:
+                        f.write(yaml.dump(lngmap))
+                else:
+                    languages.update(lngmap)
+
         return languages
 
     def diff_map(self, inlanguages):

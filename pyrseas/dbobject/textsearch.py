@@ -28,7 +28,7 @@ class TSConfiguration(DbSchemaObject):
             (sch, pars) = self.parser.split('.')
             if sch == self.schema:
                 dct['parser'] = pars
-        return {self.extern_key(): dct}
+        return dct
 
     @commentable
     @ownable

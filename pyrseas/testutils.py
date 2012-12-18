@@ -408,6 +408,7 @@ class DatabaseToMapTestCase(PyrseasTestCase):
         opts.tables = tables
         opts.no_owner = no_owner
         opts.no_privs = no_privs
+        opts.directory = None
         return db.to_map(opts)
 
 

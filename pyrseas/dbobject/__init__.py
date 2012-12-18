@@ -134,10 +134,10 @@ class DbObject(object):
 
         This is used for the first two levels of external maps.  The
         first level is the one that includes schemas, as well as
-        (procedural) languages and casts.  The second level includes
-        all schema-owned objects, i.e., tables, functions, operators,
-        etc.  All subsequent levels, e.g., primary keys, indexes,
-        etc., currently use the object name as the external
+        extensions, languages, casts and FDWs.  The second level
+        includes all schema-owned objects, i.e., tables, functions,
+        operators, etc.  All subsequent levels, e.g., primary keys,
+        indexes, etc., currently use the object name as the external
         identifier, appearing in the map after an object grouping
         header, such as ``primary_key``.
 
@@ -148,6 +148,25 @@ class DbObject(object):
         need the signature, so they override this implementation.
         """
         return '%s %s' % (self.objtype.lower(), self.name)
+
+    def extern_filename(self):
+        """Return a filename to be used to output external maps
+
+        :return: filename string
+
+        This is used for the first two levels of external maps.  The
+        first level is the one that includes schemas, as well as
+        extensions, languages, casts and FDWs.  The second level
+        includes all schema-owned objects, i.e., tables, functions,
+        operators, etc.
+
+        The common format for the filename is `objtype.objname.yaml`,
+        e.g., for a table `t1` the filename is "table.t1.yaml".  For
+        an object name that has characters not allowed in filesystems,
+        the characters are replaced by underscores.
+        """
+        # TODO:  replace disallowed characters in name
+        return '%s.%s.yaml' % (self.objtype.lower(), self.name)
 
     def key(self):
         """Return a tuple that identifies the database object
@@ -212,7 +231,7 @@ class DbObject(object):
         returns a new dictionary using the :meth:`extern_key` result
         as the key.
         """
-        return {self.extern_key(): self._base_map(no_owner, no_privs)}
+        return self._base_map(no_owner, no_privs)
 
     def map_privs(self):
         """Return a list of access privileges on the current object

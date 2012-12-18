@@ -10,6 +10,8 @@
     system catalogs.  The `ndb` Dicts object defines the schemas based
     on the `input_map` supplied to the `from_map` method.
 """
+import os
+
 from pyrseas.lib.dbconn import DbConnection
 from pyrseas.dbobject.language import LanguageDict
 from pyrseas.dbobject.cast import CastDict
@@ -211,10 +213,21 @@ class Database(object):
         """
         if not self.db:
             self.from_catalog()
-        dbmap = self.db.extensions.to_map(opts.no_owner)
-        dbmap.update(self.db.languages.to_map(opts.no_owner, opts.no_privs))
-        dbmap.update(self.db.casts.to_map())
-        dbmap.update(self.db.fdwrappers.to_map(opts.no_owner, opts.no_privs))
+
+        if opts.directory:
+            def mkdir_parents(dir):
+                head, tail = os.path.split(dir)
+                if head and not os.path.isdir(head):
+                    mkdir_parents(head)
+                if tail:
+                    os.mkdir(dir)
+            if not os.path.exists(opts.directory):
+                mkdir_parents(opts.directory)
+
+        dbmap = self.db.extensions.to_map(opts)
+        dbmap.update(self.db.languages.to_map(opts))
+        dbmap.update(self.db.casts.to_map(opts))
+        dbmap.update(self.db.fdwrappers.to_map(opts))
         dbmap.update(self.db.schemas.to_map(opts))
 
         return dbmap
