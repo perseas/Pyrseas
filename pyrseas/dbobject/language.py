@@ -123,7 +123,7 @@ class LanguageDict(DbObjectDict):
                 if opts.directory:
                     with open(os.path.join(
                             opts.directory, lng.extern_filename()), 'w') as f:
-                        f.write(yaml.dump(lngmap))
+                        f.write(yaml.dump(lngmap, default_flow_style=False))
                 else:
                     languages.update(lngmap)
 

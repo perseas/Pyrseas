@@ -11,6 +11,9 @@
     on the `input_map` supplied to the `from_map` method.
 """
 import os
+import sys
+
+import yaml
 
 from pyrseas.lib.dbconn import DbConnection
 from pyrseas.dbobject.language import LanguageDict
@@ -205,6 +208,42 @@ class Database(object):
         self.ndb.fdwrappers.from_map(input_fdws, self.ndb)
         self._link_refs(self.ndb)
 
+    def map_from_dir(self, directory):
+        """Read the database maps starting from a root directory
+
+        :param directory: root directory holding the maps
+        :return: dictionary
+        """
+        if not os.path.isdir(directory):
+            sys.exit("Root directory '%s' doesn't exist" % directory)
+
+        def load(subdir, obj):
+            with open(os.path.join(subdir, obj), 'r') as f:
+                objmap = yaml.load(f)
+            return objmap if isinstance(objmap, dict) else {}
+
+        inmap = {}
+        for entry in os.listdir(directory):
+            if entry.endswith('.yaml'):
+                if not entry.startswith('schema.'):
+                    inmap.update(load(directory, entry))
+            else:
+                # skip over unknown files/dirs
+                if not entry.startswith('schema.'):
+                    continue
+                # read schema.xxx.yaml first
+                schmap = load(directory, entry + '.yaml')
+                assert(len(schmap) == 1)
+                key = list(schmap.keys())[0]
+                inmap.update({key: {}})
+                subdir = os.path.join(directory, entry)
+                if os.path.isdir(subdir):
+                    for schobj in os.listdir(subdir):
+                        schmap[key].update(load(subdir, schobj))
+                inmap.update(schmap)
+
+        return inmap
+
     def to_map(self, opts):
         """Convert the db maps to a single hierarchy suitable for YAML
 
@@ -247,7 +286,12 @@ class Database(object):
         if not self.db:
             self.from_catalog()
         if schemas:
+            schlist = ['schema ' + sch for sch in schemas]
+            for sch in list(input_map.keys()):
+                if sch not in schlist and sch.startswith('schema '):
+                    del input_map[sch]
             self._trim_objects(schemas)
+
         langs = None
         if self.dbconn.version >= 90100:
             langs = [lang[0] for lang in self.dbconn.fetchall(

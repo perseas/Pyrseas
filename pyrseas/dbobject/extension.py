@@ -92,7 +92,7 @@ class ExtensionDict(DbObjectDict):
             if opts.directory:
                 with open(os.path.join(
                         opts.directory, ext.extern_filename()), 'w') as f:
-                    f.write(yaml.dump(extmap))
+                    f.write(yaml.dump(extmap, default_flow_style=False))
             else:
                 extens.update(extmap)
         return extens

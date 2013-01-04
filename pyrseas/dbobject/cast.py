@@ -109,7 +109,7 @@ class CastDict(DbObjectDict):
             if opts.directory:
                 with open(os.path.join(
                         opts.directory, cst.extern_filename()), 'w') as f:
-                    f.write(yaml.dump(cstmap))
+                    f.write(yaml.dump(cstmap, default_flow_style=False))
             else:
                 casts.update(cstmap)
         return casts

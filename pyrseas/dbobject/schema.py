@@ -104,11 +104,11 @@ class Schema(DbObject):
                             dir, obj.extern_filename()), 'w') as f:
                         f.write(yaml.dump({obj.extern_key(): objmap},
                                           default_flow_style=False))
-            if schbase:
-                with open(os.path.join(opts.directory,
-                          self.extern_filename()), 'w') as f:
-                    f.write(yaml.dump({self.extern_key(): schbase},
-                                      default_flow_style=False))
+            # always write the schema YAML file
+            with open(os.path.join(opts.directory,
+                                   self.extern_filename()), 'w') as f:
+                f.write(yaml.dump({self.extern_key(): schbase},
+                                  default_flow_style=False))
             return {}
 
         schmap = {obj.extern_key(): objmap for obj, objmap in schobjs

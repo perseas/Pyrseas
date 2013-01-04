@@ -18,7 +18,13 @@ Description
 
 :program:`dbtoyaml` is a utility for extracting the schema of a
 PostgreSQL database to a `YAML <http://yaml.org>`_ formatted
-specification. Note that `JSON <http://json.org/>`_ is an official
+specification.  By default, the specification is output as a single
+output stream, which can be redirected or explicitly sent to a file.
+As an alternative, the ``--directory`` option allows you to break down
+the specification into multiple files, one for each object (see
+`Directory Tree Output`_).
+
+Note that `JSON <http://json.org/>`_ is an official
 subset of YAML version 1.2, so the :program:`dbtoyaml` output should
 also be compatible with JSON tools.
 
@@ -118,6 +124,24 @@ INSERT to user 'carol'.
 nearly all types of PostgreSQL database objects.  See :ref:`api-ref`
 for a list of supported objects.
 
+Directory Tree Output
+---------------------
+
+The ``--directory`` option (see below) breaks down the output into
+multiple files under a given root directory.  The root is created if
+it does not exist.
+
+The first level contains ``schema.<name>`` subdirectories,
+``schema.<name>.yaml`` files and ``<objtype>.<name>.yaml`` files,
+where ``<name>`` is the name of the corresponding objects and
+``<objtype>`` is the type of top-level (non-schema) object.  Note that
+non-schema refers to PostgreSQL extensions, casts, languages or
+foreign data wrappers.
+
+The second level, i.e., the ``schema.<name>`` subdirectories contain
+``<objtype>.<name>.yaml`` files for each object in the particular
+schema.
+
 Options
 -------
 
@@ -127,6 +151,12 @@ addition to the :doc:`cmdargs`):
 dbname
 
     Specifies the name of the database whose schema is to extracted.
+
+-d **directory**, ``--directory`` **directory**
+
+    Extracts the schema to a two-level directory tree where
+    **directory** is the root of the tree.  See `Directory Tree
+    Output`_ above.
 
 -n `schema`, ---schema= `schema`
 

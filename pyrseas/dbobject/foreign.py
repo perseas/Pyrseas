@@ -227,7 +227,7 @@ class ForeignDataWrapperDict(DbObjectDict):
             if opts.directory:
                 with open(os.path.join(
                         opts.directory, fdw.extern_filename()), 'w') as f:
-                    f.write(yaml.dump(fdwmap))
+                    f.write(yaml.dump(fdwmap, default_flow_style=False))
             else:
                 wrappers.update(fdwmap)
         return wrappers

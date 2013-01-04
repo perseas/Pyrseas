@@ -52,7 +52,14 @@ addition to the :doc:`cmdargs`):
 
     Specifies the location of the YAML specification.  If this is
     omitted or specified as a single or double dash, the specification
-    is read from the program's standard input.
+    is read from the program's standard input.  However, if the
+    ``--directory`` option is used, that takes precedence.
+
+-d **directory**, ``--directory`` **directory**
+
+    Specifies the root of a two-level directory tree where the YAML
+    specification files are present.  See `Directory Tree Output`
+    under :doc:`dbtoyaml` for further details.
 
 -n **schema**, ``--schema=`` **schema**
 

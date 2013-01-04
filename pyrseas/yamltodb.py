@@ -20,15 +20,18 @@ def main(host='localhost', port=5432):
     parser = ArgumentParser(parents=[parent_parser()],
                             description="Generate SQL statements to update a "
                             "PostgreSQL database to match the schema specified"
-                            " in a YAML file")
+                            " in a YAML-formatted file(s)")
+    parser.add_argument('-d', '--directory',
+                        help='root directory for input YAML files')
     parser.add_argument('spec', nargs='?', type=FileType('r'),
                         default=sys.stdin, help='YAML specification')
     parser.add_argument('-1', '--single-transaction', action='store_true',
                         dest='onetrans', help="wrap commands in BEGIN/COMMIT")
     parser.add_argument('-u', '--update', action='store_true',
                         help="apply changes to database (implies -1)")
-    parser.add_argument('-n', '--schema', dest='schlist', action='append',
-                        help="only for named schemas (default all)")
+    parser.add_argument('-n', '--schema', metavar='SCHEMA', dest='schemas',
+                        action='append', default=[],
+                        help="process only named schema(s) (default all)")
 
     parser.set_defaults(host=host, port=port,
                         username=os.getenv("PGUSER") or os.getenv("USER"))
@@ -36,13 +39,12 @@ def main(host='localhost', port=5432):
 
     pswd = (args.password and getpass.getpass() or None)
     db = Database(args.dbname, args.username, pswd, args.host, args.port)
-    inmap = yaml.load(args.spec)
-    if args.schlist:
-        kschlist = ['schema ' + sch for sch in args.schlist]
-        for sch in list(inmap.keys()):
-            if sch not in kschlist and sch.startswith('schema '):
-                del inmap[sch]
-    stmts = db.diff_map(inmap, args.schlist)
+    if args.directory:
+        inmap = db.map_from_dir(args.directory)
+    else:
+        inmap = yaml.load(args.spec)
+
+    stmts = db.diff_map(inmap, args.schemas)
     if stmts:
         fd = args.output or sys.stdout
         if args.onetrans or args.update:
