@@ -474,7 +474,18 @@ class DbMigrateTestCase(TestCase):
     @classmethod
     def remove_tempfiles(cls, prefix):
         for tfile in glob.glob(os.path.join(cls.tmpdir, prefix + '*')):
-            os.remove(tfile)
+            if os.path.isdir(tfile):
+                for entry in os.listdir(tfile):
+                    entry = os.path.join(cls.tmpdir, tfile, entry)
+                    if os.path.isdir(entry):
+                        for file in os.listdir(entry):
+                            os.remove(os.path.join(entry, file))
+                        os.rmdir(entry)
+                    else:
+                        os.remove(entry)
+                os.rmdir(tfile)
+            else:
+                os.remove(tfile)
 
     def execute_script(self, path, scriptname):
         scriptfile = os.path.join(os.path.abspath(os.path.dirname(path)),
@@ -518,10 +529,27 @@ class DbMigrateTestCase(TestCase):
         args.extend(['-o', yamlfile, dbname])
         subprocess.call(args)
 
+    def create_yaml_dir(self, yamldir, srcdb=False):
+        dbname = self.srcdb.name if srcdb else self.db.name
+        args = [self.dbtoyaml, '-H']
+        if sys.platform == 'win32':
+            args.insert(0, 'python')
+        args.extend(self._db_params())
+        args.extend(['-d', yamldir, dbname])
+        subprocess.call(args)
+
     def migrate_target(self, yamlfile, outfile):
         args = [self.yamltodb, '-H']
         if sys.platform == 'win32':
             args.insert(0, 'python')
         args.extend(self._db_params())
         args.extend(['-u', '-o', outfile, self.db.name, yamlfile])
+        subprocess.call(args)
+
+    def migrate_target_dir(self, yamldir, outfile):
+        args = [self.yamltodb, '-H']
+        if sys.platform == 'win32':
+            args.insert(0, 'python')
+        args.extend(self._db_params())
+        args.extend(['-u', '-o', outfile, '-d', yamldir, self.db.name])
         subprocess.call(args)
