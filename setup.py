@@ -8,7 +8,7 @@ from setuptools import setup
 
 setup(
     name='Pyrseas',
-    version='0.6.0beta',
+    version='0.7-dev',
     packages=['pyrseas', 'pyrseas.dbobject', 'pyrseas.lib'],
     entry_points={
         'console_scripts': [

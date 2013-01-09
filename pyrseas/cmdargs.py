@@ -3,6 +3,8 @@
 
 from argparse import ArgumentParser, FileType
 
+from pyrseas import __version__
+
 
 def parent_parser():
     """Create command line argument parser with common PostgreSQL options
@@ -22,5 +24,6 @@ def parent_parser():
                         help="force password prompt")
     parser.add_argument('-o', '--output', type=FileType('w'),
                         help="output file name (default stdout)")
-    parser.add_argument('--version', action='version', version='%(prog)s 0.4')
+    parser.add_argument('--version', action='version',
+                        version='%(prog)s ' + '%s' % __version__)
     return parser

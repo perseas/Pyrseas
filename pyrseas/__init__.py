@@ -1,1 +1,1 @@
-# to avoid setuptools/distutils bug
+__version__ = '0.7-dev'
