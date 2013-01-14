@@ -6,11 +6,8 @@ import os
 import getpass
 from unittest import TestCase
 
-from psycopg2 import connect
-from psycopg2.extras import DictConnection
-from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
-
 from pyrseas.database import Database
+from pyrseas.lib.dbutils import pgexecute, PostgresDb
 
 
 def fix_indent(stmt):
@@ -19,104 +16,15 @@ def fix_indent(stmt):
         replace('( ', '(')
 
 
-def pgconnect(dbname, user, host, port):
-    "Connect to a Postgres database using psycopg2"
-    if host is None or host == '127.0.0.1' or host == 'localhost':
-        host = ''
-    else:
-        host = 'host=%s ' % host
-    if port is None or port == 5432:
-        port = ''
-    else:
-        port = "port=%d " % port
-    return connect("%s%sdbname=%s user=%s" % (
-            host, port, dbname, user), connection_factory=DictConnection)
-
-
-def pgexecute(dbconn, query):
-    "Execute a query using a cursor"
-    curs = dbconn.cursor()
-    try:
-        curs.execute(query)
-    except:
-        curs.close()
-        dbconn.rollback()
-        raise
-    return curs
-
-
-def pgexecute_auto(dbconn, query):
-    "Execute a query using a cursor with autocommit enabled"
-    isolation_level = dbconn.isolation_level
-    dbconn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
-    curs = pgexecute(dbconn, query)
-    dbconn.set_isolation_level(isolation_level)
-    return curs
-
-
 TEST_DBNAME = os.environ.get("PYRSEAS_TEST_DB", 'pyrseas_testdb')
 TEST_USER = os.environ.get("PYRSEAS_TEST_USER", getpass.getuser())
 TEST_HOST = os.environ.get("PYRSEAS_TEST_HOST", None)
 TEST_PORT = os.environ.get("PYRSEAS_TEST_PORT", None)
-ADMIN_DB = os.environ.get("PYRSEAS_ADMIN_DB", 'postgres')
-CREATE_DDL = "CREATE DATABASE %s TEMPLATE = template0"
 PG_OWNER = 'postgres'
 
 
-class PostgresDb(object):
-    """A PostgreSQL database connection
-
-    This is separate from the one used by DbConnection, because the
-    tests need to create and drop databases and other objects,
-    independently.
-    """
-    def __init__(self, name, user, host, port):
-        self.name = name
-        self.conn = None
-        self.user = user
-        self.host = host
-        self.port = port and int(port)
-        self._version = 0
-
-    def connect(self):
-        """Connect to the database
-
-        If we're not already connected we first connect to the admin
-        database and see if the given database exists.  If it doesn't,
-        we create and then connect to it.
-        """
-        if not self.conn:
-            conn = pgconnect(ADMIN_DB, self.user, self.host, self.port)
-            curs = pgexecute(conn,
-                             "SELECT 1 FROM pg_database WHERE datname = '%s'" %
-                             self.name)
-            row = curs.fetchone()
-            if not row:
-                curs.close()
-                curs = pgexecute_auto(conn, CREATE_DDL % self.name)
-                curs.close()
-            conn.close()
-            self.conn = pgconnect(self.name, self.user, self.host, self.port)
-            curs = pgexecute(self.conn, "SHOW server_version_num")
-            self._version = int(curs.fetchone()[0])
-
-    def close(self):
-        "Close the connection if still open"
-        if not self.conn:
-            return ValueError
-        self.conn.close()
-
-    @property
-    def version(self):
-        return self._version
-
-    def create(self):
-        "Drop the database if it exists and re-create it"
-        conn = pgconnect(ADMIN_DB, self.user, self.host, self.port)
-        curs = pgexecute_auto(conn, "DROP DATABASE IF EXISTS %s" % self.name)
-        curs = pgexecute_auto(conn, CREATE_DDL % self.name)
-        curs.close()
-        conn.close()
+class PgTestDb(PostgresDb):
+    """A PostgreSQL database connection for testing."""
 
     def clear(self):
         "Drop tables and other objects"
@@ -327,23 +235,6 @@ class PostgresDb(object):
                     fdw[0]))
         self.conn.commit()
 
-    def drop(self):
-        "Drop the database"
-        conn = pgconnect(ADMIN_DB, self.user, self.host, self.port)
-        curs = pgexecute_auto(conn, "DROP DATABASE %s" % self.name)
-        curs.close()
-        conn.close()
-
-    def execute(self, stmt):
-        "Execute a DDL statement"
-        curs = pgexecute(self.conn, stmt)
-        curs.close()
-
-    def execute_commit(self, stmt):
-        "Execute a DDL statement and commit"
-        self.execute(stmt)
-        self.conn.commit()
-
     def is_plpgsql_installed(self):
         "Is PL/pgSQL installed?"
         curs = pgexecute(self.conn,
@@ -365,7 +256,7 @@ class PyrseasTestCase(TestCase):
     """Base class for most test cases"""
 
     def setUp(self):
-        self.db = PostgresDb(TEST_DBNAME, TEST_USER, TEST_HOST, TEST_PORT)
+        self.db = PgTestDb(TEST_DBNAME, TEST_USER, TEST_HOST, TEST_PORT)
         self.db.connect()
         self.db.clear()
 
@@ -459,11 +350,11 @@ class DbMigrateTestCase(TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.srcdb = PostgresDb(TEST_DBNAME_SRC, TEST_USER, TEST_HOST,
+        cls.srcdb = PgTestDb(TEST_DBNAME_SRC, TEST_USER, TEST_HOST,
                                 TEST_PORT)
         cls.srcdb.connect()
         cls.srcdb.clear()
-        cls.db = PostgresDb(TEST_DBNAME, TEST_USER, TEST_HOST, TEST_PORT)
+        cls.db = PgTestDb(TEST_DBNAME, TEST_USER, TEST_HOST, TEST_PORT)
         cls.db.connect()
         cls.db.clear()
         progdir = os.path.abspath(os.path.dirname(__file__))
