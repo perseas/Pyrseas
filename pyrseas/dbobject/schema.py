@@ -8,8 +8,7 @@
 """
 import os
 
-import yaml
-
+from pyrseas.yamlutil import yamldump
 from pyrseas.dbobject import DbObjectDict, DbObject
 from pyrseas.dbobject import quote_id, split_schema_obj
 from pyrseas.dbobject import commentable, ownable, grantable
@@ -102,13 +101,11 @@ class Schema(DbObject):
                 if objmap is not None:
                     with open(os.path.join(
                             dir, obj.extern_filename()), 'w') as f:
-                        f.write(yaml.dump({obj.extern_key(): objmap},
-                                          default_flow_style=False))
+                        f.write(yamldump({obj.extern_key(): objmap}))
             # always write the schema YAML file
             with open(os.path.join(opts.directory,
                                    self.extern_filename()), 'w') as f:
-                f.write(yaml.dump({self.extern_key(): schbase},
-                                  default_flow_style=False))
+                f.write(yamldump({self.extern_key(): schbase}))
             return {}
 
         schmap = {obj.extern_key(): objmap for obj, objmap in schobjs

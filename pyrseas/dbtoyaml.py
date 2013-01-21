@@ -8,8 +8,7 @@ import sys
 import getpass
 from argparse import ArgumentParser
 
-import yaml
-
+from pyrseas.yamlutil import yamldump
 from pyrseas.database import Database
 from pyrseas.cmdargs import parent_parser
 
@@ -54,8 +53,7 @@ def main(host='localhost', port=5432, schema=None):
     dbmap = db.to_map(args)
 
     if not args.directory:
-        print(yaml.dump(dbmap, default_flow_style=False),
-              file=args.output or sys.stdout)
+        print(yamldump(dbmap), file=args.output or sys.stdout)
 
     if args.output:
         args.output.close()

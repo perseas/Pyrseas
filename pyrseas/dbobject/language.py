@@ -8,8 +8,7 @@
 """
 import os
 
-import yaml
-
+from pyrseas.yamlutil import yamldump
 from pyrseas.dbobject import DbObjectDict, DbObject, quote_id
 from pyrseas.dbobject.function import Function
 
@@ -123,7 +122,7 @@ class LanguageDict(DbObjectDict):
                 if opts.directory:
                     with open(os.path.join(
                             opts.directory, lng.extern_filename()), 'w') as f:
-                        f.write(yaml.dump(lngmap, default_flow_style=False))
+                        f.write(yamldump(lngmap))
                 else:
                     languages.update(lngmap)
 

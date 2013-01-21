@@ -7,6 +7,7 @@
     Most Pyrseas classes are derived from either DbObject or
     DbObjectDict.
 """
+import sys
 import string
 
 from pyrseas.yamlutil import MultiLineStr
@@ -124,7 +125,10 @@ class DbObject(object):
                         if line and line[-1] in (' ', '\t'):
                             line = line.rstrip()
                         newval.append(line)
-                    val = MultiLineStr('\n'.join(newval))
+                    strval = '\n'.join(newval)
+                    if sys.version < '3':
+                        strval = strval.decode('utf_8')
+                    val = MultiLineStr(strval)
                 setattr(self, key, val)
 
     def extern_key(self):

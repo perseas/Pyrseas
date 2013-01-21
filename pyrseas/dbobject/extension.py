@@ -8,8 +8,7 @@
 """
 import os
 
-import yaml
-
+from pyrseas.yamlutil import yamldump
 from pyrseas.dbobject import DbObjectDict, DbObject
 from pyrseas.dbobject import quote_id, commentable
 
@@ -92,7 +91,7 @@ class ExtensionDict(DbObjectDict):
             if opts.directory:
                 with open(os.path.join(
                         opts.directory, ext.extern_filename()), 'w') as f:
-                    f.write(yaml.dump(extmap, default_flow_style=False))
+                    f.write(yamldump(extmap))
             else:
                 extens.update(extmap)
         return extens

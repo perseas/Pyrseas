@@ -8,8 +8,7 @@
 """
 import os
 
-import yaml
-
+from pyrseas.yamlutil import yamldump
 from pyrseas.dbobject import DbObject, DbObjectDict, commentable
 
 
@@ -109,7 +108,7 @@ class CastDict(DbObjectDict):
             if opts.directory:
                 with open(os.path.join(
                         opts.directory, cst.extern_filename()), 'w') as f:
-                    f.write(yaml.dump(cstmap, default_flow_style=False))
+                    f.write(yamldump(cstmap))
             else:
                 casts.update(cstmap)
         return casts

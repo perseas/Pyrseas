@@ -12,8 +12,7 @@
 """
 import os
 
-import yaml
-
+from pyrseas.yamlutil import yamldump
 from pyrseas.dbobject import DbObjectDict, DbObject
 from pyrseas.dbobject import quote_id, commentable, ownable, grantable
 from pyrseas.dbobject.table import ClassDict, Table
@@ -227,7 +226,7 @@ class ForeignDataWrapperDict(DbObjectDict):
             if opts.directory:
                 with open(os.path.join(
                         opts.directory, fdw.extern_filename()), 'w') as f:
-                    f.write(yaml.dump(fdwmap, default_flow_style=False))
+                    f.write(yamldump(fdwmap))
             else:
                 wrappers.update(fdwmap)
         return wrappers
