@@ -397,6 +397,19 @@ class View(DbClass):
     def allprivs(self):
         return 'arwdDxt'
 
+    def to_map(self, no_owner=False, no_privs=False):
+        """Convert a view to a YAML-suitable format
+
+        :param no_owner: exclude view owner information
+        :param no_privs: exclude privilege information
+        :return: dictionary
+        """
+        view = self._base_map(no_owner, no_privs)
+        if hasattr(self, 'triggers'):
+            for key in list(self.triggers.values()):
+                view['triggers'].update(self.triggers[key.name].to_map())
+        return {self.extern_key(): view}
+
     @commentable
     @grantable
     @ownable
@@ -557,6 +570,8 @@ class ClassDict(DbObjectDict):
                     raise ValueError("View '%s' has no specification" % k)
                 for attr, val in list(inview.items()):
                     setattr(view, attr, val)
+                if 'triggers' in inview:
+                    newdb.triggers.from_map(view, inview['triggers'])
             else:
                 raise KeyError("Unrecognized object type: %s" % k)
             obj = self[(schema.name, key)]

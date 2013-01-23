@@ -112,12 +112,11 @@ class TriggerDict(DbObjectDict):
         if self.dbconn.version < 90000:
             self.query = QUERY_PRE90
         for trig in self.fetch():
-            if 'BEFORE ' in trig.definition:
-                trig.timing = 'before'
-                evtstart = trig.definition.index('BEFORE ') + 7
-            else:
-                trig.timing = 'after'
-                evtstart = trig.definition.index('AFTER ') + 6
+            for timing in ['BEFORE', 'AFTER', 'INSTEAD OF']:
+                timspc = timing + ' '
+                if timspc in trig.definition:
+                    trig.timing = timing.lower()
+                    evtstart = trig.definition.index(timspc) + len(timspc)
             evtend = trig.definition.index(' ON ', evtstart)
             events = trig.definition[evtstart:evtend]
             trig.events = []
