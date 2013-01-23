@@ -413,7 +413,11 @@ class View(DbClass):
         if hasattr(opts, 'excl_tables') and opts.excl_tables \
                 and self.name in opts.excl_tables:
             return None
-        return self._base_map(opts.no_owner, opts.no_privs)
+        view = self._base_map(opts.no_owner, opts.no_privs)
+        if hasattr(self, 'triggers'):
+            for key in list(self.triggers.values()):
+                view['triggers'].update(self.triggers[key.name].to_map())
+        return view
 
     @commentable
     @grantable
@@ -575,6 +579,8 @@ class ClassDict(DbObjectDict):
                     raise ValueError("View '%s' has no specification" % k)
                 for attr, val in list(inview.items()):
                     setattr(view, attr, val)
+                if 'triggers' in inview:
+                    newdb.triggers.from_map(view, inview['triggers'])
             else:
                 raise KeyError("Unrecognized object type: %s" % k)
             obj = self[(schema.name, key)]
