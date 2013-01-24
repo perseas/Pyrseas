@@ -193,7 +193,7 @@ def diff_privs(currobj, currlist, newobj, newlist, subobj=''):
             stmts.append(add_grant(newobj, rejoin(newprivs, usr, gtor),
                                    subobj))
         else:
-            if currprivs[(usr, gtor)] != newprivs[(usr, gtor)]:
+            if sorted(currprivs[(usr, gtor)]) != sorted(newprivs[(usr, gtor)]):
                 stmts.append(add_revoke(currobj, rejoin(currprivs, usr, gtor),
                                         subobj))
                 stmts.append(add_grant(newobj, rejoin(newprivs, usr, gtor),
