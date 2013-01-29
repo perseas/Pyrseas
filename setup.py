@@ -16,7 +16,6 @@ setup(
             'yamltodb = pyrseas.yamltodb:main']},
 
     install_requires=[
-        'setuptools >= 0.6',
         'psycopg2 >= 2.2',
         'PyYAML >= 3.09'],
 
