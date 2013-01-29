@@ -165,12 +165,17 @@ or::
 
  sudo easy_install Pyrseas
 
+If this is the first time you are installing a Python package, please
+do yourself a favor and read and follow the instructions in the
+"Distribute & Pip" subsection of the "Installing Python on ..."
+section for your platform of the `The Hitchhiker’s Guide to Python!
+<http://docs.python-guide.org/en/latest/index.html>`_.
+
 .. note:: On FreeBSD, it has been reported that it is necessary to
           install the Python ``distribute`` package, prior to
-          installing Pyrseas with ``pip``.  In other words, you need
-          to run ``sudo pip install distribute`` before the above
-          ``pip`` command.  This may also be necessary on other BSD
-          variants.
+          installing Pyrseas with ``pip``.  This may also be necessary
+          on other BSD variants.  See the *Hitchhiker's Guide* above
+          for further details.
 
 .. note:: On Windows 64-bit, it has been reported that it is necessary
           to obtain unofficial versions of the ``distribute`` and
