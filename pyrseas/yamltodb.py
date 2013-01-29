@@ -49,7 +49,7 @@ def main(host='localhost', port=5432):
         fd = args.output or sys.stdout
         if args.onetrans or args.update:
             print("BEGIN;", file=fd)
-        print(";\n".join(stmts) + ';', file=fd)
+        print(";\n\n".join(stmts) + ';', file=fd)
         if args.onetrans or args.update:
             print("COMMIT;", file=fd)
         if args.update:
