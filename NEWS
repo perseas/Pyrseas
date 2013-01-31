@@ -1,3 +1,13 @@
+0.6.1 (31-Jan-13)
+
+  * Add support for INSTEAD OF triggers on views (#50).
+
+  * Eliminated yamltodb generation of spurious REVOKE/GRANT commands
+    (#51).
+
+  * Removed setuptools from setup.py install_requires.
+
+
 0.6.0 (26-Oct-12)
 
   * Added support for:
@@ -45,7 +55,6 @@
       PostgreSQL/Python combinations
 
     - Changes and documentation for testing on Microsoft Windows
-
 
 
 0.6.0beta (16-Aug-2012)

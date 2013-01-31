@@ -2,7 +2,7 @@
    "name": "Pyrseas",
    "abstract": "Framework and utilities to upgrade and maintain databases",
    "description": "Pyrseas provides a framework and utilities to upgrade and maintain a PostgreSQL database.  Its utilities output a database schema in YAML format suitable for committing to a version control system and read this format to generate SQL to sync to another database.  Supports PostgreSQL 8.4, 9.0, 9.1 and9.2.",
-   "version": "0.6.0",
+   "version": "0.6.1",
    "maintainer": "Joe Abbate <jma@freedomcircle.com>",
    "license": "bsd",
    "prereqs": {
@@ -16,13 +16,13 @@
      "dbtoyaml": {
        "file": "pyrseas/dbtoyaml.py",
        "docfile": "docs/dbtoyaml.rst",
-       "version": "0.6.0",
+       "version": "0.6.1",
        "abstract": "Output PostgreSQL schemas in YAML format"
      },
      "yamltodb": {
        "file": "pyrseas/yamltodb.py",
        "docfile": "docs/yamltodb.rst",
-       "version": "0.6.0",
+       "version": "0.6.1",
        "abstract": "Generate SQL to sync a database with a YAML schema spec"
      }
    },

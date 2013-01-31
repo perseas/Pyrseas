@@ -22,5 +22,5 @@ def parent_parser():
                         help="force password prompt")
     parser.add_argument('-o', '--output', type=FileType('w'),
                         help="output file name (default stdout)")
-    parser.add_argument('--version', action='version', version='%(prog)s 0.4')
+    parser.add_argument('--version', action='version', version='%(prog)s 0.6')
     return parser
