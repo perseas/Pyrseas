@@ -16,6 +16,7 @@ import sys
 import yaml
 
 from pyrseas.lib.dbconn import DbConnection
+from pyrseas.dbobject import fetch_reserved_words
 from pyrseas.dbobject.language import LanguageDict
 from pyrseas.dbobject.cast import CastDict
 from pyrseas.dbobject.schema import SchemaDict
@@ -271,11 +272,11 @@ class Database(object):
 
         return dbmap
 
-    def diff_map(self, input_map, schemas=[]):
+    def diff_map(self, input_map, opts):
         """Generate SQL to transform an existing database
 
         :param input_map: a YAML map defining the new database
-        :param schemas: list of schemas to diff
+        :param opts: options to exclude objects or for special processing
         :return: list of SQL statements
 
         Compares the existing database definition, as fetched from the
@@ -285,12 +286,15 @@ class Database(object):
         """
         if not self.db:
             self.from_catalog()
-        if schemas:
+        if opts.schemas:
             schlist = ['schema ' + sch for sch in schemas]
             for sch in list(input_map.keys()):
                 if sch not in schlist and sch.startswith('schema '):
                     del input_map[sch]
             self._trim_objects(schemas)
+
+        if opts.quote_reserved:
+            fetch_reserved_words(self.dbconn)
 
         langs = None
         if self.dbconn.version >= 90100:

@@ -78,6 +78,13 @@ addition to the :doc:`cmdargs`):
     Execute the generated statements against the database mentioned in
     **dbname**.  This implies the ``--single-transaction`` option.
 
+``--quote-reserved``
+
+    When generating SQL, use delimited (quoted) identifiers around
+    reserved words used as identifiers, e.g., a table named "order".
+    Normally, only identifiers with embedded spaces or other
+    disallowed characters are quoted.
+
 Examples
 --------
 

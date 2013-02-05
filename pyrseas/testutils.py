@@ -308,11 +308,15 @@ class InputMapToSqlTestCase(PyrseasTestCase):
 
     superuser = False
 
-    def to_sql(self, inmap, stmts=None, superuser=False):
+    def to_sql(self, inmap, stmts=None, superuser=False, schemas=[],
+               quote_reserved=False):
         """Execute statements and compare database to input map.
 
         :param inmap: dictionary defining target database
         :param stmts: list of SQL database setup statements
+        :param superuser: indicates test requires superuser privilege
+        :param schemas: list of schemas to diff
+        :param quote_reserved: fetch reserved words
         :return: list of SQL statements
         """
         if (self.superuser or superuser) and not self.db.is_superuser():
@@ -322,7 +326,13 @@ class InputMapToSqlTestCase(PyrseasTestCase):
                 self.db.execute(stmt)
             self.db.conn.commit()
         db = self.database()
-        return db.diff_map(inmap)
+
+        class Opts:
+            pass
+        opts = Opts()
+        opts.schemas = schemas
+        opts.quote_reserved = quote_reserved
+        return db.diff_map(inmap, opts)
 
     def std_map(self, plpgsql_installed=False):
         "Return a standard schema map for the default database"

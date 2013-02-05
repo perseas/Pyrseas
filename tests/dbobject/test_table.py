@@ -120,6 +120,17 @@ class TableToSqlTestCase(InputMapToSqlTestCase):
         sql = self.to_sql(inmap)
         self.assertEqual(fix_indent(sql[0]), CREATE_STMT)
 
+    def test_create_table_quoted_idents(self):
+        "Create a table needing quoted identifiers"
+        inmap = self.std_map()
+        inmap['schema public'].update({'table order': {
+                    'columns': [{'primary': {'type': 'integer'}},
+                               {'two words': {'type': 'text'}}]}})
+        sql = self.to_sql(inmap, quote_reserved=True)
+        self.assertEqual(fix_indent(sql[0]),
+                         'CREATE TABLE "order" ("primary" integer, '
+                         '"two words" text)')
+
     def test_bad_table_map(self):
         "Error creating a table with a bad map"
         inmap = self.std_map()

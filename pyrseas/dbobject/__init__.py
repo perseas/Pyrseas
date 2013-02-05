@@ -17,6 +17,20 @@ from pyrseas.dbobject.privileges import add_grant, add_revoke, diff_privs
 
 VALID_FIRST_CHARS = string.ascii_lowercase + '_'
 VALID_CHARS = string.ascii_lowercase + string.digits + '_$'
+RESERVED_WORDS = []
+
+
+def fetch_reserved_words(db):
+    """Fetch PostgreSQL reserved words
+
+    :param db: DbConnection object
+    """
+    global RESERVED_WORDS
+
+    if len(RESERVED_WORDS) == 0:
+        RESERVED_WORDS = [word[0] for word in
+                          db.fetchall("""SELECT word FROM pg_get_keywords()
+                                         WHERE catcode = 'R'""")]
 
 
 def quote_id(name):
@@ -26,9 +40,8 @@ def quote_id(name):
 
     :return: possibly quoted string
     """
-    # TODO: keywords
     regular_id = True
-    if not name[0] in VALID_FIRST_CHARS:
+    if not name[0] in VALID_FIRST_CHARS or name in RESERVED_WORDS:
         regular_id = False
     else:
         for ltr in name[1:]:

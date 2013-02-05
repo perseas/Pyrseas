@@ -29,6 +29,8 @@ def main(host='localhost', port=5432):
                         dest='onetrans', help="wrap commands in BEGIN/COMMIT")
     parser.add_argument('-u', '--update', action='store_true',
                         help="apply changes to database (implies -1)")
+    parser.add_argument('--quote-reserved', action='store_true',
+                        help="quote SQL reserved words")
     parser.add_argument('-n', '--schema', metavar='SCHEMA', dest='schemas',
                         action='append', default=[],
                         help="process only named schema(s) (default all)")
@@ -44,7 +46,7 @@ def main(host='localhost', port=5432):
     else:
         inmap = yaml.load(args.spec)
 
-    stmts = db.diff_map(inmap, args.schemas)
+    stmts = db.diff_map(inmap, args)
     if stmts:
         fd = args.output or sys.stdout
         if args.onetrans or args.update:
