@@ -44,7 +44,7 @@ def main(host='localhost', port=5432):
     if args.directory:
         inmap = db.map_from_dir(args.directory)
     else:
-        inmap = yaml.load(args.spec)
+        inmap = yaml.safe_load(args.spec)
 
     stmts = db.diff_map(inmap, args)
     if stmts:

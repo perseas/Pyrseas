@@ -220,7 +220,7 @@ class Database(object):
 
         def load(subdir, obj):
             with open(os.path.join(subdir, obj), 'r') as f:
-                objmap = yaml.load(f)
+                objmap = yaml.safe_load(f)
             return objmap if isinstance(objmap, dict) else {}
 
         inmap = {}
