@@ -222,7 +222,7 @@ class Table(DbClass):
             if col:
                 cols.append(col)
         tbl = {'columns': cols}
-        attrlist = ['description', 'tablespace', 'unlogged']
+        attrlist = ['description', 'options', 'tablespace', 'unlogged']
         if not opts.no_owner:
             attrlist.append('owner')
         for attr in attrlist:
@@ -271,6 +271,7 @@ class Table(DbClass):
                 tbl['triggers'] = {}
             for k in list(self.triggers.values()):
                 tbl['triggers'].update(self.triggers[k.name].to_map())
+
         if not opts.no_privs and hasattr(self, 'privileges'):
             tbl.update({'privileges': self.map_privs()})
 
@@ -296,12 +297,15 @@ class Table(DbClass):
         inhclause = ''
         if hasattr(self, 'inherits'):
             inhclause = " INHERITS (%s)" % ", ".join(t for t in self.inherits)
+        opts = ''
+        if hasattr(self, 'options'):
+            opts = " WITH (%s)" % ', '.join(self.options)
         tblspc = ''
         if hasattr(self, 'tablespace'):
             tblspc = " TABLESPACE %s" % self.tablespace
-        stmts.append("CREATE %sTABLE %s (\n%s)%s%s" % (
+        stmts.append("CREATE %sTABLE %s (\n%s)%s%s%s" % (
                 unlogged, self.qualname(), ",\n".join(cols), inhclause,
-                tblspc))
+                opts, tblspc))
         if hasattr(self, 'owner'):
             stmts.append(self.alter_owner())
         if hasattr(self, 'privileges'):
@@ -330,6 +334,41 @@ class Table(DbClass):
             self.dropped = True
             stmts.append("DROP TABLE %s" % self.identifier())
         return stmts
+
+    def diff_options(self, newopts):
+        """Compare options lists and generate SQL SET or RESET clause
+
+        :newopts: list of new options
+        :return: SQL SET / RESET clauses
+
+        Generate ([SET|RESET storage_parameter=value) clauses from two
+        lists in the form of 'key=value' strings.
+        """
+        def to_dict(optlist):
+            return dict(opt.split('=', 1) for opt in optlist)
+
+        oldopts = {}
+        if hasattr(self, 'options'):
+            oldopts = to_dict(self.options)
+        newopts = to_dict(newopts)
+        setclauses = []
+        for key, val in list(newopts.items()):
+            if key not in oldopts:
+                setclauses.append("%s=%s" % (key, val))
+            elif val != oldopts[key]:
+                setclauses.append("%s=%s" % (key, val))
+        resetclauses = []
+        for key, val in list(oldopts.items()):
+            if key not in newopts:
+                resetclauses.append("%s" % key)
+        clauses = ''
+        if setclauses:
+            clauses = "SET (%s)" % ', '.join(setclauses)
+            if resetclauses:
+                clauses += ', '
+        if resetclauses:
+            clauses += "RESET (%s)" % ', '.join(resetclauses)
+        return clauses
 
     def diff_map(self, intable):
         """Generate SQL to transform an existing table
@@ -372,6 +411,13 @@ class Table(DbClass):
                 if descr:
                     stmts.append(descr)
 
+        newopts = []
+        if hasattr(intable, 'options'):
+            newopts = intable.options
+        diff_opts = self.diff_options(newopts)
+        if diff_opts:
+            stmts.append("ALTER %s %s %s" % (
+                    self.objtype, self.identifier(), diff_opts))
         if hasattr(intable, 'owner'):
             if intable.owner != self.owner:
                 stmts.append(self.alter_owner(intable.owner))
@@ -456,8 +502,8 @@ class View(DbClass):
 
 QUERY_PRE91 = \
         """SELECT nspname AS schema, relname AS name, relkind AS kind,
-                  spcname AS tablespace, rolname AS owner,
-                  array_to_string(relacl, ',') AS privileges,
+                  reloptions AS options, spcname AS tablespace,
+                  rolname AS owner, array_to_string(relacl, ',') AS privileges,
                   CASE WHEN relkind = 'v' THEN pg_get_viewdef(c.oid, TRUE)
                        ELSE '' END AS definition,
                   obj_description(c.oid, 'pg_class') AS description
@@ -477,7 +523,7 @@ class ClassDict(DbObjectDict):
     cls = DbClass
     query = \
         """SELECT nspname AS schema, relname AS name, relkind AS kind,
-                  relpersistence AS persistence,
+                  reloptions AS options, relpersistence AS persistence,
                   spcname AS tablespace, rolname AS owner,
                   array_to_string(relacl, ',') AS privileges,
                   CASE WHEN relkind = 'v' THEN pg_get_viewdef(c.oid, TRUE)
@@ -548,7 +594,7 @@ class ClassDict(DbObjectDict):
                 if not intable:
                     raise ValueError("Table '%s' has no specification" % k)
                 for attr in ['inherits', 'owner', 'tablespace', 'oldname',
-                             'description', 'unlogged']:
+                             'description', 'options', 'unlogged']:
                     if attr in intable:
                         setattr(table, attr, intable[attr])
                 try:

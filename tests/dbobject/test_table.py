@@ -8,6 +8,8 @@ from pyrseas.testutils import InputMapToSqlTestCase, fix_indent
 
 CREATE_STMT = "CREATE TABLE t1 (c1 integer, c2 text)"
 COMMENT_STMT = "COMMENT ON TABLE t1 IS 'Test table t1'"
+CREATE_STOR_PARAMS = CREATE_STMT + \
+    " WITH (fillfactor=90, autovacuum_enabled=false)"
 
 
 class TableToMapTestCase(DatabaseToMapTestCase):
@@ -48,6 +50,14 @@ class TableToMapTestCase(DatabaseToMapTestCase):
                                           'Test column c1 of t1'}},
                               {'c2': {'type': 'text', 'description':
                                           'Test column c2 of t1'}}]}
+        self.assertEqual(dbmap['schema public']['table t1'], expmap)
+
+    def test_map_table_options(self):
+        "Map a table with options"
+        dbmap = self.to_map([CREATE_STOR_PARAMS])
+        expmap = {'columns': [{'c1': {'type': 'integer'}},
+                              {'c2': {'type': 'text'}}],
+                  'options': ["fillfactor=90", 'autovacuum_enabled=false']}
         self.assertEqual(dbmap['schema public']['table t1'], expmap)
 
     def test_map_inherit(self):
@@ -159,6 +169,28 @@ class TableToSqlTestCase(InputMapToSqlTestCase):
                                 {'c2': {'type': 'text'}}]}})
         sql = self.to_sql(inmap, [CREATE_STMT])
         self.assertEqual(sql, ["ALTER TABLE t1 RENAME TO t2"])
+
+    def test_create_table_options(self):
+        "Create a table with options"
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+                    'columns': [{'c1': {'type': 'integer'}},
+                                {'c2': {'type': 'text'}}],
+                    'options': ["fillfactor=90", "autovacuum_enabled=false"]}})
+        sql = self.to_sql(inmap)
+        self.assertEqual(fix_indent(sql[0]), CREATE_STOR_PARAMS)
+
+    def test_change_table_options(self):
+        "Change a table's storage parameters"
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+                    'columns': [{'c1': {'type': 'integer'}},
+                                {'c2': {'type': 'text'}}],
+                    'options': ["fillfactor=70"]}})
+        sql = self.to_sql(inmap, [CREATE_STOR_PARAMS])
+        self.assertEqual(fix_indent(sql[0]),
+                         "ALTER TABLE t1 SET (fillfactor=70), "
+                         "RESET (autovacuum_enabled)")
 
     def test_create_table_within_schema(self):
         "Create a new schema and a table within it"
