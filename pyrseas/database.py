@@ -287,11 +287,11 @@ class Database(object):
         if not self.db:
             self.from_catalog()
         if opts.schemas:
-            schlist = ['schema ' + sch for sch in schemas]
+            schlist = ['schema ' + sch for sch in opts.schemas]
             for sch in list(input_map.keys()):
                 if sch not in schlist and sch.startswith('schema '):
                     del input_map[sch]
-            self._trim_objects(schemas)
+            self._trim_objects(opts.schemas)
 
         if opts.quote_reserved:
             fetch_reserved_words(self.dbconn)
