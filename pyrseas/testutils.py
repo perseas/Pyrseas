@@ -28,6 +28,7 @@ class PgTestDb(PostgresDb):
 
     def clear(self):
         "Drop tables and other objects"
+        STD_DROP = 'DROP %s IF EXISTS "%s" CASCADE'
         # Schemas other than 'public'
         curs = pgexecute(
             self.conn,
@@ -39,7 +40,7 @@ class PgTestDb(PostgresDb):
         curs.close()
         self.conn.rollback()
         for obj in objs:
-                self.execute("DROP SCHEMA IF EXISTS %s CASCADE" % (obj[0]))
+                self.execute(STD_DROP % ('SCHEMA', obj[0]))
         self.conn.commit()
 
         # Extensions
@@ -54,7 +55,7 @@ class PgTestDb(PostgresDb):
             curs.close()
             self.conn.rollback()
             for ext in exts:
-                self.execute("DROP EXTENSION IF EXISTS %s CASCADE" % (ext[0]))
+                self.execute(STD_DROP % ('EXTENSION', ext[0]))
             self.conn.commit()
 
         # Tables, sequences and views
@@ -70,14 +71,14 @@ class PgTestDb(PostgresDb):
         self.conn.rollback()
         for obj in objs:
             if obj['relkind'] == 'r':
-                self.execute("DROP TABLE IF EXISTS %s CASCADE" % (obj[0]))
+                objtype = 'TABLE'
             elif obj['relkind'] == 'S':
-                self.execute("DROP SEQUENCE IF EXISTS %s CASCADE" % (obj[0]))
+                objtype = 'SEQUENCE'
             elif obj['relkind'] == 'v':
-                self.execute("DROP VIEW IF EXISTS %s CASCADE" % (obj[0]))
+                objtype = 'VIEW'
             elif obj['relkind'] == 'f':
-                self.execute("DROP FOREIGN TABLE IF EXISTS %s CASCADE" %
-                             (obj[0]))
+                objtype = 'FOREIGN TABLE'
+            self.execute(STD_DROP % (objtype, obj[0]))
         self.conn.commit()
 
         # Types (base, composite and enums) and domains
@@ -97,10 +98,8 @@ class PgTestDb(PostgresDb):
         curs.close()
         self.conn.rollback()
         for typ in types:
-            if typ['typtype'] == 'd':
-                self.execute("DROP DOMAIN IF EXISTS %s CASCADE" % (typ[0]))
-            else:
-                self.execute("DROP TYPE IF EXISTS %s CASCADE" % (typ[0]))
+            self.execute(STD_DROP % ('DOMAIN' if typ['typtype'] == 'd'
+                                     else 'TYPE', typ[0]))
         self.conn.commit()
 
         # Functions
@@ -114,12 +113,9 @@ class PgTestDb(PostgresDb):
         curs.close()
         self.conn.rollback()
         for func in funcs:
-            if func['proisagg']:
-                self.execute("DROP AGGREGATE IF EXISTS %s CASCADE" % (
-                        func['proc']))
-            else:
-                self.execute("DROP FUNCTION IF EXISTS %s CASCADE" % (
-                        func['proc']))
+            self.execute('DROP %s IF EXISTS %s CASCADE' % (
+                    'AGGREGATE' if func['proisagg'] else 'FUNCTION',
+                    func['proc']))
         self.conn.commit()
 
         # Languages
@@ -152,7 +148,7 @@ class PgTestDb(PostgresDb):
         self.conn.rollback()
         for opfam in opfams:
             self.execute(
-                "DROP OPERATOR FAMILY IF EXISTS %s USING %s CASCADE" % (
+                'DROP OPERATOR FAMILY IF EXISTS "%s" USING "%s" CASCADE' % (
                     opfam[0], opfam[1]))
         self.conn.commit()
 
@@ -168,7 +164,7 @@ class PgTestDb(PostgresDb):
         self.conn.rollback()
         for opcl in opcls:
             self.execute(
-                "DROP OPERATOR CLASS IF EXISTS %s USING %s CASCADE" % (
+                'DROP OPERATOR CLASS IF EXISTS "%s" USING "%s" CASCADE' % (
                     opcl[0], opcl[1]))
         self.conn.commit()
 
@@ -182,7 +178,7 @@ class PgTestDb(PostgresDb):
         curs.close()
         self.conn.rollback()
         for cnv in convs:
-            self.execute("DROP CONVERSION IF EXISTS %s CASCADE" % (cnv[0]))
+            self.execute(STD_DROP % ('CONVERSION', cnv[0]))
         self.conn.commit()
 
         # Collations
@@ -197,7 +193,7 @@ class PgTestDb(PostgresDb):
             curs.close()
             self.conn.rollback()
             for coll in colls:
-                self.execute("DROP COLLATION IF EXISTS %s CASCADE" % coll[0])
+                self.execute(STD_DROP % ('COLLATION', coll[0]))
             self.conn.commit()
 
         # User mappings
@@ -211,7 +207,7 @@ class PgTestDb(PostgresDb):
         curs.close()
         self.conn.rollback()
         for ump in umaps:
-            self.execute("DROP USER MAPPING IF EXISTS FOR %s SERVER %s" % (
+            self.execute('DROP USER MAPPING IF EXISTS FOR "%s" SERVER "%s"' % (
                     ump[0], ump[1]))
         self.conn.commit()
 
@@ -221,7 +217,7 @@ class PgTestDb(PostgresDb):
         curs.close()
         self.conn.rollback()
         for srv in servs:
-            self.execute("DROP SERVER IF EXISTS %s CASCADE" % (srv[0]))
+            self.execute(STD_DROP % ('SERVER', srv[0]))
         self.conn.commit()
 
         # Foreign data wrappers
@@ -231,8 +227,7 @@ class PgTestDb(PostgresDb):
         curs.close()
         self.conn.rollback()
         for fdw in fdws:
-            self.execute("DROP FOREIGN DATA WRAPPER IF EXISTS %s CASCADE" % (
-                    fdw[0]))
+            self.execute(STD_DROP % ('FOREIGN DATA WRAPPER', fdw[0]))
         self.conn.commit()
 
     def is_plpgsql_installed(self):
