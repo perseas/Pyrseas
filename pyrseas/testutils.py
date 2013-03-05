@@ -7,6 +7,7 @@ import getpass
 from unittest import TestCase
 
 from pyrseas.database import Database
+from pyrseas.lib.dbconn import DbConnection
 from pyrseas.lib.dbutils import pgexecute, PostgresDb
 
 
@@ -449,3 +450,17 @@ class DbMigrateTestCase(TestCase):
         args.extend(self._db_params())
         args.extend(['-u', '-o', outfile, '-d', yamldir, self.db.name])
         subprocess.call(args)
+
+
+class RelationTestCase(object):
+
+    @classmethod
+    def setup_class(cls):
+        cls.pgdb = PostgresDb(TEST_DBNAME, TEST_USER, TEST_HOST, TEST_PORT)
+        cls.pgdb.connect()
+        cls.db = DbConnection(TEST_DBNAME, TEST_USER, None, TEST_HOST,
+                              TEST_PORT)
+
+    @classmethod
+    def teardown_class(cls):
+        cls.pgdb.close()
