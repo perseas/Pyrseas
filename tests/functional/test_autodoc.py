@@ -4,8 +4,6 @@
 See http://cvs.pgfoundry.org/cgi-bin/cvsweb.cgi/~checkout~/autodoc/autodoc/
 regressdatabase.sql?rev=1.2
 """
-import unittest
-
 from pyrseas.testutils import DbMigrateTestCase
 
 
@@ -47,9 +45,9 @@ class AutodocTestCase(DbMigrateTestCase):
         self.create_yaml(targyaml)
 
         # diff autodoc-src.dump against autodoc.dump
-        self.assertEqual(self.lines(srcdump), self.lines(targdump))
+        assert self.lines(srcdump) == self.lines(targdump)
         # diff autodoc-src.yaml against autodoc.yaml
-        self.assertEqual(self.lines(srcyaml), self.lines(targyaml))
+        assert self.lines(srcyaml) == self.lines(targyaml)
 
         # Undo the changes
         self.migrate_target(emptyyaml, targsql)
@@ -61,14 +59,6 @@ class AutodocTestCase(DbMigrateTestCase):
         self.create_yaml(targyaml)
 
         # diff empty.dump against autodoc.dump
-        self.assertEqual(self.lines(emptydump), self.lines(targdump))
+        assert self.lines(emptydump) == self.lines(targdump)
         # diff empty.yaml against autodoc.yaml
-        self.assertEqual(self.lines(emptyyaml), self.lines(targyaml))
-
-
-def suite():
-    tests = unittest.TestLoader().loadTestsFromTestCase(AutodocTestCase)
-    return tests
-
-if __name__ == '__main__':
-    unittest.main(defaultTest='suite')
+        assert self.lines(emptyyaml) == self.lines(targyaml)

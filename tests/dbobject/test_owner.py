@@ -5,8 +5,6 @@ The majority of other tests exclude owner information.  These
 explicitly request it.
 """
 
-import unittest
-
 from pyrseas.testutils import DatabaseToMapTestCase
 from pyrseas.testutils import InputMapToSqlTestCase, fix_indent
 
@@ -26,7 +24,7 @@ class OwnerToMapTestCase(DatabaseToMapTestCase):
         expmap = {'attributes': [{'x': {'type': 'integer'}},
                                  {'y': {'type': 'integer'}}],
                   'owner': self.db.user}
-        self.assertEqual(dbmap['schema public']['type t1'], expmap)
+        assert dbmap['schema public']['type t1'] == expmap
 
     def test_map_table(self):
         "Map a table"
@@ -34,14 +32,14 @@ class OwnerToMapTestCase(DatabaseToMapTestCase):
         expmap = {'columns': [{'c1': {'type': 'integer'}},
                               {'c2': {'type': 'text'}}],
                   'owner': self.db.user}
-        self.assertEqual(dbmap['schema public']['table t1'], expmap)
+        assert dbmap['schema public']['table t1'] == expmap
 
     def test_map_function(self):
         "Map a function"
         dbmap = self.to_map([CREATE_FUNC], no_owner=False)
         expmap = {'language': 'sql', 'returns': 'text', 'owner': self.db.user,
                   'source': SOURCE1, 'volatility': 'immutable'}
-        self.assertEqual(dbmap['schema public']['function f1()'], expmap)
+        assert dbmap['schema public']['function f1()'] == expmap
 
 
 class OwnerToSqlTestCase(InputMapToSqlTestCase):
@@ -51,55 +49,41 @@ class OwnerToSqlTestCase(InputMapToSqlTestCase):
         "Create a composite type"
         inmap = self.std_map()
         inmap['schema public'].update({'type t1': {
-                    'attributes': [{'x': {'type': 'integer'}},
-                                 {'y': {'type': 'integer'}}],
-                    'owner': self.db.user}})
+            'attributes': [{'x': {'type': 'integer'}},
+                           {'y': {'type': 'integer'}}],
+            'owner': self.db.user}})
         sql = self.to_sql(inmap)
-        self.assertEqual(fix_indent(sql[0]), CREATE_TYPE)
-        self.assertEqual(sql[1], "ALTER TYPE t1 OWNER TO %s" % self.db.user)
+        assert fix_indent(sql[0]) == CREATE_TYPE
+        assert sql[1] == "ALTER TYPE t1 OWNER TO %s" % self.db.user
 
     def test_create_table(self):
         "Create a table"
         inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
-                    'columns': [{'c1': {'type': 'integer'}},
-                                {'c2': {'type': 'text'}}],
-                    'owner': self.db.user}})
+            'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}],
+            'owner': self.db.user}})
         sql = self.to_sql(inmap)
-        self.assertEqual(fix_indent(sql[0]), CREATE_TABLE)
-        self.assertEqual(sql[1], "ALTER TABLE t1 OWNER TO %s" % self.db.user)
+        assert fix_indent(sql[0]) == CREATE_TABLE
+        assert sql[1] == "ALTER TABLE t1 OWNER TO %s" % self.db.user
 
     def test_create_function(self):
         "Create a function in a schema and a comment"
         inmap = self.std_map()
         inmap.update({'schema s1': {'function f1()': {
-                    'language': 'sql', 'returns': 'text',
-                    'source': SOURCE1, 'volatility': 'immutable',
-                    'owner': self.db.user, 'description': 'Test function'}}})
+            'language': 'sql', 'returns': 'text', 'source': SOURCE1,
+            'volatility': 'immutable', 'owner': self.db.user,
+            'description': 'Test function'}}})
         sql = self.to_sql(inmap, ["CREATE SCHEMA s1"])
         # skip first two statements as those are tested elsewhere
-        self.assertEqual(sql[2], "ALTER FUNCTION s1.f1() OWNER TO %s"
-                         % self.db.user)
+        assert sql[2] == "ALTER FUNCTION s1.f1() OWNER TO %s" % self.db.user
         # to verify correct order of invocation of ownable and commentable
-        self.assertEqual(sql[3], "COMMENT ON FUNCTION s1.f1() IS "
-                         "'Test function'")
+        assert sql[3] == "COMMENT ON FUNCTION s1.f1() IS 'Test function'"
 
     def test_change_table_owner(self):
         "Change the owner of a table"
         inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
-                    'columns': [{'c1': {'type': 'integer'}},
-                                {'c2': {'type': 'text'}}],
-                    'owner': 'someuser'}})
+            'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}],
+            'owner': 'someuser'}})
         sql = self.to_sql(inmap, [CREATE_TABLE])
-        self.assertEqual(sql[0], "ALTER TABLE t1 OWNER TO someuser")
-
-
-def suite():
-    tests = unittest.TestLoader().loadTestsFromTestCase(OwnerToMapTestCase)
-    tests.addTest(unittest.TestLoader().loadTestsFromTestCase(
-            OwnerToSqlTestCase))
-    return tests
-
-if __name__ == '__main__':
-    unittest.main(defaultTest='suite')
+        assert sql[0] == "ALTER TABLE t1 OWNER TO someuser"

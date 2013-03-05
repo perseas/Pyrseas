@@ -6,8 +6,6 @@ They should be owned by the user running the tests or the user should
 have been granted CREATE (or ALL) privileges on the tablespaces.
 """
 
-import unittest
-
 from pyrseas.testutils import DatabaseToMapTestCase
 from pyrseas.testutils import InputMapToSqlTestCase, fix_indent
 
@@ -26,7 +24,7 @@ class ToMapTestCase(DatabaseToMapTestCase):
         expmap = {'columns': [{'c1': {'type': 'integer'}},
                               {'c2': {'type': 'text'}}],
                   'tablespace': 'ts1'}
-        self.assertEqual(dbmap['schema public']['table t1'], expmap)
+        assert dbmap['schema public']['table t1'] == expmap
 
     def test_map_primary_key(self):
         "Map a table with a PRIMARY KEY using a tablespace"
@@ -35,7 +33,7 @@ class ToMapTestCase(DatabaseToMapTestCase):
                               {'c2': {'type': 'text'}}],
                   'primary_key': {'t1_pkey': {'columns': ['c1'],
                                               'tablespace': 'ts1'}}}
-        self.assertEqual(dbmap['schema public']['table t1'], expmap)
+        assert dbmap['schema public']['table t1'] == expmap
 
     def test_map_index(self):
         "Map an index using a tablespace"
@@ -44,7 +42,7 @@ class ToMapTestCase(DatabaseToMapTestCase):
                              "TABLESPACE ts1"])
         expmap = {'t1_idx': {'keys': ['c1'], 'tablespace': 'ts1',
                              'unique': True}}
-        self.assertEqual(dbmap['schema public']['table t1']['indexes'], expmap)
+        assert dbmap['schema public']['table t1']['indexes'] == expmap
 
 
 class ToSqlTestCase(InputMapToSqlTestCase):
@@ -54,71 +52,54 @@ class ToSqlTestCase(InputMapToSqlTestCase):
         "Create a table in a tablespace"
         inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
-                    'columns': [{'c1': {'type': 'integer'}},
-                               {'c2': {'type': 'text'}}],
-                    'tablespace': 'ts1'}})
+            'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}],
+            'tablespace': 'ts1'}})
         sql = self.to_sql(inmap)
-        self.assertEqual(fix_indent(sql[0]), CREATE_TABLE)
+        assert fix_indent(sql[0]) == CREATE_TABLE
 
     def test_move_table(self):
         "Move a table from one tablespace to another"
         inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
-                    'columns': [{'c1': {'type': 'integer'}},
-                               {'c2': {'type': 'text'}}],
-                    'tablespace': 'ts2'}})
+            'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}],
+            'tablespace': 'ts2'}})
         sql = self.to_sql(inmap, [CREATE_TABLE])
-        self.assertEqual(fix_indent(sql[0]),
-                         "ALTER TABLE t1 SET TABLESPACE ts2")
+        assert fix_indent(sql[0]) == "ALTER TABLE t1 SET TABLESPACE ts2"
 
     def test_create_primary_key(self):
         "Create a table with a PRIMARY KEY in a different tablespace"
         inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
-                    'columns': [{'c1': {'type': 'integer', 'not_null': True}},
-                               {'c2': {'type': 'text'}}],
-                    'primary_key': {'t1_pkey': {'columns': ['c1'],
-                                                'tablespace': 'ts2'}},
-                    'tablespace': 'ts1'}})
+            'columns': [{'c1': {'type': 'integer', 'not_null': True}},
+                        {'c2': {'type': 'text'}}],
+            'primary_key': {'t1_pkey': {'columns': ['c1'],
+                                        'tablespace': 'ts2'}},
+            'tablespace': 'ts1'}})
         sql = self.to_sql(inmap)
-        self.assertEqual(fix_indent(sql[0]), "CREATE TABLE t1 "
-                         "(c1 integer NOT NULL, c2 text) TABLESPACE ts1")
-        self.assertEqual(fix_indent(sql[1]), "ALTER TABLE t1 ADD CONSTRAINT "
-                         "t1_pkey PRIMARY KEY (c1) USING INDEX TABLESPACE ts2")
+        assert fix_indent(sql[0]) == "CREATE TABLE t1 " \
+            "(c1 integer NOT NULL, c2 text) TABLESPACE ts1"
+        assert fix_indent(sql[1]) == "ALTER TABLE t1 ADD CONSTRAINT " \
+            "t1_pkey PRIMARY KEY (c1) USING INDEX TABLESPACE ts2"
 
     def test_create_index(self):
         "Create an index using a tablespace"
         inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
-                    'columns': [{'c1': {'type': 'integer'}},
-                               {'c2': {'type': 'text'}}],
-                    'indexes': {'t1_idx': {
-                            'keys': ['c1'], 'tablespace': 'ts2',
-                            'unique': True}},
-                    'tablespace': 'ts1'}})
+            'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}],
+            'indexes': {'t1_idx': {'keys': ['c1'], 'tablespace': 'ts2',
+                                   'unique': True}},
+            'tablespace': 'ts1'}})
         sql = self.to_sql(inmap, [CREATE_TABLE])
-        self.assertEqual(fix_indent(sql[0]), "CREATE UNIQUE INDEX t1_idx "
-                         "ON t1 (c1) TABLESPACE ts2")
+        assert fix_indent(sql[0]) == "CREATE UNIQUE INDEX t1_idx " \
+            "ON t1 (c1) TABLESPACE ts2"
 
     def test_move_index(self):
         "Move a index from one tablespace to another"
         inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
-                    'columns': [{'c1': {'type': 'integer'}},
-                               {'c2': {'type': 'text'}}],
-                    'indexes': {'t1_idx': {
-                            'keys': ['c1'], 'tablespace': 'ts2'}}}})
+            'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}],
+            'indexes': {'t1_idx': {'keys': ['c1'], 'tablespace': 'ts2'}}}})
         stmts = ["CREATE TABLE t1 (c1 integer, c2 text)",
                  "CREATE INDEX t1_idx ON t1 (c1) TABLESPACE ts1"]
         sql = self.to_sql(inmap, stmts)
-        self.assertEqual(fix_indent(sql[0]),
-                         "ALTER INDEX t1_idx SET TABLESPACE ts2")
-
-
-def suite():
-    tests = unittest.TestLoader().loadTestsFromTestCase(ToMapTestCase)
-    tests.addTest(unittest.TestLoader().loadTestsFromTestCase(ToSqlTestCase))
-    return tests
-
-if __name__ == '__main__':
-    unittest.main(defaultTest='suite')
+        assert fix_indent(sql[0]) == "ALTER INDEX t1_idx SET TABLESPACE ts2"

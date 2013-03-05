@@ -4,26 +4,20 @@ Testing
 =======
 
 The majority of Pyrseas' capabilities are exercised and verified via
-unit tests written using Python's `unittest framework
-<http://docs.python.org/library/unittest.html>`_.  The tests can be
-run from the command line by most users, e.g.,
+unit tests written using `pytest <http://pytest.org/latest/>`_.  The
+tests can be run from the command line by most users, e.g.,
 
 ::
 
-   cd tests/dbobject
-   python test_table.py
-   python test_constraint.py ForeignKeyToMapTestCase
-   python test_trigger.py TriggerToSqlTestCase.test_create_trigger
-   python __init__.py
-   python -m unittest discover
+   py.test tests/dbobject/test_table.py
+   py.test tests/dbobject/test_trigger.py -k test_create_trigger
+   py.test tests/functional
 
 The first ``python`` command above runs all tests related to tables,
-mapping, creating, dropping, etc.  The next command runs the subset of
-tests related to mapping tables with foreign keys and the following
-one executes a single test to generate SQL to create a trigger.  The
-fourth command runs through all the tests suites in the ``dbobject``
-subdirectory.  The final command does the same but using the test
-discovery feature available from Python 2.7.
+mapping, creating, dropping, etc.  The second one executes a single
+test to generate SQL to create a trigger.  The third runs all the
+functional tests.  Please review the `pytest documentation
+<http://pytest.org/latest/usage.html>`_ for further options.
 
 Environment Variables
 ---------------------

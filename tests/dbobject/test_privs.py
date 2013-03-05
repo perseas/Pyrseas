@@ -6,10 +6,8 @@ explicitly request it.  In addition, the roles 'user1' and 'user2'
 should have been previously defined.
 """
 
-import unittest
-
 from pyrseas.testutils import DatabaseToMapTestCase
-from pyrseas.testutils import InputMapToSqlTestCase, fix_indent
+from pyrseas.testutils import InputMapToSqlTestCase
 
 CREATE_TABLE = "CREATE TABLE t1 (c1 integer, c2 text)"
 SOURCE1 = "SELECT 'dummy'::text"
@@ -31,7 +29,7 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
         dbmap = self.to_map(stmts, no_privs=False)
         expmap = {'privileges': [{self.db.user: ['all']},
                                  {'PUBLIC': ['usage']}, {'user1': ['all']}]}
-        self.assertEqual(dbmap['schema s1'], expmap)
+        assert dbmap['schema s1'] == expmap
 
     def test_map_table(self):
         "Map a table with various GRANTs"
@@ -43,10 +41,10 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
                   'privileges': [{self.db.user: ['all']},
                                  {'PUBLIC': ['select']},
                                  {'user1': ['insert', 'update']},
-                                 {'user2': [
-                        {'trigger': {'grantable': True}},
-                        {'references': {'grantable': True}}]}]}
-        self.assertEqual(dbmap['schema public']['table t1'], expmap)
+                                 {'user2': [{'trigger': {'grantable': True}},
+                                            {'references': {
+                                                'grantable': True}}]}]}
+        assert dbmap['schema public']['table t1'] == expmap
 
     def test_map_column(self):
         "Map a table with GRANTs on column"
@@ -55,15 +53,12 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
                  "GRANT INSERT (c1, c2) ON t1 TO user1",
                  "GRANT INSERT (c2), UPDATE (c2) ON t1 TO user2"]
         dbmap = self.to_map(stmts, no_privs=False)
-        expmap = {'columns': [{'c1': {'type': 'integer',
-                                      'privileges': [{'user1': ['insert']}]}},
-                              {'c2': {'type': 'text',
-                                      'privileges': [{'user1': ['insert']},
-                                                     {'user2': [
-                                        'insert', 'update']}]}}],
-                  'privileges': [{self.db.user: ['all']},
-                                 {'PUBLIC': ['select']}]}
-        self.assertEqual(dbmap['schema public']['table t1'], expmap)
+        expmap = {'columns': [
+            {'c1': {'type': 'integer', 'privileges': [{'user1': ['insert']}]}},
+            {'c2': {'type': 'text', 'privileges': [
+            {'user1': ['insert']}, {'user2': ['insert', 'update']}]}}],
+            'privileges': [{self.db.user: ['all']}, {'PUBLIC': ['select']}]}
+        assert dbmap['schema public']['table t1'] == expmap
 
     def test_map_sequence(self):
         "Map a sequence with various GRANTs"
@@ -76,7 +71,7 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
                   'privileges': [{self.db.user: ['all']},
                                  {'PUBLIC': ['select']},
                                  {'user1': ['usage', 'update']}]}
-        self.assertEqual(dbmap['schema public']['sequence seq1'], expmap)
+        assert dbmap['schema public']['sequence seq1'] == expmap
 
     def test_map_view(self):
         "Map a view with various GRANTs"
@@ -88,7 +83,7 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
                   'privileges': [{self.db.user: ['all']},
                                  {'PUBLIC': ['select']},
                                  {'user1': ['references']}]}
-        self.assertEqual(dbmap['schema public']['view v1'], expmap)
+        assert dbmap['schema public']['view v1'] == expmap
 
     def test_map_function(self):
         "Map a function with a GRANT and REVOKE from PUBLIC"
@@ -99,7 +94,7 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
                   'source': SOURCE1, 'volatility': 'immutable',
                   'privileges': [{self.db.user: ['execute']},
                                  {'user1': ['execute']}]}
-        self.assertEqual(dbmap['schema public']['function f1()'], expmap)
+        assert dbmap['schema public']['function f1()'] == expmap
 
     def test_map_language(self):
         "Map a  language but REVOKE default privilege"
@@ -111,7 +106,7 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
         dbmap = self.to_map(stmts, no_privs=False)
         self.db.execute_commit("DROP LANGUAGE plperl")
         expmap = {'trusted': True, 'privileges': [{self.db.user: ['usage']}]}
-        self.assertEqual(dbmap['language plperl'], expmap)
+        assert dbmap['language plperl'] == expmap
 
     def test_map_fd_wrapper(self):
         "Map a foreign data wrapper with a GRANT"
@@ -120,7 +115,7 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
         dbmap = self.to_map(stmts, no_privs=False, superuser=True)
         expmap = {'privileges': [{self.db.user: ['usage']},
                                  {'PUBLIC': ['usage']}]}
-        self.assertEqual(dbmap['foreign data wrapper fdw1'], expmap)
+        assert dbmap['foreign data wrapper fdw1'] == expmap
 
     def test_map_server(self):
         "Map a foreign server with a GRANT"
@@ -129,8 +124,7 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
         dbmap = self.to_map(stmts, no_privs=False, superuser=True)
         expmap = {'privileges': [{self.db.user: ['usage']},
                                  {'user1': ['usage']}]}
-        self.assertEqual(dbmap['foreign data wrapper fdw1']['server fs1'],
-                         expmap)
+        assert dbmap['foreign data wrapper fdw1']['server fs1'] == expmap
 
     def test_map_foreign_table(self):
         "Map a foreign table with various GRANTs"
@@ -146,7 +140,7 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
                   'privileges': [{self.db.user: ['all']},
                                  {'PUBLIC': ['select']},
                                  {'user1': ['insert', 'update']}]}
-        self.assertEqual(dbmap['schema public']['foreign table ft1'], expmap)
+        assert dbmap['schema public']['foreign table ft1'] == expmap
 
 
 class PrivilegeToSqlTestCase(InputMapToSqlTestCase):
@@ -156,302 +150,253 @@ class PrivilegeToSqlTestCase(InputMapToSqlTestCase):
         "Create a schema with various privileges"
         inmap = self.std_map()
         inmap.update({'schema s1': {
-                    'owner': self.db.user,
-                    'privileges': [{self.db.user: ['all']},
-                                   {'PUBLIC': ['usage', 'create']}]}})
+            'owner': self.db.user, 'privileges': [{
+            self.db.user: ['all']}, {'PUBLIC': ['usage', 'create']}]}})
         sql = self.to_sql(inmap)
         # sql[0] = CREATE SCHEMA
         # sql[1] = ALTER SCHEMA OWNER
-        self.assertEqual(sql[2], "GRANT ALL ON SCHEMA s1 TO %s" % self.db.user)
-        self.assertEqual(sql[3], "GRANT ALL ON SCHEMA s1 TO PUBLIC")
+        assert sql[2] == "GRANT ALL ON SCHEMA s1 TO %s" % self.db.user
+        assert sql[3] == "GRANT ALL ON SCHEMA s1 TO PUBLIC"
 
     def test_schema_new_grant(self):
         "Grant privileges on an existing schema"
         inmap = self.std_map()
         inmap.update({'schema s1': {
-                    'owner': self.db.user,
-                    'privileges': [{self.db.user: ['all']},
-                                   {'PUBLIC': ['create']}]}})
-        sql = self.to_sql(inmap, ["CREATE SCHEMA s1"])
-        self.assertEqual(len(sql), 2)
-        sql = sorted(sql)
-        self.assertEqual(sql[0], "GRANT ALL ON SCHEMA s1 TO %s" % self.db.user)
-        self.assertEqual(sql[1], "GRANT CREATE ON SCHEMA s1 TO PUBLIC")
+            'owner': self.db.user, 'privileges': [{self.db.user: ['all']},
+                                                  {'PUBLIC': ['create']}]}})
+        sql = sorted(self.to_sql(inmap, ["CREATE SCHEMA s1"]))
+        assert len(sql) == 2
+        assert sql[0] == "GRANT ALL ON SCHEMA s1 TO %s" % self.db.user
+        assert sql[1] == "GRANT CREATE ON SCHEMA s1 TO PUBLIC"
 
     def test_create_table(self):
         "Create a table with various privileges"
         inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
-                    'columns': [{'c1': {'type': 'integer'}},
-                                {'c2': {'type': 'text'}}],
-                    'owner': self.db.user,
-                    'privileges': [{self.db.user: ['all']},
-                                   {'PUBLIC': ['select']},
-                                   {'user1': ['insert', 'update']},
-                                   {'user2': [
-                                {'trigger': {'grantable': True}},
-                                {'references': {'grantable': True}}]}]}})
+            'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}],
+            'owner': self.db.user,
+            'privileges': [{self.db.user: ['all']}, {'PUBLIC': ['select']},
+                           {'user1': ['insert', 'update']},
+                           {'user2': [{'trigger': {'grantable': True}},
+                                      {'references': {'grantable': True}}]}]}})
         sql = self.to_sql(inmap)
         # sql[0] = CREATE TABLE
         # sql[1] = ALTER TABLE OWNER
-        self.assertEqual(sql[2], "GRANT ALL ON TABLE t1 TO %s" % self.db.user)
-        self.assertEqual(sql[3], GRANT_SELECT % 'PUBLIC')
-        self.assertEqual(sql[4], GRANT_INSUPD % 'user1')
-        self.assertEqual(sql[5], "GRANT TRIGGER, REFERENCES ON TABLE t1 "
-                         "TO user2 WITH GRANT OPTION")
+        assert sql[2] == "GRANT ALL ON TABLE t1 TO %s" % self.db.user
+        assert sql[3] == GRANT_SELECT % 'PUBLIC'
+        assert sql[4] == GRANT_INSUPD % 'user1'
+        assert sql[5] == "GRANT TRIGGER, REFERENCES ON TABLE t1 " \
+            "TO user2 WITH GRANT OPTION"
 
     def test_create_column_grants(self):
         "Create a table with colum-level privileges"
         inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
-                    'columns': [{'c1': {
-                                'type': 'integer',
-                                'privileges': [{'user1': ['insert']}]}},
-                                {'c2': {'type': 'text',
-                                        'privileges': [{'user1': ['insert']},
-                                                       {'user2': [
-                                            'insert', 'update']}]}}],
-                    'owner': self.db.user,
-                    'privileges': [{self.db.user: ['all']},
-                                   {'PUBLIC': ['select']}]}})
+            'columns': [{'c1': {'type': 'integer', 'privileges': [{'user1': [
+            'insert']}]}}, {'c2': {'type': 'text', 'privileges': [{'user1': [
+                'insert']}, {'user2': ['insert', 'update']}]}}],
+            'owner': self.db.user, 'privileges': [{self.db.user: ['all']},
+                                                  {'PUBLIC': ['select']}]}})
         sql = self.to_sql(inmap)
-        self.assertEqual(len(sql), 7)
+        assert len(sql) == 7
         # sql[0] = CREATE TABLE
         # sql[1] = ALTER TABLE OWNER
-        self.assertEqual(sql[2], "GRANT ALL ON TABLE t1 TO %s" % self.db.user)
-        self.assertEqual(sql[3],  GRANT_SELECT % 'PUBLIC')
-        self.assertEqual(sql[4], "GRANT INSERT (c1) ON TABLE t1 TO user1")
-        self.assertEqual(sql[5], "GRANT INSERT (c2) ON TABLE t1 TO user1")
-        self.assertEqual(sql[6],
-                         "GRANT INSERT (c2), UPDATE (c2) ON TABLE t1 TO user2")
+        assert sql[2] == "GRANT ALL ON TABLE t1 TO %s" % self.db.user
+        assert sql[3] == GRANT_SELECT % 'PUBLIC'
+        assert sql[4] == "GRANT INSERT (c1) ON TABLE t1 TO user1"
+        assert sql[5] == "GRANT INSERT (c2) ON TABLE t1 TO user1"
+        assert sql[6] == "GRANT INSERT (c2), UPDATE (c2) ON TABLE t1 TO user2"
 
     def test_table_new_grant(self):
         "Grant select privileges on an existing table"
         inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
-                    'columns': [{'c1': {'type': 'integer'}},
-                                {'c2': {'type': 'text'}}],
-                    'owner': self.db.user,
-                    'privileges': [{self.db.user: ['all']},
-                                   {'user1': ['select']}]}})
+            'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}],
+            'owner': self.db.user,
+            'privileges': [{self.db.user: ['all']}, {'user1': ['select']}]}})
         sql = self.to_sql(inmap, [CREATE_TABLE])
-        self.assertEqual(len(sql), 2)
+        assert len(sql) == 2
         sql = sorted(sql)
-        self.assertEqual(sql[0], "GRANT ALL ON TABLE t1 TO %s" % self.db.user)
-        self.assertEqual(sql[1],  GRANT_SELECT % 'user1')
+        assert sql[0] == "GRANT ALL ON TABLE t1 TO %s" % self.db.user
+        assert sql[1] == GRANT_SELECT % 'user1'
 
     def test_table_change_grant(self):
         "Grant select privileges on an existing table"
         inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
-                    'columns': [{'c1': {'type': 'integer'}},
-                                {'c2': {'type': 'text'}}],
-                    'owner': self.db.user,
-                    'privileges': [{self.db.user: ['all']},
-                                   {'PUBLIC': ['select']},
-                                   {'user1': ['insert', 'update']}]}})
-        sql = self.to_sql(inmap, [CREATE_TABLE,
-                                   GRANT_SELECT % 'user1'])
-        self.assertEqual(len(sql), 3)
-        self.assertEqual(sql[0], "REVOKE SELECT ON TABLE t1 FROM user1")
+            'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}],
+            'owner': self.db.user,
+            'privileges': [{self.db.user: ['all']}, {'PUBLIC': ['select']},
+                           {'user1': ['insert', 'update']}]}})
+        sql = self.to_sql(inmap, [CREATE_TABLE, GRANT_SELECT % 'user1'])
+        assert len(sql) == 3
+        assert sql[0] == "REVOKE SELECT ON TABLE t1 FROM user1"
         sql[1:2] = sorted(sql[1:2])
-        self.assertEqual(sql[1], GRANT_INSUPD % 'user1')
-        self.assertEqual(sql[2], GRANT_SELECT % 'PUBLIC')
+        assert sql[1] == GRANT_INSUPD % 'user1'
+        assert sql[2] == GRANT_SELECT % 'PUBLIC'
 
     def test_column_change_grants(self):
         "Change existing colum-level privileges"
         inmap = self.std_map()
-        inmap['schema public'].update({'table t1': {
-                    'columns': [{'c1': {
-                                'type': 'integer',
-                                        'privileges': [{'user1': ['insert']},
-                                                       {'user2': [
-                                            'insert', 'update']}]}},
-                                {'c2': {'type': 'text',
-                                'privileges': [{'user1': ['insert']}]}}],
-                    'owner': self.db.user,
-                    'privileges': [{self.db.user: ['all']},
-                                   {'PUBLIC': ['select']}]}})
+        inmap['schema public'].update(
+            {'table t1': {'columns': [{'c1': {
+                'type': 'integer', 'privileges': [{
+                'user1': ['insert']}, {'user2': ['insert', 'update']}]}},
+            {'c2': {'type': 'text', 'privileges': [{'user1': ['insert']}]}}],
+                'owner': self.db.user, 'privileges': [{self.db.user: ['all']},
+                {'PUBLIC': ['select']}]}})
         stmts = [CREATE_TABLE, GRANT_SELECT % 'PUBLIC',
                  "GRANT INSERT (c1, c2) ON t1 TO user1",
                  "GRANT INSERT (c2), UPDATE (c2) ON t1 TO user2"]
         sql = self.to_sql(inmap, stmts)
-        self.assertEqual(len(sql), 2)
-        self.assertEqual(sql[0],
-                         "GRANT INSERT (c1), UPDATE (c1) ON TABLE t1 TO user2")
-        self.assertEqual(sql[1], "REVOKE INSERT (c2), UPDATE (c2) ON TABLE t1 "
-                         "FROM user2")
+        assert len(sql) == 2
+        assert sql[0] == "GRANT INSERT (c1), UPDATE (c1) ON TABLE t1 TO user2"
+        assert sql[1] == "REVOKE INSERT (c2), UPDATE (c2) ON TABLE t1 " \
+            "FROM user2"
 
     def test_table_revoke_all(self):
         "Revoke all privileges on an existing table"
         inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
-                    'columns': [{'c1': {'type': 'integer'}},
-                                {'c2': {'type': 'text'}}],
-                    'owner': self.db.user}})
+            'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}],
+            'owner': self.db.user}})
         stmts = [CREATE_TABLE, GRANT_SELECT % 'PUBLIC', GRANT_INSUPD % 'user1']
-        sql = self.to_sql(inmap, stmts)
-        self.assertEqual(len(sql), 3)
-        sql = sorted(sql)
-        self.assertEqual(sql[0], "REVOKE ALL ON TABLE t1 FROM %s" %
-                         self.db.user)
-        self.assertEqual(sql[1], "REVOKE INSERT, UPDATE ON TABLE t1 "
-                         "FROM user1")
-        self.assertEqual(sql[2], "REVOKE SELECT ON TABLE t1 FROM PUBLIC")
+        sql = sorted(self.to_sql(inmap, stmts))
+        assert len(sql) == 3
+        assert sql[0] == "REVOKE ALL ON TABLE t1 FROM %s" % self.db.user
+        assert sql[1] == "REVOKE INSERT, UPDATE ON TABLE t1 FROM user1"
+        assert sql[2] == "REVOKE SELECT ON TABLE t1 FROM PUBLIC"
 
     def test_create_sequence(self):
         "Create a sequence with some privileges"
         inmap = self.std_map()
         inmap['schema public'].update({'sequence seq1': {
-                    'start_value': 1, 'increment_by': 1, 'max_value': None,
-                    'min_value': None, 'cache_value': 1,
-                    'owner': self.db.user,
-                    'privileges': [{self.db.user: ['all']},
-                                   {'PUBLIC': ['select']}]}})
+            'start_value': 1, 'increment_by': 1, 'max_value': None,
+            'min_value': None, 'cache_value': 1, 'owner': self.db.user,
+            'privileges': [{self.db.user: ['all']}, {'PUBLIC': ['select']}]}})
         sql = self.to_sql(inmap)
         # sql[0] = CREATE SEQUENCE
         # sql[1] = ALTER SEQUENCE OWNER
-        self.assertEqual(sql[2], "GRANT ALL ON SEQUENCE seq1 TO %s" %
-                         self.db.user)
-        self.assertEqual(sql[3], "GRANT SELECT ON SEQUENCE seq1 TO PUBLIC")
+        assert sql[2] == "GRANT ALL ON SEQUENCE seq1 TO %s" % self.db.user
+        assert sql[3] == "GRANT SELECT ON SEQUENCE seq1 TO PUBLIC"
 
     def test_sequence_new_grant(self):
         "Grant privileges on an existing sequence"
         inmap = self.std_map()
         inmap['schema public'].update({'sequence seq1': {
-                    'start_value': 1, 'increment_by': 1, 'max_value': None,
-                    'min_value': None, 'cache_value': 1,
-                    'owner': self.db.user,
-                    'privileges': [{self.db.user: ['all']},
-                                   {'PUBLIC': ['select']}]}})
-        sql = self.to_sql(inmap, ["CREATE SEQUENCE seq1"])
-        self.assertEqual(len(sql), 2)
-        sql = sorted(sql)
-        self.assertEqual(sql[0], "GRANT ALL ON SEQUENCE seq1 TO %s" %
-                         self.db.user)
-        self.assertEqual(sql[1], "GRANT SELECT ON SEQUENCE seq1 TO PUBLIC")
+            'start_value': 1, 'increment_by': 1, 'max_value': None,
+            'min_value': None, 'cache_value': 1, 'owner': self.db.user,
+            'privileges': [{self.db.user: ['all']}, {'PUBLIC': ['select']}]}})
+        sql = sorted(self.to_sql(inmap, ["CREATE SEQUENCE seq1"]))
+        assert len(sql) == 2
+        assert sql[0] == "GRANT ALL ON SEQUENCE seq1 TO %s" % self.db.user
+        assert sql[1] == "GRANT SELECT ON SEQUENCE seq1 TO PUBLIC"
 
     def test_create_view(self):
         "Create a view with some privileges"
         inmap = self.std_map()
         inmap['schema public'].update({'view v1': {
-                    'definition': " SELECT now()::date AS today;",
-                    'owner': self.db.user,
-                    'privileges': [{self.db.user: ['all']},
-                                   {'user1': ['select']}]}})
+            'definition': " SELECT now()::date AS today;",
+            'owner': self.db.user,
+            'privileges': [{self.db.user: ['all']}, {'user1': ['select']}]}})
         sql = self.to_sql(inmap)
         # sql[0] = CREATE VIEW
         # sql[1] = ALTER VIEW OWNER
-        self.assertEqual(sql[2], "GRANT ALL ON TABLE v1 TO %s" % self.db.user)
-        self.assertEqual(sql[3], "GRANT SELECT ON TABLE v1 TO user1")
+        assert sql[2] == "GRANT ALL ON TABLE v1 TO %s" % self.db.user
+        assert sql[3] == "GRANT SELECT ON TABLE v1 TO user1"
 
     def test_view_new_grant(self):
         "Grant privileges on an existing view"
         inmap = self.std_map()
         inmap['schema public'].update({'view v1': {
-                    'definition': " SELECT now()::date AS today;",
-                    'owner': self.db.user,
-                    'privileges': [{self.db.user: ['all']},
-                                   {'user1': ['select']}]}})
-        sql = self.to_sql(inmap,
-                          ["CREATE VIEW v1 AS SELECT now()::date AS today"])
-        self.assertEqual(len(sql), 2)
-        sql = sorted(sql)
-        self.assertEqual(sql[0], "GRANT ALL ON TABLE v1 TO %s" % self.db.user)
-        self.assertEqual(sql[1], "GRANT SELECT ON TABLE v1 TO user1")
+            'definition': " SELECT now()::date AS today;",
+            'owner': self.db.user,
+            'privileges': [{self.db.user: ['all']}, {'user1': ['select']}]}})
+        sql = sorted(self.to_sql(inmap, ["CREATE VIEW v1 AS "
+                                         "SELECT now()::date AS today"]))
+        assert len(sql) == 2
+        assert sql[0] == "GRANT ALL ON TABLE v1 TO %s" % self.db.user
+        assert sql[1] == "GRANT SELECT ON TABLE v1 TO user1"
 
     def test_create_function(self):
         "Create a function with some privileges"
         inmap = self.std_map()
         inmap['schema public'].update({'function f1()': {
-                    'language': 'sql', 'returns': 'text',
-                    'source': SOURCE1, 'volatility': 'immutable',
-                    'owner': self.db.user,
-                    'privileges': [{self.db.user: ['all']},
-                                   {'PUBLIC': ['execute']}]}})
+            'language': 'sql', 'returns': 'text', 'source': SOURCE1,
+            'volatility': 'immutable', 'owner': self.db.user,
+            'privileges': [{self.db.user: ['all']}, {'PUBLIC': ['execute']}]}})
         sql = self.to_sql(inmap)
         # sql[0] = SET check_function_bodies
         # sql[1] = CREATE FUNCTION
         # sql[2] = ALTER FUNCTION OWNER
-        self.assertEqual(sql[3], "GRANT EXECUTE ON FUNCTION f1() TO %s" %
-                         self.db.user)
-        self.assertEqual(sql[4], "GRANT EXECUTE ON FUNCTION f1() TO PUBLIC")
+        assert sql[3] == "GRANT EXECUTE ON FUNCTION f1() TO %s" % self.db.user
+        assert sql[4] == "GRANT EXECUTE ON FUNCTION f1() TO PUBLIC"
 
     def test_function_new_grant(self):
         "Grant privileges on an existing function"
         inmap = self.std_map()
         inmap['schema public'].update({'function f1()': {
-                    'language': 'sql', 'returns': 'text',
-                    'source': SOURCE1, 'volatility': 'immutable',
-                    'owner': self.db.user,
-                    'privileges': [{self.db.user: ['all']},
-                                   {'PUBLIC': ['execute']}]}})
+            'language': 'sql', 'returns': 'text', 'source': SOURCE1,
+            'volatility': 'immutable', 'owner': self.db.user,
+            'privileges': [{self.db.user: ['all']}, {'PUBLIC': ['execute']}]}})
         sql = self.to_sql(inmap, [CREATE_FUNC])
-        self.assertEqual(len(sql), 2)
+        assert len(sql) == 2
         sql = sorted(sql)
         # assumes self.db.user > PUBLIC
-        self.assertEqual(sql[0], "GRANT EXECUTE ON FUNCTION f1() TO PUBLIC")
-        self.assertEqual(sql[1], "GRANT EXECUTE ON FUNCTION f1() TO %s" %
-                         self.db.user)
+        assert sql[0] == "GRANT EXECUTE ON FUNCTION f1() TO PUBLIC"
+        assert sql[1] == "GRANT EXECUTE ON FUNCTION f1() TO %s" % self.db.user
 
     def test_create_fd_wrapper(self):
         "Create a foreign data wrapper with some privileges"
         inmap = self.std_map()
         inmap.update({'foreign data wrapper fdw1': {
-                    'owner': self.db.user,
-                    'privileges': [{self.db.user: ['all']},
-                                   {'PUBLIC': ['usage']}]}})
+            'owner': self.db.user,
+            'privileges': [{self.db.user: ['all']}, {'PUBLIC': ['usage']}]}})
         sql = self.to_sql(inmap)
         # sql[0] = CREATE FDW
         # sql[1] = ALTER FDW OWNER
-        self.assertEqual(sql[2], "GRANT USAGE ON FOREIGN DATA WRAPPER fdw1 "
-                         "TO %s" % self.db.user)
-        self.assertEqual(sql[3], "GRANT USAGE ON FOREIGN DATA WRAPPER fdw1 "
-                         "TO PUBLIC")
+        assert sql[2] == "GRANT USAGE ON FOREIGN DATA WRAPPER fdw1 " \
+            "TO %s" % self.db.user
+        assert sql[3] == "GRANT USAGE ON FOREIGN DATA WRAPPER fdw1 TO PUBLIC"
 
     def test_fd_wrapper_new_grant(self):
         "Grant privileges on an existing foreign data wrapper"
         inmap = self.std_map()
         inmap.update({'foreign data wrapper fdw1': {
-                    'owner': self.db.user,
-                    'privileges': [{self.db.user: ['all']},
-                                   {'PUBLIC': ['usage']}]}})
-        sql = self.to_sql(inmap, [CREATE_FDW], superuser=True)
-        self.assertEqual(len(sql), 2)
-        sql = sorted(sql)
+            'owner': self.db.user,
+            'privileges': [{self.db.user: ['all']}, {'PUBLIC': ['usage']}]}})
+        sql = sorted(self.to_sql(inmap, [CREATE_FDW], superuser=True))
+        assert len(sql) == 2
         # assumes self.db.user > PUBLIC
-        self.assertEqual(sql[0], "GRANT USAGE ON FOREIGN DATA WRAPPER fdw1 "
-                         "TO PUBLIC")
-        self.assertEqual(sql[1], "GRANT USAGE ON FOREIGN DATA WRAPPER fdw1 "
-                         "TO %s" % self.db.user)
+        assert sql[0] == "GRANT USAGE ON FOREIGN DATA WRAPPER fdw1 TO PUBLIC"
+        assert sql[1] == "GRANT USAGE ON FOREIGN DATA WRAPPER fdw1 " \
+            "TO %s" % self.db.user
 
     def test_create_server(self):
         "Create a foreign server with some privileges"
         inmap = self.std_map()
         inmap.update({'foreign data wrapper fdw1': {'server fs1': {
-                    'owner': self.db.user,
-                    'privileges': [{self.db.user: ['all']},
-                                   {'user2': ['usage']}]}}})
+            'owner': self.db.user,
+            'privileges': [{self.db.user: ['all']}, {'user2': ['usage']}]}}})
         sql = self.to_sql(inmap, [CREATE_FDW], superuser=True)
         # sql[0] = CREATE SERVER
         # sql[1] = ALTER SERVER OWNER
-        self.assertEqual(sql[2], "GRANT USAGE ON FOREIGN SERVER fs1 TO %s" %
-                         self.db.user)
-        self.assertEqual(sql[3], "GRANT USAGE ON FOREIGN SERVER fs1 TO user2")
+        assert sql[2] == "GRANT USAGE ON FOREIGN SERVER fs1 TO %s" % \
+            self.db.user
+        assert sql[3] == "GRANT USAGE ON FOREIGN SERVER fs1 TO user2"
 
     def test_server_new_grant(self):
         "Grant privileges on an existing foreign server"
         inmap = self.std_map()
         inmap.update({'foreign data wrapper fdw1': {'server fs1': {
-                    'owner': self.db.user,
-                    'privileges': [{self.db.user: ['all']},
-                                   {'user2': ['usage']}]}}})
-        sql = self.to_sql(inmap, [CREATE_FDW, CREATE_FS], superuser=True)
-        self.assertEqual(len(sql), 2)
-        sql = sorted(sql)
-        self.assertEqual(sql[0], "GRANT USAGE ON FOREIGN SERVER fs1 TO %s" %
-                         self.db.user)
-        self.assertEqual(sql[1], "GRANT USAGE ON FOREIGN SERVER fs1 TO user2")
+            'owner': self.db.user,
+            'privileges': [{self.db.user: ['all']}, {'user2': ['usage']}]}}})
+        sql = sorted(self.to_sql(inmap, [CREATE_FDW, CREATE_FS],
+                                 superuser=True))
+        assert len(sql) == 2
+        assert sql[0] == "GRANT USAGE ON FOREIGN SERVER fs1 TO %s" % \
+            self.db.user
+        assert sql[1] == "GRANT USAGE ON FOREIGN SERVER fs1 TO user2"
 
     def test_create_foreign_table(self):
         "Create a foreign table with some privileges"
@@ -460,18 +405,17 @@ class PrivilegeToSqlTestCase(InputMapToSqlTestCase):
         inmap = self.std_map()
         inmap.update({'foreign data wrapper fdw1': {'server fs1': {}}})
         inmap['schema public'].update({'foreign table ft1': {
-                    'columns': [{'c1': {'type': 'integer'}},
-                                {'c2': {'type': 'text'}}], 'server': 'fs1',
-                    'owner': self.db.user,
-                    'privileges': [{self.db.user: ['all']},
-                                   {'PUBLIC': ['select']},
-                                   {'user1': ['insert', 'update']}]}})
+            'columns': [{'c1': {'type': 'integer'}},
+                        {'c2': {'type': 'text'}}], 'server': 'fs1',
+            'owner': self.db.user,
+            'privileges': [{self.db.user: ['all']}, {'PUBLIC': ['select']},
+                           {'user1': ['insert', 'update']}]}})
         sql = self.to_sql(inmap, [CREATE_FDW, CREATE_FS], superuser=True)
         # sql[0] = CREATE TABLE
         # sql[1] = ALTER TABLE OWNER
-        self.assertEqual(sql[2], "GRANT ALL ON TABLE ft1 TO %s" % self.db.user)
-        self.assertEqual(sql[3], "GRANT SELECT ON TABLE ft1 TO PUBLIC")
-        self.assertEqual(sql[4], "GRANT INSERT, UPDATE ON TABLE ft1 TO user1")
+        assert sql[2] == "GRANT ALL ON TABLE ft1 TO %s" % self.db.user
+        assert sql[3] == "GRANT SELECT ON TABLE ft1 TO PUBLIC"
+        assert sql[4] == "GRANT INSERT, UPDATE ON TABLE ft1 TO user1"
 
     def test_foreign_table_new_grant(self):
         "Grant privileges on an existing foreign table"
@@ -480,28 +424,15 @@ class PrivilegeToSqlTestCase(InputMapToSqlTestCase):
         inmap = self.std_map()
         inmap.update({'foreign data wrapper fdw1': {'server fs1': {}}})
         inmap['schema public'].update({'foreign table ft1': {
-                    'columns': [{'c1': {'type': 'integer'}},
-                                {'c2': {'type': 'text'}}], 'server': 'fs1',
-                    'owner': self.db.user,
-                    'privileges': [{self.db.user: ['all']},
-                                   {'PUBLIC': ['select']},
-                                   {'user1': ['insert', 'update']}]}})
-        sql = self.to_sql(inmap, [
-                CREATE_FDW, CREATE_FS,
-                "CREATE FOREIGN TABLE ft1 (c1 integer, c2 text) SERVER fs1"],
-                          superuser=True)
-        self.assertEqual(len(sql), 3)
-        sql = sorted(sql)
-        self.assertEqual(sql[0], "GRANT ALL ON TABLE ft1 TO %s" % self.db.user)
-        self.assertEqual(sql[1], "GRANT INSERT, UPDATE ON TABLE ft1 TO user1")
-        self.assertEqual(sql[2], "GRANT SELECT ON TABLE ft1 TO PUBLIC")
-
-
-def suite():
-    tests = unittest.TestLoader().loadTestsFromTestCase(PrivilegeToMapTestCase)
-    tests.addTest(unittest.TestLoader().loadTestsFromTestCase(
-            PrivilegeToSqlTestCase))
-    return tests
-
-if __name__ == '__main__':
-    unittest.main(defaultTest='suite')
+            'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}],
+            'server': 'fs1', 'owner': self.db.user,
+            'privileges': [{self.db.user: ['all']}, {'PUBLIC': ['select']},
+                           {'user1': ['insert', 'update']}]}})
+        sql = sorted(self.to_sql(inmap, [
+            CREATE_FDW, CREATE_FS,
+            "CREATE FOREIGN TABLE ft1 (c1 integer, c2 text) SERVER fs1"],
+            superuser=True))
+        assert len(sql) == 3
+        assert sql[0] == "GRANT ALL ON TABLE ft1 TO %s" % self.db.user
+        assert sql[1] == "GRANT INSERT, UPDATE ON TABLE ft1 TO user1"
+        assert sql[2] == "GRANT SELECT ON TABLE ft1 TO PUBLIC"

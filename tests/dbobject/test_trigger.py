@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 """Test triggers"""
 
-import unittest
-
 from pyrseas.testutils import DatabaseToMapTestCase
 from pyrseas.testutils import InputMapToSqlTestCase, fix_indent
 
@@ -33,10 +31,9 @@ class TriggerToMapTestCase(DatabaseToMapTestCase):
         "Map a simple trigger"
         stmts = [CREATE_TABLE_STMT, CREATE_FUNC_STMT, CREATE_STMT]
         dbmap = self.to_map(stmts)
-        expmap = {'tr1': {'timing': 'before', 'events': ['insert', 'update'],
-                          'level': 'row', 'procedure': 'f1()'}}
-        self.assertEqual(dbmap['schema public']['table t1']['triggers'],
-                         expmap)
+        assert dbmap['schema public']['table t1']['triggers'] == {
+            'tr1': {'timing': 'before', 'events': ['insert', 'update'],
+                    'level': 'row', 'procedure': 'f1()'}}
 
     def test_map_trigger2(self):
         "Map another simple trigger with different attributes"
@@ -44,10 +41,9 @@ class TriggerToMapTestCase(DatabaseToMapTestCase):
                  "CREATE TRIGGER tr1 AFTER DELETE OR TRUNCATE ON t1 "
                  "EXECUTE PROCEDURE f1()"]
         dbmap = self.to_map(stmts)
-        expmap = {'tr1': {'timing': 'after', 'events': ['delete', 'truncate'],
-                          'level': 'statement', 'procedure': 'f1()'}}
-        self.assertEqual(dbmap['schema public']['table t1']['triggers'],
-                         expmap)
+        assert dbmap['schema public']['table t1']['triggers'] == {
+            'tr1': {'timing': 'after', 'events': ['delete', 'truncate'],
+                    'level': 'statement', 'procedure': 'f1()'}}
 
     def test_map_trigger_update_cols(self):
         "Map trigger with UPDATE OF columns"
@@ -57,11 +53,10 @@ class TriggerToMapTestCase(DatabaseToMapTestCase):
                  "CREATE TRIGGER tr1 AFTER INSERT OR UPDATE OF c1, c2 ON t1 "
                  "FOR EACH ROW EXECUTE PROCEDURE f1()"]
         dbmap = self.to_map(stmts)
-        expmap = {'tr1': {'timing': 'after', 'events': ['insert', 'update'],
-                          'columns': ['c1', 'c2'], 'level': 'row',
-                          'procedure': 'f1()'}}
-        self.assertEqual(dbmap['schema public']['table t1']['triggers'],
-                         expmap)
+        assert dbmap['schema public']['table t1']['triggers'] == {
+            'tr1': {'timing': 'after', 'events': ['insert', 'update'],
+                    'columns': ['c1', 'c2'], 'level': 'row',
+                    'procedure': 'f1()'}}
 
     def test_map_trigger_conditional(self):
         "Map trigger with a WHEN qualification"
@@ -72,11 +67,10 @@ class TriggerToMapTestCase(DatabaseToMapTestCase):
                  "WHEN (OLD.c2 IS DISTINCT FROM NEW.c2) "
                  "EXECUTE PROCEDURE f1()"]
         dbmap = self.to_map(stmts)
-        expmap = {'tr1': {'timing': 'after', 'events': ['update'],
-                          'level': 'row', 'procedure': 'f1()',
-                          'condition': '(old.c2 IS DISTINCT FROM new.c2)'}}
-        self.assertEqual(dbmap['schema public']['table t1']['triggers'],
-                         expmap)
+        assert dbmap['schema public']['table t1']['triggers'] == {
+            'tr1': {'timing': 'after', 'events': ['update'],
+                    'level': 'row', 'procedure': 'f1()',
+                    'condition': '(old.c2 IS DISTINCT FROM new.c2)'}}
 
     def test_map_trigger_instead(self):
         "Map an INSTEAD OF trigger"
@@ -88,18 +82,17 @@ class TriggerToMapTestCase(DatabaseToMapTestCase):
                  "CREATE TRIGGER tr1 INSTEAD OF INSERT ON v1 "
                  "FOR EACH ROW EXECUTE PROCEDURE f1()"]
         dbmap = self.to_map(stmts)
-        expmap = {'tr1': {'timing': 'instead of', 'events': ['insert'],
-                          'level': 'row', 'procedure': 'f1()'}}
-        self.assertEqual(dbmap['schema public']['view v1']['triggers'],
-                         expmap)
+        assert dbmap['schema public']['view v1']['triggers'] == {
+            'tr1': {'timing': 'instead of', 'events': ['insert'],
+                    'level': 'row', 'procedure': 'f1()'}}
 
     def test_map_trigger_comment(self):
         "Map a trigger comment"
         stmts = [CREATE_TABLE_STMT, CREATE_FUNC_STMT, CREATE_STMT,
                  COMMENT_STMT]
         dbmap = self.to_map(stmts)
-        self.assertEqual(dbmap['schema public']['table t1']['triggers']
-                         ['tr1']['description'], 'Test trigger tr1')
+        assert dbmap['schema public']['table t1']['triggers']['tr1'][
+            'description'] == 'Test trigger tr1'
 
 
 class ConstraintTriggerToMapTestCase(DatabaseToMapTestCase):
@@ -117,11 +110,10 @@ class ConstraintTriggerToMapTestCase(DatabaseToMapTestCase):
                  "CREATE CONSTRAINT TRIGGER tr1 AFTER INSERT OR UPDATE ON t1 "
                  "FOR EACH ROW EXECUTE PROCEDURE f1()"]
         dbmap = self.to_map(stmts)
-        expmap = {'tr1': {'constraint': True, 'timing': 'after',
-                          'events': ['insert', 'update'],
-                          'level': 'row', 'procedure': 'f1()'}}
-        self.assertEqual(dbmap['schema public']['table t1']['triggers'],
-                         expmap)
+        assert dbmap['schema public']['table t1']['triggers'] == {
+            'tr1': {'constraint': True, 'timing': 'after',
+                    'events': ['insert', 'update'], 'level': 'row',
+                    'procedure': 'f1()'}}
 
     def test_map_trigger_deferrable(self):
         "Map a deferrable, initially deferred constraint trigger"
@@ -130,12 +122,11 @@ class ConstraintTriggerToMapTestCase(DatabaseToMapTestCase):
                  "DEFERRABLE INITIALLY DEFERRED "
                  "FOR EACH ROW EXECUTE PROCEDURE f1()"]
         dbmap = self.to_map(stmts)
-        expmap = {'tr1': {'constraint': True, 'deferrable': True,
-                          'initially_deferred': True, 'timing': 'after',
-                          'events': ['insert', 'update'],
-                          'level': 'row', 'procedure': 'f1()'}}
-        self.assertEqual(dbmap['schema public']['table t1']['triggers'],
-                         expmap)
+        assert dbmap['schema public']['table t1']['triggers'] == {
+            'tr1': {'constraint': True, 'deferrable': True,
+                    'initially_deferred': True, 'timing': 'after',
+                    'events': ['insert', 'update'], 'level': 'row',
+                    'procedure': 'f1()'}}
 
 
 class TriggerToSqlTestCase(InputMapToSqlTestCase):
@@ -151,39 +142,34 @@ class TriggerToSqlTestCase(InputMapToSqlTestCase):
         "Create a simple trigger"
         inmap = self.std_map(plpgsql_installed=True)
         inmap['schema public'].update({'function f1()': {
-                    'language': 'plpgsql', 'returns': 'trigger',
-                    'source': FUNC_SRC}})
+            'language': 'plpgsql', 'returns': 'trigger', 'source': FUNC_SRC}})
         inmap['schema public'].update({'table t1': {
-                    'columns': [{'c1': {'type': 'integer'}},
-                                {'c2': {'type': 'text'}},
-                                {'c3': {'type': 'timestamp with time zone'}}],
-                    'triggers': {'tr1': {
-                            'timing': 'before', 'events': ['insert', 'update'],
-                            'level': 'row', 'procedure': 'f1()'}}}})
+            'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}},
+                        {'c3': {'type': 'timestamp with time zone'}}],
+            'triggers': {'tr1': {
+                'timing': 'before', 'events': ['insert', 'update'],
+                'level': 'row', 'procedure': 'f1()'}}}})
         sql = self.to_sql(inmap)
-        self.assertEqual(fix_indent(sql[1]), CREATE_FUNC_STMT)
-        self.assertEqual(fix_indent(sql[2]), CREATE_TABLE_STMT)
-        self.assertEqual(fix_indent(sql[3]), CREATE_STMT)
+        assert fix_indent(sql[1]) == CREATE_FUNC_STMT
+        assert fix_indent(sql[2]) == CREATE_TABLE_STMT
+        assert fix_indent(sql[3]) == CREATE_STMT
 
     def test_create_trigger2(self):
         "Create another simple trigger with"
         inmap = self.std_map(plpgsql_installed=True)
         inmap['schema public'].update({'function f1()': {
-                    'language': 'plpgsql', 'returns': 'trigger',
-                    'source': FUNC_SRC}})
+            'language': 'plpgsql', 'returns': 'trigger', 'source': FUNC_SRC}})
         inmap['schema public'].update({'table t1': {
-                    'columns': [{'c1': {'type': 'integer'}},
-                                {'c2': {'type': 'text'}},
-                                {'c3': {'type': 'timestamp with time zone'}}],
-                    'triggers': {'tr1': {'timing': 'after',
-                                         'events': ['delete', 'truncate'],
-                                         'procedure': 'f1()'}}}})
+            'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}},
+                        {'c3': {'type': 'timestamp with time zone'}}],
+            'triggers': {'tr1': {'timing': 'after',
+                                 'events': ['delete', 'truncate'],
+                                 'procedure': 'f1()'}}}})
         sql = self.to_sql(inmap)
-        self.assertEqual(fix_indent(sql[1]), CREATE_FUNC_STMT)
-        self.assertEqual(fix_indent(sql[2]), CREATE_TABLE_STMT)
-        self.assertEqual(fix_indent(sql[3]),
-                         "CREATE TRIGGER tr1 AFTER DELETE OR TRUNCATE ON t1 "
-                         "FOR EACH STATEMENT EXECUTE PROCEDURE f1()")
+        assert fix_indent(sql[1]) == CREATE_FUNC_STMT
+        assert fix_indent(sql[2]) == CREATE_TABLE_STMT
+        assert fix_indent(sql[3]) == "CREATE TRIGGER tr1 AFTER DELETE OR " \
+            "TRUNCATE ON t1 FOR EACH STATEMENT EXECUTE PROCEDURE f1()"
 
     def test_create_trigger_update_cols(self):
         "Create a trigger with UPDATE OF columns"
@@ -191,22 +177,18 @@ class TriggerToSqlTestCase(InputMapToSqlTestCase):
             self.skipTest('Only available on PG 9.0')
         inmap = self.std_map()
         inmap['schema public'].update({'function f1()': {
-                    'language': 'plpgsql', 'returns': 'trigger',
-                    'source': FUNC_SRC}})
+            'language': 'plpgsql', 'returns': 'trigger', 'source': FUNC_SRC}})
         inmap['schema public'].update({'table t1': {
-                    'columns': [{'c1': {'type': 'integer'}},
-                                {'c2': {'type': 'text'}},
-                                {'c3': {'type': 'timestamp with time zone'}}],
-                    'triggers': {'tr1': {
-                            'timing': 'before', 'events': ['insert', 'update'],
-                            'columns': ['c1', 'c2'],
-                            'level': 'row', 'procedure': 'f1()'}}}})
+            'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}},
+                        {'c3': {'type': 'timestamp with time zone'}}],
+            'triggers': {'tr1': {'timing': 'before', 'events': [
+                'insert', 'update'], 'columns': ['c1', 'c2'], 'level': 'row',
+                'procedure': 'f1()'}}}})
         sql = self.to_sql(inmap)
-        self.assertEqual(fix_indent(sql[1]), CREATE_FUNC_STMT)
-        self.assertEqual(fix_indent(sql[2]), CREATE_TABLE_STMT)
-        self.assertEqual(fix_indent(sql[3]), "CREATE TRIGGER tr1 "
-                         "BEFORE INSERT OR UPDATE OF c1, c2 "
-                         "ON t1 FOR EACH ROW EXECUTE PROCEDURE f1()")
+        assert fix_indent(sql[1]) == CREATE_FUNC_STMT
+        assert fix_indent(sql[2]) == CREATE_TABLE_STMT
+        assert fix_indent(sql[3]) == "CREATE TRIGGER tr1 BEFORE INSERT OR " \
+            "UPDATE OF c1, c2 ON t1 FOR EACH ROW EXECUTE PROCEDURE f1()"
 
     def test_create_trigger_conditional(self):
         "Create a trigger with a WHEN qualification"
@@ -214,132 +196,113 @@ class TriggerToSqlTestCase(InputMapToSqlTestCase):
             self.skipTest('Only available on PG 9.0')
         inmap = self.std_map()
         inmap['schema public'].update({'function f1()': {
-                    'language': 'plpgsql', 'returns': 'trigger',
-                    'source': FUNC_SRC}})
+            'language': 'plpgsql', 'returns': 'trigger', 'source': FUNC_SRC}})
         inmap['schema public'].update({'table t1': {
-                    'columns': [{'c1': {'type': 'integer'}},
-                                {'c2': {'type': 'text'}},
-                                {'c3': {'type': 'timestamp with time zone'}}],
-                    'triggers': {'tr1': {
-                            'timing': 'before', 'events': ['update'],
-                            'level': 'row', 'procedure': 'f1()',
-                            'condition':
-                                '(old.c2 IS DISTINCT FROM new.c2)'}}}})
+            'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}},
+                        {'c3': {'type': 'timestamp with time zone'}}],
+            'triggers': {'tr1': {'timing': 'before', 'events': [
+                'update'], 'level': 'row', 'procedure': 'f1()',
+                'condition': '(old.c2 IS DISTINCT FROM new.c2)'}}}})
         sql = self.to_sql(inmap)
-        self.assertEqual(fix_indent(sql[1]), CREATE_FUNC_STMT)
-        self.assertEqual(fix_indent(sql[2]), CREATE_TABLE_STMT)
-        self.assertEqual(fix_indent(sql[3]), "CREATE TRIGGER tr1 "
-                         "BEFORE UPDATE ON t1 FOR EACH ROW "
-                         "WHEN ((old.c2 IS DISTINCT FROM new.c2)) "
-                         "EXECUTE PROCEDURE f1()")
+        assert fix_indent(sql[1]) == CREATE_FUNC_STMT
+        assert fix_indent(sql[2]) == CREATE_TABLE_STMT
+        assert fix_indent(sql[3]) == "CREATE TRIGGER tr1 BEFORE UPDATE " \
+            "ON t1 FOR EACH ROW WHEN ((old.c2 IS DISTINCT FROM new.c2)) " \
+            "EXECUTE PROCEDURE f1()"
 
     def test_create_trigger_instead(self):
         "Create an INSTEAD OF trigger"
         inmap = self.std_map(plpgsql_installed=True)
         inmap['schema public'].update({'function f1()': {
-                    'language': 'plpgsql', 'returns': 'trigger',
-                    'source': FUNC_INSTEAD_SRC}})
+            'language': 'plpgsql', 'returns': 'trigger',
+            'source': FUNC_INSTEAD_SRC}})
         inmap['schema public'].update({'table t1': {
-                    'columns': [{'c1': {'type': 'integer'}},
-                                {'c2': {'type': 'text'}},
-                                {'c3': {'type': 'timestamp with time zone'}}]},
-                                       'view v1': {
-                    'definition': "SELECT c1, c2 FROM t1",
-                    'triggers': {'tr1': {'timing': 'instead of',
-                                         'events': ['insert'], 'level': 'row',
-                                         'procedure': 'f1()'}}}})
+            'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}},
+                        {'c3': {'type': 'timestamp with time zone'}}]},
+            'view v1': {'definition': "SELECT c1, c2 FROM t1",
+                        'triggers': {'tr1': {'timing': 'instead of',
+                                             'events': ['insert'],
+                                             'level': 'row',
+                                             'procedure': 'f1()'}}}})
         sql = self.to_sql(inmap)
-        self.assertEqual(fix_indent(sql[1]),
-                         "CREATE FUNCTION f1() RETURNS trigger "
-                         "LANGUAGE plpgsql AS $_$%s$_$" % FUNC_INSTEAD_SRC)
-        self.assertEqual(fix_indent(sql[2]), CREATE_TABLE_STMT)
-        self.assertEqual(fix_indent(sql[3]),
-                         "CREATE VIEW v1 AS SELECT c1, c2 FROM t1")
-        self.assertEqual(fix_indent(sql[4]),
-                         "CREATE TRIGGER tr1 INSTEAD OF INSERT ON v1 "
-                         "FOR EACH ROW EXECUTE PROCEDURE f1()")
+        assert fix_indent(sql[1]) == "CREATE FUNCTION f1() RETURNS trigger " \
+            "LANGUAGE plpgsql AS $_$%s$_$" % FUNC_INSTEAD_SRC
+        assert fix_indent(sql[2]) == CREATE_TABLE_STMT
+        assert fix_indent(sql[3]) == "CREATE VIEW v1 AS SELECT c1, c2 FROM t1"
+        assert fix_indent(sql[4]) == "CREATE TRIGGER tr1 INSTEAD OF INSERT " \
+            "ON v1 FOR EACH ROW EXECUTE PROCEDURE f1()"
 
     def test_create_trigger_in_schema(self):
         "Create a trigger within a non-public schema"
         inmap = self.std_map(plpgsql_installed=True)
         inmap.update({'schema s1': {'function f1()': {
-                        'language': 'plpgsql', 'returns': 'trigger',
-                        'source': FUNC_SRC},
-                      'table t1': {
-                    'columns': [{'c1': {'type': 'integer'}},
-                                {'c2': {'type': 'text'}},
-                                {'c3': {'type': 'timestamp with time zone'}}],
-                    'triggers': {'tr1': {
-                            'timing': 'before', 'events': ['insert', 'update'],
-                            'level': 'row', 'procedure': 'f1()'}}}}})
+            'language': 'plpgsql', 'returns': 'trigger', 'source': FUNC_SRC},
+            'table t1': {
+                'columns': [{'c1': {'type': 'integer'}},
+                            {'c2': {'type': 'text'}},
+                            {'c3': {'type': 'timestamp with time zone'}}],
+                'triggers': {'tr1': {
+                    'timing': 'before', 'events': ['insert', 'update'],
+                    'level': 'row', 'procedure': 'f1()'}}}}})
         sql = self.to_sql(inmap, ["CREATE SCHEMA s1"])
-        self.assertEqual(fix_indent(sql[3]), "CREATE TRIGGER tr1 "
-                         "BEFORE INSERT OR UPDATE ON s1.t1 FOR EACH ROW "
-                         "EXECUTE PROCEDURE f1()")
+        assert fix_indent(sql[3]) == "CREATE TRIGGER tr1 BEFORE INSERT OR " \
+            "UPDATE ON s1.t1 FOR EACH ROW EXECUTE PROCEDURE f1()"
 
     def test_drop_trigger(self):
         "Drop an existing trigger"
         stmts = [CREATE_TABLE_STMT, CREATE_FUNC_STMT, CREATE_STMT]
         inmap = self.std_map(plpgsql_installed=True)
         inmap['schema public'].update({'function f1()': {
-                    'language': 'plpgsql', 'returns': 'trigger',
-                    'source': FUNC_SRC}})
+            'language': 'plpgsql', 'returns': 'trigger', 'source': FUNC_SRC}})
         inmap['schema public'].update({'table t1': {
-                    'columns': [{'c1': {'type': 'integer'}},
-                                {'c2': {'type': 'text'}},
-                                {'c3': {
-                                'type': 'timestamp with time zone'}}]}})
+            'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}},
+                        {'c3': {'type': 'timestamp with time zone'}}]}})
         sql = self.to_sql(inmap, stmts)
-        self.assertEqual(sql, ["DROP TRIGGER tr1 ON t1"])
+        assert sql == ["DROP TRIGGER tr1 ON t1"]
 
     def test_drop_trigger_table(self):
         "Drop an existing trigger and the related table"
         stmts = [CREATE_TABLE_STMT, CREATE_FUNC_STMT, CREATE_STMT]
         inmap = self.std_map(plpgsql_installed=True)
         inmap['schema public'].update({'function f1()': {
-                    'language': 'plpgsql', 'returns': 'trigger',
-                    'source': FUNC_SRC}})
+            'language': 'plpgsql', 'returns': 'trigger', 'source': FUNC_SRC}})
         sql = self.to_sql(inmap, stmts)
-        self.assertEqual(sql[0], "DROP TRIGGER tr1 ON t1")
-        self.assertEqual(sql[1], "DROP TABLE t1")
+        assert sql[0] == "DROP TRIGGER tr1 ON t1"
+        assert sql[1] == "DROP TABLE t1"
 
     def test_trigger_with_comment(self):
         "Create a trigger with a comment"
         inmap = self.std_map(plpgsql_installed=True)
         inmap['schema public'].update({'function f1()': {
-                    'language': 'plpgsql', 'returns': 'trigger',
-                    'source': FUNC_SRC}})
+            'language': 'plpgsql', 'returns': 'trigger', 'source': FUNC_SRC}})
         inmap['schema public'].update({'table t1': {
-                    'columns': [{'c1': {'type': 'integer'}},
-                                {'c2': {'type': 'text'}},
-                                {'c3': {'type': 'timestamp with time zone'}}],
-                    'triggers': {'tr1': {
-                            'description': 'Test trigger tr1',
-                            'timing': 'before', 'events': ['insert', 'update'],
-                            'level': 'row', 'procedure': 'f1()'}}}})
+            'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}},
+                        {'c3': {'type': 'timestamp with time zone'}}],
+            'triggers': {'tr1': {
+                'description': 'Test trigger tr1',
+                'timing': 'before', 'events': ['insert', 'update'],
+                'level': 'row', 'procedure': 'f1()'}}}})
         sql = self.to_sql(inmap)
-        self.assertEqual(fix_indent(sql[1]), CREATE_FUNC_STMT)
-        self.assertEqual(fix_indent(sql[2]), CREATE_TABLE_STMT)
-        self.assertEqual(fix_indent(sql[3]), CREATE_STMT)
-        self.assertEqual(sql[4], COMMENT_STMT)
+        assert fix_indent(sql[1]) == CREATE_FUNC_STMT
+        assert fix_indent(sql[2]) == CREATE_TABLE_STMT
+        assert fix_indent(sql[3]) == CREATE_STMT
+        assert sql[4] == COMMENT_STMT
 
     def test_comment_on_trigger(self):
         "Create a comment on an existing trigger"
         stmts = [CREATE_TABLE_STMT, CREATE_FUNC_STMT, CREATE_STMT]
         inmap = self.std_map(plpgsql_installed=True)
         inmap['schema public'].update({'function f1()': {
-                    'language': 'plpgsql', 'returns': 'trigger',
-                    'source': FUNC_SRC}})
+            'language': 'plpgsql', 'returns': 'trigger', 'source': FUNC_SRC}})
         inmap['schema public'].update({'table t1': {
-                    'columns': [{'c1': {'type': 'integer'}},
-                                {'c2': {'type': 'text'}},
-                                {'c3': {'type': 'timestamp with time zone'}}],
-                    'triggers': {'tr1': {
-                            'description': 'Test trigger tr1',
-                            'timing': 'before', 'events': ['insert', 'update'],
-                            'level': 'row', 'procedure': 'f1()'}}}})
+            'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}},
+                        {'c3': {'type': 'timestamp with time zone'}}],
+            'triggers': {'tr1': {
+                'description': 'Test trigger tr1',
+                'timing': 'before', 'events': ['insert', 'update'],
+                'level': 'row', 'procedure': 'f1()'}}}})
         sql = self.to_sql(inmap, stmts)
-        self.assertEqual(sql, [COMMENT_STMT])
+        assert sql == [COMMENT_STMT]
 
     def test_drop_trigger_comment(self):
         "Drop a comment on an existing trigger"
@@ -347,18 +310,15 @@ class TriggerToSqlTestCase(InputMapToSqlTestCase):
                  COMMENT_STMT]
         inmap = self.std_map(plpgsql_installed=True)
         inmap['schema public'].update({'function f1()': {
-                    'language': 'plpgsql', 'returns': 'trigger',
-                    'source': FUNC_SRC}})
+            'language': 'plpgsql', 'returns': 'trigger', 'source': FUNC_SRC}})
         inmap['schema public'].update({'table t1': {
-                    'columns': [{'c1': {'type': 'integer'}},
-                                {'c2': {'type': 'text'}},
-                                {'c3': {'type': 'timestamp with time zone'}}],
-                    'triggers': {'tr1': {
-                            'timing': 'before', 'events': ['insert', 'update'],
-                            'level': 'row', 'procedure': 'f1()'}}}})
+            'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}},
+                        {'c3': {'type': 'timestamp with time zone'}}],
+            'triggers': {'tr1': {
+                'timing': 'before', 'events': ['insert', 'update'],
+                'level': 'row', 'procedure': 'f1()'}}}})
         sql = self.to_sql(inmap, stmts)
-        self.assertEqual(sql,
-                         ["COMMENT ON TRIGGER tr1 ON t1 IS NULL"])
+        assert sql == ["COMMENT ON TRIGGER tr1 ON t1 IS NULL"]
 
     def test_change_trigger_comment(self):
         "Change existing comment on a trigger"
@@ -366,19 +326,16 @@ class TriggerToSqlTestCase(InputMapToSqlTestCase):
                  COMMENT_STMT]
         inmap = self.std_map(plpgsql_installed=True)
         inmap['schema public'].update({'function f1()': {
-                    'language': 'plpgsql', 'returns': 'trigger',
-                    'source': FUNC_SRC}})
+            'language': 'plpgsql', 'returns': 'trigger', 'source': FUNC_SRC}})
         inmap['schema public'].update({'table t1': {
-                    'columns': [{'c1': {'type': 'integer'}},
-                                {'c2': {'type': 'text'}},
-                                {'c3': {'type': 'timestamp with time zone'}}],
-                    'triggers': {'tr1': {
-                            'description': 'Changed trigger tr1',
-                            'timing': 'before', 'events': ['insert', 'update'],
-                            'level': 'row', 'procedure': 'f1()'}}}})
+            'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}},
+                        {'c3': {'type': 'timestamp with time zone'}}],
+            'triggers': {'tr1': {
+                'description': 'Changed trigger tr1',
+                'timing': 'before', 'events': ['insert', 'update'],
+                'level': 'row', 'procedure': 'f1()'}}}})
         sql = self.to_sql(inmap, stmts)
-        self.assertEqual(sql, [
-                "COMMENT ON TRIGGER tr1 ON t1 IS 'Changed trigger tr1'"])
+        assert sql == ["COMMENT ON TRIGGER tr1 ON t1 IS 'Changed trigger tr1'"]
 
 
 class ConstraintTriggerToSqlTestCase(InputMapToSqlTestCase):
@@ -394,55 +351,36 @@ class ConstraintTriggerToSqlTestCase(InputMapToSqlTestCase):
         "Create a constraint trigger"
         inmap = self.std_map(plpgsql_installed=True)
         inmap['schema public'].update({'function f1()': {
-                    'language': 'plpgsql', 'returns': 'trigger',
-                    'source': FUNC_SRC}})
+            'language': 'plpgsql', 'returns': 'trigger', 'source': FUNC_SRC}})
         inmap['schema public'].update({'table t1': {
-                    'columns': [{'c1': {'type': 'integer'}},
-                                {'c2': {'type': 'text'}},
-                                {'c3': {'type': 'timestamp with time zone'}}],
-                    'triggers': {'tr1': {
-                            'constraint': True, 'timing': 'after',
-                            'events': ['insert', 'update'],
-                            'level': 'row', 'procedure': 'f1()'}}}})
+            'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}},
+                        {'c3': {'type': 'timestamp with time zone'}}],
+            'triggers': {'tr1': {
+                'constraint': True, 'timing': 'after',
+                'events': ['insert', 'update'], 'level': 'row',
+                'procedure': 'f1()'}}}})
         sql = self.to_sql(inmap)
-        self.assertEqual(fix_indent(sql[1]), CREATE_FUNC_STMT)
-        self.assertEqual(fix_indent(sql[2]), CREATE_TABLE_STMT)
-        self.assertEqual(fix_indent(sql[3]), "CREATE CONSTRAINT TRIGGER tr1 "
-                         "AFTER INSERT OR UPDATE ON t1 "
-                         "FOR EACH ROW EXECUTE PROCEDURE f1()")
+        assert fix_indent(sql[1]) == CREATE_FUNC_STMT
+        assert fix_indent(sql[2]) == CREATE_TABLE_STMT
+        assert fix_indent(sql[3]) == "CREATE CONSTRAINT TRIGGER tr1 AFTER " \
+            "INSERT OR UPDATE ON t1 FOR EACH ROW EXECUTE PROCEDURE f1()"
 
     def test_create_trigger_deferrable(self):
         "Create a deferrable constraint trigger"
         inmap = self.std_map(plpgsql_installed=True)
         inmap['schema public'].update({'function f1()': {
-                    'language': 'plpgsql', 'returns': 'trigger',
-                    'source': FUNC_SRC}})
+            'language': 'plpgsql', 'returns': 'trigger', 'source': FUNC_SRC}})
         inmap['schema public'].update({'table t1': {
-                    'columns': [{'c1': {'type': 'integer'}},
-                                {'c2': {'type': 'text'}},
-                                {'c3': {'type': 'timestamp with time zone'}}],
-                    'triggers': {'tr1': {
-                            'constraint': True, 'deferrable': True,
-                            'initially_deferred': True, 'timing': 'after',
-                            'events': ['insert', 'update'],
-                            'level': 'row', 'procedure': 'f1()'}}}})
+            'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}},
+                        {'c3': {'type': 'timestamp with time zone'}}],
+            'triggers': {'tr1': {
+                'constraint': True, 'deferrable': True,
+                'initially_deferred': True, 'timing': 'after',
+                'events': ['insert', 'update'], 'level': 'row',
+                'procedure': 'f1()'}}}})
         sql = self.to_sql(inmap)
-        self.assertEqual(fix_indent(sql[1]), CREATE_FUNC_STMT)
-        self.assertEqual(fix_indent(sql[2]), CREATE_TABLE_STMT)
-        self.assertEqual(fix_indent(sql[3]), "CREATE CONSTRAINT TRIGGER tr1 "
-                         "AFTER INSERT OR UPDATE ON t1 DEFERRABLE INITIALLY "
-                         "DEFERRED FOR EACH ROW EXECUTE PROCEDURE f1()")
-
-
-def suite():
-    tests = unittest.TestLoader().loadTestsFromTestCase(TriggerToMapTestCase)
-    tests.addTest(unittest.TestLoader().loadTestsFromTestCase(
-            TriggerToSqlTestCase))
-    tests.addTest(unittest.TestLoader().loadTestsFromTestCase(
-            ConstraintTriggerToMapTestCase))
-    tests.addTest(unittest.TestLoader().loadTestsFromTestCase(
-            ConstraintTriggerToSqlTestCase))
-    return tests
-
-if __name__ == '__main__':
-    unittest.main(defaultTest='suite')
+        assert fix_indent(sql[1]) == CREATE_FUNC_STMT
+        assert fix_indent(sql[2]) == CREATE_TABLE_STMT
+        assert fix_indent(sql[3]) == "CREATE CONSTRAINT TRIGGER tr1 " \
+            "AFTER INSERT OR UPDATE ON t1 DEFERRABLE INITIALLY " \
+            "DEFERRED FOR EACH ROW EXECUTE PROCEDURE f1()"

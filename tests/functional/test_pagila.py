@@ -6,8 +6,6 @@ pagila-schema.sql?rev=1.8
 """
 from difflib import unified_diff
 
-import unittest
-
 from pyrseas.testutils import DbMigrateTestCase
 
 
@@ -23,7 +21,7 @@ class PagilaTestCase(DbMigrateTestCase):
         if self.srcdb.version < 90000:
             self.srcdb.execute("CREATE PROCEDURAL LANGUAGE plpgsql")
             self.srcdb.execute_commit("ALTER PROCEDURAL LANGUAGE plpgsql "
-                                   "OWNER TO postgres")
+                                      "OWNER TO postgres")
         self.execute_script(__file__, 'pagila-schema.sql')
 
         # Run pg_dump against source database
@@ -65,9 +63,9 @@ class PagilaTestCase(DbMigrateTestCase):
                 subs.append(line[1:-1])
         subs = sorted(subs)
         for i, line in enumerate(sorted(adds)):
-            self.assertEqual(line, subs[i])
+            assert line == subs[i]
         # diff pagila-src.yaml against pagila.yaml
-        self.assertEqual(self.lines(srcyaml), self.lines(targyaml))
+        assert self.lines(srcyaml) == self.lines(targyaml)
 
         # Undo the changes
         self.migrate_target(emptyyaml, targsql)
@@ -79,14 +77,6 @@ class PagilaTestCase(DbMigrateTestCase):
         self.create_yaml(targyaml)
 
         # diff empty.dump against pagila.dump
-        self.assertEqual(self.lines(emptydump), self.lines(targdump))
+        assert self.lines(emptydump) == self.lines(targdump)
         # diff empty.yaml against pagila.yaml
-        self.assertEqual(self.lines(emptyyaml), self.lines(targyaml))
-
-
-def suite():
-    tests = unittest.TestLoader().loadTestsFromTestCase(PagilaTestCase)
-    return tests
-
-if __name__ == '__main__':
-    unittest.main(defaultTest='suite')
+        assert self.lines(emptyyaml) == self.lines(targyaml)
