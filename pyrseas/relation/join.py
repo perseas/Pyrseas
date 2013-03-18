@@ -169,9 +169,14 @@ class JoinRelation(object):
         if order:
             attrnames = [name for (name, attr) in self.attributes]
             for name in order:
-                if name not in attrnames:
+                nm = name.rstrip()
+                if nm[-5:].upper() == ' DESC':
+                    nm = nm[:-5]
+                elif nm[-4:].upper() == ' ASC':
+                    nm = nm[:-4]
+                if nm not in attrnames:
                     raise AttributeError("JoinRelation %s has no attribute "
-                                         "'%s'" % (self.extname, name))
+                                         "'%s'" % (self.extname, nm))
             orderby = " ORDER BY %s" % ", ".join(order)
         query = getsubset_qry() + where + orderby + slice_
         rows = self.db.fetchall(query, params)

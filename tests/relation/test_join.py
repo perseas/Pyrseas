@@ -244,6 +244,12 @@ class TestJoinRel2(RelationTestCase):
         assert tuples[0].title == 'Bob Smith'
         assert tuples[9].title == 'John Doe'
 
+    def test_get_join_slice_order_desc(self):
+        "Get a slice of tuples from a join ordered DESCending"
+        tuples = self.relation.subset(10, 0, order=['name DESC'])
+        assert tuples[0].name == 'Name 99'
+        assert tuples[9].title == 'John Doe'
+
     def test_get_join_order_by_unknown(self):
         "Get a slice of tuples ordered by unknown attribute"
         with pytest.raises(AttributeError):
