@@ -21,6 +21,7 @@ class Cast(DbObject):
 
     keylist = ['source', 'target']
     objtype = "CAST"
+    single_extern_file = True
 
     def extern_key(self):
         """Return the key to be used in external maps for this cast
@@ -102,15 +103,15 @@ class CastDict(DbObjectDict):
         dictionary of casts.
         """
         casts = {}
-        for cstkey in list(self.keys()):
+        for cstkey in sorted(self.keys()):
             cst = self[cstkey]
-            cstmap = {cst.extern_key(): cst.to_map()}
+            cast = {cst.extern_key(): cst.to_map()}
             if opts.directory:
                 with open(os.path.join(
-                        opts.directory, cst.extern_filename()), 'w') as f:
-                    f.write(yamldump(cstmap))
+                        opts.directory, cst.extern_filename()), 'a') as f:
+                    f.write(yamldump(cast))
             else:
-                casts.update(cstmap)
+                casts.update(cast)
         return casts
 
     def from_map(self, incasts, newdb):

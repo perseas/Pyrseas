@@ -13,9 +13,9 @@ from pyrseas.dbobject import quote_id, commentable, ownable
 class Operator(DbSchemaObject):
     """An operator"""
 
-    objtype = "OPERATOR"
-
     keylist = ['schema', 'name', 'leftarg', 'rightarg']
+    objtype = "OPERATOR"
+    single_extern_file = True
 
     def extern_key(self):
         """Return the key to be used in external maps for this operator

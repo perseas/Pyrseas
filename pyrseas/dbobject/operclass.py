@@ -13,9 +13,9 @@ from pyrseas.dbobject import commentable, ownable
 class OperatorClass(DbSchemaObject):
     """An operator class"""
 
-    objtype = "OPERATOR CLASS"
-
     keylist = ['schema', 'name', 'index_method']
+    objtype = "OPERATOR CLASS"
+    single_extern_file = True
 
     def extern_key(self):
         """Return the key to be used in external maps for this operator
@@ -60,7 +60,7 @@ class OperatorClass(DbSchemaObject):
         if hasattr(self, 'storage'):
             clauses.append("STORAGE %s" % self.storage)
         return ["CREATE OPERATOR CLASS %s\n    %sFOR TYPE %s USING %s "
-                     "AS\n    %s" % (
+                "AS\n    %s" % (
                 self.qualname(), dflt, self.type, self.index_method,
                 ',\n    ' .join(clauses))]
 

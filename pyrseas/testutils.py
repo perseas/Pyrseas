@@ -4,7 +4,10 @@
 import sys
 import os
 import getpass
+import tempfile
 from unittest import TestCase
+
+import yaml
 
 from pyrseas.database import Database
 from pyrseas.lib.dbconn import DbConnection
@@ -22,6 +25,8 @@ TEST_USER = os.environ.get("PYRSEAS_TEST_USER", getpass.getuser())
 TEST_HOST = os.environ.get("PYRSEAS_TEST_HOST", None)
 TEST_PORT = os.environ.get("PYRSEAS_TEST_PORT", None)
 PG_OWNER = 'postgres'
+TEST_DIR = os.path.join(tempfile.gettempdir(),
+                        os.environ.get("PYRSEAS_TEST_DIR", 'pyrseas_test'))
 
 
 class PgTestDb(PostgresDb):
@@ -115,8 +120,7 @@ class PgTestDb(PostgresDb):
         self.conn.rollback()
         for func in funcs:
             self.execute('DROP %s IF EXISTS %s CASCADE' % (
-                    'AGGREGATE' if func['proisagg'] else 'FUNCTION',
-                    func['proc']))
+                'AGGREGATE' if func['proisagg'] else 'FUNCTION', func['proc']))
         self.conn.commit()
 
         # Languages
@@ -209,7 +213,7 @@ class PgTestDb(PostgresDb):
         self.conn.rollback()
         for ump in umaps:
             self.execute('DROP USER MAPPING IF EXISTS FOR "%s" SERVER "%s"' % (
-                    ump[0], ump[1]))
+                ump[0], ump[1]))
         self.conn.commit()
 
         # Servers
@@ -271,7 +275,7 @@ class DatabaseToMapTestCase(PyrseasTestCase):
     superuser = False
 
     def to_map(self, stmts, schemas=[], tables=[], no_owner=True,
-               no_privs=True, superuser=False):
+               no_privs=True, superuser=False, directory=False):
         """Execute statements and return a database map.
 
         :param stmts: list of SQL statements to execute
@@ -279,6 +283,8 @@ class DatabaseToMapTestCase(PyrseasTestCase):
         :param tables: list of tables to map
         :param no_owner: exclude object owner information
         :param no_privs: exclude privilege information
+        :param superuser: must be superuser to run
+        :param directory: emulate --directory option
         :return: possibly trimmed map of database
         """
         if (self.superuser or superuser) and not self.db.is_superuser():
@@ -295,8 +301,19 @@ class DatabaseToMapTestCase(PyrseasTestCase):
         opts.tables = tables
         opts.no_owner = no_owner
         opts.no_privs = no_privs
-        opts.directory = None
+        opts.directory = TEST_DIR if directory else None
         return db.to_map(opts)
+
+    def yaml_load(self, filename, subdir=None):
+        """Read a file in TEST_DIR and process it with YAML load
+
+        :param filename: name of the file
+        :param subdir: name of a subdirectory where the file is located
+        :return: YAML dictionary
+        """
+        with open(os.path.join(TEST_DIR, subdir or '', filename), 'r') as f:
+            inmap = f.read()
+        return yaml.safe_load(inmap)
 
 
 class InputMapToSqlTestCase(PyrseasTestCase):
@@ -340,12 +357,12 @@ class InputMapToSqlTestCase(PyrseasTestCase):
                 and self.db._version < 90100:
             base.update({'language plpgsql': {'trusted': True}})
         if self.db._version >= 90100:
-            base.update({'extension plpgsql': {'schema': 'pg_catalog',
-                            'description': "PL/pgSQL procedural language"}})
+            base.update({'extension plpgsql': {
+                        'schema': 'pg_catalog',
+                        'description': "PL/pgSQL procedural language"}})
         return base
 
 
-import tempfile
 import glob
 import subprocess
 
@@ -357,7 +374,7 @@ class DbMigrateTestCase(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.srcdb = PgTestDb(TEST_DBNAME_SRC, TEST_USER, TEST_HOST,
-                                TEST_PORT)
+                             TEST_PORT)
         cls.srcdb.connect()
         cls.srcdb.clear()
         cls.db = PgTestDb(TEST_DBNAME, TEST_USER, TEST_HOST, TEST_PORT)

@@ -15,6 +15,7 @@ class Collation(DbSchemaObject):
 
     keylist = ['schema', 'name']
     objtype = "COLLATION"
+    single_extern_file = True
 
     @commentable
     @ownable

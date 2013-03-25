@@ -17,6 +17,7 @@ class TSConfiguration(DbSchemaObject):
 
     keylist = ['schema', 'name']
     objtype = "TEXT SEARCH CONFIGURATION"
+    single_extern_file = True
 
     def to_map(self, no_owner):
         """Convert a text search configuration to a YAML-suitable format
@@ -108,7 +109,7 @@ class TSConfigurationDict(DbObjectDict):
                         del self[oldname]
                     except KeyError as exc:
                         exc.args = ("Previous name '%s' for configuration "
-                                   "'%s' not found" % (oldname, intsc.name), )
+                                    "'%s' not found" % (oldname, intsc.name), )
                         raise
                 else:
                     # create new configuration
@@ -126,6 +127,7 @@ class TSDictionary(DbSchemaObject):
 
     keylist = ['schema', 'name']
     objtype = "TEXT SEARCH DICTIONARY"
+    single_extern_file = True
 
     @commentable
     @ownable
@@ -204,7 +206,7 @@ class TSDictionaryDict(DbObjectDict):
                         del self[oldname]
                     except KeyError as exc:
                         exc.args = ("Previous name '%s' for dictionary '%s' "
-                                   "not found" % (oldname, intsd.name), )
+                                    "not found" % (oldname, intsd.name), )
                         raise
                 else:
                     # create new dictionary
@@ -222,6 +224,7 @@ class TSParser(DbSchemaObject):
 
     keylist = ['schema', 'name']
     objtype = "TEXT SEARCH PARSER"
+    single_extern_file = True
 
     @commentable
     @ownable
@@ -302,7 +305,7 @@ class TSParserDict(DbObjectDict):
                         del self[oldname]
                     except KeyError as exc:
                         exc.args = ("Previous name '%s' for parser '%s' "
-                                   "not found" % (oldname, intsp.name), )
+                                    "not found" % (oldname, intsp.name), )
                         raise
                 else:
                     # create new parser
@@ -320,6 +323,7 @@ class TSTemplate(DbSchemaObject):
 
     keylist = ['schema', 'name']
     objtype = "TEXT SEARCH TEMPLATE"
+    single_extern_file = True
 
     @commentable
     def create(self):
@@ -396,7 +400,7 @@ class TSTemplateDict(DbObjectDict):
                         del self[oldname]
                     except KeyError as exc:
                         exc.args = ("Previous name '%s' for template '%s' "
-                                   "not found" % (oldname, intst.name), )
+                                    "not found" % (oldname, intst.name), )
                         raise
                 else:
                     # create new template

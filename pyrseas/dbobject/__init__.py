@@ -8,16 +8,19 @@
     DbObjectDict.
 """
 import sys
+import re
 import string
 
 from pyrseas.yamlutil import MultiLineStr
 from pyrseas.dbobject.privileges import privileges_to_map
-from pyrseas.dbobject.privileges import add_grant, add_revoke, diff_privs
+from pyrseas.dbobject.privileges import add_grant, diff_privs
 
 
 VALID_FIRST_CHARS = string.ascii_lowercase + '_'
 VALID_CHARS = string.ascii_lowercase + string.digits + '_$'
 RESERVED_WORDS = []
+NON_FILENAME_CHARS = re.compile(r'\W', re.U)
+MAX_FILENAME_LEN = 16
 
 
 def fetch_reserved_words(db):
@@ -182,8 +185,30 @@ class DbObject(object):
         an object name that has characters not allowed in filesystems,
         the characters are replaced by underscores.
         """
-        # TODO:  replace disallowed characters in name
-        return '%s.%s.yaml' % (self.objtype.lower(), self.name)
+
+        def xfrm_filename(objtype, objid=None):
+            """Generic transformation of object identifier to a filename
+
+            :param objtype: object type
+            :param objid: object identifier, usually the 'name' attribute
+            :return: filename string
+            """
+            if objid:
+                if sys.version < '3':
+                    objid = objid.decode('utf_8')
+                filename = '%s.%.*s.yaml' % (
+                    objtype, MAX_FILENAME_LEN, re.sub(
+                        NON_FILENAME_CHARS, '_', objid))
+                if sys.version < '3':
+                    filename = filename.encode('utf_8')
+            else:
+                filename = '%s.yaml' % objtype.replace(' ', '_')
+            return filename.lower()
+
+        if hasattr(self, 'single_extern_file') and self.single_extern_file:
+            return xfrm_filename(self.objtype)
+
+        return xfrm_filename(self.objtype, self.name)
 
     def key(self):
         """Return a tuple that identifies the database object

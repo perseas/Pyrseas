@@ -33,7 +33,9 @@ class Schema(DbObject):
 
         :return: directory path
         """
-        return os.path.join(root, "%s.%s" % (self.objtype.lower(), self.name))
+        (dir, ext) = os.path.splitext(os.path.join(root,
+                                                   self.extern_filename()))
+        return dir
 
     def to_map(self, dbschemas, opts):
         """Convert tables, etc., dictionaries to a YAML-suitable format
@@ -63,7 +65,7 @@ class Schema(DbObject):
                 schemadict = getattr(self, objtypes)
                 for objkey in list(schemadict.keys()):
                     if objtypes == 'sequences' or (
-                        not seltbls or objkey in seltbls):
+                            not seltbls or objkey in seltbls):
                         obj = schemadict[objkey]
                         schobjs.append((obj, obj.to_map(opts)))
 
@@ -100,11 +102,11 @@ class Schema(DbObject):
             for obj, objmap in schobjs:
                 if objmap is not None:
                     with open(os.path.join(
-                            dir, obj.extern_filename()), 'w') as f:
+                            dir, obj.extern_filename()), 'a') as f:
                         f.write(yamldump({obj.extern_key(): objmap}))
             # always write the schema YAML file
             with open(os.path.join(opts.directory,
-                                   self.extern_filename()), 'w') as f:
+                                   self.extern_filename()), 'a') as f:
                 f.write(yamldump({self.extern_key(): schbase}))
             return {}
 
@@ -347,7 +349,7 @@ class SchemaDict(DbObjectDict):
                         del self[oldname]
                     except KeyError as exc:
                         exc.args = ("Previous name '%s' for schema '%s' "
-                                   "not found" % (oldname, insch.name), )
+                                    "not found" % (oldname, insch.name), )
                         raise
                 else:
                     # create new schema

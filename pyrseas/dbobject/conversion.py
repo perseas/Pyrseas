@@ -15,6 +15,7 @@ class Conversion(DbSchemaObject):
 
     keylist = ['schema', 'name']
     objtype = "CONVERSION"
+    single_extern_file = True
 
     @commentable
     @ownable

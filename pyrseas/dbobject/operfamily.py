@@ -13,9 +13,9 @@ from pyrseas.dbobject import commentable, ownable
 class OperatorFamily(DbSchemaObject):
     """An operator family"""
 
-    objtype = "OPERATOR FAMILY"
-
     keylist = ['schema', 'name', 'index_method']
+    objtype = "OPERATOR FAMILY"
+    single_extern_file = True
 
     def extern_key(self):
         """Return the key to be used in external maps for the operator family

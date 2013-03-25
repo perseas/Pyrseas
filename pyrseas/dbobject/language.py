@@ -18,6 +18,7 @@ class Language(DbObject):
 
     keylist = ['name']
     objtype = "LANGUAGE"
+    single_extern_file = True
 
     def to_map(self, no_owner, no_privs):
         """Convert language to a YAML-suitable format
@@ -118,14 +119,13 @@ class LanguageDict(DbObjectDict):
             lng = self[lngkey]
             lngdict = lng.to_map(opts.no_owner, opts.no_privs)
             if lngdict is not None:
-                lngmap = {lng.extern_key(): lngdict}
+                lang = {lng.extern_key(): lngdict}
                 if opts.directory:
                     with open(os.path.join(
-                            opts.directory, lng.extern_filename()), 'w') as f:
-                        f.write(yamldump(lngmap))
+                            opts.directory, lng.extern_filename()), 'a') as f:
+                        f.write(yamldump(lang))
                 else:
-                    languages.update(lngmap)
-
+                    languages.update(lang)
         return languages
 
     def diff_map(self, inlanguages):
@@ -155,7 +155,7 @@ class LanguageDict(DbObjectDict):
                         del self[oldname]
                     except KeyError as exc:
                         exc.args = ("Previous name '%s' for language '%s' "
-                                   "not found" % (oldname, inlng.name), )
+                                    "not found" % (oldname, inlng.name), )
                         raise
                 else:
                     # create new language

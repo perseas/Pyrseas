@@ -18,6 +18,7 @@ class Extension(DbObject):
 
     keylist = ['name']
     objtype = "EXTENSION"
+    single_extern_file = True
 
     @commentable
     def create(self):
@@ -85,15 +86,15 @@ class ExtensionDict(DbObjectDict):
         dictionary of extensions.
         """
         extens = {}
-        for extkey in list(self.keys()):
+        for extkey in sorted(self.keys()):
             ext = self[extkey]
-            extmap = {ext.extern_key(): ext.to_map(opts.no_owner)}
+            exten = {ext.extern_key(): ext.to_map(opts.no_owner)}
             if opts.directory:
                 with open(os.path.join(
-                        opts.directory, ext.extern_filename()), 'w') as f:
-                    f.write(yamldump(extmap))
+                        opts.directory, ext.extern_filename()), 'a') as f:
+                    f.write(yamldump(exten))
             else:
-                extens.update(extmap)
+                extens.update(exten)
         return extens
 
     def diff_map(self, inexts):

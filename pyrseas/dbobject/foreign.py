@@ -74,7 +74,7 @@ class DbObjectWithOptions(DbObject):
         diff_opts = self.diff_options(newopts)
         if diff_opts:
             stmts.append("ALTER %s %s %s" % (
-                    self.objtype, self.identifier(), diff_opts))
+                self.objtype, self.identifier(), diff_opts))
         return stmts
 
 
@@ -82,6 +82,7 @@ class ForeignDataWrapper(DbObjectWithOptions):
     """A foreign data wrapper definition"""
 
     objtype = "FOREIGN DATA WRAPPER"
+    single_extern_file = True
 
     @property
     def allprivs(self):
@@ -136,15 +137,15 @@ class ForeignDataWrapper(DbObjectWithOptions):
 
 
 QUERY_PRE91 = \
-        """SELECT fdwname AS name, CASE WHEN fdwvalidator = 0 THEN NULL
-                    ELSE fdwvalidator::regproc END AS validator,
-                    fdwoptions AS options, rolname AS owner,
-                  array_to_string(fdwacl, ',') AS privileges,
-                  obj_description(w.oid, 'pg_foreign_data_wrapper') AS
-                      description
-           FROM pg_foreign_data_wrapper w
-                JOIN pg_roles r ON (r.oid = fdwowner)
-           ORDER BY fdwname"""
+    """SELECT fdwname AS name, CASE WHEN fdwvalidator = 0 THEN NULL
+                ELSE fdwvalidator::regproc END AS validator,
+                fdwoptions AS options, rolname AS owner,
+              array_to_string(fdwacl, ',') AS privileges,
+              obj_description(w.oid, 'pg_foreign_data_wrapper') AS
+                  description
+       FROM pg_foreign_data_wrapper w
+            JOIN pg_roles r ON (r.oid = fdwowner)
+       ORDER BY fdwname"""
 
 
 class ForeignDataWrapperDict(DbObjectDict):
@@ -219,13 +220,13 @@ class ForeignDataWrapperDict(DbObjectDict):
         dictionary of foreign data wrappers.
         """
         wrappers = {}
-        for fdwkey in list(self.keys()):
+        for fdwkey in sorted(self.keys()):
             fdw = self[fdwkey]
-            fdwmap = {fdw.extern_key():
-                          fdw.to_map(opts.no_owner, opts.no_privs)}
+            fdwmap = {fdw.extern_key(): fdw.to_map(
+                opts.no_owner, opts.no_privs)}
             if opts.directory:
                 with open(os.path.join(
-                        opts.directory, fdw.extern_filename()), 'w') as f:
+                        opts.directory, fdw.extern_filename()), 'a') as f:
                     f.write(yamldump(fdwmap))
             else:
                 wrappers.update(fdwmap)
@@ -257,7 +258,7 @@ class ForeignDataWrapperDict(DbObjectDict):
                         del self[oldname]
                     except KeyError as exc:
                         exc.args = ("Previous name '%s' for data wrapper "
-                                   "'%s' not found" % (oldname, infdw.name), )
+                                    "'%s' not found" % (oldname, infdw.name), )
                         raise
                 else:
                     # create new data wrapper
@@ -444,7 +445,7 @@ class ForeignServerDict(DbObjectDict):
                         del self[oldname]
                     except KeyError as exc:
                         exc.args = ("Previous name '%s' for dictionary '%s' "
-                                   "not found" % (oldname, insrv.name), )
+                                    "not found" % (oldname, insrv.name), )
                         raise
                 else:
                     # create new dictionary
@@ -571,11 +572,11 @@ class UserMappingDict(DbObjectDict):
                     oldname = inump.oldname
                     try:
                         stmts.append(self[(fdw, srv, oldname)].rename(
-                                inump.name))
+                            inump.name))
                         del self[(fdw, srv, oldname)]
                     except KeyError as exc:
                         exc.args = ("Previous name '%s' for user mapping '%s' "
-                                   "not found" % (oldname, inump.name), )
+                                    "not found" % (oldname, inump.name), )
                         raise
                 else:
                     # create new user mapping
@@ -636,8 +637,8 @@ class ForeignTable(DbObjectWithOptions, Table):
         if hasattr(self, 'options'):
             options.append(self.options_clause())
         stmts.append("CREATE FOREIGN TABLE %s (\n%s)\n    SERVER %s%s" % (
-                self.qualname(), ",\n".join(cols), self.server,
-                options and '\n    ' + ',\n    '.join(options) or ''))
+            self.qualname(), ",\n".join(cols), self.server,
+            options and '\n    ' + ',\n    '.join(options) or ''))
         if hasattr(self, 'owner'):
             stmts.append(self.alter_owner())
         if hasattr(self, 'description'):
