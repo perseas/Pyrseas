@@ -56,33 +56,33 @@ class Trigger(DbSchemaObject):
         evts = " OR ".join(self.events).upper()
         if hasattr(self, 'columns') and 'update' in self.events:
             evts = evts.replace("UPDATE", "UPDATE OF %s" % (
-                    ", ".join(self.columns)))
+                ", ".join(self.columns)))
         cond = ''
         if hasattr(self, 'condition'):
             cond = "\n    WHEN (%s)" % self.condition
         return ["CREATE %sTRIGGER %s\n    %s %s ON %s%s\n    FOR EACH %s"
-                     "%s\n    EXECUTE PROCEDURE %s" % (
+                "%s\n    EXECUTE PROCEDURE %s" % (
                 constr, quote_id(self.name), self.timing.upper(), evts,
                 self._table.qualname(), defer,
                 self.level.upper(), cond, self.procedure)]
 
 
 QUERY_PRE90 = \
-        """SELECT nspname AS schema, relname AS table,
-                  tgname AS name, tgisconstraint AS constraint,
-                  tgdeferrable AS deferrable,
-                  tginitdeferred AS initially_deferred,
-                  pg_get_triggerdef(t.oid) AS definition,
-                  NULL AS columns,
-                  obj_description(t.oid, 'pg_trigger') AS description
-           FROM pg_trigger t
-                JOIN pg_class c ON (t.tgrelid = c.oid)
-                JOIN pg_namespace n ON (c.relnamespace = n.oid)
-                JOIN pg_roles ON (n.nspowner = pg_roles.oid)
-                LEFT JOIN pg_constraint cn ON (tgconstraint = cn.oid)
-           WHERE contype != 'f' OR contype IS NULL
-             AND (nspname != 'pg_catalog' AND nspname != 'information_schema')
-           ORDER BY 1, 2, 3"""
+    """SELECT nspname AS schema, relname AS table,
+              tgname AS name, tgisconstraint AS constraint,
+              tgdeferrable AS deferrable,
+              tginitdeferred AS initially_deferred,
+              pg_get_triggerdef(t.oid) AS definition,
+              NULL AS columns,
+              obj_description(t.oid, 'pg_trigger') AS description
+       FROM pg_trigger t
+            JOIN pg_class c ON (t.tgrelid = c.oid)
+            JOIN pg_namespace n ON (c.relnamespace = n.oid)
+            JOIN pg_roles ON (n.nspowner = pg_roles.oid)
+            LEFT JOIN pg_constraint cn ON (tgconstraint = cn.oid)
+       WHERE contype != 'f' OR contype IS NULL
+         AND (nspname != 'pg_catalog' AND nspname != 'information_schema')
+       ORDER BY 1, 2, 3"""
 
 
 class TriggerDict(DbObjectDict):
@@ -128,7 +128,7 @@ class TriggerDict(DbObjectDict):
             if 'WHEN (' in trig.definition:
                 trig.condition = trig.definition[
                     trig.definition.index('WHEN (') + 6:
-                        trig.definition.index(') EXECUTE PROCEDURE')]
+                    trig.definition.index(') EXECUTE PROCEDURE')]
             trig.procedure = trig.definition[trig.definition.index(EXEC_PROC)
                                              + len(EXEC_PROC):]
             del trig.definition

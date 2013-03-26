@@ -39,7 +39,7 @@ def main(host='localhost', port=5432, schema=None):
                        help="extract the named table(s) (default all)")
     group.add_argument('-T', '--exclude-table', metavar='TABLE',
                        dest='excl_tables', action='append', default=[],
-                        help="do NOT extract the named table(s) "
+                       help="do NOT extract the named table(s) "
                        "(default none)")
 
     parser.set_defaults(host=host, port=port, schema=schema,

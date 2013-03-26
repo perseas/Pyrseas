@@ -47,8 +47,8 @@ class DbConnection(object):
         """Connect to the database"""
         try:
             self.conn = connect("%s%sdbname=%s%s%s" % (
-                    self.host, self.port, self.dbname, self.user, self.pswd),
-                                connection_factory=DictConnection)
+                self.host, self.port, self.dbname, self.user, self.pswd),
+                connection_factory=DictConnection)
         except Exception as exc:
             if str(exc)[:6] == 'FATAL:':
                 sys.exit("Database connection error: %s" % str(exc)[8:])

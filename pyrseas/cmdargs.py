@@ -15,13 +15,13 @@ def parent_parser():
     parser.add_argument('dbname', help='database name')
     group = parser.add_argument_group('Connection options')
     group.add_argument('-H', '--host', help="database server host or "
-                        "socket directory (default %(default)s)")
+                       "socket directory (default %(default)s)")
     group.add_argument('-p', '--port', type=int, help="database server port "
-                        "number (default %(default)s)")
+                       "number (default %(default)s)")
     group.add_argument('-U', '--username', dest='username',
-                        help="database user name (default %(default)s)")
+                       help="database user name (default %(default)s)")
     group.add_argument('-W', '--password', action="store_true",
-                        help="force password prompt")
+                       help="force password prompt")
     parser.add_argument('-o', '--output', type=FileType('w'),
                         help="output file name (default stdout)")
     parser.add_argument('--version', action='version',

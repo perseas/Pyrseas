@@ -70,7 +70,7 @@ class RuleDict(DbObjectDict):
             do_loc = rule.definition.index(' DO ')
             if 'WHERE' in rule.definition:
                 rule.condition = rule.definition[rule.definition.index(
-                        ' WHERE ') + 7:do_loc]
+                    ' WHERE ') + 7:do_loc]
             if hasattr(rule, 'instead') and rule.instead:
                 do_loc += 8
             rule.actions = rule.definition[do_loc + 4:-1]
@@ -84,8 +84,8 @@ class RuleDict(DbObjectDict):
         """
         for rul in list(inmap.keys()):
             inrule = inmap[rul]
-            rule = Rule(table=table.name, schema=table.schema,
-                                    name=rul, **inrule)
+            rule = Rule(table=table.name, schema=table.schema, name=rul,
+                        **inrule)
             if inrule:
                 if 'oldname' in inrule:
                     rule.oldname = inrule['oldname']

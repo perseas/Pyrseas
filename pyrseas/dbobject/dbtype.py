@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-    pyrseas.dbobject.type
-    ~~~~~~~~~~~~~~~~~~~~~
+    pyrseas.dbobject.dbtype
+    ~~~~~~~~~~~~~~~~~~~~~~~
 
     This module defines six classes: DbType derived from
     DbSchemaObject, BaseType, Composite, Domain and Enum derived from
@@ -59,7 +59,7 @@ class BaseType(DbType):
             if fnc in self.dep_funcs:
                 stmts.append(self.dep_funcs[fnc].create(basetype=True))
                 opt_clauses.append("%s = %s" % (
-                        fnc.upper(), self.dep_funcs[fnc].qualname()))
+                    fnc.upper(), self.dep_funcs[fnc].qualname()))
         if hasattr(self, 'internallength'):
             opt_clauses.append("INTERNALLENGTH = %s" % self.internallength)
         if hasattr(self, 'alignment'):
@@ -74,8 +74,8 @@ class BaseType(DbType):
             opt_clauses.append("PREFERRED = TRUE")
         stmts.append("CREATE TYPE %s (\n    INPUT = %s,"
                      "\n    OUTPUT = %s%s%s)" % (
-                self.qualname(), self.input, self.output,
-                opt_clauses and ',\n    ' or '', ',\n    '.join(opt_clauses)))
+                     self.qualname(), self.input, self.output, opt_clauses and
+                     ',\n    ' or '', ',\n    '.join(opt_clauses)))
         return stmts
 
     def drop(self):
@@ -139,7 +139,7 @@ class Composite(DbType):
         if not hasattr(intype, 'attributes'):
             raise KeyError("Composite '%s' has no attributes" % intype.name)
         attrnames = [attr.name for attr in self.attributes
-                    if not hasattr(attr, 'dropped')]
+                     if not hasattr(attr, 'dropped')]
         dbattrs = len(attrnames)
 
         base = "ALTER TYPE %s\n    " % (self.qualname())

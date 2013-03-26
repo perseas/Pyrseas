@@ -79,14 +79,14 @@ class Sequence(DbClass):
                 (self.name not in opts.tables and
                  not hasattr(self, 'owner_table') or
                  self.owner_table not in opts.tables) or (
-                    hasattr(opts, 'excl_tables') and opts.excl_tables
-                    and self.name in opts.excl_tables):
+                     hasattr(opts, 'excl_tables') and opts.excl_tables
+                     and self.name in opts.excl_tables):
             return None
         seq = {}
         for key, val in list(self.__dict__.items()):
             if key in self.keylist or key == 'dependent_table' or (
-                key == 'owner' and opts.no_owner) or (
-                key == 'privileges' and opts.no_privs):
+                    key == 'owner' and opts.no_owner) or (
+                    key == 'privileges' and opts.no_privs):
                 continue
             if key == 'privileges':
                 seq[key] = self.map_privs()
@@ -138,8 +138,8 @@ class Sequence(DbClass):
         if pth:
             stmts.append(pth)
         stmts.append("ALTER SEQUENCE %s OWNED BY %s.%s" % (
-                quote_id(self.name), quote_id(self.owner_table),
-                quote_id(self.owner_column)))
+            quote_id(self.name), quote_id(self.owner_table),
+            quote_id(self.owner_column)))
         return stmts
 
     def diff_map(self, inseq):
@@ -236,16 +236,15 @@ class Table(DbClass):
                     self.check_constraints[k.name].to_map(self.column_names()))
         if hasattr(self, 'primary_key'):
             tbl.update(primary_key=self.primary_key.to_map(
-                    self.column_names()))
+                self.column_names()))
         if hasattr(self, 'foreign_keys'):
             if not 'foreign_keys' in tbl:
                 tbl['foreign_keys'] = {}
             for k in list(self.foreign_keys.values()):
                 tbls = dbschemas[k.ref_schema].tables
                 tbl['foreign_keys'].update(self.foreign_keys[k.name].to_map(
-                        self.column_names(),
-                        tbls[self.foreign_keys[k.name].ref_table].
-                        column_names()))
+                    self.column_names(),
+                    tbls[self.foreign_keys[k.name].ref_table]. column_names()))
         if hasattr(self, 'unique_constraints'):
             if not 'unique_constraints' in tbl:
                 tbl.update(unique_constraints={})
@@ -304,8 +303,8 @@ class Table(DbClass):
         if hasattr(self, 'tablespace'):
             tblspc = " TABLESPACE %s" % self.tablespace
         stmts.append("CREATE %sTABLE %s (\n%s)%s%s%s" % (
-                unlogged, self.qualname(), ",\n".join(cols), inhclause,
-                opts, tblspc))
+            unlogged, self.qualname(), ",\n".join(cols), inhclause, opts,
+            tblspc))
         if hasattr(self, 'owner'):
             stmts.append(self.alter_owner())
         if hasattr(self, 'privileges'):
@@ -416,8 +415,8 @@ class Table(DbClass):
             newopts = intable.options
         diff_opts = self.diff_options(newopts)
         if diff_opts:
-            stmts.append("ALTER %s %s %s" % (
-                    self.objtype, self.identifier(), diff_opts))
+            stmts.append("ALTER %s %s %s" % (self.objtype, self.identifier(),
+                                             diff_opts))
         if hasattr(intable, 'owner'):
             if intable.owner != self.owner:
                 stmts.append(self.alter_owner(intable.owner))
@@ -501,20 +500,20 @@ class View(DbClass):
 
 
 QUERY_PRE91 = \
-        """SELECT nspname AS schema, relname AS name, relkind AS kind,
-                  reloptions AS options, spcname AS tablespace,
-                  rolname AS owner, array_to_string(relacl, ',') AS privileges,
-                  CASE WHEN relkind = 'v' THEN pg_get_viewdef(c.oid, TRUE)
-                       ELSE '' END AS definition,
-                  obj_description(c.oid, 'pg_class') AS description
-           FROM pg_class c
-                JOIN pg_roles r ON (r.oid = relowner)
-                JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
-                LEFT JOIN pg_tablespace t ON (reltablespace = t.oid)
-           WHERE relkind in ('r', 'S', 'v')
-                 AND (nspname != 'pg_catalog'
-                      AND nspname != 'information_schema')
-           ORDER BY nspname, relname"""
+    """SELECT nspname AS schema, relname AS name, relkind AS kind,
+              reloptions AS options, spcname AS tablespace,
+              rolname AS owner, array_to_string(relacl, ',') AS privileges,
+              CASE WHEN relkind = 'v' THEN pg_get_viewdef(c.oid, TRUE)
+                   ELSE '' END AS definition,
+              obj_description(c.oid, 'pg_class') AS description
+       FROM pg_class c
+            JOIN pg_roles r ON (r.oid = relowner)
+            JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
+            LEFT JOIN pg_tablespace t ON (reltablespace = t.oid)
+       WHERE relkind in ('r', 'S', 'v')
+             AND (nspname != 'pg_catalog'
+                  AND nspname != 'information_schema')
+       ORDER BY nspname, relname"""
 
 
 class ClassDict(DbObjectDict):
@@ -730,7 +729,7 @@ class ClassDict(DbObjectDict):
             del self[(obj.schema, oldname)]
         except KeyError as exc:
             exc.args = ("Previous name '%s' for %s '%s' not found" % (
-                    oldname, objtype, obj.name), )
+                oldname, objtype, obj.name), )
             raise
         return stmt
 
@@ -850,7 +849,7 @@ class ClassDict(DbObjectDict):
             if (isinstance(table, Sequence)
                     and (hasattr(table, 'owner_table')
                          or hasattr(table, 'dependent_table'))) \
-                         or isinstance(table, View):
+                    or isinstance(table, View):
                 continue
             if hasattr(table, 'dropped') and not table.dropped:
                 # next, drop other subordinate objects

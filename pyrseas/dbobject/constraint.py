@@ -333,7 +333,7 @@ class ConstraintDict(DbObjectDict):
             chks = inconstrs['check_constraints']
             for cns in list(chks.keys()):
                 check = CheckConstraint(table=table.name, schema=table.schema,
-                                      name=cns)
+                                        name=cns)
                 val = chks[cns]
                 try:
                     check.expression = val['expression']
@@ -368,7 +368,7 @@ class ConstraintDict(DbObjectDict):
             fkeys = inconstrs['foreign_keys']
             for cns in list(fkeys.keys()):
                 fkey = ForeignKey(table=table.name, schema=table.schema,
-                                      name=cns)
+                                  name=cns)
                 val = fkeys[cns]
                 if 'on_update' in val:
                     act = val['on_update']
@@ -412,7 +412,7 @@ class ConstraintDict(DbObjectDict):
                     fkey.ref_cols = refs['columns']
                 except KeyError as exc:
                     exc.args = ("Constraint '%s' missing reference columns"
-                                    % cns, )
+                                % cns, )
                     raise
                 sch = table.schema
                 if 'schema' in refs:
@@ -425,7 +425,7 @@ class ConstraintDict(DbObjectDict):
             uconstrs = inconstrs['unique_constraints']
             for cns in list(uconstrs.keys()):
                 unq = UniqueConstraint(table=table.name, schema=table.schema,
-                                      name=cns)
+                                       name=cns)
                 val = uconstrs[cns]
                 try:
                     unq.keycols = val['columns']

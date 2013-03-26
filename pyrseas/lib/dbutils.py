@@ -22,7 +22,7 @@ def pgconnect(dbname, user, host, port):
     else:
         port = "port=%d " % port
     return connect("%s%sdbname=%s user=%s" % (
-            host, port, dbname, user), connection_factory=DictConnection)
+        host, port, dbname, user), connection_factory=DictConnection)
 
 
 def pgexecute(dbconn, oper, args=None):

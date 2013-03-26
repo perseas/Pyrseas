@@ -8,11 +8,14 @@ import sys
 from setuptools import setup
 from setuptools.command.test import test as TestCommand
 
+
 class PyTest(TestCommand):
+
     def finalize_options(self):
         TestCommand.finalize_options(self)
         self.test_args = []
         self.test_suite = True
+
     def run_tests(self):
         import pytest
         errno = pytest.main(self.test_args)
@@ -33,7 +36,7 @@ setup(
         'PyYAML >= 3.09'],
 
     tests_require=['pytest'],
-    cmdclass = {'test': PyTest},
+    cmdclass={'test': PyTest},
 
     author='Joe Abbate',
     author_email='jma@freedomcircle.com',

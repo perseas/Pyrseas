@@ -131,10 +131,10 @@ def add_grant(obj, privspec, subobj=''):
     stmts = []
     if privs:
         stmts.append("GRANT %s ON %s %s TO %s" % (
-                ', '.join(privs), objtype, obj.identifier(), usr))
+            ', '.join(privs), objtype, obj.identifier(), usr))
     if wgo:
         stmts.append("GRANT %s ON %s %s TO %s WITH GRANT OPTION" % (
-                ', '.join(wgo), objtype, obj.identifier(), usr))
+            ', '.join(wgo), objtype, obj.identifier(), usr))
     return stmts
 
 
@@ -154,10 +154,10 @@ def add_revoke(obj, privspec, subobj=''):
     stmts = []
     if wgo:
         stmts.append("REVOKE %s ON %s %s FROM %s" % (
-                ', '.join(wgo), objtype, obj.identifier(), usr))
+            ', '.join(wgo), objtype, obj.identifier(), usr))
     if privs:
         stmts.append("REVOKE %s ON %s %s FROM %s" % (
-                ', '.join(privs), objtype, obj.identifier(), usr))
+            ', '.join(privs), objtype, obj.identifier(), usr))
     return stmts
 
 

@@ -268,11 +268,11 @@ class IndexDict(DbObjectDict):
                     oldname = inidx.oldname
                     try:
                         stmts.append(self[(sch, tbl, oldname)].rename(
-                                inidx.name))
+                            inidx.name))
                         del self[(sch, tbl, oldname)]
                     except KeyError as exc:
                         exc.args = ("Previous name '%s' for index '%s' "
-                                  "not found" % (oldname, inidx.name), )
+                                    "not found" % (oldname, inidx.name), )
                         raise
                 else:
                     # create new index

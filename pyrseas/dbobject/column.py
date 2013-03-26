@@ -6,8 +6,7 @@
     This module defines two classes: Column derived from
     DbSchemaObject and ColumnDict derived from DbObjectDict.
 """
-from pyrseas.dbobject import DbObjectDict, DbSchemaObject
-from pyrseas.dbobject import quote_id, grantable
+from pyrseas.dbobject import DbObjectDict, DbSchemaObject, quote_id
 from pyrseas.dbobject.privileges import privileges_from_map, add_grant
 from pyrseas.dbobject.privileges import diff_privs
 
@@ -133,7 +132,7 @@ class Column(DbSchemaObject):
         if pth:
             stmts.append(pth)
         stmts.append("ALTER TABLE %s ALTER COLUMN %s SET DEFAULT %s" % (
-                quote_id(self.table), quote_id(self.name), self.default))
+            quote_id(self.table), quote_id(self.name), self.default))
         return stmts
 
     def diff_map(self, incol):
@@ -170,22 +169,22 @@ class Column(DbSchemaObject):
 
 
 QUERY_PRE91 = \
-        """SELECT nspname AS schema, relname AS table, attname AS name,
-                  attnum AS number, format_type(atttypid, atttypmod) AS type,
-                  attnotnull AS not_null, attinhcount AS inherited,
-                  pg_get_expr(adbin, adrelid) AS default,
-                  attisdropped AS dropped,
-                  array_to_string(attacl, ',') AS privileges,
-                  col_description(c.oid, attnum) AS description
-           FROM pg_attribute JOIN pg_class c ON (attrelid = c.oid)
-                JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
-                LEFT JOIN pg_attrdef ON (attrelid = pg_attrdef.adrelid
-                     AND attnum = pg_attrdef.adnum)
-           WHERE relkind in ('c', 'r', 'f')
-                 AND (nspname != 'pg_catalog'
-                      AND nspname != 'information_schema')
-                 AND attnum > 0
-           ORDER BY nspname, relname, attnum"""
+    """SELECT nspname AS schema, relname AS table, attname AS name,
+              attnum AS number, format_type(atttypid, atttypmod) AS type,
+              attnotnull AS not_null, attinhcount AS inherited,
+              pg_get_expr(adbin, adrelid) AS default,
+              attisdropped AS dropped,
+              array_to_string(attacl, ',') AS privileges,
+              col_description(c.oid, attnum) AS description
+       FROM pg_attribute JOIN pg_class c ON (attrelid = c.oid)
+            JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
+            LEFT JOIN pg_attrdef ON (attrelid = pg_attrdef.adrelid
+                 AND attnum = pg_attrdef.adnum)
+       WHERE relkind in ('c', 'r', 'f')
+             AND (nspname != 'pg_catalog'
+                  AND nspname != 'information_schema')
+             AND attnum > 0
+       ORDER BY nspname, relname, attnum"""
 
 
 class ColumnDict(DbObjectDict):
@@ -245,9 +244,9 @@ class ColumnDict(DbObjectDict):
                     if not hasattr(table, 'owner'):
                         raise ValueError("Column '%s.%s' has privileges but "
                                          "no owner information" % (
-                                table.name, key))
+                                         table.name, key))
                     col.privileges = privileges_from_map(
-                                col.privileges, col.allprivs, table.owner)
+                        col.privileges, col.allprivs, table.owner)
                 cols.append(col)
 
     def diff_map(self, incols):

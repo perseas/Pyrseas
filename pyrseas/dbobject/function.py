@@ -125,9 +125,9 @@ class Function(Proc):
 
         stmts.append("CREATE%s FUNCTION %s(%s) RETURNS %s\n    LANGUAGE %s"
                      "%s%s%s%s%s%s\n    AS %s" % (
-                newsrc and " OR REPLACE" or '', self.qualname(),
-                self.arguments, self.returns, self.language, volat, strict,
-                secdef, cost, rows, config, src))
+                     newsrc and " OR REPLACE" or '', self.qualname(),
+                     self.arguments, self.returns, self.language, volat,
+                     strict, secdef, cost, rows, config, src))
         return stmts
 
     def diff_map(self, infunction):
@@ -185,7 +185,7 @@ class Aggregate(Proc):
         if hasattr(self, 'sortop'):
             opt_clauses.append("SORTOP = %s" % self.sortop)
         return ["CREATE AGGREGATE %s(%s) (\n    SFUNC = %s,"
-                     "\n    STYPE = %s%s%s)" % (
+                "\n    STYPE = %s%s%s)" % (
                 self.qualname(),
                 self.arguments, self.sfunc, self.stype,
                 opt_clauses and ',\n    ' or '', ',\n    '.join(opt_clauses))]
