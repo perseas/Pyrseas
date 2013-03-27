@@ -20,10 +20,27 @@ def fix_indent(stmt):
         replace('( ', '(')
 
 
+def remove_temp_files(tmpdir, prefix=''):
+    "Remove files in a temporary directory"
+    for tfile in glob.glob(os.path.join(tmpdir, prefix + '*')):
+        if os.path.isdir(tfile):
+            for entry in os.listdir(tfile):
+                entry = os.path.join(tmpdir, tfile, entry)
+                if os.path.isdir(entry):
+                    for file in os.listdir(entry):
+                        os.remove(os.path.join(entry, file))
+                    os.rmdir(entry)
+                else:
+                    os.remove(entry)
+            os.rmdir(tfile)
+        else:
+            os.remove(tfile)
+
+
 TEST_DBNAME = os.environ.get("PYRSEAS_TEST_DB", 'pyrseas_testdb')
 TEST_USER = os.environ.get("PYRSEAS_TEST_USER", getpass.getuser())
 TEST_HOST = os.environ.get("PYRSEAS_TEST_HOST", None)
-TEST_PORT = os.environ.get("PYRSEAS_TEST_PORT", None)
+TEST_PORT = int(os.environ.get("PYRSEAS_TEST_PORT", 5432))
 PG_OWNER = 'postgres'
 TEST_DIR = os.path.join(tempfile.gettempdir(),
                         os.environ.get("PYRSEAS_TEST_DIR", 'pyrseas_test'))
@@ -315,6 +332,9 @@ class DatabaseToMapTestCase(PyrseasTestCase):
             inmap = f.read()
         return yaml.safe_load(inmap)
 
+    def remove_tempfiles(self):
+        remove_temp_files(TEST_DIR)
+
 
 class InputMapToSqlTestCase(PyrseasTestCase):
     """Base class for "input map to SQL" test cases"""
@@ -383,23 +403,11 @@ class DbMigrateTestCase(TestCase):
         progdir = os.path.abspath(os.path.dirname(__file__))
         cls.dbtoyaml = os.path.join(progdir, 'dbtoyaml.py')
         cls.yamltodb = os.path.join(progdir, 'yamltodb.py')
-        cls.tmpdir = tempfile.gettempdir()
+        cls.tmpdir = TEST_DIR
 
     @classmethod
     def remove_tempfiles(cls, prefix):
-        for tfile in glob.glob(os.path.join(cls.tmpdir, prefix + '*')):
-            if os.path.isdir(tfile):
-                for entry in os.listdir(tfile):
-                    entry = os.path.join(cls.tmpdir, tfile, entry)
-                    if os.path.isdir(entry):
-                        for file in os.listdir(entry):
-                            os.remove(os.path.join(entry, file))
-                        os.rmdir(entry)
-                    else:
-                        os.remove(entry)
-                os.rmdir(tfile)
-            else:
-                os.remove(tfile)
+        remove_temp_files(cls.tmpdir, prefix)
 
     def execute_script(self, path, scriptname):
         scriptfile = os.path.join(os.path.abspath(os.path.dirname(path)),

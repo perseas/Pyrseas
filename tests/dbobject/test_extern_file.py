@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """Test external files used in --directory option"""
 import sys
-from pyrseas.testutils import DatabaseToMapTestCase
 
 from pyrseas.testutils import PyrseasTestCase
+from pyrseas.testutils import DatabaseToMapTestCase
 from pyrseas.dbobject.schema import Schema
 from pyrseas.dbobject.function import Function
 from pyrseas.dbobject.table import Sequence, Table, View
@@ -22,6 +22,10 @@ DROP_TSP = "DROP TEXT SEARCH PARSER IF EXISTS tsp1 CASCADE"
 
 
 class ExternalFilenameMapTestCase(DatabaseToMapTestCase):
+
+    def setUp(self):
+        super(ExternalFilenameMapTestCase, self).setUp()
+        self.remove_tempfiles()
 
     def test_map_casts(self):
         "Map casts"
