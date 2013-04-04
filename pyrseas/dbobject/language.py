@@ -6,9 +6,6 @@
     This defines two classes, Language and LanguageDict, derived from
     DbObject and DbObjectDict, respectively.
 """
-import os
-
-from pyrseas.yamlutil import yamldump
 from pyrseas.dbobject import DbObjectDict, DbObject, quote_id
 from pyrseas.dbobject.function import Function
 
@@ -104,29 +101,6 @@ class LanguageDict(DbObjectDict):
                 if not hasattr(language, 'functions'):
                     language.functions = {}
                 language.functions.update({fnc: func})
-
-    def to_map(self, opts):
-        """Convert the language dictionary to a regular dictionary
-
-        :param opts: options to include/exclude information, etc.
-        :return: dictionary
-
-        Invokes the `to_map` method of each language to construct a
-        dictionary of languages.
-        """
-        languages = {}
-        for lngkey in list(self.keys()):
-            lng = self[lngkey]
-            lngdict = lng.to_map(opts.no_owner, opts.no_privs)
-            if lngdict is not None:
-                lang = {lng.extern_key(): lngdict}
-                if opts.directory:
-                    with open(os.path.join(
-                            opts.directory, lng.extern_filename()), 'a') as f:
-                        f.write(yamldump(lang))
-                else:
-                    languages.update(lang)
-        return languages
 
     def diff_map(self, inlanguages):
         """Generate SQL to transform existing languages

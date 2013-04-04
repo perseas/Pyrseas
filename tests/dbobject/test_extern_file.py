@@ -2,6 +2,8 @@
 """Test external files used in --directory option"""
 import sys
 
+import pytest
+
 from pyrseas.testutils import PyrseasTestCase
 from pyrseas.testutils import DatabaseToMapTestCase
 from pyrseas.dbobject.schema import Schema
@@ -203,6 +205,24 @@ class ExternalFilenameMapTestCase(DatabaseToMapTestCase):
             'lextypes': 'prsd_lextype', 'headline': 'prsd_headline'}}
         self.db.execute(DROP_TSC)
         self.db.execute_commit(DROP_TSP)
+
+    def test_map_drop_table(self):
+        "Map three tables, drop one and map the remaining two"
+        self.to_map(["CREATE TABLE t1 (c1 integer, c2 text)",
+                     "CREATE TABLE t2 (c1 integer, c2 text)",
+                     "CREATE TABLE t3 (c1 integer, c2 text)"], directory=True)
+        expmap = {'columns': [{'c1': {'type': 'integer'}},
+                              {'c2': {'type': 'text'}}]}
+        for tbl in ['t1', 't2', 't3']:
+            assert self.yaml_load('table.%s.yaml' % tbl, 'schema.public')[
+                'table %s' % tbl] == expmap
+        self.to_map(["DROP TABLE t2"], directory=True)
+        with pytest.raises(IOError) as exc:
+            self.yaml_load('table.t2.yaml', 'schema.public')
+        assert 'No such file' in str(exc.value)
+        for tbl in ['t1', 't3']:
+            assert self.yaml_load('table.%s.yaml' % tbl, 'schema.public')[
+                'table %s' % tbl] == expmap
 
 
 class ExternalFilenameTestCase(PyrseasTestCase):

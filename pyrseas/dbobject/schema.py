@@ -99,16 +99,22 @@ class Schema(DbObject):
             dir = self.extern_dir(opts.directory)
             if not os.path.exists(dir):
                 os.mkdir(dir)
+            filemap = {}
             for obj, objmap in schobjs:
                 if objmap is not None:
-                    with open(os.path.join(
-                            dir, obj.extern_filename()), 'a') as f:
-                        f.write(yamldump({obj.extern_key(): objmap}))
+                    extkey = obj.extern_key()
+                    filepath = os.path.join(dir, obj.extern_filename())
+                    with open(filepath, 'a') as f:
+                        f.write(yamldump({extkey: objmap}))
+                    outobj = {extkey: filepath}
+                filemap.update(outobj)
             # always write the schema YAML file
-            with open(os.path.join(opts.directory,
-                                   self.extern_filename()), 'a') as f:
-                f.write(yamldump({self.extern_key(): schbase}))
-            return {}
+            filepath = os.path.join(opts.directory, self.extern_filename())
+            extkey = self.extern_key()
+            with open(filepath, 'a') as f:
+                f.write(yamldump({extkey: schbase}))
+            filemap.update(schema=filepath)
+            return {extkey: filemap}
 
         schmap = {obj.extern_key(): objmap for obj, objmap in schobjs
                   if objmap is not None}
@@ -198,7 +204,7 @@ class SchemaDict(DbObjectDict):
                     schema.privileges = privileges_from_map(
                         inschema[key], schema.allprivs, schema.owner)
                     mapped = True
-                if not mapped:
+                if not mapped and key != 'schema':
                     raise KeyError("Expected typed object, found '%s'" % key)
 
             for objtype in SCHOBJS1:

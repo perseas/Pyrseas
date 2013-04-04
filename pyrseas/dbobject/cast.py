@@ -6,9 +6,6 @@
     This module defines two classes: Cast derived from DbObject and
     CastDict derived from DbObjectDict.
 """
-import os
-
-from pyrseas.yamlutil import yamldump
 from pyrseas.dbobject import DbObject, DbObjectDict, commentable
 
 
@@ -38,7 +35,7 @@ class Cast(DbObject):
         """
         return "(%s AS %s)" % (self.source, self.target)
 
-    def to_map(self):
+    def to_map(self, no_owner=False, no_privs=False):
         """Convert a cast to a YAML-suitable format
 
         :return: dictionary
@@ -92,27 +89,6 @@ class CastDict(DbObjectDict):
               OR substring(tn.nspname for 3) != 'pg_'
               OR (castfunc != 0 AND substring(pn.nspname for 3) != 'pg_')
            ORDER BY castsource, casttarget"""
-
-    def to_map(self,  opts):
-        """Convert the cast dictionary to a regular dictionary
-
-        :param opts: options to include/exclude information, etc.
-        :return: dictionary
-
-        Invokes the `to_map` method of each cast to construct a
-        dictionary of casts.
-        """
-        casts = {}
-        for cstkey in sorted(self.keys()):
-            cst = self[cstkey]
-            cast = {cst.extern_key(): cst.to_map()}
-            if opts.directory:
-                with open(os.path.join(
-                        opts.directory, cst.extern_filename()), 'a') as f:
-                    f.write(yamldump(cast))
-            else:
-                casts.update(cast)
-        return casts
 
     def from_map(self, incasts, newdb):
         """Initalize the dictionary of casts by converting the input map

@@ -404,6 +404,8 @@ class DbMigrateTestCase(TestCase):
         cls.dbtoyaml = os.path.join(progdir, 'dbtoyaml.py')
         cls.yamltodb = os.path.join(progdir, 'yamltodb.py')
         cls.tmpdir = TEST_DIR
+        if not os.path.exists(cls.tmpdir):
+            os.mkdir(cls.tmpdir)
 
     @classmethod
     def remove_tempfiles(cls, prefix):

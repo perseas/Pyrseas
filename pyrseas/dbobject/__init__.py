@@ -7,11 +7,12 @@
     Most Pyrseas classes are derived from either DbObject or
     DbObjectDict.
 """
-import sys
+import os
 import re
 import string
+import sys
 
-from pyrseas.yamlutil import MultiLineStr
+from pyrseas.yamlutil import MultiLineStr, yamldump
 from pyrseas.dbobject.privileges import privileges_to_map
 from pyrseas.dbobject.privileges import add_grant, diff_privs
 
@@ -469,6 +470,32 @@ class DbObjectDict(dict):
             if hasattr(obj, 'privileges'):
                 obj.privileges = obj.privileges.split(',')
             self[obj.key()] = obj
+
+    def to_map(self,  opts):
+        """Convert the object dictionary to a regular dictionary
+
+        :param opts: options to include/exclude information, etc.
+        :return: dictionary
+
+        Invokes the `to_map` method of each object to construct the
+        dictionary.  If opts specifies a directory, the objects are
+        written to files in that directory.
+        """
+        objdict = {}
+        for objkey in sorted(self.keys()):
+            obj = self[objkey]
+            objmap = obj.to_map(opts.no_owner, opts.no_privs)
+            if objmap is not None:
+                extkey = obj.extern_key()
+                outobj = {extkey: objmap}
+                if opts.directory:
+                    filepath = os.path.join(opts.directory,
+                                            obj.extern_filename())
+                    with open(filepath, 'a') as f:
+                        f.write(yamldump(outobj))
+                    outobj = {extkey: filepath}
+                objdict.update(outobj)
+        return objdict
 
     def fetch(self):
         """Fetch all objects from the catalogs using the class :attr:`query`

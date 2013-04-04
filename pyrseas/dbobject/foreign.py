@@ -10,9 +10,6 @@
     ForeignTable derived from DbObjectWithOptions and Table, and
     ForeignTableDict derived from ClassDict.
 """
-import os
-
-from pyrseas.yamlutil import yamldump
 from pyrseas.dbobject import DbObjectDict, DbObject
 from pyrseas.dbobject import quote_id, commentable, ownable, grantable
 from pyrseas.dbobject.table import ClassDict, Table
@@ -209,28 +206,6 @@ class ForeignDataWrapperDict(DbObjectDict):
             if not hasattr(wrapper, 'servers'):
                 wrapper.servers = {}
             wrapper.servers.update({srv: dbserver})
-
-    def to_map(self, opts):
-        """Convert the wrapper dictionary to a regular dictionary
-
-        :param opts: options to include/exclude information, etc.
-        :return: dictionary
-
-        Invokes the `to_map` method of each wrapper to construct a
-        dictionary of foreign data wrappers.
-        """
-        wrappers = {}
-        for fdwkey in sorted(self.keys()):
-            fdw = self[fdwkey]
-            fdwmap = {fdw.extern_key(): fdw.to_map(
-                opts.no_owner, opts.no_privs)}
-            if opts.directory:
-                with open(os.path.join(
-                        opts.directory, fdw.extern_filename()), 'a') as f:
-                    f.write(yamldump(fdwmap))
-            else:
-                wrappers.update(fdwmap)
-        return wrappers
 
     def diff_map(self, inwrappers):
         """Generate SQL to transform existing data wrappers

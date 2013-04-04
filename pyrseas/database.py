@@ -15,6 +15,7 @@ import sys
 
 import yaml
 
+from pyrseas.yamlutil import yamldump
 from pyrseas.lib.dbconn import DbConnection
 from pyrseas.dbobject import fetch_reserved_words
 from pyrseas.dbobject.language import LanguageDict
@@ -226,6 +227,8 @@ class Database(object):
         inmap = {}
         for entry in os.listdir(directory):
             if entry.endswith('.yaml'):
+                if entry.startswith('database.'):
+                    continue
                 if not entry.startswith('schema.'):
                     inmap.update(load(directory, entry))
             else:
@@ -263,12 +266,27 @@ class Database(object):
                     os.mkdir(dir)
             if not os.path.exists(opts.directory):
                 mkdir_parents(opts.directory)
+            dbfilepath = os.path.join(opts.directory, 'database.%s.yaml' %
+                                      self.dbconn.dbname)
+            if os.path.exists(dbfilepath):
+                with open(dbfilepath, 'r') as f:
+                    objmap = yaml.safe_load(f)
+                for obj, val in objmap.items():
+                    if isinstance(val, dict):
+                        for schobj, filepath in val.items():
+                            os.remove(filepath)
+                    else:
+                        os.remove(val)
 
         dbmap = self.db.extensions.to_map(opts)
         dbmap.update(self.db.languages.to_map(opts))
         dbmap.update(self.db.casts.to_map(opts))
         dbmap.update(self.db.fdwrappers.to_map(opts))
         dbmap.update(self.db.schemas.to_map(opts))
+
+        if opts.directory:
+            with open(dbfilepath, 'w') as f:
+                f.write(yamldump(dbmap))
 
         return dbmap
 

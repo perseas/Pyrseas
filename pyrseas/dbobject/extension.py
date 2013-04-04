@@ -6,9 +6,6 @@
     This module defines two classes: Extension derived from DbObject,
     and ExtensionDict derived from DbObjectDict.
 """
-import os
-
-from pyrseas.yamlutil import yamldump
 from pyrseas.dbobject import DbObjectDict, DbObject
 from pyrseas.dbobject import quote_id, commentable
 
@@ -75,27 +72,6 @@ class ExtensionDict(DbObjectDict):
             if exten.name in langtempls:
                 lang = {'language %s' % exten.name: {'_ext': 'e'}}
                 newdb.languages.from_map(lang)
-
-    def to_map(self, opts):
-        """Convert the extension dictionary to a regular dictionary
-
-        :param opts: options to include/exclude information, etc.
-        :return: dictionary
-
-        Invokes the `to_map` method of each extension to construct a
-        dictionary of extensions.
-        """
-        extens = {}
-        for extkey in sorted(self.keys()):
-            ext = self[extkey]
-            exten = {ext.extern_key(): ext.to_map(opts.no_owner)}
-            if opts.directory:
-                with open(os.path.join(
-                        opts.directory, ext.extern_filename()), 'a') as f:
-                    f.write(yamldump(exten))
-            else:
-                extens.update(exten)
-        return extens
 
     def diff_map(self, inexts):
         """Generate SQL to transform existing extensions
