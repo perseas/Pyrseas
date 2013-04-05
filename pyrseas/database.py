@@ -274,8 +274,9 @@ class Database(object):
                 for obj, val in objmap.items():
                     if isinstance(val, dict):
                         for schobj, filepath in val.items():
-                            os.remove(filepath)
-                    else:
+                            if os.path.exists(filepath):
+                                os.remove(filepath)
+                    elif os.path.exists(val):
                         os.remove(val)
 
         dbmap = self.db.extensions.to_map(opts)
