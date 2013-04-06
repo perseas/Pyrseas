@@ -21,7 +21,7 @@ VALID_FIRST_CHARS = string.ascii_lowercase + '_'
 VALID_CHARS = string.ascii_lowercase + string.digits + '_$'
 RESERVED_WORDS = []
 NON_FILENAME_CHARS = re.compile(r'\W', re.U)
-MAX_FILENAME_LEN = 16
+MAX_IDENT_LEN = int(os.environ.get("PYRSEAS_MAX_IDENT_LEN", 16))
 
 
 def fetch_reserved_words(db):
@@ -198,7 +198,7 @@ class DbObject(object):
                 if sys.version < '3':
                     objid = objid.decode('utf_8')
                 filename = '%s.%.*s.yaml' % (
-                    objtype, MAX_FILENAME_LEN, re.sub(
+                    objtype, MAX_IDENT_LEN, re.sub(
                         NON_FILENAME_CHARS, '_', objid))
                 if sys.version < '3':
                     filename = filename.encode('utf_8')
