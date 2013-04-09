@@ -11,6 +11,7 @@ import os
 import re
 import string
 import sys
+from functools import wraps
 
 from pyrseas.yamlutil import MultiLineStr, yamldump
 from pyrseas.dbobject.privileges import privileges_to_map
@@ -77,6 +78,7 @@ def split_schema_obj(obj, sch=None):
 
 def commentable(func):
     """Decorator to add comments to various objects"""
+    @wraps(func)
     def add_comment(obj, *args, **kwargs):
         stmts = func(obj, *args, **kwargs)
         if hasattr(obj, 'description'):
@@ -87,6 +89,7 @@ def commentable(func):
 
 def grantable(func):
     """Decorator to add GRANT to various objects"""
+    @wraps(func)
     def grant(obj, *args, **kwargs):
         stmts = func(obj, *args, **kwargs)
         if hasattr(obj, 'privileges'):
@@ -98,6 +101,7 @@ def grantable(func):
 
 def ownable(func):
     """Decorator to add ALTER OWNER to various objects"""
+    @wraps(func)
     def add_alter(obj, *args, **kwargs):
         stmts = func(obj, *args, **kwargs)
         if hasattr(obj, 'owner'):
