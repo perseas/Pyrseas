@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-    pyrseas.schema
-    ~~~~~~~~~~~~~~
+    pyrseas.dbobject.schema
+    ~~~~~~~~~~~~~~~~~~~~~~~
 
     This defines two classes, Schema and SchemaDict, derived from
     DbObject and DbObjectDict, respectively.

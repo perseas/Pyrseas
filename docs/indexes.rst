@@ -21,9 +21,9 @@ An :class:`Index` has the following attributes: :attr:`access_method`,
 
 .. autoclass:: Index
 
-. automethod:: Index.key_columns
+.. automethod:: Index.key_expressions
 
-. automethod:: Index.to_map
+.. automethod:: Index.to_map
 
 .. automethod:: Index.create
 

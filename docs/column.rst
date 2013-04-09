@@ -51,3 +51,5 @@ schema name and table name, and each value is a list of
 .. autoclass:: ColumnDict
 
 .. automethod:: ColumnDict.from_map
+
+.. automethod:: ColumnDict.diff_map

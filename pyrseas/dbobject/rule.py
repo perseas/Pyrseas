@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-    pyrseas.rule
-    ~~~~~~~~~~~~
+    pyrseas.dbobject.rule
+    ~~~~~~~~~~~~~~~~~~~~~
 
     This defines two classes, Rule and RuleDict, derived from
     DbSchemaObject and DbObjectDict, respectively.

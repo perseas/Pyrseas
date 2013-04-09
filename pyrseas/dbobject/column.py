@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-    pyrseas.column
-    ~~~~~~~~~~~~~~
+    pyrseas.dbobject.column
+    ~~~~~~~~~~~~~~~~~~~~~~~
 
     This module defines two classes: Column derived from
     DbSchemaObject and ColumnDict derived from DbObjectDict.

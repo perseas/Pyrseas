@@ -21,17 +21,25 @@ uniquely identify each object instance within the database.
 
 .. autoattribute:: DbObject.objtype
 
-.. automethod:: DbObject.extern_key
-
 .. autoattribute:: DbObject.keylist
 
 .. automethod:: DbObject.key
+
+The following methods are generally used to map objects for external
+output:
+
+.. automethod:: DbObject.extern_key
+
+.. automethod:: DbObject.extern_filename
 
 .. automethod:: DbObject.identifier
 
 .. automethod:: DbObject.to_map
 
 .. automethod:: DbObject.map_privs
+
+The following methods generate SQL statements from the object
+properties and sometimes from a second object:
 
 .. automethod:: DbObject.comment
 
@@ -40,6 +48,10 @@ uniquely identify each object instance within the database.
 .. automethod:: DbObject.drop
 
 .. automethod:: DbObject.rename
+
+.. automethod:: DbObject.diff_map
+
+.. automethod:: DbObject.diff_privileges
 
 .. automethod:: DbObject.diff_description
 
@@ -63,6 +75,8 @@ e.g., :class:`~pyrseas.schema.SchemaDict` sets :attr:`cls` to
 .. autoattribute:: DbObjectDict.cls
 
 .. autoattribute:: DbObjectDict.query
+
+.. automethod:: DbObjectDict.to_map
 
 .. automethod:: DbObjectDict.fetch
 

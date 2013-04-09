@@ -19,8 +19,6 @@ conversion between character set encodings
 
 .. automethod:: Conversion.create
 
-.. automethod:: Conversion.diff_map
-
 Conversion Dictionary
 ---------------------
 

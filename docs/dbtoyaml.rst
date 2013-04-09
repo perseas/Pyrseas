@@ -140,7 +140,54 @@ foreign data wrappers.
 
 The second level, i.e., the ``schema.<name>`` subdirectories contain
 ``<objtype>.<name>.yaml`` files for each object in the particular
-schema.
+schema (but see below for caveats).
+
+Object Name Conflicts
+~~~~~~~~~~~~~~~~~~~~~
+
+The names of PostgreSQL objects can include characters that are not
+allowed in filesystem object names.  The most common example is the
+division operator ('/'), but even table names can include
+non-alphanumeric characters, if the identifiers are quoted.
+
+In addition, one can define two or more objects with the same base
+name, e.g., function ``foo(integer)`` and function ``foo(text)``, or a
+table named ``"My Table"`` and another named ``"my table"`` or
+``"MY TABLE"``. On certain operating systems, i.e., Windows, it is not
+possible to create two files in the same directory that differ only in
+the case of their characters.
+
+In order to deal with the aforementioned issues, ``dbtoyaml`` places
+certain objects in common files and transforms object identifiers so
+that they are suitable for use in files and directories.  For example,
+the information for all user-defined casts are written to the file
+``cast.yaml`` in the root directory.  Functions with the same name but
+different arguments are written to a single file, e.g.,
+``function.foo.yaml`` in the first example above.  Identifiers are
+also converted to all lowercase, non-alphanumeric characters
+(excluding underscore) are converted to underscores and, by default,
+object names are truncated to 16 characters.
+
+If two object names, thus transformed, map to the same string, then
+the objects' information is written to the same file, e.g.,
+``table.my_table.yaml`` in the second example above.  If you prefer to
+change the default truncation length, please define the environment
+variable ``PYRSEAS_MAX_IDENT_LEN`` to some integer value (up to 63).
+
+Version Control and Dropped Objects
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+It is expected that the output of ``dbtoyaml --directory`` will be
+placed under version control.  Further invocations should then update
+the files in the same directory tree.  However, if an object is
+dropped from the database ``dbtoyaml`` would normally only output
+files for new or changed objects--and thus keep the dropped object
+file under version control.  To deal with dropped objects, ``dbtoyaml
+-d`` outputs a special YAML "index" file, named
+``database.<dbname>.yaml`` in the root directory.  When ``dbtoyaml
+-d`` is run a second time, it looks for this "index" file and if
+found, proceeds to delete the previous run's ``.yaml`` files before
+outputting new ones.
 
 Options
 -------
@@ -216,3 +263,7 @@ To extract objects, to standard output, except those in schemas
 ``product`` and ``store``::
 
   dbtoyaml -N product -N store moviesdb
+
+To extract objects to a directory under version control::
+
+  dbtoyaml moviesdb -d movies/dbspec

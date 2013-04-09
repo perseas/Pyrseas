@@ -23,8 +23,6 @@ rewrite rule
 
 .. automethod:: Rule.create
 
-.. automethod:: Rule.diff_map
-
 Rule Dictionary
 ---------------
 

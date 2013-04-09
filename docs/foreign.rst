@@ -61,8 +61,6 @@ represents the collection of foreign data wrappers in a database.
 
 .. automethod:: ForeignDataWrapperDict.link_refs
 
-.. automethod:: ForeignDataWrapperDict.to_map
-
 .. automethod:: ForeignDataWrapperDict.diff_map
 
 Foreign Server

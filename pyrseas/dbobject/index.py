@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-    pyrseas.index
-    ~~~~~~~~~~~~~
+    pyrseas.dbobject.index
+    ~~~~~~~~~~~~~~~~~~~~~~
 
     This defines two classes, Index and IndexDict, derived
     from DbSchemaObject and DbObjectDict, respectively.

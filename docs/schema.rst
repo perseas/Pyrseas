@@ -22,6 +22,8 @@ course the identifying attribute in the :class:`Schema`
 
 .. autoclass:: Schema
 
+.. automethod:: Schema.extern_dir
+
 .. automethod:: Schema.to_map
 
 .. automethod:: Schema.create

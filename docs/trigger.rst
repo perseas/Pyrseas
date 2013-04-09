@@ -26,8 +26,6 @@ or `constraint trigger
 
 .. automethod:: Trigger.create
 
-.. automethod:: Trigger.diff_map
-
 Trigger Dictionary
 ------------------
 

@@ -50,8 +50,6 @@ Aggregate Function
 
 .. automethod:: Aggregate.create
 
-.. automethod:: Aggregate.diff_map
-
 Procedure Dictionary
 --------------------
 

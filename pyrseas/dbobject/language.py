@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-    pyrseas.language
-    ~~~~~~~~~~~~~~~~
+    pyrseas.dbobject.language
+    ~~~~~~~~~~~~~~~~~~~~~~~~~
 
     This defines two classes, Language and LanguageDict, derived from
     DbObject and DbObjectDict, respectively.

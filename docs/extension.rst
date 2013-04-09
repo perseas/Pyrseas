@@ -31,6 +31,4 @@ represents the collection of extensions in a database.
 
 .. automethod:: ExtensionDict.from_map
 
-.. automethod:: ExtensionDict.to_map
-
 .. automethod:: ExtensionDict.diff_map

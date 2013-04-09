@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-    pyrseas.trigger
-    ~~~~~~~~~~~~~~~
+    pyrseas.dbobject.trigger
+    ~~~~~~~~~~~~~~~~~~~~~~~~
 
     This module defines two classes: Trigger derived from
     DbSchemaObject, and TriggerDict derived from DbObjectDict.

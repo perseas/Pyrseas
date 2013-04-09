@@ -51,6 +51,8 @@ a primary key constraint.
 
 .. automethod:: PrimaryKey.to_map
 
+.. automethod:: PrimaryKey.diff_map
+
 Foreign Key
 -----------
 
@@ -79,6 +81,8 @@ The following shows a foreign key segment of a map returned by
 
 .. automethod:: ForeignKey.add
 
+.. automethod:: ForeignKey.diff_map
+
 Unique Constraint
 -----------------
 
@@ -88,6 +92,8 @@ represents a UNIQUE, non-primary key constraint.
 .. autoclass:: UniqueConstraint
 
 .. automethod:: UniqueConstraint.to_map
+
+.. automethod:: UniqueConstraint.diff_map
 
 Constraint Dictionary
 ---------------------

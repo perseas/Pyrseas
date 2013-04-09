@@ -17,8 +17,6 @@ or sequence as defined in the PostgreSQL `pg_class` catalog.
 
 .. autoclass:: DbClass
 
-.. automethod:: DbClass.diff_description
-
 Sequence
 --------
 
@@ -48,6 +46,8 @@ are defaults so in practice an empty dictionary is also acceptable.
 .. autoclass:: Sequence
 
 .. automethod:: Sequence.get_attrs
+
+.. automethod:: Sequence.get_dependent_table
 
 .. automethod:: Sequence.to_map
 
@@ -110,6 +110,8 @@ such specification.
 
 .. automethod:: Table.drop
 
+.. automethod:: Table.diff_options
+
 .. automethod:: Table.diff_map
 
 View
@@ -130,6 +132,8 @@ The map returned by :meth:`to_map` and expected as argument by
 
 
 .. autoclass:: View
+
+.. automethod:: View.to_map
 
 .. automethod:: View.create
 

@@ -35,8 +35,6 @@ represents the collection of casts in a database.
 
 .. autoclass:: CastDict
 
-.. automethod:: CastDict.to_map
-
 .. automethod:: CastDict.from_map
 
 .. automethod:: CastDict.diff_map

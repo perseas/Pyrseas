@@ -62,6 +62,8 @@ use. Methods :meth:`to_map` and :meth:`diff_map` are the external API.
 
 .. automethod:: Database.from_map
 
+.. automethod:: Database.map_from_dir
+
 .. automethod:: Database.to_map
 
 .. automethod:: Database.diff_map
