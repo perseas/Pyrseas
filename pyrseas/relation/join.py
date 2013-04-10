@@ -104,15 +104,16 @@ class JoinRelation(object):
             attrs.update({attr.name: (expr, attr.type)})
         subclauses = []
         params = {}
-        for attr in list(qry_args.keys()):
-            if attr not in list(attrs.keys()):
+        for name in list(qry_args.keys()):
+            if name not in list(attrs.keys()):
                 raise KeyError("Attribute '%s' not allowed in query string" %
-                               attr)
-            if attrs[attr][1] == str:
-                subclauses.append("%s ILIKE %%(%s)s" % (attrs[attr][0], attr))
-                params.update({attr: '%%%s%%' % qry_args[attr]})
-            elif attrs[attr][1] in (int, float):
-                arg = qry_args[attr].strip()
+                               name)
+            (expr, type_) = attrs[name]
+            if type_ == str:
+                subclauses.append("%s ILIKE %%(%s)s" % (expr, name))
+                params.update({name: '%%%s%%' % qry_args[name]})
+            else:
+                arg = qry_args[name].strip()
                 oper = '='
                 if arg[:2] in ['>=', '!=', '<=']:
                     oper = arg[:2]
@@ -120,9 +121,10 @@ class JoinRelation(object):
                 elif arg[:1] in ['>', '<']:
                     oper = arg[:1]
                     arg = arg[1:].strip()
-                subclauses.append("%s %s %%(%s)s" % (
-                    attrs[attr][0], oper, attr))
-                params.update({attr: attrs[attr][1](arg)})
+                subclauses.append("%s %s %%(%s)s" % (expr, oper, name))
+                if type_ in (int, float):
+                    arg = type_(arg)
+                params.update({name: arg})
 
         return (" WHERE %s" % " AND ".join(subclauses), params)
 
