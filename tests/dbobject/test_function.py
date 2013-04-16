@@ -40,6 +40,14 @@ class FunctionToMapTestCase(DatabaseToMapTestCase):
         assert dbmap['schema public']['function f1(integer, integer)'] == \
             {'language': 'sql', 'returns': 'integer', 'source': SOURCE2}
 
+    def test_map_function_default_args(self):
+        "Map a function with default arguments"
+        stmts = ["CREATE FUNCTION f1(integer, integer) RETURNS integer "
+                 "LANGUAGE sql AS $_$%s$_$" % SOURCE2]
+        dbmap = self.to_map(stmts)
+        assert dbmap['schema public']['function f1(integer, integer)'] == \
+            {'language': 'sql', 'returns': 'integer', 'source': SOURCE2}
+
     def test_map_void_function(self):
         "Map a function returning void"
         stmts = ["CREATE TABLE t1 (c1 integer, c2 text)",
@@ -211,7 +219,7 @@ class FunctionToSqlTestCase(InputMapToSqlTestCase):
     def test_drop_function_with_args(self):
         "Drop an existing function which has arguments"
         sql = self.to_sql(self.std_map(), [CREATE_STMT2])
-        assert sql[0], "DROP FUNCTION f1(integer == integer)"
+        assert sql[0] == "DROP FUNCTION f1(integer, integer)"
 
     def test_change_function_defn(self):
         "Change function definition"

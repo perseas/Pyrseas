@@ -10,6 +10,7 @@ from pyrseas.testutils import InputMapToSqlTestCase, fix_indent
 
 CREATE_TABLE = "CREATE TABLE t1 (c1 integer, c2 text)"
 SOURCE1 = "SELECT 'dummy'::text"
+SOURCE2 = "SELECT $1 * $2"
 CREATE_FUNC = "CREATE FUNCTION f1() RETURNS text LANGUAGE sql IMMUTABLE AS " \
     "$_$%s$_$" % SOURCE1
 CREATE_TYPE = "CREATE TYPE t1 AS (x integer, y integer)"
@@ -78,6 +79,21 @@ class OwnerToSqlTestCase(InputMapToSqlTestCase):
         assert sql[2] == "ALTER FUNCTION s1.f1() OWNER TO %s" % self.db.user
         # to verify correct order of invocation of ownable and commentable
         assert sql[3] == "COMMENT ON FUNCTION s1.f1() IS 'Test function'"
+
+    def test_create_function_default_args(self):
+        "Create a function with default arguments"
+        inmap = self.std_map()
+        inmap['schema public'].update({
+            'function f1(integer, INOUT integer)': {
+                'allargs': 'integer, INOUT integer DEFAULT 1',
+                'language': 'sql', 'returns': 'integer', 'source': SOURCE2,
+                'owner': self.db.user}})
+        sql = self.to_sql(inmap)
+        assert fix_indent(sql[1]) == \
+            "CREATE FUNCTION f1(integer, INOUT integer DEFAULT 1) " \
+            "RETURNS integer LANGUAGE sql AS $_$%s$_$" % SOURCE2
+        assert sql[2] == "ALTER FUNCTION f1(integer, INOUT integer) " \
+            "OWNER TO %s" % self.db.user
 
     def test_change_table_owner(self):
         "Change the owner of a table"

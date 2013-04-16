@@ -123,10 +123,11 @@ class Function(Proc):
             if self.rows != 1000:
                 rows = " ROWS %s" % self.rows
 
+        args = self.allargs if hasattr(self, 'allargs') else self.arguments
         stmts.append("CREATE%s FUNCTION %s(%s) RETURNS %s\n    LANGUAGE %s"
                      "%s%s%s%s%s%s\n    AS %s" % (
                      newsrc and " OR REPLACE" or '', self.qualname(),
-                     self.arguments, self.returns, self.language, volat,
+                     args, self.returns, self.language, volat,
                      strict, secdef, cost, rows, config, src))
         return stmts
 
@@ -197,7 +198,8 @@ class ProcDict(DbObjectDict):
     cls = Proc
     query = \
         """SELECT nspname AS schema, proname AS name,
-                  pg_get_function_arguments(p.oid) AS arguments,
+                  pg_get_function_identity_arguments(p.oid) AS arguments,
+                  pg_get_function_arguments(p.oid) AS allargs,
                   pg_get_function_result(p.oid) AS returns,
                   rolname AS owner, array_to_string(proacl, ',') AS privileges,
                   l.lanname AS language, provolatile AS volatility,
@@ -227,6 +229,8 @@ class ProcDict(DbObjectDict):
             if hasattr(proc, 'privileges'):
                 proc.privileges = proc.privileges.split(',')
             sch, prc, arg = proc.key()
+            if hasattr(proc, 'allargs') and proc.allargs == proc.arguments:
+                del proc.allargs
             if hasattr(proc, 'proisagg'):
                 del proc.proisagg
                 del proc.source
