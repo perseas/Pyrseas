@@ -179,8 +179,7 @@ class Aggregate(Proc):
         """
         opt_clauses = []
         if hasattr(self, 'finalfunc'):
-            ffname = self.finalfunc[:self.finalfunc.index('(')]
-            opt_clauses.append("FINALFUNC = %s" % ffname)
+            opt_clauses.append("FINALFUNC = %s" % self.finalfunc)
         if hasattr(self, 'initcond'):
             opt_clauses.append("INITCOND = '%s'" % self.initcond)
         if hasattr(self, 'sortop'):
@@ -206,9 +205,9 @@ class ProcDict(DbObjectDict):
                   proisstrict AS strict, proisagg, prosrc AS source,
                   probin::text AS obj_file, proconfig AS configuration,
                   prosecdef AS security_definer, procost AS cost,
-                  aggtransfn::regprocedure AS sfunc,
+                  aggtransfn::regproc AS sfunc,
                   aggtranstype::regtype AS stype,
-                  aggfinalfn::regprocedure AS finalfunc,
+                  aggfinalfn::regproc AS finalfunc,
                   agginitval AS initcond, aggsortop::regoper AS sortop,
                   obj_description(p.oid, 'pg_proc') AS description,
                   prorows::integer AS rows

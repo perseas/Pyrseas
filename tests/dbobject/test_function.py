@@ -285,7 +285,7 @@ class AggregateToMapTestCase(DatabaseToMapTestCase):
         stmts = [CREATE_STMT2, "CREATE AGGREGATE a1 (integer) ("
                  "SFUNC = f1, STYPE = integer)"]
         dbmap = self.to_map(stmts)
-        expmap = {'sfunc': 'f1(integer,integer)', 'stype': 'integer'}
+        expmap = {'sfunc': 'f1', 'stype': 'integer'}
         assert dbmap['schema public']['function f1(integer, integer)'] == \
             {'language': 'sql', 'returns': 'integer', 'source': SOURCE2,
              'volatility': 'immutable'}
@@ -299,8 +299,8 @@ class AggregateToMapTestCase(DatabaseToMapTestCase):
                  "CREATE AGGREGATE a1 (integer) (SFUNC = f1, STYPE = integer, "
                  "FINALFUNC = f2, INITCOND = '-1')"]
         dbmap = self.to_map(stmts)
-        expmap = {'sfunc': 'f1(integer,integer)', 'stype': 'integer',
-                  'initcond': '-1', 'finalfunc': 'f2(integer)'}
+        expmap = {'sfunc': 'f1', 'stype': 'integer',
+                  'initcond': '-1', 'finalfunc': 'f2'}
         assert dbmap['schema public']['function f1(integer, integer)'] == \
             {'language': 'sql', 'returns': 'integer', 'source': SOURCE2,
              'volatility': 'immutable'}
@@ -314,7 +314,7 @@ class AggregateToMapTestCase(DatabaseToMapTestCase):
         stmts = [CREATE_STMT2, "CREATE AGGREGATE a1 (integer) ("
                  "SFUNC = f1, STYPE = integer, SORTOP = >)"]
         dbmap = self.to_map(stmts)
-        expmap = {'sfunc': 'f1(integer,integer)', 'stype': 'integer',
+        expmap = {'sfunc': 'f1', 'stype': 'integer',
                   'sortop': 'pg_catalog.>'}
         assert dbmap['schema public']['aggregate a1(integer)'] == expmap
 
@@ -346,7 +346,7 @@ class AggregateToSqlTestCase(InputMapToSqlTestCase):
             'source': "SELECT $1::float", 'volatility': 'immutable'}})
         inmap['schema public'].update({'aggregate a1(integer)': {
             'sfunc': 'f1', 'stype': 'integer', 'initcond': '-1',
-            'finalfunc': 'f2(integer)'}})
+            'finalfunc': 'f2'}})
         sql = self.to_sql(inmap)
         assert fix_indent(sql[1]) == CREATE_STMT2
         assert fix_indent(sql[2]) == "CREATE FUNCTION f2(integer) " \
