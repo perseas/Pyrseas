@@ -132,8 +132,6 @@ privileges, at either the operating system or PostgreSQL level.
  - Create a PostgreSQL password file, e.g., on Linux: ``~/.pgpass``, on
    Windows: ``%APPDATA%\postgresql\pgpass.conf``.
 
- - Using psql or pgAdmin, create roles **user1** and **user2**.
-
  - Create directories to hold tablespaces, e.g., ``/extra/pg/9.1/ts1``
    on Linux, ``C:\\extra\\pg\\9.1\\ts1`` on Windows.  The directories
    need to be owned by the **postgres** user. This may be tricky on

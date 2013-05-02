@@ -3,7 +3,7 @@
 
 The majority of other tests exclude access privileges.  These
 explicitly request it.  In addition, the roles 'user1' and 'user2'
-should have been previously defined.
+are created if they don't exist.
 """
 
 from pyrseas.testutils import DatabaseToMapTestCase
@@ -19,8 +19,20 @@ GRANT_SELECT = "GRANT SELECT ON TABLE t1 TO %s"
 GRANT_INSUPD = "GRANT INSERT, UPDATE ON TABLE t1 TO %s"
 
 
+def check_extra_users(db):
+    "Check existence of extra test users"
+    for user in ['user1', 'user2']:
+        row = db.fetchone("SELECT 1 FROM pg_roles WHERE rolname = %s", (user,))
+        if row is None:
+            db.execute_commit("CREATE ROLE %s" % user)
+
+
 class PrivilegeToMapTestCase(DatabaseToMapTestCase):
     """Test mapping of object privilege information"""
+
+    def setUp(self):
+        super(DatabaseToMapTestCase, self).setUp()
+        check_extra_users(self.db)
 
     def test_map_schema(self):
         "Map a schema with some GRANTs"
@@ -145,6 +157,10 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
 
 class PrivilegeToSqlTestCase(InputMapToSqlTestCase):
     """Test SQL generation of privilege information (GRANTs)"""
+
+    def setUp(self):
+        super(InputMapToSqlTestCase, self).setUp()
+        check_extra_users(self.db)
 
     def test_create_schema(self):
         "Create a schema with various privileges"
