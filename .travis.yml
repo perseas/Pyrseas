@@ -2,5 +2,9 @@ language: python
 python:
   - "3.3"
   - "2.7"
+before_install:
+  - sudo sed -i -e 's/# fr_FR.UTF-8/fr_FR.UTF-8/g' /etc/locale.gen
+  - sudo locale-gen
+  - sudo apt-get install -qq postgresql-plperl
 install: pip install -r requirements.txt
 script: python setup.py test
