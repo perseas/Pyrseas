@@ -44,6 +44,7 @@ TEST_PORT = int(os.environ.get("PYRSEAS_TEST_PORT", 5432))
 PG_OWNER = 'postgres'
 TEST_DIR = os.path.join(tempfile.gettempdir(),
                         os.environ.get("PYRSEAS_TEST_DIR", 'pyrseas_test'))
+TRAVIS = (os.environ.get("TRAVIS", 'false') == 'true')
 
 
 class PgTestDb(PostgresDb):
@@ -433,11 +434,19 @@ class DbMigrateTestCase(TestCase):
         return lines
 
     def run_pg_dump(self, dumpfile, srcdb=False):
-        v = self.srcdb._version
-        pg_dumpver = "pg_dump%d%d" % (v // 10000,
-                                      (v - v // 10000 * 10000) // 100)
-        if sys.platform == 'win32':
-            pg_dumpver += '.bat'
+        """Run pg_dump using special scripts or directly (on Travis-CI)
+
+        :param dumpfile: path to the pg_dump output file
+        :param srcdb: run against source database
+        """
+        if TRAVIS:
+            pg_dumpver = 'pg_dump'
+        else:
+            v = self.srcdb._version
+            pg_dumpver = "pg_dump%d%d" % (v // 10000,
+                                          (v - v // 10000 * 10000) // 100)
+            if sys.platform == 'win32':
+                pg_dumpver += '.bat'
         dbname = self.srcdb.name if srcdb else self.db.name
         args = [pg_dumpver, '-h']
         args.extend(self._db_params())
