@@ -6,6 +6,7 @@ before_install:
   - sudo locale-gen fr_FR.UTF-8
   - sudo mkdir -p /extra/pg/9.1/ts1 /extra/pg/9.1/ts2
   - sudo chown postgres:postgres /extra/pg/9.1/ts1 /extra/pg/9.1/ts2
+  - sudo apt-get update -qq
   - sudo apt-get install -qq postgresql-plperl
 install: pip install -r requirements.txt
 before_script:
