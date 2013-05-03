@@ -5,6 +5,11 @@ python:
 before_install:
   - sudo sed -i -e 's/# fr_FR.UTF-8/fr_FR.UTF-8/g' /etc/locale.gen
   - sudo locale-gen
+  - sudo mkdir -p /extra/pg/9.1/ts1 /extra/pg/9.1/ts2
+  - sudo chown postgres:postgres /extra/pg/9.1/ts1 /extra/pg/9.1/ts2
   - sudo apt-get install -qq postgresql-plperl
 install: pip install -r requirements.txt
+before_script:
+  - psql -Upostgres -c "CREATE TABLESPACE ts1 LOCATION '/extra/pg/9.1/ts1'"
+  - psql -Upostgres -c "CREATE TABLESPACE ts2 LOCATION '/extra/pg/9.1/ts2'"
 script: python setup.py test
