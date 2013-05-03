@@ -3,8 +3,7 @@ python:
   - "3.3"
   - "2.7"
 before_install:
-  - sudo sed -i -e 's/# fr_FR.UTF-8/fr_FR.UTF-8/g' /etc/locale.gen
-  - sudo locale-gen
+  - sudo locale-gen fr_FR.UTF-8
   - sudo mkdir -p /extra/pg/9.1/ts1 /extra/pg/9.1/ts2
   - sudo chown postgres:postgres /extra/pg/9.1/ts1 /extra/pg/9.1/ts2
   - sudo apt-get install -qq postgresql-plperl
