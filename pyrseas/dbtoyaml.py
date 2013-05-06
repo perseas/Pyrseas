@@ -8,6 +8,9 @@ import sys
 import getpass
 from argparse import ArgumentParser
 
+if os.environ.get("TRAVIS", 'false') == 'true':
+    print("dbtoyaml: sys.path=%s" % sys.path)
+
 from pyrseas.yamlutil import yamldump
 from pyrseas.database import Database
 from pyrseas.cmdargs import parent_parser

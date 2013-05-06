@@ -461,7 +461,8 @@ class DbMigrateTestCase(TestCase):
         args.extend(self._db_params())
         args.extend(['-o', yamlfile, dbname])
         env = os.environ
-        env.update({'PYTHONPATH': os.getcwd()})
+        path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+        env.update({'PYTHONPATH': path})
         subprocess.check_call(args, env=env)
 
     def create_yaml_dir(self, yamldir, srcdb=False):
@@ -472,7 +473,8 @@ class DbMigrateTestCase(TestCase):
         args.extend(self._db_params())
         args.extend(['-d', yamldir, dbname])
         env = os.environ
-        env.update({'PYTHONPATH': os.getcwd()})
+        path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+        env.update({'PYTHONPATH': path})
         subprocess.check_call(args, env=env)
 
     def migrate_target(self, yamlfile, outfile):
