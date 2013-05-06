@@ -451,7 +451,7 @@ class DbMigrateTestCase(TestCase):
         args = [pg_dumpver, '-h']
         args.extend(self._db_params())
         args.extend(['-s', '-f', dumpfile, dbname])
-        subprocess.call(args)
+        subprocess.check_call(args)
 
     def create_yaml(self, yamlfile, srcdb=False):
         dbname = self.srcdb.name if srcdb else self.db.name
@@ -460,7 +460,9 @@ class DbMigrateTestCase(TestCase):
             args.insert(0, 'python')
         args.extend(self._db_params())
         args.extend(['-o', yamlfile, dbname])
-        subprocess.call(args)
+        env = os.environ
+        env.update({'PYTHONPATH': os.getcwd()})
+        subprocess.check_call(args, env=env)
 
     def create_yaml_dir(self, yamldir, srcdb=False):
         dbname = self.srcdb.name if srcdb else self.db.name
@@ -469,7 +471,9 @@ class DbMigrateTestCase(TestCase):
             args.insert(0, 'python')
         args.extend(self._db_params())
         args.extend(['-d', yamldir, dbname])
-        subprocess.call(args)
+        env = os.environ
+        env.update({'PYTHONPATH': os.getcwd()})
+        subprocess.check_call(args, env=env)
 
     def migrate_target(self, yamlfile, outfile):
         args = [self.yamltodb, '-H']
@@ -477,7 +481,7 @@ class DbMigrateTestCase(TestCase):
             args.insert(0, 'python')
         args.extend(self._db_params())
         args.extend(['-u', '-o', outfile, self.db.name, yamlfile])
-        subprocess.call(args)
+        subprocess.check_call(args)
 
     def migrate_target_dir(self, yamldir, outfile):
         args = [self.yamltodb, '-H']
@@ -485,7 +489,7 @@ class DbMigrateTestCase(TestCase):
             args.insert(0, 'python')
         args.extend(self._db_params())
         args.extend(['-u', '-o', outfile, '-d', yamldir, self.db.name])
-        subprocess.call(args)
+        subprocess.check_call(args)
 
 
 class RelationTestCase(object):
