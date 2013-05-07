@@ -8,10 +8,7 @@ before_install:
   - sudo chown postgres:postgres /extra/pg/9.1/ts1 /extra/pg/9.1/ts2
   - sudo apt-get update -qq
   - sudo apt-get install -qq postgresql-plperl
-install: pip install -r requirements.txt
 before_script:
-  - pip freeze
-  - python -c "import yaml; print(yaml.__version__); print(yaml.__file__)"
   - psql -Upostgres -c "CREATE TABLESPACE ts1 LOCATION '/extra/pg/9.1/ts1'"
   - psql -Upostgres -c "CREATE TABLESPACE ts2 LOCATION '/extra/pg/9.1/ts2'"
 script:
