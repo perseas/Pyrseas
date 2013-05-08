@@ -453,31 +453,28 @@ class DbMigrateTestCase(TestCase):
         args.extend(['-s', '-f', dumpfile, dbname])
         subprocess.check_call(args)
 
-    def adjust_env(self):
+    def invoke(self, args):
+        args.insert(0, sys.executable)
         path = [os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))]
         path.append(os.path.abspath(os.path.join(os.path.dirname(
                     yaml.__file__), '..')))
-        env = os.environ
+        env = os.environ.copy()
         env.update({'PYTHONPATH': ':'.join(path)})
-        return env
+        subprocess.check_call(args, env=env)
 
     def create_yaml(self, yamlfile, srcdb=False):
         dbname = self.srcdb.name if srcdb else self.db.name
         args = [self.dbtoyaml, '-H']
-        if sys.platform == 'win32':
-            args.insert(0, 'python')
         args.extend(self._db_params())
         args.extend(['-o', yamlfile, dbname])
-        subprocess.check_call(args, env=self.adjust_env())
+        self.invoke(args)
 
     def create_yaml_dir(self, yamldir, srcdb=False):
         dbname = self.srcdb.name if srcdb else self.db.name
         args = [self.dbtoyaml, '-H']
-        if sys.platform == 'win32':
-            args.insert(0, 'python')
         args.extend(self._db_params())
         args.extend(['-d', yamldir, dbname])
-        subprocess.check_call(args, env=self.adjust_env())
+        self.invoke(args)
 
     def migrate_target(self, yamlfile, outfile):
         args = [self.yamltodb, '-H']
@@ -485,15 +482,13 @@ class DbMigrateTestCase(TestCase):
             args.insert(0, 'python')
         args.extend(self._db_params())
         args.extend(['-u', '-o', outfile, self.db.name, yamlfile])
-        subprocess.check_call(args, env=self.adjust_env())
+        self.invoke(args)
 
     def migrate_target_dir(self, yamldir, outfile):
         args = [self.yamltodb, '-H']
-        if sys.platform == 'win32':
-            args.insert(0, 'python')
         args.extend(self._db_params())
         args.extend(['-u', '-o', outfile, '-d', yamldir, self.db.name])
-        subprocess.check_call(args, env=self.adjust_env())
+        self.invoke(args)
 
 
 class RelationTestCase(object):
