@@ -181,7 +181,7 @@ class ForeignDataWrapperDict(DbObjectDict):
             self[fdw] = wrapper = ForeignDataWrapper(name=fdw)
             inwrapper = inwrappers[key]
             inservs = {}
-            for key in list(inwrapper.keys()):
+            for key in sorted(list(inwrapper.keys())):
                 if key.startswith('server '):
                     inservs.update({key: inwrapper[key]})
                 elif key in ['handler', 'validator', 'options', 'owner',

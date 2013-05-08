@@ -246,10 +246,8 @@ class PrivilegeToSqlTestCase(InputMapToSqlTestCase):
                            {'user1': ['insert', 'update']}]}})
         sql = self.to_sql(inmap, [CREATE_TABLE, GRANT_SELECT % 'user1'])
         assert len(sql) == 3
-        assert sql[0] == "REVOKE SELECT ON TABLE t1 FROM user1"
-        sql[1:2] = sorted(sql[1:2])
-        assert sql[1] == GRANT_INSUPD % 'user1'
-        assert sql[2] == GRANT_SELECT % 'PUBLIC'
+        assert sorted(sql) == [GRANT_INSUPD % 'user1', GRANT_SELECT % 'PUBLIC',
+                               "REVOKE SELECT ON TABLE t1 FROM user1"]
 
     def test_column_change_grants(self):
         "Change existing colum-level privileges"
