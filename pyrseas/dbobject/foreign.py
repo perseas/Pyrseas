@@ -181,7 +181,7 @@ class ForeignDataWrapperDict(DbObjectDict):
             self[fdw] = wrapper = ForeignDataWrapper(name=fdw)
             inwrapper = inwrappers[key]
             inservs = {}
-            for key in sorted(list(inwrapper.keys())):
+            for key in list(inwrapper.keys()):
                 if key.startswith('server '):
                     inservs.update({key: inwrapper[key]})
                 elif key in ['handler', 'validator', 'options', 'owner',
@@ -189,7 +189,7 @@ class ForeignDataWrapperDict(DbObjectDict):
                     setattr(wrapper, key, inwrapper[key])
                 elif key == 'privileges':
                     wrapper.privileges = privileges_from_map(
-                        inwrapper[key], wrapper.allprivs, wrapper.owner)
+                        inwrapper[key], wrapper.allprivs, inwrapper['owner'])
                 else:
                     raise KeyError("Expected typed object, found '%s'" % key)
             newdb.servers.from_map(wrapper, inservs, newdb)
