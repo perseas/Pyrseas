@@ -348,8 +348,9 @@ class AggregateToSqlTestCase(InputMapToSqlTestCase):
             'sfunc': 'f1', 'stype': 'integer', 'initcond': '-1',
             'finalfunc': 'f2'}})
         sql = self.to_sql(inmap)
-        assert fix_indent(sql[1]) == CREATE_STMT2
-        assert fix_indent(sql[2]) == "CREATE FUNCTION f2(integer) " \
+        funcs = sorted(sql[1:3])
+        assert fix_indent(funcs[0]) == CREATE_STMT2
+        assert fix_indent(funcs[1]) == "CREATE FUNCTION f2(integer) " \
             "RETURNS double precision LANGUAGE sql IMMUTABLE " \
             "AS $_$SELECT $1::float$_$"
         assert fix_indent(sql[3]) == "CREATE AGGREGATE a1(integer) " \
