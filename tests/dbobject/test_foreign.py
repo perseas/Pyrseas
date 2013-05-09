@@ -98,8 +98,10 @@ class ForeignDataWrapperToSqlTestCase(InputMapToSqlTestCase):
         inmap.update({'foreign data wrapper fdw1': {
             'options': ['opt1=valX', 'opt3=valY']}})
         sql = self.to_sql(inmap, stmts, superuser=True)
-        assert fix_indent(sql[0]) == "ALTER FOREIGN DATA WRAPPER fdw1 " \
-            "OPTIONS (SET opt1 'valX', opt3 'valY', DROP opt2)"
+        sql = fix_indent(sql[0]).split('OPTIONS ')
+        assert sql[0] == "ALTER FOREIGN DATA WRAPPER fdw1 "
+        assert sorted(sql[1][1:-1].split(', ')) == [
+            "DROP opt2", "SET opt1 'valX'", "opt3 'valY'"]
 
     def test_comment_on_fd_wrapper(self):
         "Create a comment for an existing foreign data wrapper"
@@ -206,8 +208,10 @@ class ForeignServerToSqlTestCase(InputMapToSqlTestCase):
         inmap.update({'foreign data wrapper fdw1': {'server fs1': {
             'options': ['opt1=valA', 'opt2=valB']}}})
         sql = self.to_sql(inmap, stmts, superuser=True)
-        assert fix_indent(sql[0]) == \
-            "ALTER SERVER fs1 OPTIONS (opt1 'valA', opt2 'valB')"
+        sql = fix_indent(sql[0]).split('OPTIONS ')
+        assert sql[0] == "ALTER SERVER fs1 "
+        assert sorted(sql[1][1:-1].split(', ')) == [
+            "opt1 'valA'", "opt2 'valB'"]
 
     def test_drop_server_wrapper(self):
         "Drop an existing foreign data wrapper and its server"
@@ -295,8 +299,9 @@ class UserMappingToSqlTestCase(InputMapToSqlTestCase):
         inmap.update({'foreign data wrapper fdw1': {'server fs1': {
             'user mappings': {'PUBLIC': {}}}}})
         sql = self.to_sql(inmap, stmts, superuser=True)
-        assert fix_indent(sql[0]) == "ALTER USER MAPPING FOR PUBLIC " \
-            "SERVER fs1 OPTIONS (DROP opt1, DROP opt2)"
+        sql = fix_indent(sql[0]).split('OPTIONS ')
+        assert sql[0] == "ALTER USER MAPPING FOR PUBLIC SERVER fs1 "
+        assert sorted(sql[1][1:-1].split(', ')) == ["DROP opt1", "DROP opt2"]
 
 
 class ForeignTableToMapTestCase(DatabaseToMapTestCase):
