@@ -2,13 +2,24 @@
 Pyrseas
 =======
 
+.. image:: https://api.travis-ci.org/jmafc/Pyrseas.png?branch=master
+           :target: https://travis-ci.org/jmafc/Pyrseas
+
+.. image:: https://pypip.in/v/Pyrseas/badge.png
+           :target: https://crate.io/packages/Pyrseas/
+           :alt: Latest PyPI version
+
+.. image:: https://pypip.in/d/Pyrseas/badge.png
+           :target: https://crate.io/packages/Pyrseas/
+           :alt: Number of PyPI downloads
+
 Pyrseas provides a framework and utilities to upgrade and maintain a
 PostgreSQL database.
 
 Features
 --------
 
-- Outputs a YAML/JSON description of a PostgreSQL database's tables
+- Outputs a YAML description of a PostgreSQL database's tables
   and other objects (metadata), suitable for storing in a version
   control repository
 

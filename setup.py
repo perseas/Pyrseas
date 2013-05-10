@@ -41,7 +41,7 @@ setup(
     author='Joe Abbate',
     author_email='jma@freedomcircle.com',
     description='Framework and utilities to upgrade and maintain databases',
-    long_description=open('README').read(),
+    long_description=open('README.rst').read(),
     url='http://www.pyrseas.org/',
     classifiers=[
         'Development Status :: 4 - Beta',
@@ -59,6 +59,7 @@ setup(
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.2',
+        'Programming Language :: Python :: 3.3',
         'Programming Language :: SQL',
         'Topic :: Database :: Front-Ends',
         'Topic :: Software Development :: Code Generators',
