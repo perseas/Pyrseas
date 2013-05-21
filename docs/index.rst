@@ -14,8 +14,8 @@ Features
 - Generates SQL statements to modify a database so that it willl match
   an input YAML/JSON specification
 
-- (planned) Generates an extended YAML description of a PostgreSQL
-  database from its catalogs and from an extension specification.
+- Generates an augmented YAML description of a PostgreSQL database
+  from its catalogs and an augmentation specification.
 
 - (planned) Generates a flexible web application to update PostgreSQL
   tables
@@ -45,9 +45,11 @@ Contents
    devel
    testing
    issues
+   predefaug
 .. toctree::
    :maxdepth: 1
 
+   dbaugment
    dbtoyaml
    yamltodb
    cmdargs
@@ -89,6 +91,17 @@ classes and methods are documented mainly for developer use.
    trigger
    textsearch
    foreign
+
+
+Augmenter API Reference
+-----------------------
+
+.. toctree::
+   :maxdepth: 2
+
+   augmentdb
+   cfgobjects
+   augobjects
 
 
 Indices and tables

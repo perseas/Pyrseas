@@ -10,6 +10,7 @@ from unittest import TestCase
 import yaml
 
 from pyrseas.database import Database
+from pyrseas.augmentdb import AugmentDatabase
 from pyrseas.lib.dbconn import DbConnection
 from pyrseas.lib.dbutils import pgexecute, PostgresDb
 
@@ -489,6 +490,32 @@ class DbMigrateTestCase(TestCase):
         args.extend(self._db_params())
         args.extend(['-u', '-o', outfile, '-d', yamldir, self.db.name])
         self.invoke(args)
+
+
+class AugmentToMapTestCase(PyrseasTestCase):
+
+    def to_map(self, stmts, augmap):
+        """Apply an augment map and return a map of the updated database.
+
+        :param stmts: list of SQL statements to execute
+        :param augmap: dictionary describing the augmentations
+        :return: dictionary of the updated database
+        """
+        for stmt in stmts:
+            self.db.execute(stmt)
+        self.db.conn.commit()
+        db = AugmentDatabase(self.db.name, self.db.user, host=self.db.host,
+                             port=self.db.port)
+
+        class Opts:
+            pass
+        opts = Opts()
+        opts.schemas = []
+        opts.tables = []
+        opts.no_owner = True
+        opts.no_privs = True
+        opts.directory = None
+        return db.apply(augmap, opts)
 
 
 class RelationTestCase(object):
