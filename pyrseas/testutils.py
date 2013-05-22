@@ -460,7 +460,7 @@ class DbMigrateTestCase(TestCase):
         path.append(os.path.abspath(os.path.join(os.path.dirname(
                     yaml.__file__), '..')))
         env = os.environ.copy()
-        env.update({'PYTHONPATH': ':'.join(path)})
+        env.update({'PYTHONPATH': os.pathsep.join(path)})
         subprocess.check_call(args, env=env)
 
     def create_yaml(self, yamlfile, srcdb=False):
@@ -479,8 +479,6 @@ class DbMigrateTestCase(TestCase):
 
     def migrate_target(self, yamlfile, outfile):
         args = [self.yamltodb, '-H']
-        if sys.platform == 'win32':
-            args.insert(0, 'python')
         args.extend(self._db_params())
         args.extend(['-u', '-o', outfile, self.db.name, yamlfile])
         self.invoke(args)
