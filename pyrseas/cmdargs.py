@@ -3,17 +3,15 @@
 
 from argparse import ArgumentParser, FileType
 
-from pyrseas import __version__
 
-
-def parent_parser():
+def cmd_parser(description, version):
     """Create command line argument parser with common PostgreSQL options
 
     :return: the created parser
     """
-    parser = ArgumentParser(add_help=False)
-    parser.add_argument('dbname', help='database name')
-    group = parser.add_argument_group('Connection options')
+    parent = ArgumentParser(add_help=False)
+    parent.add_argument('dbname', help='database name')
+    group = parent.add_argument_group('Connection options')
     group.add_argument('-H', '--host', help="database server host or "
                        "socket directory (default %(default)s)")
     group.add_argument('-p', '--port', type=int, help="database server port "
@@ -22,8 +20,9 @@ def parent_parser():
                        help="database user name (default %(default)s)")
     group.add_argument('-W', '--password', action="store_true",
                        help="force password prompt")
-    parser.add_argument('-o', '--output', type=FileType('w'),
+    parent.add_argument('-o', '--output', type=FileType('w'),
                         help="output file name (default stdout)")
+    parser = ArgumentParser(parents=[parent], description=description)
     parser.add_argument('--version', action='version',
-                        version='%(prog)s ' + '%s' % __version__)
+                        version='%(prog)s ' + '%s' % version)
     return parser

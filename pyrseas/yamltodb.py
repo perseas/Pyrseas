@@ -7,20 +7,20 @@ from __future__ import print_function
 import os
 import sys
 import getpass
-from argparse import ArgumentParser, FileType
+from argparse import FileType
 
 import yaml
 
+from pyrseas import __version__
 from pyrseas.database import Database
-from pyrseas.cmdargs import parent_parser
+from pyrseas.cmdargs import cmd_parser
 
 
 def main(host='localhost', port=5432):
     """Convert YAML specifications to database DDL."""
-    parser = ArgumentParser(parents=[parent_parser()],
-                            description="Generate SQL statements to update a "
-                            "PostgreSQL database to match the schema specified"
-                            " in a YAML-formatted file(s)")
+    parser = cmd_parser("Generate SQL statements to update a PostgreSQL "
+                        "database to match the schema specified in a "
+                        "YAML-formatted file(s)", __version__)
     parser.add_argument('-d', '--directory',
                         help='root directory for input YAML files')
     parser.add_argument('spec', nargs='?', type=FileType('r'),

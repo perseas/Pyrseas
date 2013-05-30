@@ -6,20 +6,21 @@ from __future__ import print_function
 import os
 import sys
 import getpass
-from argparse import ArgumentParser, FileType
+from argparse import FileType
 
 import yaml
 
+from pyrseas import __version__
 from pyrseas.yamlutil import yamldump
 from pyrseas.augmentdb import AugmentDatabase
-from pyrseas.cmdargs import parent_parser
+from pyrseas.cmdargs import cmd_parser
 
 
 def main(host='localhost', port=5432):
     """Augment database specifications"""
-    parser = ArgumentParser(parents=[parent_parser()],
-                            description="Augment a PostgreSQL database with "
-                            "standard attributes and procedures")
+    parser = cmd_parser("Generate a modified schema for a PostgreSQL "
+                        "database, in YAML format, augmented with specified "
+                        "attributes and procedures", __version__)
     parser.add_argument('spec', nargs='?', type=FileType('r'),
                         default=sys.stdin, help='YAML augmenter specification')
     parser.add_argument('--merge-spec', dest='mergefile',

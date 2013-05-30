@@ -6,21 +6,20 @@ from __future__ import print_function
 import os
 import sys
 import getpass
-from argparse import ArgumentParser
 
 if os.environ.get("TRAVIS", 'false') == 'true':
     print("dbtoyaml: sys.path=%s" % sys.path)
 
+from pyrseas import __version__
 from pyrseas.yamlutil import yamldump
 from pyrseas.database import Database
-from pyrseas.cmdargs import parent_parser
+from pyrseas.cmdargs import cmd_parser
 
 
 def main(host='localhost', port=5432, schema=None):
     """Convert database table specifications to YAML."""
-    parser = ArgumentParser(parents=[parent_parser()],
-                            description="Extract the schema of a PostgreSQL "
-                            "database in YAML format")
+    parser = cmd_parser("Extract the schema of a PostgreSQL database in "
+                        "YAML format", __version__)
     parser.add_argument('-d', '--directory',
                         help='root directory for output')
     parser.add_argument('-O', '--no-owner', action='store_true',
