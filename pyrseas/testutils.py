@@ -431,7 +431,7 @@ class DbMigrateTestCase(TestCase):
         if self.db.port is not None:
             args.append("-p %d " % self.db.port)
         if self.db.user is not None:
-            args.append("-U %s " % self.db.user)
+            args.append("-U %s" % self.db.user)
         return args
 
     def lines(self, the_file):
