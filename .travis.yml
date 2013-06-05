@@ -11,5 +11,6 @@ before_install:
 before_script:
   - psql -Upostgres -c "CREATE TABLESPACE ts1 LOCATION '/extra/pg/9.1/ts1'"
   - psql -Upostgres -c "CREATE TABLESPACE ts2 LOCATION '/extra/pg/9.1/ts2'"
+  - psql -Upostgres -c "CREATE USER travis SUPERUSER"
 script:
   - python setup.py test
