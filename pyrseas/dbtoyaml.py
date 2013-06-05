@@ -3,12 +3,8 @@
 """dbtoyaml - extract the schema of a PostgreSQL database in YAML format"""
 
 from __future__ import print_function
-import os
 import sys
 import getpass
-
-if os.environ.get("TRAVIS", 'false') == 'true':
-    print("dbtoyaml: sys.path=%s" % sys.path)
 
 from pyrseas import __version__
 from pyrseas.yamlutil import yamldump
@@ -16,7 +12,7 @@ from pyrseas.database import Database
 from pyrseas.cmdargs import cmd_parser
 
 
-def main(host='localhost', port=5432, schema=None):
+def main(schema=None):
     """Convert database table specifications to YAML."""
     parser = cmd_parser("Extract the schema of a PostgreSQL database in "
                         "YAML format", __version__)
@@ -43,9 +39,7 @@ def main(host='localhost', port=5432, schema=None):
                        dest='excl_tables', action='append', default=[],
                        help="do NOT extract the named table(s) "
                        "(default none)")
-
-    parser.set_defaults(host=host, port=port, schema=schema,
-                        username=os.getenv("PGUSER") or os.getenv("USER"))
+    parser.set_defaults(schema=schema)
     args = parser.parse_args()
     if args.directory and args.output:
         parser.error("Cannot specify both directory and file output")

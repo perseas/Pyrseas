@@ -395,8 +395,7 @@ class DbMigrateTestCase(TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.srcdb = PgTestDb(TEST_DBNAME_SRC, TEST_USER, TEST_HOST,
-                             TEST_PORT)
+        cls.srcdb = PgTestDb(TEST_DBNAME_SRC, TEST_USER, TEST_HOST, TEST_PORT)
         cls.srcdb.connect()
         cls.srcdb.clear()
         cls.db = PgTestDb(TEST_DBNAME, TEST_USER, TEST_HOST, TEST_PORT)
@@ -426,8 +425,14 @@ class DbMigrateTestCase(TestCase):
         return os.path.join(self.tmpdir, filename)
 
     def _db_params(self):
-        return (self.db.host or 'localhost',
-                '-p', '%d' % (self.db.port or 5432), '-U', self.db.user)
+        args = []
+        if self.db.host is not None:
+            args.append("--host=%s " % self.db.host)
+        if self.db.port is not None:
+            args.append("-p %d " % self.db.port)
+        if self.db.user is not None:
+            args.append("-U %s " % self.db.user)
+        return args
 
     def lines(self, the_file):
         with open(the_file) as f:
@@ -449,7 +454,7 @@ class DbMigrateTestCase(TestCase):
             if sys.platform == 'win32':
                 pg_dumpver += '.bat'
         dbname = self.srcdb.name if srcdb else self.db.name
-        args = [pg_dumpver, '-h']
+        args = [pg_dumpver]
         args.extend(self._db_params())
         args.extend(['-s', '-f', dumpfile, dbname])
         subprocess.check_call(args)
@@ -465,26 +470,26 @@ class DbMigrateTestCase(TestCase):
 
     def create_yaml(self, yamlfile, srcdb=False):
         dbname = self.srcdb.name if srcdb else self.db.name
-        args = [self.dbtoyaml, '-H']
+        args = [self.dbtoyaml]
         args.extend(self._db_params())
         args.extend(['-o', yamlfile, dbname])
         self.invoke(args)
 
     def create_yaml_dir(self, yamldir, srcdb=False):
         dbname = self.srcdb.name if srcdb else self.db.name
-        args = [self.dbtoyaml, '-H']
+        args = [self.dbtoyaml]
         args.extend(self._db_params())
         args.extend(['-d', yamldir, dbname])
         self.invoke(args)
 
     def migrate_target(self, yamlfile, outfile):
-        args = [self.yamltodb, '-H']
+        args = [self.yamltodb]
         args.extend(self._db_params())
         args.extend(['-u', '-o', outfile, self.db.name, yamlfile])
         self.invoke(args)
 
     def migrate_target_dir(self, yamldir, outfile):
-        args = [self.yamltodb, '-H']
+        args = [self.yamltodb]
         args.extend(self._db_params())
         args.extend(['-u', '-o', outfile, '-d', yamldir, self.db.name])
         self.invoke(args)

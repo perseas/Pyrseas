@@ -4,7 +4,6 @@
 to match the schema specified in a YAML file"""
 
 from __future__ import print_function
-import os
 import sys
 import getpass
 from argparse import FileType
@@ -16,7 +15,7 @@ from pyrseas.database import Database
 from pyrseas.cmdargs import cmd_parser
 
 
-def main(host='localhost', port=5432):
+def main():
     """Convert YAML specifications to database DDL."""
     parser = cmd_parser("Generate SQL statements to update a PostgreSQL "
                         "database to match the schema specified in a "
@@ -34,9 +33,6 @@ def main(host='localhost', port=5432):
     parser.add_argument('-n', '--schema', metavar='SCHEMA', dest='schemas',
                         action='append', default=[],
                         help="process only named schema(s) (default all)")
-
-    parser.set_defaults(host=host, port=port,
-                        username=os.getenv("PGUSER") or os.getenv("USER"))
     args = parser.parse_args()
 
     pswd = (args.password and getpass.getpass() or None)

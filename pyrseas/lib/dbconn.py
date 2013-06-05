@@ -25,22 +25,10 @@ class DbConnection(object):
         :param port: host port number
         """
         self.dbname = dbname
-        if user is None:
-            self.user = ''
-        else:
-            self.user = " user=%s" % user
-        if pswd is None:
-            self.pswd = ''
-        else:
-            self.pswd = " password=%s" % pswd
-        if host is None or host == '127.0.0.1' or host == 'localhost':
-            self.host = ''
-        else:
-            self.host = "host=%s " % host
-        if port is None or port == 5432:
-            self.port = ''
-        else:
-            self.port = "port=%d " % port
+        self.user = '' if user is None else " user=%s" % user
+        self.pswd = '' if pswd is None else " password=%s" % pswd
+        self.host = '' if host is None else "host=%s " % host
+        self.port = '' if port is None else "port=%d " % port
         self.conn = None
 
     def connect(self):

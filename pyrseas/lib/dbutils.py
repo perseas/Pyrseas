@@ -11,18 +11,13 @@ from psycopg2.extras import DictConnection
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
 
-def pgconnect(dbname, user, host, port):
+def pgconnect(dbname, user=None, host=None, port=None):
     "Connect to a Postgres database using psycopg2"
-    if host is None or host == '127.0.0.1' or host == 'localhost':
-        host = ''
-    else:
-        host = 'host=%s ' % host
-    if port is None or port == 5432:
-        port = ''
-    else:
-        port = "port=%d " % port
-    return connect("%s%sdbname=%s user=%s" % (
-        host, port, dbname, user), connection_factory=DictConnection)
+    user = '' if user is None else " user=%s" % user
+    host = '' if host is None else "host=%s " % host
+    port = '' if port is None else "port=%d " % port
+    return connect("%s%sdbname=%s%s" % (host, port, dbname, user),
+                   connection_factory=DictConnection)
 
 
 def pgexecute(dbconn, oper, args=None):

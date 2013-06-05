@@ -3,7 +3,6 @@
 """dbaugment - Augment a PostgreSQL database"""
 
 from __future__ import print_function
-import os
 import sys
 import getpass
 from argparse import FileType
@@ -16,7 +15,7 @@ from pyrseas.augmentdb import AugmentDatabase
 from pyrseas.cmdargs import cmd_parser
 
 
-def main(host='localhost', port=5432):
+def main():
     """Augment database specifications"""
     parser = cmd_parser("Generate a modified schema for a PostgreSQL "
                         "database, in YAML format, augmented with specified "
@@ -27,9 +26,6 @@ def main(host='localhost', port=5432):
                         help="output a merged specification file")
     parser.add_argument('--merge-config', action="store_true",
                         help="include configuration in merged file")
-
-    parser.set_defaults(host=host, port=port,
-                        username=os.getenv("PGUSER") or os.getenv("USER"))
     args = parser.parse_args()
 
     pswd = (args.password and getpass.getpass() or None)
