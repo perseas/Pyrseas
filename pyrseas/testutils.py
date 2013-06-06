@@ -429,9 +429,9 @@ class DbMigrateTestCase(TestCase):
         if self.db.host is not None:
             args.append("--host=%s" % self.db.host)
         if self.db.port is not None:
-            args.append("-port=%d " % self.db.port)
+            args.append("--port=%d " % self.db.port)
         if self.db.user is not None:
-            args.append("-username=%s" % self.db.user)
+            args.append("--username=%s" % self.db.user)
         return args
 
     def lines(self, the_file):
