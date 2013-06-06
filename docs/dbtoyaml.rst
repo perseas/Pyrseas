@@ -127,9 +127,11 @@ for a list of supported objects.
 Directory Tree Output
 ---------------------
 
-The ``--directory`` option (see below) breaks down the output into
-multiple files under a given root directory.  The root is created if
-it does not exist.
+.. program:: dbtoyaml
+
+The :option:`--directory` option breaks down the output into multiple
+files under a given root directory.  The root is created if it does
+not exist.
 
 The first level contains ``schema.<name>`` subdirectories,
 ``schema.<name>.yaml`` files and ``<objtype>.<name>.yaml`` files,
@@ -199,50 +201,56 @@ dbname
 
     Specifies the name of the database whose schema is to extracted.
 
--d **directory**, ``--directory`` **directory**
+.. cmdoption:: -d <directory>
+               --directory <directory>
 
     Extracts the schema to a two-level directory tree where
-    **directory** is the root of the tree.  See `Directory Tree
-    Output`_ above.
+    `directory` is the root of the tree.  See `Directory Tree Output`_
+    above.
 
--n `schema`, ---schema= `schema`
+.. cmdoption:: -n <schema>
+               --schema <schema>
 
     Extracts only a schema matching `schema`. By default, all schemas
     are extracted. Multiple schemas can be extracted by using multiple
     ``-n`` switches. Note that normally all objects that belong to the
     schema are extracted as well, unless excluded otherwise.
 
--N `schema`, ---exclude-schema= `schema`
+.. cmdoption:: -N <schema>
+               --exclude-schema <schema>
 
-    Does not extract schema matching `schema`. This can be given more
+    Does not extract schema matching `schema`.  This can be given more
     than once to exclude several schemas.
 
--O, ---no-owner
+.. cmdoption:: -O, --no-owner
 
     Do not output object ownership information.  By default, as seen
     in the sample output above, database objects (schemas, tables,
     etc.) that can be owned by some user, are shown with an "owner:
-    *username*" element.  The ``-O`` switch suppresses all those
+    *username*" element.  The :option:`-O` switch suppresses all those
     lines.
 
--t `table`, ---table= `table`
+.. cmdoption:: -t <table>
+               --table <table>
 
     Extract only tables matching `table`.  Multiple tables can be
-    extracted by using multiple ``-t`` switches.  Note that selecting
-    a table may cause other objects, such as an owned sequence, to be
-    extracted as well
+    extracted by using multiple :option:`-t` switches.  Note that
+    selecting a table may cause other objects, such as an owned
+    sequence, to be extracted as well
 
--T `table`, ---exclude-table= `table`
+.. cmdoption:: -T <table>
+               --exclude-table <table>
 
     Do not extract tables matching `table`.  Multiple tables can be
-    excluded by using multiple ``-T`` switches.
+    excluded by using multiple :option:`-T` switches.
 
--x, ---no-privileges
+.. cmdoption:: -x, --no-privileges
 
     Do not output access privilege information.  By default, as seen
     in the sample output above, if specific GRANTs have been issued on
     various objects (schemas, tables, etc.), the privileges are shown
-    under each object.  The ``-x`` switch suppresses all those lines.
+    under each object.  The :option:`-x` switch suppresses all those
+    lines.
 
 Examples
 --------

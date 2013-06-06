@@ -44,6 +44,8 @@ Options
 :program:`yamltodb` accepts the following command-line arguments (in
 addition to the :doc:`cmdargs`):
 
+.. program:: yamltodb
+
 **dbname**
 
     Specifies the name of the database whose schema is to analyzed.
@@ -53,32 +55,36 @@ addition to the :doc:`cmdargs`):
     Specifies the location of the YAML specification.  If this is
     omitted or specified as a single or double dash, the specification
     is read from the program's standard input.  However, if the
-    ``--directory`` option is used, that takes precedence.
+    :option:`--directory` option is used, that takes precedence.
 
--d **directory**, ``--directory`` **directory**
+.. cmdoption:: -d <directory>
+               --directory <directory>
 
     Specifies the root of a two-level directory tree where the YAML
     specification files are present.  See `Directory Tree Output`
     under :doc:`dbtoyaml` for further details.
 
--n **schema**, ``--schema=`` **schema**
+.. cmdoption:: -n <schema>
+               --schema <schema>
 
-    Compare only a schema matching **schema**.  By default, all schemas
+    Compare only a schema matching `schema`.  By default, all schemas
     are compared.  Multiple schemas can be compared by using multiple
-    ``-n`` switches.
+    :option:`-n` switches.
 
--1\, ``--single-transaction``
+.. cmdoption:: -1
+               --single-transaction
 
     Wrap the generated statements in BEGIN/COMMIT. This ensures that
     either all the statements complete successfully, or no changes are
     applied.
 
--u\, ``--update``
+.. cmdoption:: -u, --update
 
     Execute the generated statements against the database mentioned in
-    **dbname**.  This implies the ``--single-transaction`` option.
+    **dbname**.  This implies the :option:`--single-transaction`
+    option.
 
-``--quote-reserved``
+.. cmdoption:: --quote-reserved
 
     When generating SQL, use delimited (quoted) identifiers around
     reserved words used as identifiers, e.g., a table named "order".

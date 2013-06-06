@@ -3,35 +3,41 @@ Common Command Line Options
 
 The Pyrseas utilities support the following command line options:
 
--H `host`, ---host= `host`
+.. cmdoption:: -H <host>
+               --host <host>
 
-    Specifies the host name of the machine on which the PostgreSQL
-    server is running. The default host name is 'localhost'.
+    Specifies the `host name` of the machine on which the PostgreSQL
+    server is running.  The default host name is determined by
+    PostgreSQL (normally, a Unix-domain socket or ``localhost``).
 
--h, ---help
+.. cmdoption:: -h, --help
 
     Show help about the program's command line arguments, and exit.
 
--o `file`, ---output= `file`
+.. cmdoption:: -o <file>
+               --output <file>
 
-    Send output to the specified file. If this is omitted, the
+    Send output to the specified `file`.  If this is omitted, the
     standard output is used.
 
--p `port`, ---port= `port`
+.. cmdoption:: -p <port>
+               --port <port>
 
-    Specifies the TCP port on which the PostgreSQL server is listening
-    for connections. The default port number is 5432.
+    Specifies the `port` on which the PostgreSQL server is listening
+    for connections.  The default port number is determined by
+    PostgreSQL (normally, 5432).
 
--U `username`, ---user= `username`
+.. cmdoption:: -U <username>
+               --user <username>
 
-    User name to connect as. The default user name is provided by the
-    environment variable :envvar:`USER`.
+    `User name` to connect as.  The default user name is determined by
+    PostgreSQL (normally, the name of the user running the program).
 
----version
+.. cmdoption:: --version
 
     Print the program version and exit.
 
--W, ---password
+.. cmdoption:: -W, --password
 
     Force the program to prompt for a password before connecting to a
     database.  If this option is not specified and password
