@@ -25,7 +25,8 @@ class PyTest(TestCommand):
 setup(
     name='Pyrseas',
     version='0.7-dev',
-    packages=['pyrseas', 'pyrseas.dbobject', 'pyrseas.lib'],
+    packages=['pyrseas', 'pyrseas.dbobject', 'pyrseas.lib', 'pyrseas.augment',
+              'pyrseas.relation'],
     entry_points={
         'console_scripts': [
             'dbtoyaml = pyrseas.dbtoyaml:main',
