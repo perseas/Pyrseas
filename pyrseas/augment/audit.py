@@ -10,18 +10,6 @@ from pyrseas.augment import DbAugment, DbAugmentDict
 from pyrseas.dbobject import split_schema_obj
 
 
-CFG_AUDIT_COLUMNS = \
-    {
-    'default': {
-            'columns': ['modified_by_user', 'modified_timestamp'],
-            'triggers': ['audit_columns_default']
-            },
-    'created_date_only': {
-            'columns': ['created_date']
-            }
-    }
-
-
 class CfgAuditColumn(DbAugment):
     """An augmentation that adds automatically maintained audit columns"""
 
@@ -57,9 +45,9 @@ class CfgAuditColumnDict(DbAugmentDict):
 
     cls = CfgAuditColumn
 
-    def __init__(self):
-        for aud in CFG_AUDIT_COLUMNS:
-            self[aud] = CfgAuditColumn(name=aud, **CFG_AUDIT_COLUMNS[aud])
+    def __init__(self, config):
+        for aud in config:
+            self[aud] = CfgAuditColumn(name=aud, **config[aud])
 
     def from_map(self, inaudcols):
         """Initalize the dictionary of functions by converting the input map

@@ -1,0 +1,58 @@
+augmenter:
+  audit_columns:
+    created_date_only:
+      columns:
+      - created_date
+    default:
+      columns:
+      - modified_by_user
+      - modified_timestamp
+      triggers:
+      - audit_columns_default
+  columns:
+    created_by_ip_addr:
+      not_null: true
+      type: inet
+    created_by_user:
+      not_null: true
+      type: character varying(63)
+    created_date:
+      default: ('now'::text)::date
+      not_null: true
+      type: date
+    created_timestamp:
+      not_null: true
+      type: timestamp with time zone
+    modified_by_ip_addr:
+      not_null: true
+      type: inet
+    modified_by_user:
+      not_null: true
+      type: character varying(63)
+    modified_timestamp:
+      not_null: true
+      type: timestamp with time zone
+  func_templates:
+    functempl_aud_dflt: |2-
+      BEGIN
+        NEW.{{modified_by_user}} = CURRENT_USER;
+        NEW.{{modified_timestamp}} = CURRENT_TIMESTAMP;
+        RETURN NEW;
+      END
+  functions:
+    aud_dflt():
+      description: |-
+        Provides modified_by_user and modified_timestamp values for audit
+         columns.
+      language: plpgsql
+      returns: trigger
+      security_definer: true
+      source: '{{functempl_aud_dflt}}'
+  triggers:
+    audit_columns_default:
+      events:
+      - update
+      level: row
+      name: '{{table_name}}_20_aud_dflt'
+      procedure: aud_dflt()
+      timing: before

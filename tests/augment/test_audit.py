@@ -8,10 +8,10 @@ from pyrseas.testutils import AugmentToMapTestCase
 CREATE_STMT = "CREATE TABLE t1 (c1 integer, c2 text)"
 FUNC_SRC = """\
 BEGIN
-    NEW.modified_by_user = CURRENT_USER;
-    NEW.modified_timestamp = CURRENT_TIMESTAMP;
-    RETURN NEW;
-END """
+  NEW.modified_by_user = CURRENT_USER;
+  NEW.modified_timestamp = CURRENT_TIMESTAMP;
+  RETURN NEW;
+END"""
 
 
 class AuditColumnsTestCase(AugmentToMapTestCase):

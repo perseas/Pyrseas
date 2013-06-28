@@ -10,21 +10,6 @@ from pyrseas.augment import DbAugmentDict, DbAugment
 from pyrseas.dbobject.column import Column
 
 
-CFG_COLUMNS = \
-    {
-    'created_by_user': {'not_null': True, 'type': 'character varying(63)'},
-    'created_by_ip_addr': {'not_null': True, 'type': 'inet'},
-    'created_date': {'default': "('now'::text)::date", 'not_null': True,
-                     'type': 'date'},
-    'created_timestamp': {'not_null': True,
-                          'type': 'timestamp with time zone'},
-    'modified_by_ip_addr': {'not_null': True, 'type': 'inet'},
-    'modified_by_user': {'not_null': True, 'type': 'character varying(63)'},
-    'modified_timestamp': {'not_null': True,
-                           'type': 'timestamp with time zone'}
-    }
-
-
 class CfgColumn(DbAugment):
     "A configuration column definition"
 
@@ -56,12 +41,12 @@ class CfgColumnDict(DbAugmentDict):
 
     cls = CfgColumn
 
-    def __init__(self):
+    def __init__(self, config):
         self.col_trans_tbl = []
-        for col in CFG_COLUMNS:
-            if not 'name' in CFG_COLUMNS[col]:
-                CFG_COLUMNS[col]['name'] = col
-            self[col] = CfgColumn(**CFG_COLUMNS[col])
+        for col in config:
+            if not 'name' in config[col]:
+                config[col]['name'] = col
+            self[col] = CfgColumn(**config[col])
             self.col_trans_tbl.append(('{{%s}}' % col, self[col].name))
 
     def from_map(self, incols):

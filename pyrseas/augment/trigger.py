@@ -11,17 +11,6 @@ from pyrseas.dbobject import split_schema_obj
 from pyrseas.dbobject.trigger import Trigger
 
 
-CFG_TRIGGERS = \
-    {
-    'audit_columns_default': {
-            'name': '{{table_name}}_20_aud_dflt',
-            'events': ['update'],
-            'level': 'row',
-            'procedure': 'aud_dflt()',
-            'timing': 'before'},
-    }
-
-
 class CfgTrigger(DbAugment):
     "A configuration trigger definition"
 
@@ -54,10 +43,10 @@ class CfgTriggerDict(DbAugmentDict):
 
     cls = CfgTrigger
 
-    def __init__(self):
+    def __init__(self, config):
         """Initialize internal configuration triggers"""
-        for trg in CFG_TRIGGERS:
-            self[trg] = CfgTrigger(**CFG_TRIGGERS[trg])
+        for trg in config:
+            self[trg] = CfgTrigger(**config[trg])
 
     def from_map(self, intrigs):
         """Initialize the dictionary of triggers by converting the input dict

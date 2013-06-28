@@ -109,7 +109,8 @@ class Database(object):
             self.ftables = ForeignTableDict(dbconn)
             self.collations = CollationDict(dbconn)
 
-    def __init__(self, dbname, user=None, pswd=None, host=None, port=None):
+    def __init__(self, dbname, user=None, pswd=None, host=None, port=None,
+                 config=None):
         """Initialize the database
 
         :param dbname: database name
@@ -117,9 +118,11 @@ class Database(object):
         :param pswd: user password
         :param host: host name
         :param port: host port number
+        :param config: configuration dictionary
         """
         self.dbconn = CatDbConnection(dbname, user, pswd, host, port)
         self.db = None
+        self.config = config
 
     def _link_refs(self, db):
         """Link related objects"""

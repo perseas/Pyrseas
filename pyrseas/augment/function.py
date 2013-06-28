@@ -10,50 +10,6 @@ from pyrseas.augment import DbAugmentDict, DbAugment
 from pyrseas.dbobject.function import Function
 
 
-CFG_FUNC_SEGMENTS = \
-    {
-    'funcseg_parent_column_list': ["{{parent_column}}"],
-    'funcseg_new_child_column_list': ["NEW.{{child_column}}"],
-    'funcseg_new_child_column_is_null':
-        ["NEW.{{child_column}} IS NULL", ' OR\n           '],
-    'funcseg_parent_child_key_match':
-        ["{{parent_key}} = NEW.{{child_fkey}}", '\n          AND '],
-    'funcseg_new_old_child_column_assign':
-        ["NEW.{{child_column}} := OLD.{{child_column}}", ';\n        '],
-    'funcseg_copy_cascade_if_block':
-["""IF TG_OP = 'UPDATE' AND (
-            NEW.{{parent_column}} IS DISTINCT FROM OLD.{{parent_column}}) THEN
-        UPDATE {{child_schema}}.{{child_table}}
-        SET {{child_column}} = NULL
-        WHERE {{child_fkey}} = NEW.{{child_fkey}};
-    END IF""", ';\n    ']
-    }
-
-
-CFG_FUNC_TEMPLATES = \
-    {
-    'functempl_aud_dflt':
-"""BEGIN
-    NEW.{{modified_by_user}} = CURRENT_USER;
-    NEW.{{modified_timestamp}} = CURRENT_TIMESTAMP;
-    RETURN NEW;
-END """,
-    }
-
-
-CFG_FUNCTIONS = \
-    {
-    'aud_dflt()': {
-            'description':
-                "Provides modified_by_user and modified_timestamp " \
-                "values for audit columns.",
-            'language': 'plpgsql',
-            'returns': 'trigger',
-            'security_definer': True,
-            'source': '{{functempl_aud_dflt}}'},
-    }
-
-
 class CfgFunctionSource(DbAugment):
     "A configuration function source or part thereof"
     pass
@@ -117,15 +73,15 @@ class CfgFunctionSourceDict(DbAugmentDict):
 
     cls = CfgFunctionSource
 
-    def __init__(self):
-        for seg in CFG_FUNC_SEGMENTS:
-            src = CFG_FUNC_SEGMENTS[seg]
+    def __init__(self, cfg_templates, cfg_segments):
+        for seg in cfg_segments:
+            src = cfg_segments[seg]
             dct = {'source': src[0]}
             if len(src) == 2:
                 dct.update(join=src[1])
             self[seg] = CfgFunctionSegment(name=seg, **dct)
-        for templ in CFG_FUNC_TEMPLATES:
-            src = CFG_FUNC_TEMPLATES[templ]
+        for templ in cfg_templates:
+            src = cfg_templates[templ]
             dct = {'source': src}
             self[templ] = CfgFunctionTemplate(name=templ, **dct)
 
@@ -182,7 +138,7 @@ class CfgFunction(DbAugment):
             seg = src[beg:beg + end]
             if seg in augdb.funcsrcs:
                 src = src.replace('{{%s}}' % seg, augdb.funcsrcs[seg].replace(
-                        strans_tbl, mtrans_tbl))
+                    strans_tbl, mtrans_tbl))
             if seg in mtrans_tbl:
                 src = src.replace('{{%s}}' % seg, mtrans_tbl[seg][0])
 
@@ -202,9 +158,9 @@ class CfgFunctionDict(DbAugmentDict):
 
     cls = CfgFunction
 
-    def __init__(self):
-        for func in CFG_FUNCTIONS:
-            fncdict = CFG_FUNCTIONS[func]
+    def __init__(self, config):
+        for func in config:
+            fncdict = config[func]
             paren = func.find('(')
             (fnc, args) = (func[:paren], func[paren + 1:-1])
             fncname = fnc

@@ -42,6 +42,7 @@ Contents
 
    overview
    install
+   config
    devel
    testing
    issues

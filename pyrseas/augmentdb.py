@@ -22,21 +22,32 @@ from pyrseas.augment.trigger import CfgTriggerDict
 from pyrseas.augment.audit import CfgAuditColumnDict
 
 
+def cfg_section(config, section):
+    "Return the configuration section if present, else an empty dict"
+    return config[section] if section in config else {}
+
+
 class AugmentDatabase(Database):
     """A database that is to be augmented"""
 
     class AugDicts(object):
         """A holder for dictionaries (maps) describing augmentations"""
 
-        def __init__(self):
-            """Initialize the various DbAugmentDict-derived dictionaries"""
+        def __init__(self, config):
+            """Initialize the various DbAugmentDict-derived dictionaries
+
+            :param config: configuration dictionary
+            """
             self.schemas = AugSchemaDict()
             self.tables = AugClassDict()
-            self.columns = CfgColumnDict()
-            self.funcsrcs = CfgFunctionSourceDict()
-            self.functions = CfgFunctionDict()
-            self.triggers = CfgTriggerDict()
-            self.auditcols = CfgAuditColumnDict()
+            self.columns = CfgColumnDict(cfg_section(config, 'columns'))
+            self.funcsrcs = CfgFunctionSourceDict(
+                cfg_section(config, 'func_templates'),
+                cfg_section(config, 'func_segments'))
+            self.functions = CfgFunctionDict(cfg_section(config, 'functions'))
+            self.triggers = CfgTriggerDict(cfg_section(config, 'triggers'))
+            self.auditcols = CfgAuditColumnDict(
+                cfg_section(config, 'audit_columns'))
 
         def _link_refs(self):
             """Link related objects"""
@@ -81,7 +92,7 @@ class AugmentDatabase(Database):
         in the dictionary are then linked to related objects, e.g.,
         tables are linked to the schemas they belong.
         """
-        self.adb = self.AugDicts()
+        self.adb = self.AugDicts(cfg_section(self.config, 'augmenter'))
         aug_schemas = {}
         for key in list(aug_map.keys()):
             if key == 'augmenter':

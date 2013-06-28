@@ -68,6 +68,6 @@ class AugClassDict(DbAugmentDict):
         for (sch, tbl) in list(self.keys()):
             if not (sch, tbl) in tables:
                 raise KeyError("Table %s.%s not in current database" % (
-                        sch, tbl))
+                    sch, tbl))
             if not hasattr(self[(sch, tbl)], 'current'):
                 self[(sch, tbl)].current = tables[(sch, tbl)]

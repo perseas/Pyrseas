@@ -7,6 +7,7 @@ import sys
 import getpass
 
 from pyrseas import __version__
+from pyrseas.config import Config
 from pyrseas.yamlutil import yamldump
 from pyrseas.database import Database
 from pyrseas.cmdargs import cmd_parser
@@ -14,8 +15,9 @@ from pyrseas.cmdargs import cmd_parser
 
 def main(schema=None):
     """Convert database table specifications to YAML."""
+    cfg = Config()
     parser = cmd_parser("Extract the schema of a PostgreSQL database in "
-                        "YAML format", __version__)
+                        "YAML format", __version__, cfg)
     parser.add_argument('-d', '--directory',
                         help='root directory for output')
     parser.add_argument('-O', '--no-owner', action='store_true',

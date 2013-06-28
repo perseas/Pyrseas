@@ -9,6 +9,7 @@ from unittest import TestCase
 
 import yaml
 
+from pyrseas.config import Config
 from pyrseas.database import Database
 from pyrseas.augmentdb import AugmentDatabase
 from pyrseas.lib.dbconn import DbConnection
@@ -507,8 +508,9 @@ class AugmentToMapTestCase(PyrseasTestCase):
         for stmt in stmts:
             self.db.execute(stmt)
         self.db.conn.commit()
+        cfg = Config()
         db = AugmentDatabase(self.db.name, self.db.user, host=self.db.host,
-                             port=self.db.port)
+                             port=self.db.port, config=cfg)
 
         class Opts:
             pass

@@ -27,10 +27,12 @@ setup(
     version='0.7-dev',
     packages=['pyrseas', 'pyrseas.dbobject', 'pyrseas.lib', 'pyrseas.augment',
               'pyrseas.relation'],
+    data_files=[('config', ['config/config.yaml'])],
     entry_points={
         'console_scripts': [
             'dbtoyaml = pyrseas.dbtoyaml:main',
-            'yamltodb = pyrseas.yamltodb:main']},
+            'yamltodb = pyrseas.yamltodb:main',
+            'dbaugment = pyrseas.dbaugment:main']},
 
     install_requires=[
         'psycopg2 >= 2.2',

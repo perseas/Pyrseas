@@ -3,6 +3,13 @@ Common Command Line Options
 
 The Pyrseas utilities support the following command line options:
 
+.. cmdoption:: -c <config-file>
+               --config <config-file>
+
+    Specifies an additional `configuration file` to be read and merged
+    with configuration information from other sources.  See
+    :doc:`config` for more details.
+
 .. cmdoption:: -H <host>
                --host <host>
 
