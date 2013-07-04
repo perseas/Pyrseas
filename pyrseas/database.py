@@ -109,18 +109,14 @@ class Database(object):
             self.ftables = ForeignTableDict(dbconn)
             self.collations = CollationDict(dbconn)
 
-    def __init__(self, dbname, user=None, pswd=None, host=None, port=None,
-                 config=None):
+    def __init__(self, config):
         """Initialize the database
 
-        :param dbname: database name
-        :param user: user name
-        :param pswd: user password
-        :param host: host name
-        :param port: host port number
         :param config: configuration dictionary
         """
-        self.dbconn = CatDbConnection(dbname, user, pswd, host, port)
+        db = config['database']
+        self.dbconn = CatDbConnection(db['dbname'], db['username'],
+                                      db['password'], db['host'], db['port'])
         self.db = None
         self.config = config
 
@@ -251,15 +247,15 @@ class Database(object):
 
         return inmap
 
-    def to_map(self, opts):
+    def to_map(self):
         """Convert the db maps to a single hierarchy suitable for YAML
 
-        :param opts: options to include or exclude various objects
         :return: a YAML-suitable dictionary (without Python objects)
         """
         if not self.db:
             self.from_catalog()
 
+        opts = self.config['options']
         if opts.directory:
             def mkdir_parents(dir):
                 head, tail = os.path.split(dir)
@@ -294,11 +290,10 @@ class Database(object):
 
         return dbmap
 
-    def diff_map(self, input_map, opts):
+    def diff_map(self, input_map):
         """Generate SQL to transform an existing database
 
         :param input_map: a YAML map defining the new database
-        :param opts: options to exclude objects or for special processing
         :return: list of SQL statements
 
         Compares the existing database definition, as fetched from the
@@ -308,6 +303,7 @@ class Database(object):
         """
         if not self.db:
             self.from_catalog()
+        opts = self.config['options']
         if opts.schemas:
             schlist = ['schema ' + sch for sch in opts.schemas]
             for sch in list(input_map.keys()):

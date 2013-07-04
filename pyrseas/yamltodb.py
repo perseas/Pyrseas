@@ -5,23 +5,20 @@ to match the schema specified in a YAML file"""
 
 from __future__ import print_function
 import sys
-import getpass
 from argparse import FileType
 
 import yaml
 
 from pyrseas import __version__
-from pyrseas.config import Config
 from pyrseas.database import Database
-from pyrseas.cmdargs import cmd_parser
+from pyrseas.cmdargs import cmd_parser, parse_args
 
 
 def main():
     """Convert YAML specifications to database DDL."""
-    cfg = Config()
     parser = cmd_parser("Generate SQL statements to update a PostgreSQL "
                         "database to match the schema specified in a "
-                        "YAML-formatted file(s)", __version__, cfg)
+                        "YAML-formatted file(s)", __version__)
     parser.add_argument('-d', '--directory',
                         help='root directory for input YAML files')
     parser.add_argument('spec', nargs='?', type=FileType('r'),
@@ -35,24 +32,24 @@ def main():
     parser.add_argument('-n', '--schema', metavar='SCHEMA', dest='schemas',
                         action='append', default=[],
                         help="process only named schema(s) (default all)")
-    args = parser.parse_args()
-
-    pswd = (args.password and getpass.getpass() or None)
-    db = Database(args.dbname, args.username, pswd, args.host, args.port, cfg)
-    if args.directory:
-        inmap = db.map_from_dir(args.directory)
+    cfg = parse_args(parser)
+    output = cfg['files']['output']
+    options = cfg['options']
+    db = Database(cfg)
+    if options.directory:
+        inmap = db.map_from_dir(options.directory)
     else:
-        inmap = yaml.safe_load(args.spec)
+        inmap = yaml.safe_load(options.spec)
 
-    stmts = db.diff_map(inmap, args)
+    stmts = db.diff_map(inmap)
     if stmts:
-        fd = args.output or sys.stdout
-        if args.onetrans or args.update:
+        fd = output or sys.stdout
+        if options.onetrans or options.update:
             print("BEGIN;", file=fd)
         print(";\n\n".join(stmts) + ';', file=fd)
-        if args.onetrans or args.update:
+        if options.onetrans or options.update:
             print("COMMIT;", file=fd)
-        if args.update:
+        if options.update:
             try:
                 for stmt in stmts:
                     db.dbconn.execute(stmt)
@@ -62,8 +59,8 @@ def main():
             else:
                 db.dbconn.commit()
                 print("Changes applied", file=sys.stderr)
-        if args.output:
-            args.output.close()
+        if output:
+            output.close()
 
 if __name__ == '__main__':
     main()

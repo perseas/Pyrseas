@@ -128,7 +128,7 @@ class AugmentDatabase(Database):
             else:
                 raise KeyError("Expected typed object, found '%s'" % key)
 
-    def apply(self, aug_map, opts):
+    def apply(self, aug_map):
         """Apply augmentations to an existing database
 
         :param aug_map: a YAML map defining the desired augmentations
@@ -143,4 +143,4 @@ class AugmentDatabase(Database):
         self.from_augmap(aug_map)
         for sch in self.adb.schemas:
             self.adb.schemas[sch].apply(self.adb)
-        return self.to_map(opts)
+        return self.to_map()

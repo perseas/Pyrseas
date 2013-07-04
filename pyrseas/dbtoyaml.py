@@ -4,20 +4,17 @@
 
 from __future__ import print_function
 import sys
-import getpass
 
 from pyrseas import __version__
-from pyrseas.config import Config
 from pyrseas.yamlutil import yamldump
 from pyrseas.database import Database
-from pyrseas.cmdargs import cmd_parser
+from pyrseas.cmdargs import cmd_parser, parse_args
 
 
 def main(schema=None):
     """Convert database table specifications to YAML."""
-    cfg = Config()
     parser = cmd_parser("Extract the schema of a PostgreSQL database in "
-                        "YAML format", __version__, cfg)
+                        "YAML format", __version__)
     parser.add_argument('-d', '--directory',
                         help='root directory for output')
     parser.add_argument('-O', '--no-owner', action='store_true',
@@ -42,19 +39,20 @@ def main(schema=None):
                        help="do NOT extract the named table(s) "
                        "(default none)")
     parser.set_defaults(schema=schema)
-    args = parser.parse_args()
-    if args.directory and args.output:
+    cfg = parse_args(parser)
+    output = cfg['files']['output']
+    options = cfg['options']
+    if options.directory and output:
         parser.error("Cannot specify both directory and file output")
 
-    pswd = (args.password and getpass.getpass() or None)
-    db = Database(args.dbname, args.username, pswd, args.host, args.port)
-    dbmap = db.to_map(args)
+    db = Database(cfg)
+    dbmap = db.to_map()
 
-    if not args.directory:
-        print(yamldump(dbmap), file=args.output or sys.stdout)
+    if not options.directory:
+        print(yamldump(dbmap), file=output or sys.stdout)
 
-    if args.output:
-        args.output.close()
+    if output:
+        output.close()
 
 if __name__ == '__main__':
     main()

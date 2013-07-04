@@ -279,14 +279,21 @@ class PyrseasTestCase(TestCase):
         self.db = PgTestDb(TEST_DBNAME, TEST_USER, TEST_HOST, TEST_PORT)
         self.db.connect()
         self.db.clear()
+        # TODO: ensure no extraneous configuration info is read
+        self.cfg = Config()
+        dbc = self.cfg['database']
+        dbc['dbname'] = self.db.name
+        dbc['username'] = self.db.user
+        dbc['password'] = None
+        dbc['host'] = self.db.host
+        dbc['port'] = self.db.port
 
     def tearDown(self):
         self.db.close()
 
     def database(self):
         """The Pyrseas Database instance"""
-        return Database(self.db.name, user=self.db.user, host=self.db.host,
-                        port=self.db.port)
+        return Database(self.cfg)
 
 
 class DatabaseToMapTestCase(PyrseasTestCase):
@@ -312,7 +319,6 @@ class DatabaseToMapTestCase(PyrseasTestCase):
         for stmt in stmts:
             self.db.execute(stmt)
         self.db.conn.commit()
-        db = self.database()
 
         class Opts:
             pass
@@ -322,7 +328,8 @@ class DatabaseToMapTestCase(PyrseasTestCase):
         opts.no_owner = no_owner
         opts.no_privs = no_privs
         opts.directory = TEST_DIR if directory else None
-        return db.to_map(opts)
+        self.cfg['options'] = opts
+        return self.database().to_map()
 
     def yaml_load(self, filename, subdir=None):
         """Read a file in TEST_DIR and process it with YAML load
@@ -361,14 +368,14 @@ class InputMapToSqlTestCase(PyrseasTestCase):
             for stmt in stmts:
                 self.db.execute(stmt)
             self.db.conn.commit()
-        db = self.database()
 
         class Opts:
             pass
         opts = Opts()
         opts.schemas = schemas
         opts.quote_reserved = quote_reserved
-        return db.diff_map(inmap, opts)
+        self.cfg['options'] = opts
+        return self.database().diff_map(inmap)
 
     def std_map(self, plpgsql_installed=False):
         "Return a standard schema map for the default database"
@@ -508,9 +515,7 @@ class AugmentToMapTestCase(PyrseasTestCase):
         for stmt in stmts:
             self.db.execute(stmt)
         self.db.conn.commit()
-        cfg = Config()
-        db = AugmentDatabase(self.db.name, self.db.user, host=self.db.host,
-                             port=self.db.port, config=cfg)
+        db = AugmentDatabase(self.cfg)
 
         class Opts:
             pass
@@ -520,7 +525,8 @@ class AugmentToMapTestCase(PyrseasTestCase):
         opts.no_owner = True
         opts.no_privs = True
         opts.directory = None
-        return db.apply(augmap, opts)
+        self.cfg['options'] = opts
+        return db.apply(augmap)
 
 
 class RelationTestCase(object):
