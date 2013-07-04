@@ -281,6 +281,8 @@ class PyrseasTestCase(TestCase):
         self.db.clear()
         # TODO: ensure no extraneous configuration info is read
         self.cfg = Config()
+        if not 'database' in self.cfg:
+            self.cfg.update(database={})
         dbc = self.cfg['database']
         dbc['dbname'] = self.db.name
         dbc['username'] = self.db.user
