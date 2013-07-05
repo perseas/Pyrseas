@@ -12,6 +12,6 @@ before_script:
   - psql -Upostgres -c "CREATE TABLESPACE ts1 LOCATION '/extra/pg/9.1/ts1'"
   - psql -Upostgres -c "CREATE TABLESPACE ts2 LOCATION '/extra/pg/9.1/ts2'"
   - psql -Upostgres -c "CREATE LANGUAGE plpythonu"
-  - psql postgres -c "DO $$import subprocess; plpy.info(subprocess.check_output(['localedef', '--list-archive']))$$ LANGUAGE plpythonu;"
+  - psql postgres -c "DO \$\$import subprocess; plpy.info(subprocess.check_output(['localedef', '--list-archive']))\$\$ LANGUAGE plpythonu;"
 script:
   - python setup.py test
