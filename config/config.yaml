@@ -8,9 +8,24 @@ augmenter:
       - modified_by_user
       - modified_timestamp
       triggers:
-      - audit_columns_default
+      - audit_default
+    modified_only:
+      columns:
+      - modified_timestamp
+      triggers:
+      - audit_modified_only
+    full:
+      columns:
+      - created_by_user
+      - created_by_ip_address
+      - created_timestamp
+      - modified_by_user
+      - modified_by_ip_address
+      - modified_timestamp
+      triggers:
+      - audit_full
   columns:
-    created_by_ip_addr:
+    created_by_ip_address:
       not_null: true
       type: inet
     created_by_user:
@@ -23,7 +38,7 @@ augmenter:
     created_timestamp:
       not_null: true
       type: timestamp with time zone
-    modified_by_ip_addr:
+    modified_by_ip_address:
       not_null: true
       type: inet
     modified_by_user:
@@ -33,26 +48,102 @@ augmenter:
       not_null: true
       type: timestamp with time zone
   func_templates:
-    functempl_aud_dflt: |2-
+    functempl_audit_default: |2-
       BEGIN
         NEW.{{modified_by_user}} = CURRENT_USER;
         NEW.{{modified_timestamp}} = CURRENT_TIMESTAMP;
         RETURN NEW;
       END
+    functempl_audit_full: |2-
+      BEGIN
+        IF TG_OP = 'INSERT' THEN
+          NEW.{{created_timestamp}} = CURRENT_TIMESTAMP;
+          NEW.{{created_by_user}} = pyrseas.get_session_variable('audit_user');
+          NEW.{{created_by_ip_address}} = pyrseas.get_session_variable('audit_ip_address');
+        ELSIF TG_OP = 'UPDATE' THEN
+          NEW.{{created_timestamp}} = OLD.created_timestamp;
+          NEW.{{created_by_user}} = OLD.created_by_user;
+          NEW.{{created_by_ip_address}} = OLD.created_by_ip_address;
+        END IF;
+        NEW.{{modified_timestamp}} = CURRENT_TIMESTAMP;
+        NEW.{{modified_by_user}} = pyrseas.get_session_variable('audit_user');
+        NEW.{{modified_by_ip_address}} = pyrseas.get_session_variable('audit_ip_address');
+        RETURN NEW;
+      END
+    functempl_audit_modified: |2-
+      BEGIN
+        NEW.{{modified_timestamp}} = CURRENT_TIMESTAMP;
+        RETURN NEW;
+      END
   functions:
-    aud_dflt():
+    audit_default():
       description: |-
         Provides modified_by_user and modified_timestamp values for audit
          columns.
       language: plpgsql
       returns: trigger
       security_definer: true
-      source: '{{functempl_aud_dflt}}'
+      source: '{{functempl_audit_default}}'
+    audit_full():
+      description: |-
+        Provides created/modified values for audit columns.
+      language: plpgsql
+      returns: trigger
+      security_definer: true
+      source: '{{functempl_audit_full}}'
+    audit_modified():
+      description: |-
+        Provides modified_timestamp values for audit columns.
+      language: plpgsql
+      returns: trigger
+      security_definer: true
+      source: '{{functempl_audit_modified}}'
+  schema pyrseas:
+    function get_session_variable(var_name character varying):
+      language: plpgsql
+      returns: character varying
+      source: |2
+          BEGIN
+            RETURN pg_catalog.current_setting('pyrseas.' || var_name);
+          END;
+    function get_session_variable(var_name character varying, default_value character varying):
+      language: plpgsql
+      returns: character varying
+      source: |2
+          BEGIN
+            RETURN pg_catalog.current_setting('pyrseas.' || var_name);
+          EXCEPTION
+            WHEN undefined_object THEN
+              RETURN default_value;
+          END;
+    function set_session_variable(var_name character varying, var_value character varying):
+      language: plpgsql
+      returns: void
+      source: |2
+          BEGIN
+            PERFORM pg_catalog.set_config('pyrseas.' || var_name, var_value, false);
+          END;
   triggers:
-    audit_columns_default:
+    audit_default:
       events:
       - update
       level: row
-      name: '{{table_name}}_20_aud_dflt'
-      procedure: aud_dflt()
+      name: '{{table_name}}_20_audit_default'
+      procedure: audit_default()
+      timing: before
+    audit_full:
+      events:
+      - insert
+      - update
+      level: row
+      name: '{{table_name}}_20_audit_full'
+      procedure: audit_full()
+      timing: before
+    audit_modified_only:
+      events:
+      - insert
+      - update
+      level: row
+      name: '{{table_name}}_20_audit_modified_only'
+      procedure: audit_modified()
       timing: before

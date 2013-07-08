@@ -100,14 +100,14 @@ class AuditColumnsTestCase(AugmentToMapTestCase):
                                   'not_null': True}},
             {'modified_timestamp': {'type': 'timestamp with time zone',
                                     'not_null': True}}],
-            'triggers': {'t1_20_aud_dflt': {
+            'triggers': {'t1_20_audit_default': {
                 'events': ['update'], 'level': 'row',
-                'procedure': 'aud_dflt()', 'timing': 'before'}}}
+                'procedure': 'audit_default()', 'timing': 'before'}}}
         assert expmap == dbmap['schema public']['table t1']
-        assert dbmap['schema public']['function aud_dflt()']['returns'] == \
-            'trigger'
-        assert dbmap['schema public']['function aud_dflt()']['source'] == \
-            FUNC_SRC
+        assert dbmap['schema public']['function audit_default()'][
+            'returns'] == 'trigger'
+        assert dbmap['schema public']['function audit_default()'][
+            'source'] == FUNC_SRC
 
     def test_nonpublic_schema_with_trigger(self):
         "Add predefined audit columns with trigger in a non-public schema"
@@ -121,13 +121,14 @@ class AuditColumnsTestCase(AugmentToMapTestCase):
                                   'not_null': True}},
             {'modified_timestamp': {'type': 'timestamp with time zone',
                                     'not_null': True}}],
-            'triggers': {'t1_20_aud_dflt': {
+            'triggers': {'t1_20_audit_default': {
                 'events': ['update'], 'level': 'row',
-                'procedure': 's1.aud_dflt()', 'timing': 'before'}}}
+                'procedure': 's1.audit_default()', 'timing': 'before'}}}
         assert expmap == dbmap['schema s1']['table t1']
-        assert dbmap['schema s1']['function aud_dflt()']['returns'] == \
+        assert dbmap['schema s1']['function audit_default()']['returns'] == \
             'trigger'
-        assert dbmap['schema s1']['function aud_dflt()']['source'] == FUNC_SRC
+        assert dbmap['schema s1']['function audit_default()'][
+            'source'] == FUNC_SRC
 
     def test_skip_existing_columns(self):
         "Do not add already existing audit columns"
