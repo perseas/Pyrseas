@@ -20,9 +20,10 @@ class ExtensionToMapTestCase(DatabaseToMapTestCase):
         "Map an existing extension"
         if self.db.version < 90100:
             self.skipTest('Only available on PG 9.1')
+        VERS = '1.0' if self.db.version < 90300 else '1.1'
         dbmap = self.to_map([CREATE_STMT])
         assert dbmap['extension pg_trgm'] == {
-            'schema': 'public', 'version': '1.0', 'description': TRGM_COMMENT}
+            'schema': 'public', 'version': VERS, 'description': TRGM_COMMENT}
 
     def test_map_no_depends(self):
         "Ensure no dependencies are included when mapping an extension"
@@ -47,9 +48,10 @@ class ExtensionToMapTestCase(DatabaseToMapTestCase):
         "Map an existing extension"
         if self.db.version < 90100:
             self.skipTest('Only available on PG 9.1')
+        VERS = '1.0' if self.db.version < 90300 else '1.1'
         dbmap = self.to_map(["CREATE SCHEMA s1", CREATE_STMT + " SCHEMA s1"])
         assert dbmap['extension pg_trgm'] == {
-            'schema': 's1', 'version': '1.0', 'description': TRGM_COMMENT}
+            'schema': 's1', 'version': VERS, 'description': TRGM_COMMENT}
 
 
 class ExtensionToSqlTestCase(InputMapToSqlTestCase):

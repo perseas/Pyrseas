@@ -25,7 +25,9 @@ class ViewToMapTestCase(DatabaseToMapTestCase):
         stmts = ["CREATE TABLE t1 (c1 INTEGER, c2 TEXT, c3 INTEGER)",
                  "CREATE VIEW v1 AS SELECT c1, c3 * 2 FROM t1"]
         dbmap = self.to_map(stmts)
-        expmap = {'definition': " SELECT t1.c1, t1.c3 * 2\n   FROM t1;"}
+        fmt = "%s%s" if (self.db.version < 90300) else "%s\n   %s"
+        expmap = {'definition': fmt % (" SELECT t1.c1,",
+                                       " t1.c3 * 2\n   FROM t1;")}
         assert dbmap['schema public']['view v1'] == expmap
 
     def test_map_view_comment(self):

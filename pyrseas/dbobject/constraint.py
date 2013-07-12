@@ -14,7 +14,6 @@ from pyrseas.dbobject import quote_id, split_schema_obj, commentable
 
 ACTIONS = {'r': 'restrict', 'c': 'cascade', 'n': 'set null',
            'd': 'set default'}
-MATCHTYPES = {'f': 'full', 'p': 'partial', 'u': 'simple'}
 
 
 class Constraint(DbSchemaObject):
@@ -254,6 +253,8 @@ class UniqueConstraint(Constraint):
         stmts.append(self.diff_description(inuc))
         return stmts
 
+MATCHTYPES_PRE93 = {'f': 'full', 'p': 'partial', 'u': 'simple'}
+
 
 class ConstraintDict(DbObjectDict):
     "The collection of table or column constraints in a database"
@@ -281,9 +282,12 @@ class ConstraintDict(DbObjectDict):
            WHERE (nspname != 'pg_catalog' AND nspname != 'information_schema')
                  AND conislocal
            ORDER BY schema, 2, name"""
+    match_types = {'f': 'full', 'p': 'partial', 's': 'simple'}
 
     def _from_catalog(self):
         """Initialize the dictionary of constraints by querying the catalogs"""
+        if self.dbconn.version < 90300:
+            self.match_types = MATCHTYPES_PRE93
         for constr in self.fetch():
             constr.unqualify()
             sch, tbl, cns = constr.key()
@@ -312,10 +316,10 @@ class ConstraintDict(DbObjectDict):
                     del constr.on_delete
                 else:
                     constr.on_delete = ACTIONS[constr.on_delete]
-                if constr.match == 'u':
+                if self.match_types[constr.match] == 'simple':
                     del constr.match
                 else:
-                    constr.match = MATCHTYPES[constr.match]
+                    constr.match = self.match_types[constr.match]
                 reftbl = constr.ref_table
                 (constr.ref_schema, constr.ref_table) = split_schema_obj(
                     reftbl)
@@ -388,7 +392,7 @@ class ConstraintDict(DbObjectDict):
                     fkey.deferred = True
                 if 'match' in val:
                     mat = val['match']
-                    if mat.lower() not in list(MATCHTYPES.values()):
+                    if mat.lower() not in list(self.match_types.values()):
                         raise ValueError("Invalid match type '%s' for "
                                          "constraint '%s'" % (mat, cns))
                     fkey.match = mat

@@ -49,12 +49,13 @@ class ExternalFilenameMapTestCase(DatabaseToMapTestCase):
         "Map extensions"
         if self.db.version < 90100:
             self.skipTest('Only available on PG 9.1')
+        TRGM_VERS = '1.0' if self.db.version < 90300 else '1.1'
         self.to_map(["CREATE EXTENSION pg_trgm"], superuser=True,
                     directory=True)
         expmap = {'extension plpgsql': {
             'schema': 'pg_catalog', 'version': '1.0',
             'description': 'PL/pgSQL procedural language'},
-            'extension pg_trgm': {'schema': 'public', 'version': '1.0',
+            'extension pg_trgm': {'schema': 'public', 'version': TRGM_VERS,
             'description': "text similarity measurement and index searching "
             "based on trigrams"}}
         assert self.yaml_load('extension.yaml') == expmap

@@ -30,12 +30,14 @@ class RuleToMapTestCase(DatabaseToMapTestCase):
     def test_map_rule_conditional(self):
         "Map rule with a qualification"
         stmts = [CREATE_TABLE_STMT,
-                 "CREATE RULE r1 AS ON DELETE TO t1 WHERE OLD.c1 < 1000"
+                 "CREATE RULE r1 AS ON DELETE TO t1 WHERE OLD.c1 < 1000 "
                  "DO INSERT INTO t1 VALUES (OLD.c1 + 1000, OLD.c2)"]
         dbmap = self.to_map(stmts)
+        fmt = "%s%s" if (self.db.version < 90300) else " %s\n %s"
+        action = fmt % ("INSERT INTO t1 (c1, c2)",
+                        " VALUES ((old.c1 + 1000), old.c2)")
         expmap = {'r1': {'event': 'delete', 'condition': "(old.c1 < 1000)",
-                         'actions': "INSERT INTO t1 (c1, c2) VALUES ("
-                         "(old.c1 + 1000), old.c2)"}}
+                         'actions': action}}
         assert dbmap['schema public']['table t1']['rules'] == expmap
 
     def test_map_rule_multi_actions(self):
@@ -44,10 +46,14 @@ class RuleToMapTestCase(DatabaseToMapTestCase):
             'UPDATE', "(INSERT INTO t1 (c1) VALUES (old.c1 + 100); "
             "INSERT INTO t1 (c1) VALUES (old.c1 + 200))")]
         dbmap = self.to_map(stmts)
-        expmap = {'r1': {
-            'event': 'update', 'actions':
-            "(INSERT INTO t1 (c1) VALUES ((old.c1 + 100)); "
-            "INSERT INTO t1 (c1) VALUES ((old.c1 + 200)); )"}}
+        ins = "INSERT INTO t1 (c1)"
+        if (self.db.version < 90300):
+            fmt = "(%s%s %s%s )"
+        else:
+            fmt = "( %s\n %s\n %s\n %s\n)"
+        actions = fmt % (ins, " VALUES ((old.c1 + 100));",
+                         ins, " VALUES ((old.c1 + 200));")
+        expmap = {'r1': {'event': 'update', 'actions': actions}}
         assert dbmap['schema public']['table t1']['rules'] == expmap
 
     def test_map_rule_comment(self):
