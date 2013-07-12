@@ -89,7 +89,7 @@ class PgTestDb(PostgresDb):
             self.conn,
             """SELECT relname, relkind FROM pg_class
                       JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
-               WHERE relkind in ('r', 'S', 'v', 'f')
+               WHERE relkind in ('r', 'S', 'v', 'f', 'm')
                      AND nspname NOT IN ('pg_catalog', 'information_schema')
                ORDER BY relkind DESC""")
         objs = curs.fetchall()
@@ -104,6 +104,8 @@ class PgTestDb(PostgresDb):
                 objtype = 'VIEW'
             elif obj['relkind'] == 'f':
                 objtype = 'FOREIGN TABLE'
+            elif obj['relkind'] == 'm':
+                objtype = 'MATERIALIZED VIEW'
             self.execute(STD_DROP % (objtype, obj[0]))
         self.conn.commit()
 

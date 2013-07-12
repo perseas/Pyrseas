@@ -3,9 +3,10 @@
     pyrseas.dbobject.table
     ~~~~~~~~~~~~~~~~~~~~~~
 
-    This module defines four classes: DbClass derived from
-    DbSchemaObject, Sequence and Table derived from DbClass, and
-    ClassDict derived from DbObjectDict.
+    This module defines six classes: DbClass derived from
+    DbSchemaObject, Sequence, Table and View derived from DbClass,
+    MaterializedView derived from View, and ClassDict derived from
+    DbObjectDict.
 """
 import sys
 
@@ -499,6 +500,60 @@ class View(DbClass):
         return stmts
 
 
+class MaterializedView(View):
+    """A materialized view definition
+
+    A materialized view is identified by its schema name and view name.
+    """
+
+    objtype = "MATERIALIZED VIEW"
+
+    def to_map(self, opts):
+        """Convert a materialized view to a YAML-suitable format
+
+        :param opts: options to include/exclude tables, etc.
+        :return: dictionary
+        """
+        if hasattr(opts, 'excl_tables') and opts.excl_tables \
+                and self.name in opts.excl_tables:
+            return None
+        return self._base_map(opts.no_owner, opts.no_privs)
+
+    @commentable
+    @grantable
+    @ownable
+    def create(self, newdefn=None):
+        """Return SQL statements to CREATE the materialized view
+
+        :return: SQL statements
+        """
+        defn = newdefn or self.definition
+        if defn[-1:] == ';':
+            defn = defn[:-1]
+        return ["CREATE %s %s AS\n   %s" % (
+                self.objtype, self.qualname(), defn)]
+
+    def diff_map(self, inview):
+        """Generate SQL to transform an existing materialized view
+
+        :param inview: a YAML map defining the new view
+        :return: list of SQL statements
+
+        Compares the view to an input view and generates SQL
+        statements to transform it into the one represented by the
+        input.
+        """
+        stmts = []
+        if self.definition != inview.definition:
+            stmts.append(self.create(inview.definition))
+        if hasattr(inview, 'owner'):
+            if inview.owner != self.owner:
+                stmts.append(self.alter_owner(inview.owner))
+        stmts.append(self.diff_privileges(inview))
+        stmts.append(self.diff_description(inview))
+        return stmts
+
+
 QUERY_PRE91 = \
     """SELECT nspname AS schema, relname AS name, relkind AS kind,
               reloptions AS options, spcname AS tablespace,
@@ -515,6 +570,25 @@ QUERY_PRE91 = \
                   AND nspname != 'information_schema')
        ORDER BY nspname, relname"""
 
+QUERY_PRE93 = \
+    """SELECT nspname AS schema, relname AS name, relkind AS kind,
+              reloptions AS options, relpersistence AS persistence,
+              spcname AS tablespace, rolname AS owner,
+              array_to_string(relacl, ',') AS privileges,
+              CASE WHEN relkind = 'v' THEN pg_get_viewdef(c.oid, TRUE)
+                   ELSE '' END AS definition,
+              obj_description(c.oid, 'pg_class') AS description
+       FROM pg_class c
+            JOIN pg_roles r ON (r.oid = relowner)
+            JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
+            LEFT JOIN pg_tablespace t ON (reltablespace = t.oid)
+       WHERE relkind in ('r', 'S', 'v')
+             AND (nspname != 'pg_catalog'
+                  AND nspname != 'information_schema')
+       ORDER BY nspname, relname"""
+
+OBJTYPES = ['table', 'sequence', 'view', 'materialized view']
+
 
 class ClassDict(DbObjectDict):
     "The collection of tables and similar objects in a database"
@@ -525,14 +599,16 @@ class ClassDict(DbObjectDict):
                   reloptions AS options, relpersistence AS persistence,
                   spcname AS tablespace, rolname AS owner,
                   array_to_string(relacl, ',') AS privileges,
-                  CASE WHEN relkind = 'v' THEN pg_get_viewdef(c.oid, TRUE)
+                  CASE WHEN relkind ~ '[vm]' THEN pg_get_viewdef(c.oid, TRUE)
                        ELSE '' END AS definition,
+                  CASE WHEN relkind = 'm' THEN relispopulated
+                       ELSE FALSE END AS with_data,
                   obj_description(c.oid, 'pg_class') AS description
            FROM pg_class c
                 JOIN pg_roles r ON (r.oid = relowner)
                 JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
                 LEFT JOIN pg_tablespace t ON (reltablespace = t.oid)
-           WHERE relkind in ('r', 'S', 'v')
+           WHERE relkind in ('r', 'S', 'v', 'm')
                  AND (nspname != 'pg_catalog'
                       AND nspname != 'information_schema')
            ORDER BY nspname, relname"""
@@ -547,6 +623,8 @@ class ClassDict(DbObjectDict):
         """Initialize the dictionary of tables by querying the catalogs"""
         if self.dbconn.version < 90100:
             self.query = QUERY_PRE91
+        elif self.dbconn.version < 90300:
+            self.query = QUERY_PRE93
         for table in self.fetch():
             sch, tbl = table.key()
             if hasattr(table, 'privileges'):
@@ -565,6 +643,8 @@ class ClassDict(DbObjectDict):
                 inst.get_dependent_table(self.dbconn)
             elif kind == 'v':
                 self[(sch, tbl)] = View(**table.__dict__)
+            elif kind == 'm':
+                self[(sch, tbl)] = MaterializedView(**table.__dict__)
         inhtbls = self.dbconn.fetchall(self.inhquery)
         self.dbconn.rollback()
         for (tbl, partbl, num) in inhtbls:
@@ -583,8 +663,12 @@ class ClassDict(DbObjectDict):
         """
         for k in list(inobjs.keys()):
             inobj = inobjs[k]
-            (objtype, spc, key) = k.partition(' ')
-            if spc != ' ' or objtype not in ['table', 'sequence', 'view']:
+            objtype = None
+            for typ in OBJTYPES:
+                if k.startswith(typ):
+                    objtype = typ
+                    key = k[len(typ) + 1:]
+            if objtype is None:
                 raise KeyError("Unrecognized object type: %s" % k)
             if objtype == 'table':
                 self[(schema.name, key)] = table = Table(
@@ -626,6 +710,14 @@ class ClassDict(DbObjectDict):
                     setattr(view, attr, val)
                 if 'triggers' in inview:
                     newdb.triggers.from_map(view, inview['triggers'])
+            elif objtype == 'materialized view':
+                self[(schema.name, key)] = mview = MaterializedView(
+                    schema=schema.name, name=key)
+                inmview = inobj
+                if not inmview:
+                    raise ValueError("View '%s' has no specification" % k)
+                for attr, val in list(inmview.items()):
+                    setattr(mview, attr, val)
             else:
                 raise KeyError("Unrecognized object type: %s" % k)
             obj = self[(schema.name, key)]

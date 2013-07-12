@@ -13,7 +13,7 @@ from pyrseas.dbobject import DbObjectDict, DbObject
 from pyrseas.dbobject import quote_id, split_schema_obj
 from pyrseas.dbobject import commentable, ownable, grantable
 from pyrseas.dbobject.dbtype import BaseType, Composite, Domain, Enum
-from pyrseas.dbobject.table import Table, Sequence, View
+from pyrseas.dbobject.table import Table, Sequence, View, MaterializedView
 from pyrseas.dbobject.privileges import privileges_from_map
 
 
@@ -69,7 +69,7 @@ class Schema(DbObject):
                         obj = schemadict[objkey]
                         schobjs.append((obj, obj.to_map(opts)))
 
-        for objtypes in ['ftables', 'sequences', 'views']:
+        for objtypes in ['ftables', 'sequences', 'views', 'matviews']:
             mapper(objtypes)
 
         def mapper2(objtypes):
@@ -134,6 +134,7 @@ class Schema(DbObject):
 
 PREFIXES = {'domain ': 'types', 'type': 'types', 'table ': 'tables',
             'view ': 'tables', 'sequence ': 'tables',
+            'materialized view ': 'tables',
             'function ': 'functions', 'aggregate ': 'functions',
             'operator family ': 'operfams', 'operator class ': 'operclasses',
             'conversion ': 'conversions', 'text search dictionary ': 'tsdicts',
@@ -261,6 +262,8 @@ class SchemaDict(DbObjectDict):
                 link_one(sch, 'tables', tbl, table)
             elif isinstance(table, Sequence):
                 link_one(sch, 'sequences', tbl, table)
+            elif isinstance(table, MaterializedView):
+                link_one(sch, 'matviews', tbl, table)
             elif isinstance(table, View):
                 link_one(sch, 'views', tbl, table)
         for (sch, fnc, arg) in list(dbfunctions.keys()):
