@@ -78,6 +78,7 @@ classes and methods are documented mainly for developer use.
    schema
    collation
    conversion
+   eventtrig
    extension
    function
    operator

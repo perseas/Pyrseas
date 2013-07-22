@@ -40,6 +40,7 @@ from pyrseas.dbobject.foreign import ForeignServerDict, UserMappingDict
 from pyrseas.dbobject.foreign import ForeignTableDict
 from pyrseas.dbobject.extension import ExtensionDict
 from pyrseas.dbobject.collation import CollationDict
+from pyrseas.dbobject.eventtrig import EventTriggerDict
 
 
 def flatten(lst):
@@ -108,6 +109,7 @@ class Database(object):
             self.usermaps = UserMappingDict(dbconn)
             self.ftables = ForeignTableDict(dbconn)
             self.collations = CollationDict(dbconn)
+            self.eventtrigs = EventTriggerDict(dbconn)
 
     def __init__(self, config):
         """Initialize the database
@@ -129,6 +131,7 @@ class Database(object):
                              db.tstempls, db.ftables, db.collations)
         db.tables.link_refs(db.columns, db.constraints, db.indexes,
                             db.rules, db.triggers)
+        db.functions.link_refs(db.eventtrigs)
         db.fdwrappers.link_refs(db.servers)
         db.servers.link_refs(db.usermaps)
         db.ftables.link_refs(db.columns)
@@ -143,7 +146,7 @@ class Database(object):
                         'functions', 'operators', 'operclasses', 'operfams',
                         'rules', 'triggers', 'conversions', 'tstempls',
                         'tsdicts', 'tsparsers', 'tsconfigs', 'extensions',
-                        'collations']:
+                        'collations', 'eventtrigs']:
             objdict = getattr(self.db, objtype)
             for obj in list(objdict.keys()):
                 # obj[0] is the schema name in all these dicts
@@ -187,6 +190,7 @@ class Database(object):
         input_casts = {}
         input_fdws = {}
         input_ums = {}
+        input_evttrigs = {}
         for key in list(input_map.keys()):
             if key.startswith('schema '):
                 input_schemas.update({key: input_map[key]})
@@ -200,6 +204,8 @@ class Database(object):
                 input_fdws.update({key: input_map[key]})
             elif key.startswith('user mapping for '):
                 input_ums.update({key: input_map[key]})
+            elif key.startswith('event trigger '):
+                input_evttrigs.update({key: input_map[key]})
             else:
                 raise KeyError("Expected typed object, found '%s'" % key)
         self.ndb.extensions.from_map(input_extens, langs, self.ndb)
@@ -207,6 +213,7 @@ class Database(object):
         self.ndb.schemas.from_map(input_schemas, self.ndb)
         self.ndb.casts.from_map(input_casts, self.ndb)
         self.ndb.fdwrappers.from_map(input_fdws, self.ndb)
+        self.ndb.eventtrigs.from_map(input_evttrigs, self.ndb)
         self._link_refs(self.ndb)
 
     def map_from_dir(self, directory):
@@ -282,6 +289,7 @@ class Database(object):
         dbmap.update(self.db.languages.to_map(opts))
         dbmap.update(self.db.casts.to_map(opts))
         dbmap.update(self.db.fdwrappers.to_map(opts))
+        dbmap.update(self.db.eventtrigs.to_map(opts))
         dbmap.update(self.db.schemas.to_map(opts))
 
         if opts.directory:
@@ -327,6 +335,7 @@ class Database(object):
         stmts.append(self.db.operators.diff_map(self.ndb.operators))
         stmts.append(self.db.operfams.diff_map(self.ndb.operfams))
         stmts.append(self.db.operclasses.diff_map(self.ndb.operclasses))
+        stmts.append(self.db.eventtrigs.diff_map(self.ndb.eventtrigs))
         stmts.append(self.db.tables.diff_map(self.ndb.tables))
         stmts.append(self.db.constraints.diff_map(self.ndb.constraints))
         stmts.append(self.db.indexes.diff_map(self.ndb.indexes))

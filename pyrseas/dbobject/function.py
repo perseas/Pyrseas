@@ -8,7 +8,7 @@
     FunctionDict derived from DbObjectDict.
 """
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
-from pyrseas.dbobject import commentable, ownable, grantable
+from pyrseas.dbobject import commentable, ownable, grantable, split_schema_obj
 from pyrseas.dbobject.privileges import privileges_from_map
 
 
@@ -282,6 +282,22 @@ class ProcDict(DbObjectDict):
             if 'privileges' in infunc:
                 func.privileges = privileges_from_map(
                     infunc['privileges'], func.allprivs, func.owner)
+
+    def link_refs(self, dbeventtrigs):
+        """Connect event triggers to the functions executed
+
+        :param dbeventtrigs: dictionary of event triggers
+
+        Fills in the `event_triggers` list for each function by
+        traversing the `dbeventtrigs` dictionary.
+        """
+        for key in list(dbeventtrigs.keys()):
+            evttrg = dbeventtrigs[key]
+            (sch, fnc) = split_schema_obj(evttrg.procedure)
+            func = self[(sch, fnc[:-2], '')]
+            if not hasattr(func, 'event_triggers'):
+                func.event_triggers = []
+            func.event_triggers.append(evttrg.name)
 
     def diff_map(self, infuncs):
         """Generate SQL to transform existing functions
