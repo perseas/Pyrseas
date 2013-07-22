@@ -3,9 +3,10 @@ Tables, Views and Sequences
 
 .. module:: pyrseas.dbobject.table
 
-The :mod:`table` module defines five classes, :class:`DbClass` derived
+The :mod:`table` module defines six classes, :class:`DbClass` derived
 from :class:`DbSchemaObject`, classes :class:`Sequence`,
-:class:`Table` and :class:`View` derived from :class:`DbClass`, and
+:class:`Table` and :class:`View` derived from :class:`DbClass`,
+:class:`MaterializedView` derived from :class:`View`, and
 :class:`ClassDict`, derived from :class:`DbObjectDict`.
 
 Database Class
@@ -139,6 +140,20 @@ The map returned by :meth:`to_map` and expected as argument by
 
 .. automethod:: View.diff_map
 
+Materialized View
+-----------------
+
+Class :class:`MaterializedView` is derived from :class:`View` and
+represents a `materialized view
+<http://www.postgresql.org/docs/9.3/static/sql-creatematerializedview.html>`_,
+available from PostgreSQL 9.3 onwards. Its :attr:`keylist` attributes
+are the schema name and the view name.
+
+.. autoclass:: MaterializedView
+
+.. automethod:: MaterializedView.to_map
+
+.. automethod:: MaterializedView.diff_map
 
 Class Dictionary
 ----------------
