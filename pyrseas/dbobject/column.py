@@ -35,6 +35,8 @@ class Column(DbSchemaObject):
             del dct['collation']
         if hasattr(self, 'inherited'):
             dct['inherited'] = (self.inherited != 0)
+        if hasattr(self, 'statistics') and self.statistics == -1:
+            del dct['statistics']
         return {self.name: dct}
 
     def add(self):
@@ -165,6 +167,14 @@ class Column(DbSchemaObject):
             stmts.append(base + "SET DEFAULT %s" % incol.default)
         if hasattr(self, 'default') and not hasattr(incol, 'default'):
             stmts.append(base + "DROP DEFAULT")
+        # check STATISTICS
+        if self.statistics == -1 and (hasattr(incol, 'statistics') and
+                                      incol.statistics != -1):
+            stmts.append(base + "SET STATISTICS %d" % incol.statistics)
+        if self.statistics != -1 and (not hasattr(incol, 'statistics') or
+                                      incol.statistics == -1):
+            stmts.append(base + "SET STATISTICS -1")
+
         return (", ".join(stmts), self.diff_description(incol))
 
 
@@ -173,7 +183,7 @@ QUERY_PRE91 = \
               attnum AS number, format_type(atttypid, atttypmod) AS type,
               attnotnull AS not_null, attinhcount AS inherited,
               pg_get_expr(adbin, adrelid) AS default,
-              attisdropped AS dropped,
+              attstattarget AS statistics, attisdropped AS dropped,
               array_to_string(attacl, ',') AS privileges,
               col_description(c.oid, attnum) AS description
        FROM pg_attribute JOIN pg_class c ON (attrelid = c.oid)
@@ -196,6 +206,7 @@ class ColumnDict(DbObjectDict):
                   attnum AS number, format_type(atttypid, atttypmod) AS type,
                   attnotnull AS not_null, attinhcount AS inherited,
                   pg_get_expr(adbin, adrelid) AS default,
+                  attstattarget AS statistics,
                   collname AS collation, attisdropped AS dropped,
                   array_to_string(attacl, ',') AS privileges,
                   col_description(c.oid, attnum) AS description

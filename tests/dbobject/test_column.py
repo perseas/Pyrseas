@@ -139,6 +139,14 @@ class ColumnToMapTestCase(DatabaseToMapTestCase):
             {'c7': {'type': 'boolean', 'default': 'false'}}]}
         assert dbmap['schema public']['table t1'] == expmap
 
+    def test_statistics(self):
+        "Map a table with column statistics"
+        stmts = [CREATE_STMT1, "ALTER TABLE t1 ALTER c1 SET STATISTICS 100"]
+        dbmap = self.to_map(stmts)
+        expmap = {'columns': [{'c1': {'type': 'integer', 'statistics': 100}},
+                              {'c2': {'type': 'text'}}]}
+        assert dbmap['schema public']['table t1'] == expmap
+
 
 class ColumnToSqlTestCase(InputMapToSqlTestCase):
     """Test SQL generation of column-related statements from input schemas"""
@@ -334,3 +342,16 @@ class ColumnToSqlTestCase(InputMapToSqlTestCase):
         sql = self.to_sql(inmap, stmts)
         assert len(sql) == 1
         assert fix_indent(sql[0]) == "ALTER TABLE t1 DROP COLUMN c2"
+
+    def test_alter_statistics(self):
+        "Alter a table to add column statistics"
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+            'columns': [{'c1': {'type': 'integer', 'statistics': 100}},
+                        {'c2': {'type': 'text'}}]}})
+        sql = self.to_sql(inmap, [CREATE_STMT1, "ALTER TABLE t1 ALTER c2 "
+                                  "SET STATISTICS 1000"])
+        assert fix_indent(sql[0]) == \
+            "ALTER TABLE t1 ALTER COLUMN c1 SET STATISTICS 100"
+        assert fix_indent(sql[1]) == \
+            "ALTER TABLE t1 ALTER COLUMN c2 SET STATISTICS -1"
