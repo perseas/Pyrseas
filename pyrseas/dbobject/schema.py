@@ -44,6 +44,8 @@ class Schema(DbObject):
         :param opts: options to include/exclude schemas/tables, etc.
         :return: dictionary
         """
+        if self.name == 'pyrseas':
+            return {}
         no_owner = opts.no_owner
         no_privs = opts.no_privs
         schbase = {} if no_owner else {'owner': self.owner}
