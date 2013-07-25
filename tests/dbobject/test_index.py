@@ -119,6 +119,15 @@ class IndexToMapTestCase(DatabaseToMapTestCase):
                                 'type': 'expression'}}]}}}
         assert dbmap['schema public']['table t1'] == expmap
 
+    def test_map_index_cluster(self):
+        "Map a table with an index and cluster on it"
+        dbmap = self.to_map([CREATE_TABLE_STMT, CREATE_STMT,
+                             "CLUSTER t1 USING t1_idx"])
+        expmap = {'columns': [{'c1': {'type': 'integer'}},
+                              {'c2': {'type': 'text'}}],
+                  'indexes': {'t1_idx': {'keys': ['c1'], 'cluster': True}}}
+        assert dbmap['schema public']['table t1'] == expmap
+
     def test_map_index_comment(self):
         "Map an index comment"
         dbmap = self.to_map([CREATE_TABLE_STMT, CREATE_STMT, COMMENT_STMT])

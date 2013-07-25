@@ -137,7 +137,7 @@ class IndexDict(DbObjectDict):
                   indisunique AS unique, indkey AS keycols,
                   pg_get_expr(indexprs, indrelid) AS keyexprs,
                   pg_get_indexdef(indexrelid) AS defn,
-                  spcname AS tablespace,
+                  spcname AS tablespace, indisclustered AS cluster,
                   obj_description (c.oid, 'pg_class') AS description
            FROM pg_index JOIN pg_class c ON (indexrelid = c.oid)
                 JOIN pg_namespace ON (relnamespace = pg_namespace.oid)

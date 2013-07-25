@@ -116,6 +116,16 @@ class PrimaryKeyToMapTestCase(DatabaseToMapTestCase):
         dbmap = self.to_map(stmts)
         assert dbmap['schema public']['table t1'] == self.map_pkey3
 
+    def test_primary_key_cluster(self):
+        "Map a table with a primary key and CLUSTER on it"
+        stmts = ["CREATE TABLE t1 (c1 integer PRIMARY KEY, c2 text)",
+                 "CLUSTER t1 USING t1_pkey"]
+        dbmap = self.to_map(stmts)
+        assert dbmap['schema public']['table t1'] == {
+            'columns': [{'c1': {'type': 'integer', 'not_null': True}},
+                        {'c2': {'type': 'text'}}],
+            'primary_key': {'t1_pkey': {'columns': ['c1'], 'cluster': True}}}
+
     def test_map_pk_comment(self):
         "Map a primary key with a comment"
         stmts = ["CREATE TABLE t1 (c1 integer CONSTRAINT cns1 PRIMARY KEY, "
@@ -596,6 +606,16 @@ class UniqueConstraintToMapTestCase(DatabaseToMapTestCase):
                  "c1 INTEGER CONSTRAINT t1_unique_key UNIQUE, c2 TEXT)"]
         dbmap = self.to_map(stmts)
         assert dbmap['schema public']['table t1'] == self.map_unique3
+
+    def test_unique_cluster(self):
+        "Map a table with a unique constraint and CLUSTER on it"
+        stmts = ["CREATE TABLE t1 (c1 integer, c2 text UNIQUE)",
+                 "CLUSTER t1 USING t1_c2_key"]
+        dbmap = self.to_map(stmts)
+        assert dbmap['schema public']['table t1'] == {
+            'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}],
+            'unique_constraints': {'t1_c2_key': {
+                'columns': ['c2'], 'cluster': True}}}
 
 
 class UniqueConstraintToSqlTestCase(InputMapToSqlTestCase):

@@ -267,17 +267,18 @@ class ConstraintDict(DbObjectDict):
                   conname AS name,
                   CASE WHEN contypid != 0 THEN 'd' ELSE '' END AS target,
                   contype AS type, conkey AS keycols,
-                  condeferrable AS deferrable,
-                  condeferred AS deferred,
+                  condeferrable AS deferrable, condeferred AS deferred,
                   confrelid::regclass AS ref_table, confkey AS ref_cols,
                   consrc AS expression, confupdtype AS on_update,
                   confdeltype AS on_delete, confmatchtype AS match,
                   amname AS access_method, spcname AS tablespace,
+                  indisclustered AS cluster,
                   obj_description(c.oid, 'pg_constraint') AS description
            FROM pg_constraint c
                 JOIN pg_namespace ON (connamespace = pg_namespace.oid)
-                LEFT JOIN pg_class i on (conname = relname)
-                LEFT JOIN pg_tablespace t ON (i.reltablespace = t.oid)
+                LEFT JOIN pg_class cl on (conname = relname)
+                LEFT JOIN pg_index i ON (i.indexrelid = cl.oid)
+                LEFT JOIN pg_tablespace t ON (cl.reltablespace = t.oid)
                 LEFT JOIN pg_am on (relam = pg_am.oid)
            WHERE (nspname != 'pg_catalog' AND nspname != 'information_schema')
                  AND conislocal
