@@ -173,6 +173,28 @@ class PrimaryKeyToSqlTestCase(InputMapToSqlTestCase):
         sql = self.to_sql(inmap, stmts)
         assert sql == ["ALTER TABLE t1 DROP CONSTRAINT t1_pkey"]
 
+    def test_primary_key_clustered(self):
+        "Create new table clustered on the primary key"
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+            'columns': [{'c1': {'type': 'integer', 'not_null': True}},
+                        {'c2': {'type': 'text'}}],
+            'primary_key': {'t1_pkey': {'columns': ['c1'], 'cluster': True}}}})
+        sql = self.to_sql(inmap)
+        assert sql[2] == "CLUSTER t1 USING t1_pkey"
+
+    def test_primary_key_uncluster(self):
+        "Remove cluster from table clustered on the primary key"
+        stmts = ["CREATE TABLE t1 (c1 integer PRIMARY KEY, c2 text)",
+                 "CLUSTER t1 USING t1_pkey"]
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+            'columns': [{'c1': {'type': 'integer', 'not_null': True}},
+                        {'c2': {'type': 'text'}}],
+            'primary_key': {'t1_pkey': {'columns': ['c1']}}}})
+        sql = self.to_sql(inmap, stmts)
+        assert fix_indent(sql[0]) == "ALTER TABLE t1 SET WITHOUT CLUSTER"
+
 
 class ForeignKeyToMapTestCase(DatabaseToMapTestCase):
     """Test mapping of created FOREIGN KEYs"""
@@ -607,7 +629,7 @@ class UniqueConstraintToMapTestCase(DatabaseToMapTestCase):
         dbmap = self.to_map(stmts)
         assert dbmap['schema public']['table t1'] == self.map_unique3
 
-    def test_unique_cluster(self):
+    def test_map_unique_cluster(self):
         "Map a table with a unique constraint and CLUSTER on it"
         stmts = ["CREATE TABLE t1 (c1 integer, c2 text UNIQUE)",
                  "CLUSTER t1 USING t1_c2_key"]
@@ -656,6 +678,27 @@ class UniqueConstraintToSqlTestCase(InputMapToSqlTestCase):
                          'c2': {'type': 'text'}}]}})
         sql = self.to_sql(inmap, stmts)
         assert sql == ["ALTER TABLE t1 DROP CONSTRAINT t1_c1_key"]
+
+    def test_create_unique_clustered(self):
+        "Create new table clustered on the unique constraint index"
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+            'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}],
+            'unique_constraints': {'t1_c1_key': {'columns': ['c1'],
+                                                 'cluster': True}}}})
+        sql = self.to_sql(inmap)
+        assert sql[2] == "CLUSTER t1 USING t1_c1_key"
+
+    def test_unique_cluster(self):
+        "Cluster a table on the unique constraint index"
+        stmts = ["CREATE TABLE t1 (c1 integer UNIQUE, c2 text)"]
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+            'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}],
+            'unique_constraints': {'t1_c1_key': {'columns': ['c1'],
+                                                 'cluster': True}}}})
+        sql = self.to_sql(inmap, stmts)
+        assert sql[0] == "CLUSTER t1 USING t1_c1_key"
 
 
 class ConstraintCommentTestCase(InputMapToSqlTestCase):

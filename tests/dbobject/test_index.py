@@ -227,6 +227,36 @@ class IndexToSqlTestCase(InputMapToSqlTestCase):
         assert sql[1] == "CREATE INDEX t1_idx2 ON t1 (" \
             "(((c2 || ', '::text) || c3)), (((c3 || ' '::text) || c2)))"
 
+    def test_create_table_with_index_clustered(self):
+        "Create new table clustered on a single column index"
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+            'columns': [{'c1': {'type': 'integer'}},
+                        {'c2': {'type': 'text'}}],
+            'indexes': {'t1_idx': {'keys': ['c1'], 'cluster': True}}}})
+        sql = self.to_sql(inmap)
+        assert sql[2] == "CLUSTER t1 USING t1_idx"
+
+    def test_cluster_table_with_index(self):
+        "Change a table with an index to cluster on it"
+        stmts = [CREATE_TABLE_STMT, CREATE_STMT]
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+            'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}],
+            'indexes': {'t1_idx': {'keys': ['c1'], 'cluster': True}}}})
+        sql = self.to_sql(inmap, stmts)
+        assert sql[0] == "CLUSTER t1 USING t1_idx"
+
+    def test_uncluster_table_with_index(self):
+        "Change a table clustered on an index to remove cluster"
+        stmts = [CREATE_TABLE_STMT, CREATE_STMT, "CLUSTER t1 USING t1_idx"]
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+            'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}],
+            'indexes': {'t1_idx': {'keys': ['c1']}}}})
+        sql = self.to_sql(inmap, stmts)
+        assert fix_indent(sql[0]) == "ALTER TABLE t1 SET WITHOUT CLUSTER"
+
     def test_comment_on_index(self):
         "Create a comment for an existing index"
         stmts = [CREATE_TABLE_STMT, CREATE_STMT]

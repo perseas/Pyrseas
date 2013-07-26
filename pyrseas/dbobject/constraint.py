@@ -38,12 +38,17 @@ class Constraint(DbSchemaObject):
         Works as is for primary keys and unique constraints but has
         to be overridden for check constraints and foreign keys.
         """
+        stmts = []
         tblspc = ''
         if hasattr(self, 'tablespace'):
             tblspc = " USING INDEX TABLESPACE %s" % self.tablespace
-        return ["ALTER TABLE %s ADD CONSTRAINT %s %s (%s)%s" % (
-                self._table.qualname(), quote_id(self.name),
-                self.objtype, self.key_columns(), tblspc)]
+        stmts.append("ALTER TABLE %s ADD CONSTRAINT %s %s (%s)%s" % (
+                     self._table.qualname(), quote_id(self.name),
+                     self.objtype, self.key_columns(), tblspc))
+        if hasattr(self, 'cluster') and self.cluster:
+            stmts.append("CLUSTER %s USING %s" % (
+                quote_id(self.table), quote_id(self.name)))
+        return stmts
 
     def drop(self):
         """Return string to drop the constraint via ALTER TABLE
@@ -143,6 +148,13 @@ class PrimaryKey(Constraint):
         """
         stmts = []
         # TODO: to be implemented (via ALTER DROP and ALTER ADD)
+        if hasattr(inpk, 'cluster'):
+            if not hasattr(self, 'cluster'):
+                stmts.append("CLUSTER %s USING %s" % (
+                    quote_id(self.table), quote_id(self.name)))
+        elif hasattr(self, 'cluster'):
+            stmts.append("ALTER TABLE %s\n    SET WITHOUT CLUSTER" %
+                         quote_id(self.table))
         stmts.append(self.diff_description(inpk))
         return stmts
 
@@ -250,10 +262,18 @@ class UniqueConstraint(Constraint):
         """
         stmts = []
         # TODO: to be implemented (via ALTER DROP and ALTER ADD)
+        if hasattr(inuc, 'cluster'):
+            if not hasattr(self, 'cluster'):
+                stmts.append("CLUSTER %s USING %s" % (
+                    quote_id(self.table), quote_id(self.name)))
+        elif hasattr(self, 'cluster'):
+            stmts.append("ALTER TABLE %s\n    SET WITHOUT CLUSTER" %
+                         quote_id(self.table))
         stmts.append(self.diff_description(inuc))
         return stmts
 
 MATCHTYPES_PRE93 = {'f': 'full', 'p': 'partial', 'u': 'simple'}
+COMMON_ATTRS = ['access_method', 'tablespace', 'description', 'cluster']
 
 
 class ConstraintDict(DbObjectDict):
@@ -366,7 +386,7 @@ class ConstraintDict(DbObjectDict):
                 exc.args = ("Constraint '%s' is missing columns" % cns, )
                 raise
             for attr, value in list(val.items()):
-                if attr in ['access_method', 'tablespace', 'description']:
+                if attr in COMMON_ATTRS:
                     setattr(pkey, attr, value)
             self[(table.schema, table.name, cns)] = pkey
         if 'foreign_keys' in inconstrs:
@@ -438,7 +458,7 @@ class ConstraintDict(DbObjectDict):
                     exc.args = ("Constraint '%s' is missing columns" % cns, )
                     raise
                 for attr, value in list(val.items()):
-                    if attr in ['access_method', 'tablespace', 'description']:
+                    if attr in COMMON_ATTRS:
                         setattr(unq, attr, value)
                 self[(table.schema, table.name, cns)] = unq
 

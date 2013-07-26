@@ -92,6 +92,9 @@ class Index(DbSchemaObject):
         stmts.append("CREATE %sINDEX %s ON %s %s(%s)%s" % (
             'UNIQUE ' if unq else '', quote_id(self.name),
             quote_id(self.table), acc, self.key_expressions(), tblspc))
+        if hasattr(self, 'cluster') and self.cluster:
+            stmts.append("CLUSTER %s USING %s" % (
+                quote_id(self.table), quote_id(self.name)))
         return stmts
 
     def diff_map(self, inindex):
@@ -123,6 +126,13 @@ class Index(DbSchemaObject):
                              % quote_id(inindex.tablespace))
         elif hasattr(self, 'tablespace'):
             stmts.append(base + "SET TABLESPACE pg_default")
+        if hasattr(inindex, 'cluster'):
+            if not hasattr(self, 'cluster'):
+                stmts.append("CLUSTER %s USING %s" % (
+                    quote_id(self.table), quote_id(self.name)))
+        elif hasattr(self, 'cluster'):
+            stmts.append("ALTER TABLE %s\n    SET WITHOUT CLUSTER" %
+                         quote_id(self.table))
         stmts.append(self.diff_description(inindex))
         return stmts
 
@@ -234,7 +244,7 @@ class IndexDict(DbObjectDict):
                 idx.keys = val['columns']
             else:
                 raise KeyError("Index '%s' is missing keys specification" % i)
-            for attr in ['access_method', 'unique', 'tablespace']:
+            for attr in ['access_method', 'unique', 'tablespace', 'cluster']:
                 if attr in val:
                     setattr(idx, attr, val[attr])
             if not hasattr(idx, 'access_method'):
