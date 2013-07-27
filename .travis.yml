@@ -3,7 +3,7 @@ python:
   - "3.3"
   - "2.7"
 before_install:
-  - sudo locale-gen fr_FR.UTF-8
+  - sudo locale-gen --no-archive fr_FR.UTF-8
   - sudo mkdir -p /extra/pg/9.1/ts1 /extra/pg/9.1/ts2
   - sudo chown postgres:postgres /extra/pg/9.1/ts1 /extra/pg/9.1/ts2
   - sudo apt-get update -qq
@@ -11,9 +11,4 @@ before_install:
 before_script:
   - psql -Upostgres -c "CREATE TABLESPACE ts1 LOCATION '/extra/pg/9.1/ts1'"
   - psql -Upostgres -c "CREATE TABLESPACE ts2 LOCATION '/extra/pg/9.1/ts2'"
-  - psql postgres -c "CREATE LANGUAGE plpythonu"
-  - psql postgres -c 'DO $$import subprocess; plpy.info(subprocess.check_output(["localedef", "--list-archive"]))$$ LANGUAGE plpythonu;'
-script:
-  - psql postgres -c "CREATE DATABASE pyrseas_testdb"
-  - psql pyrseas_testdb -c "CREATE COLLATION c1 (LC_COLLATE = 'fr_FR.UTF-8', LC_CTYPE = 'fr_FR.UTF-8')"
   - python setup.py test
