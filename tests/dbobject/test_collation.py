@@ -13,7 +13,7 @@ from pyrseas.testutils import InputMapToSqlTestCase, fix_indent
 if sys.platform == 'win32':
     COLL = 'French_France.1252'
 else:
-    COLL = 'fr_FR.utf8'
+    COLL = 'fr_FR.UTF-8'
 
 CREATE_STMT = "CREATE COLLATION c1 (LC_COLLATE = '%s', LC_CTYPE = '%s')" % (
     COLL, COLL)

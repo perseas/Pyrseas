@@ -13,7 +13,7 @@ from pyrseas.dbobject.table import Sequence, Table, View
 if sys.platform == 'win32':
     COLL = 'French_France.1252'
 else:
-    COLL = 'fr_FR.utf8'
+    COLL = 'fr_FR.UTF-8'
 
 CREATE_FDW = "CREATE FOREIGN DATA WRAPPER "
 SOURCE1 = "SELECT 'dummy'::text"

@@ -15,5 +15,5 @@ before_script:
   - psql postgres -c 'DO $$import subprocess; plpy.info(subprocess.check_output(["localedef", "--list-archive"]))$$ LANGUAGE plpythonu;'
 script:
   - psql postgres -c "CREATE DATABASE pyrseas_testdb"
-  - psql pyrseas_testdb -c "CREATE COLLATION c1 (LC_COLLATE = 'fr_FR.utf8', LC_CTYPE = 'fr_FR.utf8')"
+  - psql pyrseas_testdb -c "CREATE COLLATION c1 (LC_COLLATE = 'fr_FR.UTF-8', LC_CTYPE = 'fr_FR.UTF-8')"
   - python setup.py test
