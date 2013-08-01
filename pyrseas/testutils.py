@@ -299,6 +299,12 @@ class PyrseasTestCase(TestCase):
         """The Pyrseas Database instance"""
         return Database(self.cfg)
 
+    def config_options(self, **kwargs):
+        class Opts():
+            def __init__(self, **kwargs):
+                [setattr(self, opt, val) for opt, val in list(kwargs.items())]
+        self.cfg['options'] = Opts(**kwargs)
+
 
 class DatabaseToMapTestCase(PyrseasTestCase):
     """Base class for "database to map" test cases"""
@@ -323,16 +329,9 @@ class DatabaseToMapTestCase(PyrseasTestCase):
         for stmt in stmts:
             self.db.execute(stmt)
         self.db.conn.commit()
-
-        class Opts:
-            pass
-        opts = Opts()
-        opts.schemas = schemas
-        opts.tables = tables
-        opts.no_owner = no_owner
-        opts.no_privs = no_privs
-        opts.directory = TEST_DIR if directory else None
-        self.cfg['options'] = opts
+        self.config_options(schemas=schemas, tables=tables, no_owner=no_owner,
+                            no_privs=no_privs,
+                            directory=TEST_DIR if directory else None)
         return self.database().to_map()
 
     def yaml_load(self, filename, subdir=None):
@@ -373,12 +372,7 @@ class InputMapToSqlTestCase(PyrseasTestCase):
                 self.db.execute(stmt)
             self.db.conn.commit()
 
-        class Opts:
-            pass
-        opts = Opts()
-        opts.schemas = schemas
-        opts.quote_reserved = quote_reserved
-        self.cfg['options'] = opts
+        self.config_options(schemas=schemas, quote_reserved=quote_reserved)
         return self.database().diff_map(inmap)
 
     def std_map(self, plpgsql_installed=False):
@@ -519,17 +513,9 @@ class AugmentToMapTestCase(PyrseasTestCase):
         for stmt in stmts:
             self.db.execute(stmt)
         self.db.conn.commit()
+        self.config_options(schemas=[], tables=[], no_owner=True,
+                            no_privs=True, directory=None)
         db = AugmentDatabase(self.cfg)
-
-        class Opts:
-            pass
-        opts = Opts()
-        opts.schemas = []
-        opts.tables = []
-        opts.no_owner = True
-        opts.no_privs = True
-        opts.directory = None
-        self.cfg['options'] = opts
         return db.apply(augmap)
 
 
