@@ -274,13 +274,18 @@ class PgTestDb(PostgresDb):
         return row and True
 
 
+def _connect_clear(dbname):
+    db = PgTestDb(dbname, TEST_USER, TEST_HOST, TEST_PORT)
+    db.connect()
+    db.clear()
+    return db
+
+
 class PyrseasTestCase(TestCase):
     """Base class for most test cases"""
 
     def setUp(self):
-        self.db = PgTestDb(TEST_DBNAME, TEST_USER, TEST_HOST, TEST_PORT)
-        self.db.connect()
-        self.db.clear()
+        self.db = _connect_clear(TEST_DBNAME)
         # TODO: ensure no extraneous configuration info is read
         self.cfg = Config()
         if not 'database' in self.cfg:
@@ -401,12 +406,8 @@ class DbMigrateTestCase(TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.srcdb = PgTestDb(TEST_DBNAME_SRC, TEST_USER, TEST_HOST, TEST_PORT)
-        cls.srcdb.connect()
-        cls.srcdb.clear()
-        cls.db = PgTestDb(TEST_DBNAME, TEST_USER, TEST_HOST, TEST_PORT)
-        cls.db.connect()
-        cls.db.clear()
+        cls.srcdb = _connect_clear(TEST_DBNAME_SRC)
+        cls.db = _connect_clear(TEST_DBNAME)
         progdir = os.path.abspath(os.path.dirname(__file__))
         cls.dbtoyaml = os.path.join(progdir, 'dbtoyaml.py')
         cls.yamltodb = os.path.join(progdir, 'yamltodb.py')
