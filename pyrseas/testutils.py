@@ -286,8 +286,7 @@ class PyrseasTestCase(TestCase):
 
     def setUp(self):
         self.db = _connect_clear(TEST_DBNAME)
-        # TODO: ensure no extraneous configuration info is read
-        self.cfg = Config()
+        self.cfg = Config(sys_only=True)
         if not 'database' in self.cfg:
             self.cfg.update(database={})
         dbc = self.cfg['database']

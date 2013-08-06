@@ -36,9 +36,11 @@ def _load_cfg(envvar, alt_dir):
 class Config(dict):
     "A configuration dictionary"
 
-    def __init__(self):
+    def __init__(self, sys_only=False):
         self.update(_load_cfg("PYRSEAS_SYS_CONFIG", os.path.abspath(
                     os.path.join(os.path.dirname(__file__), '..', 'config'))))
+        if sys_only:
+            return
         cfg = _load_cfg("PYRSEAS_USER_CONFIG",
                         os.path.join(_home_dir(), 'pyrseas'))
         for key, val in list(cfg.items()):
