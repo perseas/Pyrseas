@@ -26,13 +26,3 @@ The tag has to be added manually to a YAML specification for yamltodb
 to act on it and cannot be kept in the YAML file for subsequent runs.
 This is not entirely satisfactory for storing the YAML file in a
 version control system.
-
-Delimited identifiers
----------------------
-
-PostgreSQL supports SQL delimited identifiers, i.e., object
-identifiers that include special characters (e.g., spaces, minus
-signs) or that are SQL reserved words.  Pyrseas currently supports the
-first type of delimited identifiers, but not the use of reserved
-words, such as the tables named "order" or columns named "limit."
-Some work is in progress to address this issue.
