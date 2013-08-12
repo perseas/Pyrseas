@@ -39,9 +39,9 @@ currently defined.
 
 .. autoclass:: CfgFunctionSource
 
-.. autoclass:: CfgFunctionSourceSegment
+.. autoclass:: CfgFunctionSegment
 
-.. automethod:: CfgFunctionSourceSegment.replace
+.. automethod:: CfgFunctionSegment.replace
 
 .. autoclass:: CfgFunctionTemplate
 
