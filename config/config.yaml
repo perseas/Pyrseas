@@ -49,12 +49,14 @@ augmenter:
       type: timestamp with time zone
   func_templates:
     functempl_audit_default: |2-
+
       BEGIN
         NEW.{{modified_by_user}} = CURRENT_USER;
         NEW.{{modified_timestamp}} = CURRENT_TIMESTAMP;
         RETURN NEW;
       END
     functempl_audit_full: |2-
+
       BEGIN
         IF TG_OP = 'INSERT' THEN
           NEW.{{created_timestamp}} = CURRENT_TIMESTAMP;
@@ -71,6 +73,7 @@ augmenter:
         RETURN NEW;
       END
     functempl_audit_modified: |2-
+
       BEGIN
         NEW.{{modified_timestamp}} = CURRENT_TIMESTAMP;
         RETURN NEW;
