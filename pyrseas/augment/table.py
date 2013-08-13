@@ -26,6 +26,9 @@ class AugTable(AugDbClass):
         """
         currtbl = augdb.current.tables[self.current.key()]
         if hasattr(self, 'audit_columns'):
+            if self.audit_columns not in augdb.auditcols:
+                raise KeyError("Specification %s not in current configuration"
+                               % self.audit_columns)
             augdb.auditcols[self.audit_columns].apply(currtbl, augdb)
 
 
