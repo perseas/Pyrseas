@@ -38,7 +38,12 @@ def main():
     options = cfg['options']
     augdb = AugmentDatabase(cfg)
     augmap = yaml.safe_load(options.spec)
-    outmap = augdb.apply(augmap)
+    try:
+        outmap = augdb.apply(augmap)
+    except BaseException as exc:
+        if type(exc) != KeyError:
+            raise
+        sys.exit("ERROR: %s" % str(exc))
     print(yamldump(outmap), file=output or sys.stdout)
     if output:
         output.close()
