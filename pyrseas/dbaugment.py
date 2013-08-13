@@ -29,10 +29,6 @@ def main():
                         help='exclude privilege (GRANT/REVOKE) information')
     parser.add_argument('spec', nargs='?', type=FileType('r'),
                         default=sys.stdin, help='YAML augmenter specification')
-    parser.add_argument('--merge-spec', dest='mergefile',
-                        help="output a merged specification file")
-    parser.add_argument('--merge-config', action="store_true",
-                        help="include configuration in merged file")
     cfg = parse_args(parser)
     output = cfg['files']['output']
     options = cfg['options']

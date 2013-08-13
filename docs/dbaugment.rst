@@ -70,18 +70,6 @@ addition to the :doc:`cmdargs`):
     is omitted, the specification is read from the program's standard
     input.
 
-.. program:: dbaugment
-
-.. cmdoption:: --merge-config
-
-    Output a merged YAML file, including the database schema, the
-    augmenter specification and the configuration information.
-
-.. cmdoption:: --merge-specs <file>
-
-    Output a merged YAML file including the database schema and the
-    augmenter specification to the given `file`.
-
 Examples
 --------
 
