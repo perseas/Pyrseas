@@ -32,7 +32,7 @@ The specification file format is as follows::
    table t1:
      audit_columns: default
    table t3:
-     audit_columns: last_modified_only
+     audit_columns: modified_only
 
 The specification file lists each schema, and within it, each table to
 be augmented.  Under each table the following values are recognized:
