@@ -6,10 +6,16 @@ import pytest
 from pyrseas.testutils import AugmentToMapTestCase
 
 CREATE_STMT = "CREATE TABLE t1 (c1 integer, c2 text)"
-FUNC_SRC = """
+FUNC_SRC1 = """
 BEGIN
   NEW.modified_by_user = CURRENT_USER;
   NEW.modified_timestamp = CURRENT_TIMESTAMP;
+  RETURN NEW;
+END"""
+
+FUNC_SRC2 = """
+BEGIN
+  NEW.updated = CURRENT_TIMESTAMP;
   RETURN NEW;
 END"""
 
@@ -68,15 +74,23 @@ class AuditColumnsTestCase(AugmentToMapTestCase):
     def test_rename_column(self):
         "Add predefined audit column but with new name"
         augmap = {'augmenter': {'columns': {
-            'created_date': {'name': 'created'}}},
+            'modified_timestamp': {'name': 'updated'}}},
             'schema public': {'table t1': {
-                'audit_columns': 'created_date_only'}}}
+                'audit_columns': 'modified_only'}}}
         dbmap = self.to_map([CREATE_STMT], augmap)
-        expmap = {'columns': [
+        colmap = {'columns': [
             {'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}},
-            {'created': {'type': 'date', 'not_null': True,
-                         'default': "('now'::text)::date"}}]}
-        assert expmap == dbmap['schema public']['table t1']
+            {'updated': {'type': 'timestamp with time zone',
+                         'not_null': True}}],
+            'triggers': {'t1_20_audit_modified_only': {
+                'events': ['insert', 'update'], 'level': 'row',
+                'procedure': 'audit_modified()', 'timing': 'before'}}}
+        funcmap = {'language': 'plpgsql', 'returns': 'trigger',
+                   'security_definer': True, 'description':
+                   'Provides modified_timestamp values for audit columns.',
+                   'source': FUNC_SRC2}
+        assert dbmap['schema public']['table t1'] == colmap
+        assert dbmap['schema public']['function audit_modified()'] == funcmap
 
     def test_change_column_type(self):
         "Add predefined audit column but with changed datatype"
@@ -107,7 +121,7 @@ class AuditColumnsTestCase(AugmentToMapTestCase):
         assert dbmap['schema public']['function audit_default()'][
             'returns'] == 'trigger'
         assert dbmap['schema public']['function audit_default()'][
-            'source'] == FUNC_SRC
+            'source'] == FUNC_SRC1
 
     def test_nonpublic_schema_with_trigger(self):
         "Add predefined audit columns with trigger in a non-public schema"
@@ -128,7 +142,7 @@ class AuditColumnsTestCase(AugmentToMapTestCase):
         assert dbmap['schema s1']['function audit_default()']['returns'] == \
             'trigger'
         assert dbmap['schema s1']['function audit_default()'][
-            'source'] == FUNC_SRC
+            'source'] == FUNC_SRC1
 
     def test_skip_existing_columns(self):
         "Do not add already existing audit columns"

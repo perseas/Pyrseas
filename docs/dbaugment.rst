@@ -78,6 +78,24 @@ specifications in the file ``moviesbl.yaml``::
 
   dbaugment moviesdb moviesbl.yaml
 
+To add a column named ``updated`` to table ``public.film`` to hold the
+date and time each row was inserted or updated, create a YAML
+specification file, say ``film.yaml`` as follows::
+
+ augmenter:
+   columns:
+     modified_timestamp:
+       name: updated
+ schema public:
+   table film:
+     audit_columns: modified_only
+
+Then run the following command to generate the resulting database
+specification, alter the table and create the needed trigger and
+function.
+
+ dbaugment moviesdb film.yaml | yamltodb moviesdb -u
+
 See Also
 --------
 

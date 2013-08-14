@@ -54,6 +54,7 @@ class CfgColumnDict(DbAugmentDict):
 
         :param incols: YAML dictionary defining the columns
         """
+        renames = False
         for col in incols:
             if col in self:
                 ccol = self[col]
@@ -61,3 +62,8 @@ class CfgColumnDict(DbAugmentDict):
                 self[col] = ccol = CfgColumn(name=col)
             for attr, val in list(incols[col].items()):
                 setattr(ccol, attr, val)
+                if attr == 'name':
+                    renames = True
+        if renames:
+            self.col_trans_tbl = [('{{%s}}' % col, self[col].name)
+                                  for col in self]
