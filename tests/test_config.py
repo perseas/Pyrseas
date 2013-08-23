@@ -40,3 +40,15 @@ def test_repo_config(tmpdir):
     os.environ["PYRSEAS_REPO_DIR"] = tmpdir.strpath
     cfg = Config()
     assert cfg['schema public'] == CFG_TABLE_DATA
+
+
+def test_cmd_parser(tmpdir):
+    "Test parsing a configuration file specified on the command line"
+    f = tmpdir.join(CFG_FILE)
+    f.write(yamldump(CFG_DATA))
+    sys.argv = ['testprog', 'testdb', '--config', f.strpath]
+    os.environ["PYRSEAS_USER_CONFIG"] = ''
+    os.environ["PYRSEAS_REPO_DIR"] = ''
+    parser = cmd_parser("Test description", '0.0.1')
+    cfg = parse_args(parser)
+    assert cfg['schema public'] == CFG_TABLE_DATA

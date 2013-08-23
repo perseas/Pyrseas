@@ -41,14 +41,15 @@ class Config(dict):
                     os.path.join(os.path.dirname(__file__), '..', 'config'))))
         if sys_only:
             return
-        cfg = _load_cfg("PYRSEAS_USER_CONFIG",
-                        os.path.join(_home_dir(), 'pyrseas'))
-        for key, val in list(cfg.items()):
-            if key in self:
-                self[key].update(val)
-            else:
-                self[key] = val
-        cfg = _load_cfg("PYRSEAS_REPO_DIR", None)
+        self.merge(_load_cfg("PYRSEAS_USER_CONFIG",
+                             os.path.join(_home_dir(), 'pyrseas')))
+        self.merge(_load_cfg("PYRSEAS_REPO_DIR", None))
+
+    def merge(self, cfg):
+        """Merge extra configuration
+
+        :param cfg: extra configuration (dict)
+        """
         for key, val in list(cfg.items()):
             if key in self:
                 self[key].update(val)

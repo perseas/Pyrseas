@@ -4,9 +4,11 @@
 from argparse import ArgumentParser, FileType
 import getpass
 
+import yaml
+
 from pyrseas.config import Config
 
-_cfg = Config()
+_cfg = None
 
 HELP_TEXT = {
     'host': "database server host or socket directory",
@@ -30,9 +32,13 @@ def cmd_parser(description, version):
     :param version: version of the caller
     :return: the created parser
     """
+    global _cfg
+
     parent = ArgumentParser(add_help=False)
     parent.add_argument('dbname', help='database name')
     group = parent.add_argument_group('Connection options')
+    if _cfg is None:
+        _cfg = Config()
     cfg = _cfg['database'] if 'database' in _cfg else {}
     group.add_argument('-H', '--host', **_help_dflt('host', cfg))
     group.add_argument('-p', '--port', type=int, **_help_dflt('port', cfg))
@@ -70,5 +76,7 @@ def parse_args(parser):
     for key in ['output', 'config']:
         _cfg['files'][key] = args[key]
         del args[key]
+    if 'config' in _cfg['files'] and _cfg['files']['config']:
+        _cfg.merge(yaml.safe_load(_cfg['files']['config']))
     _cfg['options'] = arg_opts
     return _cfg
