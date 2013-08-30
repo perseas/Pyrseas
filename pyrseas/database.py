@@ -129,8 +129,11 @@ class Database(object):
                              db.operfams, db.operclasses, db.conversions,
                              db.tsconfigs, db.tsdicts, db.tsparsers,
                              db.tstempls, db.ftables, db.collations)
+        loadcfg = {}
+        if 'dataload' in self.config:
+            loadcfg = self.config['dataload']
         db.tables.link_refs(db.columns, db.constraints, db.indexes,
-                            db.rules, db.triggers)
+                            db.rules, db.triggers, loadcfg)
         db.functions.link_refs(db.eventtrigs)
         db.fdwrappers.link_refs(db.servers)
         db.servers.link_refs(db.usermaps)
@@ -363,4 +366,6 @@ class Database(object):
         stmts.append(self.db.servers._drop())
         stmts.append(self.db.fdwrappers._drop())
         stmts.append(self.db.languages._drop())
+        if 'dataload' in self.config:
+            stmts.append(self.ndb.tables.load())
         return [s for s in flatten(stmts)]

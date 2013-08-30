@@ -358,7 +358,7 @@ class InputMapToSqlTestCase(PyrseasTestCase):
 
     superuser = False
 
-    def to_sql(self, inmap, stmts=None, superuser=False, schemas=[],
+    def to_sql(self, inmap, stmts=None, config={}, superuser=False, schemas=[],
                quote_reserved=False):
         """Execute statements and compare database to input map.
 
@@ -377,6 +377,7 @@ class InputMapToSqlTestCase(PyrseasTestCase):
             self.db.conn.commit()
 
         self.config_options(schemas=schemas, quote_reserved=quote_reserved)
+        self.cfg.merge(config)
         return self.database().diff_map(inmap)
 
     def std_map(self, plpgsql_installed=False):

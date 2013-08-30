@@ -437,6 +437,16 @@ class Table(DbClass):
 
         return stmts
 
+    def load(self):
+        """Generate SQL to load data into a table
+
+        :return: list of SQL statements
+        """
+        stmts = ["TRUNCATE ONLY %s" % self.qualname()]
+        stmts.append("\\copy %s from '%s.data' csv" % (
+            self.qualname(), self.name))
+        return stmts
+
 
 class View(DbClass):
     """A database view definition
@@ -730,7 +740,8 @@ class ClassDict(DbObjectDict):
                     obj.privileges = privileges_from_map(
                         inobj['privileges'], obj.allprivs, obj.owner)
 
-    def link_refs(self, dbcolumns, dbconstrs, dbindexes, dbrules, dbtriggers):
+    def link_refs(self, dbcolumns, dbconstrs, dbindexes, dbrules, dbtriggers,
+                  dataload):
         """Connect columns, constraints, etc. to their respective tables
 
         :param dbcolumns: dictionary of columns
@@ -738,6 +749,7 @@ class ClassDict(DbObjectDict):
         :param dbindexes: dictionary of indexes
         :param dbrules: dictionary of rules
         :param dbtriggers: dictionary of triggers
+        :param dataload: dictionary of data loading info
 
         Links each list of table columns in `dbcolumns` to the
         corresponding table. Fills the `foreign_keys`,
@@ -811,6 +823,14 @@ class ClassDict(DbObjectDict):
                 table.triggers = {}
             table.triggers.update({trg: dbtriggers[(sch, tbl, trg)]})
             dbtriggers[(sch, tbl, trg)]._table = self[(sch, tbl)]
+        if dataload and not hasattr(self, 'dataload'):
+            self.dataload = []
+            for key in dataload.keys():
+                if not key.startswith('schema '):
+                    raise KeyError("Unrecognized object type: %s" % key)
+                sch = key[7:]
+                for tbl in dataload[key]:
+                    self.dataload.append(self[(sch, tbl)])
 
     def _rename(self, obj, objtype):
         """Process a RENAME"""
@@ -825,6 +845,16 @@ class ClassDict(DbObjectDict):
                 oldname, objtype, obj.name), )
             raise
         return stmt
+
+    def load(self):
+        """Iterate over tables to be loaded
+
+        :return: list of SQL statements
+        """
+        stmts = []
+        for tbl in self.dataload:
+            stmts.append(tbl.load())
+        return stmts
 
     def diff_map(self, intables):
         """Generate SQL to transform existing tables and sequences
