@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """Test RelVars"""
+from __future__ import unicode_literals
+
 from copy import copy
 from datetime import date, datetime, timedelta
 

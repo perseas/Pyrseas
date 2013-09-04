@@ -7,10 +7,15 @@
     DbSchemaObject, Function and Aggregate derived from Proc, and
     FunctionDict derived from DbObjectDict.
 """
+import sys
+
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
 from pyrseas.dbobject import commentable, ownable, grantable, split_schema_obj
 from pyrseas.dbobject.privileges import privileges_from_map
 
+strtypes = (str, )
+if sys.version_info[0] == 2:
+    strtypes = (str, unicode)
 
 VOLATILITY_TYPES = {'i': 'immutable', 's': 'stable', 'v': 'volatile'}
 
@@ -330,7 +335,8 @@ class ProcDict(DbObjectDict):
                 for stmt in diff_stmts:
                     if isinstance(stmt, list) and stmt:
                         stmt = stmt[0]
-                    if isinstance(stmt, str) and stmt.startswith("CREATE "):
+                    if isinstance(stmt, strtypes) and \
+                            stmt.startswith("CREATE "):
                         created = True
                         break
                 stmts.append(diff_stmts)

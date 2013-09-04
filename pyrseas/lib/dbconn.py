@@ -10,6 +10,9 @@ import sys
 
 from psycopg2 import connect
 from psycopg2.extras import DictConnection
+if sys.version_info[0] == 2:
+    from psycopg2.extensions import register_type, UNICODE
+    register_type(UNICODE)
 
 
 class DbConnection(object):

@@ -3,8 +3,9 @@
 import sys
 from yaml import add_representer, dump
 
+if sys.version_info[0] == 2:
+    from yaml import safe_dump as dump
 
-if sys.version < '3':
     class MultiLineStr(unicode):
         """ Marker for multiline strings"""
 else:
