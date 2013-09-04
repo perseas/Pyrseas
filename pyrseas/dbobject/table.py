@@ -741,7 +741,7 @@ class ClassDict(DbObjectDict):
                         inobj['privileges'], obj.allprivs, obj.owner)
 
     def link_refs(self, dbcolumns, dbconstrs, dbindexes, dbrules, dbtriggers,
-                  dataload):
+                  datacopy):
         """Connect columns, constraints, etc. to their respective tables
 
         :param dbcolumns: dictionary of columns
@@ -749,7 +749,7 @@ class ClassDict(DbObjectDict):
         :param dbindexes: dictionary of indexes
         :param dbrules: dictionary of rules
         :param dbtriggers: dictionary of triggers
-        :param dataload: dictionary of data loading info
+        :param datacopy: dictionary of data loading info
 
         Links each list of table columns in `dbcolumns` to the
         corresponding table. Fills the `foreign_keys`,
@@ -823,14 +823,14 @@ class ClassDict(DbObjectDict):
                 table.triggers = {}
             table.triggers.update({trg: dbtriggers[(sch, tbl, trg)]})
             dbtriggers[(sch, tbl, trg)]._table = self[(sch, tbl)]
-        if dataload and not hasattr(self, 'dataload'):
-            self.dataload = []
-            for key in dataload.keys():
+        if datacopy and not hasattr(self, 'datacopy'):
+            self.datacopy = []
+            for key in datacopy.keys():
                 if not key.startswith('schema '):
                     raise KeyError("Unrecognized object type: %s" % key)
                 sch = key[7:]
-                for tbl in dataload[key]:
-                    self.dataload.append(self[(sch, tbl)])
+                for tbl in datacopy[key]:
+                    self.datacopy.append(self[(sch, tbl)])
 
     def _rename(self, obj, objtype):
         """Process a RENAME"""
@@ -852,7 +852,7 @@ class ClassDict(DbObjectDict):
         :return: list of SQL statements
         """
         stmts = []
-        for tbl in self.dataload:
+        for tbl in self.datacopy:
             stmts.append(tbl.load())
         return stmts
 

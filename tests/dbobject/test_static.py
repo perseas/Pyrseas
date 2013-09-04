@@ -17,7 +17,7 @@ class StaticTableToSqlTestCase(InputMapToSqlTestCase):
         inmap['schema public'].update({'table t1': {
             'columns': [{'c1': {'type': 'integer'}},
                         {'c2': {'type': 'text'}}]}})
-        cfg = {'dataload': {'schema public': ['t1']}}
+        cfg = {'datacopy': {'schema public': ['t1']}}
         sql = self.to_sql(inmap, [CREATE_STMT], config=cfg)
         assert fix_indent(sql[0]) == TRUNC_STMT
         assert fix_indent(sql[1]) == COPY_STMT

@@ -130,8 +130,8 @@ class Database(object):
                              db.tsconfigs, db.tsdicts, db.tsparsers,
                              db.tstempls, db.ftables, db.collations)
         loadcfg = {}
-        if 'dataload' in self.config:
-            loadcfg = self.config['dataload']
+        if 'datacopy' in self.config:
+            loadcfg = self.config['datacopy']
         db.tables.link_refs(db.columns, db.constraints, db.indexes,
                             db.rules, db.triggers, loadcfg)
         db.functions.link_refs(db.eventtrigs)
@@ -366,6 +366,6 @@ class Database(object):
         stmts.append(self.db.servers._drop())
         stmts.append(self.db.fdwrappers._drop())
         stmts.append(self.db.languages._drop())
-        if 'dataload' in self.config:
+        if 'datacopy' in self.config:
             stmts.append(self.ndb.tables.load())
         return [s for s in flatten(stmts)]
