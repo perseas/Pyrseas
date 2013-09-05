@@ -846,6 +846,12 @@ class ClassDict(DbObjectDict):
             raise
         return stmt
 
+    def copydata(self):
+        """Iterate over tables to be copied
+        """
+        for tbl in self.datacopy:
+            self.dbconn.copy_to("%s.data" % tbl.name, tbl.qualname())
+
     def load(self):
         """Iterate over tables to be loaded
 

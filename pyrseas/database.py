@@ -298,6 +298,8 @@ class Database(object):
         if opts.directory:
             with open(dbfilepath, 'w') as f:
                 f.write(yamldump(dbmap))
+        if 'datacopy' in self.config:
+            self.db.tables.copydata()
 
         return dbmap
 

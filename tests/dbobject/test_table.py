@@ -92,7 +92,7 @@ class TableToMapTestCase(DatabaseToMapTestCase):
         "Map two tables out of three present"
         stmts = [CREATE_STMT, "CREATE TABLE t2 (c1 integer, c2 text)",
                  "CREATE TABLE t3 (c1 integer, c2 text)"]
-        dbmap = self.to_map(stmts, None, ['t2', 't1'])
+        dbmap = self.to_map(stmts, tables=['t2', 't1'])
         expmap = {'columns': [{'c1': {'type': 'integer'}},
                               {'c2': {'type': 'text'}}]}
         assert dbmap['schema public']['table t1'] == expmap
@@ -104,7 +104,7 @@ class TableToMapTestCase(DatabaseToMapTestCase):
         stmts = [CREATE_STMT, "CREATE TABLE t2 (c1 integer, c2 text)",
                  "CREATE SEQUENCE seq1", "ALTER SEQUENCE seq1 OWNED BY t2.c1",
                  "CREATE SEQUENCE seq2"]
-        dbmap = self.to_map(stmts, None, ['t2'])
+        dbmap = self.to_map(stmts, tables=['t2'])
         self.db.execute_commit("DROP SEQUENCE seq1")
         expmap = {'columns': [{'c1': {'type': 'integer'}},
                               {'c2': {'type': 'text'}}]}

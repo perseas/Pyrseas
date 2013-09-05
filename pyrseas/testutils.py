@@ -315,11 +315,12 @@ class DatabaseToMapTestCase(PyrseasTestCase):
 
     superuser = False
 
-    def to_map(self, stmts, schemas=[], tables=[], no_owner=True,
+    def to_map(self, stmts, config={}, schemas=[], tables=[], no_owner=True,
                no_privs=True, superuser=False, directory=False):
         """Execute statements and return a database map.
 
         :param stmts: list of SQL statements to execute
+        :param config: dictionary of configuration information
         :param schemas: list of schemas to map
         :param tables: list of tables to map
         :param no_owner: exclude object owner information
@@ -336,6 +337,7 @@ class DatabaseToMapTestCase(PyrseasTestCase):
         self.config_options(schemas=schemas, tables=tables, no_owner=no_owner,
                             no_privs=no_privs,
                             directory=TEST_DIR if directory else None)
+        self.cfg.merge(config)
         return self.database().to_map()
 
     def yaml_load(self, filename, subdir=None):
@@ -364,6 +366,7 @@ class InputMapToSqlTestCase(PyrseasTestCase):
 
         :param inmap: dictionary defining target database
         :param stmts: list of SQL database setup statements
+        :param config: dictionary of configuration information
         :param superuser: indicates test requires superuser privilege
         :param schemas: list of schemas to diff
         :param quote_reserved: fetch reserved words

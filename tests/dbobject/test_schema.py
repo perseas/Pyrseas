@@ -26,7 +26,7 @@ class SchemaToMapTestCase(DatabaseToMapTestCase):
     def test_map_select_schema(self):
         "Map a single schema when three schemas exist"
         stmts = [CREATE_STMT, "CREATE SCHEMA s2", "CREATE SCHEMA s3"]
-        dbmap = self.to_map(stmts, ['s2'])
+        dbmap = self.to_map(stmts, schemas=['s2'])
         assert 'schema s1' not in dbmap
         assert dbmap['schema s2'] == {}
         assert 'schema s3' not in dbmap
