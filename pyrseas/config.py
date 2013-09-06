@@ -18,10 +18,9 @@ def _home_dir():
     return os.path.abspath(dir)
 
 
-def _load_cfg(envvar, alt_dir):
+def _load_cfg(cfgdir):
     cfgpath = ''
     cfg = {}
-    cfgdir = os.environ.get(envvar, alt_dir)
     if cfgdir is not None:
         if os.path.isdir(cfgdir):
             cfgpath = os.path.join(cfgdir, CFG_FILE)
@@ -37,13 +36,19 @@ class Config(dict):
     "A configuration dictionary"
 
     def __init__(self, sys_only=False):
-        self.update(_load_cfg("PYRSEAS_SYS_CONFIG", os.path.abspath(
-                    os.path.join(os.path.dirname(__file__), '..', 'config'))))
+        self.update(_load_cfg(
+            os.environ.get("PYRSEAS_SYS_CONFIG",
+                           os.path.abspath(os.path.join(
+                           os.path.dirname(__file__), '..', 'config')))))
         if sys_only:
             return
-        self.merge(_load_cfg("PYRSEAS_USER_CONFIG",
-                             os.path.join(_home_dir(), 'pyrseas')))
-        self.merge(_load_cfg("PYRSEAS_REPO_DIR", None))
+        self.merge(_load_cfg(os.environ.get("PYRSEAS_USER_CONFIG",
+                             os.path.join(_home_dir(), 'pyrseas'))))
+        cfgdir = os.environ.get("PYRSEAS_REPO_DIR", None)
+        if cfgdir is None and 'repository' in self and \
+                'path' in self['repository']:
+            cfgdir = self['repository']['path']
+        self.merge(_load_cfg(cfgdir))
 
     def merge(self, cfg):
         """Merge extra configuration

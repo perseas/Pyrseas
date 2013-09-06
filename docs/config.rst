@@ -57,10 +57,16 @@ Repository Configuration
 A configuration file can be placed in a version control repository or
 project directory, so that it can be under version control together
 with other Pyrseas files such as the output from ``dbtoyaml
---directory``.  There is no default location for this, but you can use
-the ``PYRSEAS_REPO_DIR`` to specify the directory path to the root of
-the repository and the utilities will look for a configuration file in
-that location.
+--directory``.  The default location for this can be specified in the
+user configuration, using the keys ``repository`` and ``path``, for
+example::
+
+ repository:
+   path: /home/user/project/repo
+
+You can also use the ``PYRSEAS_REPO_DIR`` environment variable to
+specify (or override) the directory path to the root of the repository
+and the utilities will look for a configuration file in that location.
 
 If present, the repository configuration file will be merged with the
 system and user configuration information.
