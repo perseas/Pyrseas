@@ -7,15 +7,10 @@
     DbSchemaObject, Function and Aggregate derived from Proc, and
     FunctionDict derived from DbObjectDict.
 """
-import sys
-
+from pyrseas.lib.pycompat import strtypes
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
 from pyrseas.dbobject import commentable, ownable, grantable, split_schema_obj
 from pyrseas.dbobject.privileges import privileges_from_map
-
-strtypes = (str, )
-if sys.version_info[0] == 2:
-    strtypes = (str, unicode)
 
 VOLATILITY_TYPES = {'i': 'immutable', 's': 'stable', 'v': 'volatile'}
 

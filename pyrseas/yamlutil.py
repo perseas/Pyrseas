@@ -1,9 +1,12 @@
+# -*- coding: utf-8 -*-
 """Pyrseas YAML utilities"""
 
-import sys
 from yaml import add_representer, dump
 
-if sys.version_info[0] == 2:
+from pyrseas.lib.pycompat import PY2
+
+
+if PY2:
     from yaml import safe_dump as dump
 
     class MultiLineStr(unicode):

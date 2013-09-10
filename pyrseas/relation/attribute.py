@@ -2,7 +2,7 @@
 """
     pyrseas.relation.attribute
 """
-import sys
+from pyrseas.lib.pycompat import PY2
 
 
 class Attribute(object):
@@ -25,8 +25,7 @@ class Attribute(object):
                     float(value) == value):
                 value = float(value)
             if not isinstance(value, type_):
-                if not (sys.version_info < (3, 0) and type_ == str
-                        and isinstance(value, unicode)):
+                if not (PY2 and type_ == str and isinstance(value, unicode)):
                     raise ValueError("Value (%s) of %r is not of type '%s'" %
                                      (value, self, type_.__name__))
         self.value = value

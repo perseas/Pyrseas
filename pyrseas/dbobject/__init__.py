@@ -10,9 +10,9 @@
 import os
 import re
 import string
-import sys
 from functools import wraps
 
+from pyrseas.lib.pycompat import PY2, strtypes
 from pyrseas.yamlutil import MultiLineStr, yamldump
 from pyrseas.dbobject.privileges import privileges_to_map
 from pyrseas.dbobject.privileges import add_grant, diff_privs
@@ -140,14 +140,14 @@ class DbObject(object):
         for key, val in list(attrs.items()):
             if val or key in self.keylist:
                 if key in ['definition', 'description', 'source'] and \
-                        isinstance(val, str) and '\n' in val:
+                        isinstance(val, strtypes) and '\n' in val:
                     newval = []
                     for line in val.split('\n'):
                         if line and line[-1] in (' ', '\t'):
                             line = line.rstrip()
                         newval.append(line)
                     strval = '\n'.join(newval)
-                    if sys.version < '3':
+                    if PY2:
                         strval = strval.decode('utf_8')
                     val = MultiLineStr(strval)
                 setattr(self, key, val)
@@ -199,12 +199,12 @@ class DbObject(object):
             :return: filename string
             """
             if objid:
-                if sys.version < '3':
+                if PY2:
                     objid = objid.decode('utf_8')
                 filename = '%s.%.*s.yaml' % (
                     objtype, MAX_IDENT_LEN, re.sub(
                         NON_FILENAME_CHARS, '_', objid))
-                if sys.version < '3':
+                if PY2:
                     filename = filename.encode('utf_8')
             else:
                 filename = '%s.yaml' % objtype.replace(' ', '_')

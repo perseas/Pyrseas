@@ -10,6 +10,7 @@
 """
 import sys
 
+from pyrseas.lib.pycompat import PY2
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
 from pyrseas.dbobject import quote_id, split_schema_obj
 from pyrseas.dbobject import commentable, ownable, grantable
@@ -96,7 +97,7 @@ class Sequence(DbClass):
             elif key == 'min_value' and val == 1:
                 seq[key] = None
             else:
-                if sys.version < '3':
+                if PY2:
                     if isinstance(val, (int, long)) and val <= sys.maxsize:
                         seq[key] = int(val)
                     else:
