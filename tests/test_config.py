@@ -10,8 +10,8 @@ from pyrseas.yamlutil import yamldump
 
 USER_CFG_DATA = {'database': {'port': 5433},
                  'output': {'version_comment': True}}
-CFG_TABLE_DATA = {'table t1': {'data': '/tmp/t1.data'}}
-CFG_DATA = {'schema public': CFG_TABLE_DATA}
+CFG_TABLE_DATA = {'schema public': ['t1', 't2']}
+CFG_DATA = {'dataload': CFG_TABLE_DATA}
 CFG_FILE = 'testcfg.yaml'
 
 
@@ -39,7 +39,7 @@ def test_repo_config(tmpdir):
     f.write(yamldump(CFG_DATA))
     os.environ["PYRSEAS_REPO_DIR"] = tmpdir.strpath
     cfg = Config()
-    assert cfg['schema public'] == CFG_TABLE_DATA
+    assert cfg['dataload'] == CFG_TABLE_DATA
 
 
 def test_cmd_parser(tmpdir):
@@ -51,4 +51,16 @@ def test_cmd_parser(tmpdir):
     os.environ["PYRSEAS_REPO_DIR"] = ''
     parser = cmd_parser("Test description", '0.0.1')
     cfg = parse_args(parser)
-    assert cfg['schema public'] == CFG_TABLE_DATA
+    assert cfg['dataload'] == CFG_TABLE_DATA
+
+
+def test_repo_user_config(tmpdir):
+    "Test a repository path specified in the user config"
+    usercfg = {'repository': {'path': tmpdir.strpath}}
+    userf = tmpdir.join("usercfg.yaml")
+    userf.write(yamldump(usercfg))
+    os.environ["PYRSEAS_USER_CONFIG"] = userf.strpath
+    repof = tmpdir.join("config.yaml")
+    repof.write(yamldump(CFG_DATA))
+    cfg = Config()
+    assert cfg['dataload'] == CFG_TABLE_DATA
