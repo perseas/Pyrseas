@@ -13,7 +13,6 @@ class AutodocTestCase(DbMigrateTestCase):
     @classmethod
     def tearDownClass(cls):
         cls.remove_tempfiles('autodoc')
-        cls.remove_tempfiles('empty')
 
     def test_autodoc(self):
         # Create the source schema
@@ -28,20 +27,11 @@ class AutodocTestCase(DbMigrateTestCase):
         #       the YAML directory tree is for processing
         srcyaml = self.tempfile_path('autodoc-src.yaml')
         self.create_yaml(srcyaml, True)
-        srcdir = self.tempfile_path('autodoc')
-        self.create_yaml_dir(srcdir, True)
-
-        # Run pg_dump/dbtoyaml against empty target database
-        emptydump = self.tempfile_path('empty.dump')
-        self.run_pg_dump(emptydump)
-        emptyyaml = self.tempfile_path('empty.yaml')
-        self.create_yaml(emptyyaml)
-        emptydir = self.tempfile_path('empty')
-        self.create_yaml_dir(emptydir)
+        self.create_yaml(None, True)
 
         # Migrate the target database
         targsql = self.tempfile_path('autodoc.sql')
-        self.migrate_target_dir(srcdir, targsql)
+        self.migrate_target(None, targsql)
 
         # Run pg_dump against target database
         targdump = self.tempfile_path('autodoc.dump')
@@ -57,15 +47,28 @@ class AutodocTestCase(DbMigrateTestCase):
         assert self.lines(srcyaml) == self.lines(targyaml)
 
         # Undo the changes
-        self.migrate_target_dir(emptydir, targsql)
+        self.srcdb.execute_commit(
+            "DROP SCHEMA inherit, product, store, warehouse CASCADE")
+        # Create source YAML file and directory tree
+        srcyaml = self.tempfile_path('autodoc-src-empty.yaml')
+        self.create_yaml(srcyaml, True)
+        self.create_yaml(None, True)
+        targsql = self.tempfile_path('autodoc-empty.sql')
+        self.migrate_target(None, targsql)
+
+        # Run pg_dump against source database
+        srcdump = self.tempfile_path('autodoc-src-empty.dump')
+        self.run_pg_dump(srcdump, True)
 
         # Run pg_dump against target database
+        targdump = self.tempfile_path('autodoc-empty.dump')
         self.run_pg_dump(targdump)
 
         # Create target YAML file
+        targyaml = self.tempfile_path('autodoc-empty.yaml')
         self.create_yaml(targyaml)
 
         # diff empty.dump against autodoc.dump
-        assert self.lines(emptydump) == self.lines(targdump)
+        assert self.lines(srcdump) == self.lines(targdump)
         # diff empty.yaml against autodoc.yaml
-        assert self.lines(emptyyaml) == self.lines(targyaml)
+        assert self.lines(srcyaml) == self.lines(targyaml)

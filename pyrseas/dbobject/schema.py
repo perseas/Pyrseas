@@ -37,7 +37,7 @@ class Schema(DbObject):
                                                    self.extern_filename()))
         return dir
 
-    def to_map(self, dbschemas, opts):
+    def to_map(self, dbschemas, opts, metadata_dir):
         """Convert tables, etc., dictionaries to a YAML-suitable format
 
         :param dbschemas: dictionary of schemas
@@ -97,8 +97,8 @@ class Schema(DbObject):
         if self.name == 'pg_catalog' and not schobjs:
             return {}
 
-        if opts.directory:
-            dir = self.extern_dir(opts.directory)
+        if opts.multiple_files:
+            dir = self.extern_dir(metadata_dir)
             if not os.path.exists(dir):
                 os.mkdir(dir)
             filemap = {}
@@ -111,7 +111,7 @@ class Schema(DbObject):
                     outobj = {extkey: filepath}
                 filemap.update(outobj)
             # always write the schema YAML file
-            filepath = os.path.join(opts.directory, self.extern_filename())
+            filepath = os.path.join(metadata_dir, self.extern_filename())
             extkey = self.extern_key()
             with open(filepath, 'a') as f:
                 f.write(yamldump({extkey: schbase}))
@@ -314,7 +314,7 @@ class SchemaDict(DbObjectDict):
             coll = dbcolls[(sch, cll)]
             link_one(sch, 'collations', cll, coll)
 
-    def to_map(self, opts):
+    def to_map(self, opts, metadata_dir=None):
         """Convert the schema dictionary to a regular dictionary
 
         :param opts: options to include/exclude schemas/tables, etc.
@@ -330,7 +330,7 @@ class SchemaDict(DbObjectDict):
                 if hasattr(opts, 'excl_schemas') and opts.excl_schemas \
                         and sch in opts.excl_schemas:
                     continue
-                schemas.update(self[sch].to_map(self, opts))
+                schemas.update(self[sch].to_map(self, opts, metadata_dir))
 
         return schemas
 

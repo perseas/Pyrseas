@@ -19,8 +19,8 @@ def main():
     parser = cmd_parser("Generate SQL statements to update a PostgreSQL "
                         "database to match the schema specified in a "
                         "YAML-formatted file(s)", __version__)
-    parser.add_argument('-d', '--directory',
-                        help='root directory for input YAML files')
+    parser.add_argument('-m', '--multiple-files', action='store_true',
+                        help='input from multiple files (metadata directory)')
     parser.add_argument('spec', nargs='?', type=FileType('r'),
                         default=sys.stdin, help='YAML specification')
     parser.add_argument('-1', '--single-transaction', action='store_true',
@@ -36,8 +36,8 @@ def main():
     output = cfg['files']['output']
     options = cfg['options']
     db = Database(cfg)
-    if options.directory:
-        inmap = db.map_from_dir(options.directory)
+    if options.multiple_files:
+        inmap = db.map_from_dir()
     else:
         inmap = yaml.safe_load(options.spec)
 

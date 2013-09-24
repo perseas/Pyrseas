@@ -475,7 +475,7 @@ class DbObjectDict(dict):
                 obj.privileges = obj.privileges.split(',')
             self[obj.key()] = obj
 
-    def to_map(self,  opts):
+    def to_map(self,  opts, metadata_dir=None):
         """Convert the object dictionary to a regular dictionary
 
         :param opts: options to include/exclude information, etc.
@@ -492,8 +492,8 @@ class DbObjectDict(dict):
             if objmap is not None:
                 extkey = obj.extern_key()
                 outobj = {extkey: objmap}
-                if opts.directory:
-                    filepath = os.path.join(opts.directory,
+                if opts.multiple_files:
+                    filepath = os.path.join(metadata_dir,
                                             obj.extern_filename())
                     with open(filepath, 'a') as f:
                         f.write(yamldump(outobj))

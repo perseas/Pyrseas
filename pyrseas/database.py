@@ -219,14 +219,14 @@ class Database(object):
         self.ndb.eventtrigs.from_map(input_evttrigs, self.ndb)
         self._link_refs(self.ndb)
 
-    def map_from_dir(self, directory):
-        """Read the database maps starting from a root directory
+    def map_from_dir(self):
+        """Read the database maps starting from metadata directory
 
-        :param directory: root directory holding the maps
         :return: dictionary
         """
-        if not os.path.isdir(directory):
-            sys.exit("Root directory '%s' doesn't exist" % directory)
+        metadata_dir = self.config['files']['metadata_path']
+        if not os.path.isdir(metadata_dir):
+            sys.exit("Metadata directory '%s' doesn't exist" % metadata_dir)
 
         def load(subdir, obj):
             with open(os.path.join(subdir, obj), 'r') as f:
@@ -234,22 +234,22 @@ class Database(object):
             return objmap if isinstance(objmap, dict) else {}
 
         inmap = {}
-        for entry in os.listdir(directory):
+        for entry in os.listdir(metadata_dir):
             if entry.endswith('.yaml'):
                 if entry.startswith('database.'):
                     continue
                 if not entry.startswith('schema.'):
-                    inmap.update(load(directory, entry))
+                    inmap.update(load(metadata_dir, entry))
             else:
                 # skip over unknown files/dirs
                 if not entry.startswith('schema.'):
                     continue
                 # read schema.xxx.yaml first
-                schmap = load(directory, entry + '.yaml')
+                schmap = load(metadata_dir, entry + '.yaml')
                 assert(len(schmap) == 1)
                 key = list(schmap.keys())[0]
                 inmap.update({key: {}})
-                subdir = os.path.join(directory, entry)
+                subdir = os.path.join(metadata_dir, entry)
                 if os.path.isdir(subdir):
                     for schobj in os.listdir(subdir):
                         schmap[key].update(load(subdir, schobj))
@@ -266,36 +266,46 @@ class Database(object):
             self.from_catalog()
 
         opts = self.config['options']
-        if opts.directory:
+        metadata_dir = None
+
+        if opts.multiple_files:
+            metadata_dir = self.config['files']['metadata_path']
+
             def mkdir_parents(dir):
                 head, tail = os.path.split(dir)
                 if head and not os.path.isdir(head):
                     mkdir_parents(head)
                 if tail:
                     os.mkdir(dir)
-            if not os.path.exists(opts.directory):
-                mkdir_parents(opts.directory)
-            dbfilepath = os.path.join(opts.directory, 'database.%s.yaml' %
+
+            if not os.path.exists(metadata_dir):
+                mkdir_parents(metadata_dir)
+            dbfilepath = os.path.join(metadata_dir, 'database.%s.yaml' %
                                       self.dbconn.dbname)
             if os.path.exists(dbfilepath):
                 with open(dbfilepath, 'r') as f:
                     objmap = yaml.safe_load(f)
                 for obj, val in objmap.items():
                     if isinstance(val, dict):
+                        dirpath = ''
                         for schobj, filepath in val.items():
                             if os.path.exists(filepath):
                                 os.remove(filepath)
+                                if schobj == 'schema':
+                                    (dirpath, ext) = os.path.splitext(filepath)
+                        if os.path.exists(dirpath):
+                            os.rmdir(dirpath)
                     elif os.path.exists(val):
                         os.remove(val)
 
-        dbmap = self.db.extensions.to_map(opts)
-        dbmap.update(self.db.languages.to_map(opts))
-        dbmap.update(self.db.casts.to_map(opts))
-        dbmap.update(self.db.fdwrappers.to_map(opts))
-        dbmap.update(self.db.eventtrigs.to_map(opts))
-        dbmap.update(self.db.schemas.to_map(opts))
+        dbmap = self.db.extensions.to_map(opts, metadata_dir)
+        dbmap.update(self.db.languages.to_map(opts, metadata_dir))
+        dbmap.update(self.db.casts.to_map(opts, metadata_dir))
+        dbmap.update(self.db.fdwrappers.to_map(opts, metadata_dir))
+        dbmap.update(self.db.eventtrigs.to_map(opts, metadata_dir))
+        dbmap.update(self.db.schemas.to_map(opts, metadata_dir))
 
-        if opts.directory:
+        if opts.multiple_files:
             with open(dbfilepath, 'w') as f:
                 f.write(yamldump(dbmap))
         if 'datacopy' in self.config:

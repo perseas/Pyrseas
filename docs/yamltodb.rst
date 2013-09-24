@@ -55,14 +55,13 @@ addition to the :doc:`cmdargs`):
     Specifies the location of the YAML specification.  If this is
     omitted or specified as a single or double dash, the specification
     is read from the program's standard input.  However, if the
-    :option:`--directory` option is used, that takes precedence.
+    :option:`--multiple-files` option is used, that takes precedence.
 
-.. cmdoption:: -d <directory>
-               --directory <directory>
+.. cmdoption:: -m, --multiple-files
 
-    Specifies the root of a two-level directory tree where the YAML
-    specification files are present.  See `Directory Tree Output`
-    under :doc:`dbtoyaml` for further details.
+    Specifies that input should be taken from YAML specification files
+    present in a two-level (metadata) directory tree.  See `Multiple
+    File Output` under :doc:`dbtoyaml` for further details.
 
 .. cmdoption:: -n <schema>
                --schema <schema>

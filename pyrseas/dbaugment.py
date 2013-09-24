@@ -19,9 +19,9 @@ def main():
     parser = cmd_parser("Generate a modified schema for a PostgreSQL "
                         "database, in YAML format, augmented with specified "
                         "attributes and procedures", __version__)
-    # TODO: processing of directory, owner and privileges
-    parser.add_argument('-d', '--directory',
-                        help='root directory for output')
+    # TODO: processing of multiple files, owner and privileges
+    parser.add_argument('-m', '--multiple-files', action='store_true',
+                        help='multiple files (metadata directory)')
     parser.add_argument('-O', '--no-owner', action='store_true',
                         help='exclude object ownership information')
     parser.add_argument('-x', '--no-privileges', action='store_true',

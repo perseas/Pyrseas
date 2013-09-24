@@ -150,3 +150,6 @@ augmenter:
       name: '{{table_name}}_20_audit_modified_only'
       procedure: audit_modified()
       timing: before
+repository:
+  metadata: metadata
+  data: metadata

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Test external files used in --directory option"""
+"""Test external files used in --multiple-files option"""
 import sys
 
 import pytest
@@ -38,7 +38,7 @@ class ExternalFilenameMapTestCase(DatabaseToMapTestCase):
                      "CREATE CAST (smallint AS boolean) WITH FUNCTION "
                      "int2_bool(smallint)",
                      "CREATE CAST (d1 AS integer) WITH INOUT AS IMPLICIT"],
-                    superuser=True, directory=True)
+                    superuser=True, multiple_files=True)
         expmap = {'cast (smallint as boolean)': {
             'function': 'int2_bool(smallint)', 'context': 'explicit',
             'method': 'function'}, 'cast (d1 as integer)':
@@ -51,7 +51,7 @@ class ExternalFilenameMapTestCase(DatabaseToMapTestCase):
             self.skipTest('Only available on PG 9.1')
         TRGM_VERS = '1.0' if self.db.version < 90300 else '1.1'
         self.to_map(["CREATE EXTENSION pg_trgm"], superuser=True,
-                    directory=True)
+                    multiple_files=True)
         expmap = {'extension plpgsql': {
             'schema': 'pg_catalog', 'version': '1.0',
             'description': 'PL/pgSQL procedural language'},
@@ -63,7 +63,8 @@ class ExternalFilenameMapTestCase(DatabaseToMapTestCase):
     def test_map_fd_wrappers(self):
         "Map foreign data wrappers"
         self.to_map([CREATE_FDW + "fdw1", CREATE_FDW + "fdw2 "
-                     "OPTIONS (debug 'true')"], superuser=True, directory=True)
+                     "OPTIONS (debug 'true')"], superuser=True,
+                    multiple_files=True)
         expmap = {'foreign data wrapper fdw1': {},
                   'foreign data wrapper fdw2': {'options': ['debug=true']}}
         assert self.yaml_load('foreign_data_wrapper.yaml') == expmap
@@ -72,7 +73,7 @@ class ExternalFilenameMapTestCase(DatabaseToMapTestCase):
         "Map languages"
         if self.db.version >= 90100:
             self.skipTest('Only available before PG 9.1')
-        self.to_map([DROP_LANG, "CREATE LANGUAGE plperl"], directory=True)
+        self.to_map([DROP_LANG, "CREATE LANGUAGE plperl"], multiple_files=True)
         assert self.yaml_load('language.yaml')['language plperl'] == {
             'trusted': True}
         self.db.execute_commit(DROP_LANG)
@@ -86,7 +87,7 @@ class ExternalFilenameMapTestCase(DatabaseToMapTestCase):
                      "COMMENT ON COLLATION coll1 IS 'A test collation'",
                      "CREATE COLLATION coll2 (LC_COLLATE = '%s', "
                      "LC_CTYPE = '%s')" % (COLL, COLL)],
-                    directory=True)
+                    multiple_files=True)
         assert self.yaml_load('collation.yaml', 'schema.public') == {
             'collation coll1': {'lc_collate': COLL, 'lc_ctype': COLL,
                                 'description': "A test collation"},
@@ -97,7 +98,7 @@ class ExternalFilenameMapTestCase(DatabaseToMapTestCase):
         self.to_map(["CREATE CONVERSION conv1 FOR 'LATIN1' TO 'UTF8' "
                      "FROM iso8859_1_to_utf8",
                      "COMMENT ON CONVERSION conv1 IS 'A test conversion'"],
-                    directory=True)
+                    multiple_files=True)
         assert self.yaml_load('conversion.yaml', 'schema.public') == {
             'conversion conv1': {'source_encoding': 'LATIN1',
             'dest_encoding': 'UTF8', 'function': 'iso8859_1_to_utf8',
@@ -108,7 +109,7 @@ class ExternalFilenameMapTestCase(DatabaseToMapTestCase):
         self.to_map(["CREATE FUNCTION f1() RETURNS text LANGUAGE sql "
                      "IMMUTABLE AS $_$%s$_$" % SOURCE1,
                      "CREATE FUNCTION f2() RETURNS text LANGUAGE sql "
-                     "IMMUTABLE AS $_$%s$_$" % SOURCE1], directory=True)
+                     "IMMUTABLE AS $_$%s$_$" % SOURCE1], multiple_files=True)
         expmap = {'language': 'sql', 'returns': 'text',
                   'source': SOURCE1, 'volatility': 'immutable'}
         assert self.yaml_load('function.f1.yaml', 'schema.public') == {
@@ -121,7 +122,7 @@ class ExternalFilenameMapTestCase(DatabaseToMapTestCase):
         self.to_map(["CREATE FUNCTION f3(integer) RETURNS text LANGUAGE sql "
                      "IMMUTABLE AS $_$%s$_$" % SOURCE2,
                      "CREATE FUNCTION f3(real) RETURNS text LANGUAGE sql "
-                     "IMMUTABLE AS $_$%s$_$" % SOURCE2], directory=True)
+                     "IMMUTABLE AS $_$%s$_$" % SOURCE2], multiple_files=True)
         expmap = {'language': 'sql', 'returns': 'text',
                   'source': SOURCE2, 'volatility': 'immutable'}
         assert self.yaml_load('function.f3.yaml', 'schema.public') == {
@@ -137,7 +138,7 @@ class ExternalFilenameMapTestCase(DatabaseToMapTestCase):
                      "CREATE OPERATOR CLASS oc1 FOR TYPE integer USING btree "
                      "AS OPERATOR 1 public.<, OPERATOR 3 public.=, OPERATOR "
                      "5 public.>, FUNCTION 1 btint4cmp(integer,integer)"],
-                    superuser=True, directory=True)
+                    superuser=True, multiple_files=True)
         oprmap = {'operator <(integer, integer)': {'procedure': 'int4lt'},
                   'operator =(integer, integer)': {'procedure': 'int4eq'},
                   'operator >(integer, integer)': {'procedure': 'int4gt'}}
@@ -153,7 +154,7 @@ class ExternalFilenameMapTestCase(DatabaseToMapTestCase):
         self.to_map(["CREATE SCHEMA s1",
                      "CREATE OPERATOR FAMILY s1.of1 USING btree",
                      "CREATE OPERATOR FAMILY s1.of2 USING btree"],
-                    superuser=True, directory=True)
+                    superuser=True, multiple_files=True)
         assert self.yaml_load('operator_family.yaml', 'schema.s1') == {
             'operator family of1 using btree': {},
             'operator family of2 using btree': {}}
@@ -162,7 +163,8 @@ class ExternalFilenameMapTestCase(DatabaseToMapTestCase):
         "Map tables"
         self.to_map(["CREATE TABLE t1 (c1 integer PRIMARY KEY, c2 text)",
                      "CREATE TABLE t2 (c1 integer, c2 integer, c3 text, "
-                     "FOREIGN KEY (c2) REFERENCES t1 (c1))"], directory=True)
+                     "FOREIGN KEY (c2) REFERENCES t1 (c1))"],
+                    multiple_files=True)
         expmap1 = {'table t1': {'columns': [
             {'c1': {'type': 'integer', 'not_null': True}},
             {'c2': {'type': 'text'}}],
@@ -179,7 +181,7 @@ class ExternalFilenameMapTestCase(DatabaseToMapTestCase):
         "Map tables into a merged file"
         self.to_map(["CREATE TABLE account_transfers_1 (c1 integer, c2 text)",
                      "CREATE TABLE account_transfers_2 (c1 integer, c2 text)"],
-                    directory=True)
+                    multiple_files=True)
         expmap = {'table account_transfers_1': {'columns': [
             {'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}]},
             'table account_transfers_2': {'columns': [
@@ -195,7 +197,7 @@ class ExternalFilenameMapTestCase(DatabaseToMapTestCase):
                      "LEXTYPES = prsd_lextype, HEADLINE = prsd_headline)",
                      "CREATE TEXT SEARCH CONFIGURATION tsc1 (PARSER = tsp1)",
                      "CREATE TEXT SEARCH CONFIGURATION tsc2 (PARSER = tsp1)"],
-                    superuser=True, directory=True)
+                    superuser=True, multiple_files=True)
         assert self.yaml_load('text_search_configuration.yaml',
                               'schema.public') == \
             {'text search configuration tsc1': {'parser': 'tsp1'},
@@ -211,13 +213,14 @@ class ExternalFilenameMapTestCase(DatabaseToMapTestCase):
         "Map three tables, drop one and map the remaining two"
         self.to_map(["CREATE TABLE t1 (c1 integer, c2 text)",
                      "CREATE TABLE t2 (c1 integer, c2 text)",
-                     "CREATE TABLE t3 (c1 integer, c2 text)"], directory=True)
+                     "CREATE TABLE t3 (c1 integer, c2 text)"],
+                    multiple_files=True)
         expmap = {'columns': [{'c1': {'type': 'integer'}},
                               {'c2': {'type': 'text'}}]}
         for tbl in ['t1', 't2', 't3']:
             assert self.yaml_load('table.%s.yaml' % tbl, 'schema.public')[
                 'table %s' % tbl] == expmap
-        self.to_map(["DROP TABLE t2"], directory=True)
+        self.to_map(["DROP TABLE t2"], multiple_files=True)
         with pytest.raises(IOError) as exc:
             self.yaml_load('table.t2.yaml', 'schema.public')
         assert 'No such file' in str(exc.value)

@@ -57,14 +57,14 @@ Repository Configuration
 A configuration file can be placed in a version control repository or
 project directory, so that it can be under version control together
 with other Pyrseas files such as the output from ``dbtoyaml
---directory``.  The default location for this can be specified in the
-user configuration, using the keys ``repository`` and ``path``, for
-example::
+--multiple-files``.  The default location for this can be specified in
+the user configuration, using the keys ``repository`` and ``path``,
+for example::
 
  repository:
    path: /home/user/project/repo
 
-You can also use the ``PYRSEAS_REPO_DIR`` environment variable to
+You can also use the :option:`--repository` command line option
 specify (or override) the directory path to the root of the repository
 and the utilities will look for a configuration file in that location.
 
@@ -75,6 +75,6 @@ Command Line Configuration
 --------------------------
 
 The utilities also allow you to specify a fourth configuration file on
-the command line, using the ``--config`` command line option.  Again,
-if the file exists, its information will be merged with previously
-read files.
+the command line, using the :option:`--config` command line option.
+Again, if the file exists, its information will be merged with
+previously read files.

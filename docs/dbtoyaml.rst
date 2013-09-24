@@ -20,9 +20,9 @@ Description
 PostgreSQL database to a `YAML <http://yaml.org>`_ formatted
 specification.  By default, the specification is output as a single
 output stream, which can be redirected or explicitly sent to a file.
-As an alternative, the ``--directory`` option allows you to break down
-the specification into multiple files, one for each object (see
-`Directory Tree Output`_).
+As an alternative, the ``--multiple-files`` option allows you to break
+down the specification into multiple files, one for each object (see
+`Multiple File Output`_).
 
 Note that `JSON <http://json.org/>`_ is an official
 subset of YAML version 1.2, so the :program:`dbtoyaml` output should
@@ -124,14 +124,18 @@ INSERT to user 'carol'.
 nearly all types of PostgreSQL database objects.  See :ref:`api-ref`
 for a list of supported objects.
 
-Directory Tree Output
----------------------
+Multiple File Output
+--------------------
 
 .. program:: dbtoyaml
 
-The :option:`--directory` option breaks down the output into multiple
-files under a given root directory.  The root is created if it does
-not exist.
+The :option:`--multiple-files` option breaks down the output into
+multiple files under a given root directory.  The root is created if
+it does not exist.  The root directory name defaults to ``metadata``
+in the system configuration file.  The location of the root directory
+defaults to the configuration item ``repository.path`` or can be
+specified using the :option:`--repository` option (see :doc:`config`
+and :doc:`cmdargs` for further details).
 
 The first level contains ``schema.<name>`` subdirectories,
 ``schema.<name>.yaml`` files and ``<objtype>.<name>.yaml`` files,
@@ -179,9 +183,9 @@ variable ``PYRSEAS_MAX_IDENT_LEN`` to some integer value (up to 63).
 Version Control and Dropped Objects
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-It is expected that the output of ``dbtoyaml --directory`` will be
-placed under version control.  Further invocations should then update
-the files in the same directory tree.  However, if an object is
+It is expected that the output of ``dbtoyaml --multiple-files`` will
+be placed under version control.  Further invocations should then
+update the files in the same directory tree.  However, if an object is
 dropped from the database ``dbtoyaml`` would normally only output
 files for new or changed objects--and thus keep the dropped object
 file under version control.  To deal with dropped objects, ``dbtoyaml
@@ -201,12 +205,10 @@ dbname
 
     Specifies the name of the database whose schema is to extracted.
 
-.. cmdoption:: -d <directory>
-               --directory <directory>
+.. cmdoption:: -m, --multiple-files
 
-    Extracts the schema to a two-level directory tree where
-    `directory` is the root of the tree.  See `Directory Tree Output`_
-    above.
+    Extracts the schema to a two-level directory tree.  See `Multiple
+    File Output`_ above.
 
 .. cmdoption:: -n <schema>
                --schema <schema>

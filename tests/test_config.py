@@ -21,6 +21,8 @@ def test_defaults():
     for key in ['audit_columns', 'functions', 'func_templates', 'columns',
                 'triggers']:
         assert key in cfg['augmenter']
+    for key in ['metadata', 'data']:
+        assert key in cfg['repository']
 
 
 def test_user_config(tmpdir):

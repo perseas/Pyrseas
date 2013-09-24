@@ -316,7 +316,7 @@ class DatabaseToMapTestCase(PyrseasTestCase):
     superuser = False
 
     def to_map(self, stmts, config={}, schemas=[], tables=[], no_owner=True,
-               no_privs=True, superuser=False, directory=False):
+               no_privs=True, superuser=False, multiple_files=False):
         """Execute statements and return a database map.
 
         :param stmts: list of SQL statements to execute
@@ -326,7 +326,7 @@ class DatabaseToMapTestCase(PyrseasTestCase):
         :param no_owner: exclude object owner information
         :param no_privs: exclude privilege information
         :param superuser: must be superuser to run
-        :param directory: emulate --directory option
+        :param multiple_files: emulate --multiple_files option
         :return: possibly trimmed map of database
         """
         if (self.superuser or superuser) and not self.db.is_superuser():
@@ -334,9 +334,10 @@ class DatabaseToMapTestCase(PyrseasTestCase):
         for stmt in stmts:
             self.db.execute(stmt)
         self.db.conn.commit()
+        if multiple_files:
+            self.cfg.merge({'files': {'metadata_path': TEST_DIR}})
         self.config_options(schemas=schemas, tables=tables, no_owner=no_owner,
-                            no_privs=no_privs,
-                            directory=TEST_DIR if directory else None)
+                            no_privs=no_privs, multiple_files=multiple_files)
         self.cfg.merge(config)
         return self.database().to_map()
 
@@ -478,30 +479,24 @@ class DbMigrateTestCase(TestCase):
         env.update({'PYTHONPATH': os.pathsep.join(path)})
         subprocess.check_call(args, env=env)
 
-    def create_yaml(self, yamlfile, srcdb=False):
+    def create_yaml(self, yamlfile='', srcdb=False):
         dbname = self.srcdb.name if srcdb else self.db.name
         args = [self.dbtoyaml]
         args.extend(self._db_params())
-        args.extend(['-o', yamlfile, dbname])
-        self.invoke(args)
-
-    def create_yaml_dir(self, yamldir, srcdb=False):
-        dbname = self.srcdb.name if srcdb else self.db.name
-        args = [self.dbtoyaml]
-        args.extend(self._db_params())
-        args.extend(['-d', yamldir, dbname])
+        if yamlfile:
+            args.extend(['-o', yamlfile, dbname])
+        else:
+            args.extend(['-r', TEST_DIR, '-m', dbname])
         self.invoke(args)
 
     def migrate_target(self, yamlfile, outfile):
         args = [self.yamltodb]
         args.extend(self._db_params())
-        args.extend(['-u', '-o', outfile, self.db.name, yamlfile])
-        self.invoke(args)
-
-    def migrate_target_dir(self, yamldir, outfile):
-        args = [self.yamltodb]
-        args.extend(self._db_params())
-        args.extend(['-u', '-o', outfile, '-d', yamldir, self.db.name])
+        if yamlfile:
+            args.extend(['-u', '-o', outfile, self.db.name, yamlfile])
+        else:
+            args.extend(['-u', '-o', outfile, '-r', TEST_DIR, '-m',
+                         self.db.name])
         self.invoke(args)
 
 
@@ -518,7 +513,7 @@ class AugmentToMapTestCase(PyrseasTestCase):
             self.db.execute(stmt)
         self.db.conn.commit()
         self.config_options(schemas=[], tables=[], no_owner=True,
-                            no_privs=True, directory=None)
+                            no_privs=True, multiple_files=False)
         db = AugmentDatabase(self.cfg)
         return db.apply(augmap)
 

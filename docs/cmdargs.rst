@@ -34,6 +34,16 @@ The Pyrseas utilities support the following command line options:
     for connections.  The default port number is determined by
     PostgreSQL (normally, 5432).
 
+.. cmdoption:: -r <path>
+               --repository <path>
+
+    Specifies the `path` to a directory where metadata and static data
+    files will be written to or read from, or where an additional
+    configuration file can be found.  Normally, this will be the root
+    of a version control repository.  If this is not specified on the
+    command line or in a configuration file, it defaults to the
+    current working directory.
+
 .. cmdoption:: -U <username>
                --user <username>
 
