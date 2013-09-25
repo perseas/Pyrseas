@@ -13,6 +13,7 @@ class AutodocTestCase(DbMigrateTestCase):
     @classmethod
     def tearDownClass(cls):
         cls.remove_tempfiles('autodoc')
+        cls.remove_tempfiles('metadata')
 
     def test_autodoc(self):
         # Create the source schema
