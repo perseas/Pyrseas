@@ -437,8 +437,8 @@ class Table(DbClass):
 
         return stmts
 
-    def load(self):
-        """Generate SQL to load data into a table
+    def data_import(self):
+        """Generate SQL to import data into a table
 
         :return: list of SQL statements
         """
@@ -749,7 +749,7 @@ class ClassDict(DbObjectDict):
         :param dbindexes: dictionary of indexes
         :param dbrules: dictionary of rules
         :param dbtriggers: dictionary of triggers
-        :param datacopy: dictionary of data loading info
+        :param datacopy: dictionary of data copying info
 
         Links each list of table columns in `dbcolumns` to the
         corresponding table. Fills the `foreign_keys`,
@@ -846,20 +846,20 @@ class ClassDict(DbObjectDict):
             raise
         return stmt
 
-    def copydata(self):
+    def data_export(self):
         """Iterate over tables to be copied
         """
         for tbl in self.datacopy:
             self.dbconn.copy_to("%s.data" % tbl.name, tbl.qualname())
 
-    def load(self):
-        """Iterate over tables to be loaded
+    def data_import(self):
+        """Iterate over tables to be imported
 
         :return: list of SQL statements
         """
         stmts = []
         for tbl in self.datacopy:
-            stmts.append(tbl.load())
+            stmts.append(tbl.data_import())
         return stmts
 
     def diff_map(self, intables):

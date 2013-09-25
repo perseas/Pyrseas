@@ -129,11 +129,11 @@ class Database(object):
                              db.operfams, db.operclasses, db.conversions,
                              db.tsconfigs, db.tsdicts, db.tsparsers,
                              db.tstempls, db.ftables, db.collations)
-        loadcfg = {}
+        copycfg = {}
         if 'datacopy' in self.config:
-            loadcfg = self.config['datacopy']
+            copycfg = self.config['datacopy']
         db.tables.link_refs(db.columns, db.constraints, db.indexes,
-                            db.rules, db.triggers, loadcfg)
+                            db.rules, db.triggers, copycfg)
         db.functions.link_refs(db.eventtrigs)
         db.fdwrappers.link_refs(db.servers)
         db.servers.link_refs(db.usermaps)
@@ -309,7 +309,7 @@ class Database(object):
             with open(dbfilepath, 'w') as f:
                 f.write(yamldump(dbmap))
         if 'datacopy' in self.config:
-            self.db.tables.copydata()
+            self.db.tables.data_export()
 
         return dbmap
 
@@ -379,5 +379,5 @@ class Database(object):
         stmts.append(self.db.fdwrappers._drop())
         stmts.append(self.db.languages._drop())
         if 'datacopy' in self.config:
-            stmts.append(self.ndb.tables.load())
+            stmts.append(self.ndb.tables.data_import())
         return [s for s in flatten(stmts)]
