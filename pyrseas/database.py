@@ -266,21 +266,19 @@ class Database(object):
             self.from_catalog()
 
         opts = self.config['options']
-        metadata_dir = None
+
+        def mkdir_parents(dir):
+            head, tail = os.path.split(dir)
+            if head and not os.path.isdir(head):
+                mkdir_parents(head)
+            if tail:
+                os.mkdir(dir)
 
         if opts.multiple_files:
-            metadata_dir = self.config['files']['metadata_path']
-
-            def mkdir_parents(dir):
-                head, tail = os.path.split(dir)
-                if head and not os.path.isdir(head):
-                    mkdir_parents(head)
-                if tail:
-                    os.mkdir(dir)
-
-            if not os.path.exists(metadata_dir):
-                mkdir_parents(metadata_dir)
-            dbfilepath = os.path.join(metadata_dir, 'database.%s.yaml' %
+            opts.metadata_dir = self.config['files']['metadata_path']
+            if not os.path.exists(opts.metadata_dir):
+                mkdir_parents(opts.metadata_dir)
+            dbfilepath = os.path.join(opts.metadata_dir, 'database.%s.yaml' %
                                       self.dbconn.dbname)
             if os.path.exists(dbfilepath):
                 with open(dbfilepath, 'r') as f:
@@ -298,18 +296,22 @@ class Database(object):
                     elif os.path.exists(val):
                         os.remove(val)
 
-        dbmap = self.db.extensions.to_map(opts, metadata_dir)
-        dbmap.update(self.db.languages.to_map(opts, metadata_dir))
-        dbmap.update(self.db.casts.to_map(opts, metadata_dir))
-        dbmap.update(self.db.fdwrappers.to_map(opts, metadata_dir))
-        dbmap.update(self.db.eventtrigs.to_map(opts, metadata_dir))
-        dbmap.update(self.db.schemas.to_map(opts, metadata_dir))
+        dbmap = self.db.extensions.to_map(opts)
+        dbmap.update(self.db.languages.to_map(opts))
+        dbmap.update(self.db.casts.to_map(opts))
+        dbmap.update(self.db.fdwrappers.to_map(opts))
+        dbmap.update(self.db.eventtrigs.to_map(opts))
+        opts.datacopy = None
+        if 'datacopy' in self.config:
+            opts.datacopy = self.config['datacopy']
+            opts.data_dir = self.config['files']['data_path']
+            if not os.path.exists(opts.data_dir):
+                mkdir_parents(opts.data_dir)
+        dbmap.update(self.db.schemas.to_map(opts))
 
         if opts.multiple_files:
             with open(dbfilepath, 'w') as f:
                 f.write(yamldump(dbmap))
-        if 'datacopy' in self.config:
-            self.db.tables.data_export()
 
         return dbmap
 

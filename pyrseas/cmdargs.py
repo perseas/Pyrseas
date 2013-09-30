@@ -101,6 +101,7 @@ def parse_args(parser):
         del args['repository']
 
     _cfg['files']['metadata_path'] = _repo_path(_cfg, 'metadata')
+    _cfg['files']['data_path'] = _repo_path(_cfg, 'data')
 
     if 'config' in _cfg['files'] and _cfg['files']['config']:
         _cfg.merge(yaml.safe_load(_cfg['files']['config']))

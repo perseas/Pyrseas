@@ -7,7 +7,7 @@ from pyrseas.testutils import InputMapToSqlTestCase, fix_indent
 
 CREATE_STMT = "CREATE TABLE t1 (c1 integer, c2 text)"
 TRUNC_STMT = "TRUNCATE ONLY t1"
-FILE_PATH = 't1.data'
+FILE_PATH = 'table.t1.data'
 COPY_STMT = "\\copy t1 from '%s' csv" % FILE_PATH
 TABLE_DATA = [(1, 'abc'), (2, 'def'), (3, 'ghi')]
 
@@ -27,7 +27,9 @@ class StaticTableToMapTestCase(DatabaseToMapTestCase):
         assert dbmap['schema public']['table t1'] == {
             'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}]}
         recs = []
-        with open(FILE_PATH) as f:
+        with open(os.path.join(
+                self.cfg['files']['data_path'], self.cfg['repository']['data'],
+                "schema.public", FILE_PATH)) as f:
             for line in f:
                 (c1, c2) = line.split(',')
                 recs.append((int(c1), c2.rstrip()))

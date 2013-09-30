@@ -336,6 +336,8 @@ class DatabaseToMapTestCase(PyrseasTestCase):
         self.db.conn.commit()
         if multiple_files:
             self.cfg.merge({'files': {'metadata_path': TEST_DIR}})
+        if 'datacopy' in config:
+            self.cfg.merge({'files': {'data_path': TEST_DIR}})
         self.config_options(schemas=schemas, tables=tables, no_owner=no_owner,
                             no_privs=no_privs, multiple_files=multiple_files)
         self.cfg.merge(config)

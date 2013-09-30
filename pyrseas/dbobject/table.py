@@ -443,8 +443,8 @@ class Table(DbClass):
         :return: list of SQL statements
         """
         stmts = ["TRUNCATE ONLY %s" % self.qualname()]
-        stmts.append("\\copy %s from '%s.data' csv" % (
-            self.qualname(), self.name))
+        stmts.append("\\copy %s from '%s.%s.data' csv" % (
+            self.qualname(), self.objtype.lower(), self.name))
         return stmts
 
 
@@ -850,7 +850,8 @@ class ClassDict(DbObjectDict):
         """Iterate over tables to be copied
         """
         for tbl in self.datacopy:
-            self.dbconn.copy_to("%s.data" % tbl.name, tbl.qualname())
+            self.dbconn.copy_to("%s.%s.data" % tbl.objtype.lower(), tbl.name,
+                                tbl.qualname())
 
     def data_import(self):
         """Iterate over tables to be imported
