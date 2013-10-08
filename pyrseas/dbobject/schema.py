@@ -57,7 +57,7 @@ class Schema(DbObject):
         schobjs = []
         seltbls = getattr(opts, 'tables', [])
         if hasattr(self, 'tables'):
-            for objkey in list(self.tables.keys()):
+            for objkey in self.tables:
                 if not seltbls or objkey in seltbls:
                     obj = self.tables[objkey]
                     schobjs.append((obj, obj.to_map(dbschemas, opts)))
@@ -65,7 +65,7 @@ class Schema(DbObject):
         def mapper(objtypes):
             if hasattr(self, objtypes):
                 schemadict = getattr(self, objtypes)
-                for objkey in list(schemadict.keys()):
+                for objkey in schemadict:
                     if objtypes == 'sequences' or (
                             not seltbls or objkey in seltbls):
                         obj = schemadict[objkey]
@@ -77,7 +77,7 @@ class Schema(DbObject):
         def mapper2(objtypes):
             if hasattr(self, objtypes):
                 schemadict = getattr(self, objtypes)
-                for objkey in list(schemadict.keys()):
+                for objkey in schemadict:
                     obj = schemadict[objkey]
                     schobjs.append((obj, obj.to_map(no_owner)))
 
@@ -89,13 +89,20 @@ class Schema(DbObject):
                              'types', 'collations']:
                 mapper2(objtypes)
             if hasattr(self, 'functions'):
-                for objkey in list(self.functions.keys()):
+                for objkey in self.functions:
                     obj = self.functions[objkey]
                     schobjs.append((obj, obj.to_map(no_owner, no_privs)))
 
         # special case for pg_catalog schema
         if self.name == 'pg_catalog' and not schobjs:
             return {}
+
+        if hasattr(self, 'datacopy') and self.datacopy:
+            dir = self.extern_dir(opts.data_dir)
+            if not os.path.exists(dir):
+                os.mkdir(dir)
+            for tbl in self.datacopy:
+                self.tables[tbl].data_export(dbschemas.dbconn, dir)
 
         if opts.multiple_files:
             dir = self.extern_dir(opts.metadata_dir)
@@ -132,6 +139,19 @@ class Schema(DbObject):
         :return: SQL statements
         """
         return ["CREATE SCHEMA %s" % quote_id(self.name)]
+
+    def data_import(self, opts):
+        """Generate SQL to import data from the tables in this schema
+
+        :param opts: options to include/exclude schemas/tables, etc.
+        :return: list of SQL statements
+        """
+        stmts = []
+        if hasattr(self, 'datacopy') and self.datacopy:
+            dir = self.extern_dir(opts.data_dir)
+            for tbl in self.datacopy:
+                stmts.append(self.tables[tbl].data_import(dir))
+        return stmts
 
 
 PREFIXES = {'domain ': 'types', 'type': 'types', 'table ': 'tables',
@@ -175,7 +195,7 @@ class SchemaDict(DbObjectDict):
         construction of the internal collection of dictionaries
         describing the database objects.
         """
-        for key in list(inmap.keys()):
+        for key in inmap:
             (objtype, spc, sch) = key.partition(' ')
             if spc != ' ' or objtype != 'schema':
                 raise KeyError("Unrecognized object type: %s" % key)
@@ -184,7 +204,7 @@ class SchemaDict(DbObjectDict):
             objdict = {}
             for key in sorted(inschema.keys()):
                 mapped = False
-                for prefix in list(PREFIXES.keys()):
+                for prefix in PREFIXES:
                     if key.startswith(prefix):
                         otype = PREFIXES[prefix]
                         if otype not in objdict:
@@ -219,100 +239,73 @@ class SchemaDict(DbObjectDict):
                     subobjs = getattr(newdb, objtype)
                     subobjs.from_map(schema, objdict[objtype])
 
-    def link_refs(self, dbtypes, dbtables, dbfunctions, dbopers, dbopfams,
-                  dbopcls, dbconvs, dbtsconfigs, dbtsdicts, dbtspars,
-                  dbtstmpls, dbftables, dbcolls):
-        """Connect types, tables and functions to their respective schemas
+    def link_refs(self, db, datacopy):
+        """Connect various schema objects to their respective schemas
 
-        :param dbtypes: dictionary of types and domains
-        :param dbtables: dictionary of tables, sequences and views
-        :param dbfunctions: dictionary of functions
-        :param dbopers: dictionary of operators
-        :param dbopfams: dictionary of operator families
-        :param dbopcls: dictionary of operator classes
-        :param dbconvs: dictionary of conversions
-        :param dbtsconfigs: dictionary of text search configurations
-        :param dbtsdicts: dictionary of text search dictionaries
-        :param dbtspars: dictionary of text search parsers
-        :param dbtstmpls: dictionary of text search templates
-        :param dbftables: dictionary of foreign tables
-        :param dbcolls: dictionary of collations
-
-        Fills in the `domains` dictionary for each schema by
-        traversing the `dbtypes` dictionary.  Fills in the `tables`,
-        `sequences`, `views` dictionaries for each schema by
-        traversing the `dbtables` dictionary. Fills in the `functions`
-        dictionary by traversing the `dbfunctions` dictionary.
+        :param db: dictionary of dictionaries of all objects
+        :param datacopy: dictionary of data copying info
         """
-        def link_one(sch, objtype, objkeys, obj):
-            schema = self[sch]
-            if not hasattr(schema, objtype):
-                setattr(schema, objtype, {})
-            objdict = getattr(schema, objtype)
-            objdict.update({objkeys: obj})
+        def link_one(targdict, objtype, objkeys, subtype=None):
+            schema = self[objkeys[0]]
+            if subtype is None:
+                subtype = objtype
+            if not hasattr(schema, subtype):
+                setattr(schema, subtype, {})
+            objdict = getattr(schema, subtype)
+            key = objkeys[1] if len(objkeys) == 2 else objkeys[1:]
+            objdict.update({key: targdict[objkeys]})
 
-        for (sch, typ) in list(dbtypes.keys()):
-            dbtype = dbtypes[(sch, typ)]
+        targ = db.types
+        for keys in targ:
+            dbtype = targ[keys]
             if isinstance(dbtype, Domain):
-                link_one(sch, 'domains', typ, dbtype)
+                link_one(targ, 'types', keys, 'domains')
             elif isinstance(dbtype, Enum) or isinstance(dbtype, Composite) \
                     or isinstance(dbtype, BaseType):
-                link_one(sch, 'types', typ, dbtype)
-        for (sch, tbl) in list(dbtables.keys()):
-            table = dbtables[(sch, tbl)]
+                link_one(targ, 'types', keys)
+        targ = db.tables
+        for keys in targ:
+            table = targ[keys]
+            type_ = 'tables'
             if isinstance(table, Table):
-                link_one(sch, 'tables', tbl, table)
+                link_one(targ, type_, keys)
             elif isinstance(table, Sequence):
-                link_one(sch, 'sequences', tbl, table)
+                link_one(targ, type_, keys, 'sequences')
             elif isinstance(table, MaterializedView):
-                link_one(sch, 'matviews', tbl, table)
+                link_one(targ, type_, keys, 'matviews')
             elif isinstance(table, View):
-                link_one(sch, 'views', tbl, table)
-        for (sch, fnc, arg) in list(dbfunctions.keys()):
-            func = dbfunctions[(sch, fnc, arg)]
-            link_one(sch, 'functions', (fnc, arg), func)
+                link_one(targ, type_, keys, 'views')
+        targ = db.functions
+        for keys in targ:
+            func = targ[keys]
+            link_one(targ, 'functions', keys)
             if hasattr(func, 'returns'):
                 rettype = func.returns
                 if rettype.upper().startswith("SETOF "):
                     rettype = rettype[6:]
-                (retsch, rettyp) = split_schema_obj(rettype, sch)
-                if (retsch, rettyp) in list(dbtables.keys()):
-                    deptbl = dbtables[(retsch, rettyp)]
+                (retsch, rettyp) = split_schema_obj(rettype, keys[0])
+                if (retsch, rettyp) in db.tables:
+                    deptbl = db.tables[(retsch, rettyp)]
                     if not hasattr(func, 'dependent_table'):
                         func.dependent_table = deptbl
                     if not hasattr(deptbl, 'dependent_funcs'):
                         deptbl.dependent_funcs = []
                     deptbl.dependent_funcs.append(func)
-        for (sch, opr, lft, rgt) in list(dbopers.keys()):
-            oper = dbopers[(sch, opr, lft, rgt)]
-            link_one(sch, 'operators', (opr, lft, rgt), oper)
-        for (sch, opc, idx) in list(dbopcls.keys()):
-            opcl = dbopcls[(sch, opc, idx)]
-            link_one(sch, 'operclasses', (opc, idx), opcl)
-        for (sch, opf, idx) in list(dbopfams.keys()):
-            opfam = dbopfams[(sch, opf, idx)]
-            link_one(sch, 'operfams', (opf, idx), opfam)
-        for (sch, cnv) in list(dbconvs.keys()):
-            conv = dbconvs[(sch, cnv)]
-            link_one(sch, 'conversions', cnv, conv)
-        for (sch, tsc) in list(dbtsconfigs.keys()):
-            tscfg = dbtsconfigs[(sch, tsc)]
-            link_one(sch, 'tsconfigs', tsc, tscfg)
-        for (sch, tsd) in list(dbtsdicts.keys()):
-            tsdict = dbtsdicts[(sch, tsd)]
-            link_one(sch, 'tsdicts', tsd, tsdict)
-        for (sch, tsp) in list(dbtspars.keys()):
-            tspar = dbtspars[(sch, tsp)]
-            link_one(sch, 'tsparsers', tsp, tspar)
-        for (sch, tst) in list(dbtstmpls.keys()):
-            tstmpl = dbtstmpls[(sch, tst)]
-            link_one(sch, 'tstempls', tst, tstmpl)
-        for (sch, ftb) in list(dbftables.keys()):
-            ftbl = dbftables[(sch, ftb)]
-            link_one(sch, 'ftables', ftb, ftbl)
-        for (sch, cll) in list(dbcolls.keys()):
-            coll = dbcolls[(sch, cll)]
-            link_one(sch, 'collations', cll, coll)
+        for objtype in ['operators', 'operclasses', 'operfams', 'conversions',
+                        'tsconfigs', 'tsdicts', 'tsparsers', 'tstempls',
+                        'ftables', 'collations']:
+            targ = getattr(db, objtype)
+            for keys in targ:
+                link_one(targ, objtype, keys)
+        for key in datacopy:
+            if not key.startswith('schema '):
+                raise KeyError("Unrecognized object type: %s" % key)
+            schema = self[key[7:]]
+            if not hasattr(schema, 'datacopy'):
+                schema.datacopy = []
+            for tbl in datacopy[key]:
+                if tbl in schema.tables:
+                    schema.datacopy.append(tbl)
 
     def to_map(self, opts):
         """Convert the schema dictionary to a regular dictionary
@@ -325,7 +318,7 @@ class SchemaDict(DbObjectDict):
         """
         schemas = {}
         selschs = getattr(opts, 'schemas', [])
-        for sch in list(self.keys()):
+        for sch in self:
             if not selschs or sch in selschs:
                 if hasattr(opts, 'excl_schemas') and opts.excl_schemas \
                         and sch in opts.excl_schemas:
@@ -346,7 +339,7 @@ class SchemaDict(DbObjectDict):
         """
         stmts = []
         # check input schemas
-        for sch in list(inschemas.keys()):
+        for sch in inschemas:
             insch = inschemas[sch]
             # does it exist in the database?
             if sch in self:
@@ -366,7 +359,7 @@ class SchemaDict(DbObjectDict):
                     # create new schema
                     stmts.append(insch.create())
         # check database schemas
-        for sch in list(self.keys()):
+        for sch in self:
             # if missing and not 'public', drop it
             if sch not in ['public', 'pg_catalog'] and sch not in inschemas:
                 self[sch].dropped = True
@@ -378,7 +371,15 @@ class SchemaDict(DbObjectDict):
         :return: SQL statements
         """
         stmts = []
-        for sch in list(self.keys()):
+        for sch in self:
             if sch != 'public' and hasattr(self[sch], 'dropped'):
                 stmts.append(self[sch].drop())
         return stmts
+
+    def data_import(self, opts):
+        """Iterate over schemas with tables to be imported
+
+        :param opts: options to include/exclude schemas/tables, etc.
+        :return: list of SQL statements
+        """
+        return [self[sch].data_import(opts) for sch in self]

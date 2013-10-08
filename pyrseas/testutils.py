@@ -335,22 +335,25 @@ class DatabaseToMapTestCase(PyrseasTestCase):
             self.db.execute(stmt)
         self.db.conn.commit()
         if multiple_files:
-            self.cfg.merge({'files': {'metadata_path': TEST_DIR}})
+            self.cfg.merge({'files': {'metadata_path': os.path.join(
+                            TEST_DIR, self.cfg['repository']['metadata'])}})
         if 'datacopy' in config:
-            self.cfg.merge({'files': {'data_path': TEST_DIR}})
+            self.cfg.merge({'files': {'data_path': os.path.join(
+                            TEST_DIR, self.cfg['repository']['data'])}})
         self.config_options(schemas=schemas, tables=tables, no_owner=no_owner,
                             no_privs=no_privs, multiple_files=multiple_files)
         self.cfg.merge(config)
         return self.database().to_map()
 
     def yaml_load(self, filename, subdir=None):
-        """Read a file in TEST_DIR and process it with YAML load
+        """Read a file in the metadata_path and process it with YAML load
 
         :param filename: name of the file
         :param subdir: name of a subdirectory where the file is located
         :return: YAML dictionary
         """
-        with open(os.path.join(TEST_DIR, subdir or '', filename), 'r') as f:
+        with open(os.path.join(self.cfg['files']['metadata_path'],
+                               subdir or '', filename), 'r') as f:
             inmap = f.read()
         return yaml.safe_load(inmap)
 
@@ -382,6 +385,9 @@ class InputMapToSqlTestCase(PyrseasTestCase):
                 self.db.execute(stmt)
             self.db.conn.commit()
 
+        if 'datacopy' in config:
+            self.cfg.merge({'files': {'data_path': os.path.join(
+                            TEST_DIR, self.cfg['repository']['data'])}})
         self.config_options(schemas=schemas, quote_reserved=quote_reserved)
         self.cfg.merge(config)
         return self.database().diff_map(inmap)

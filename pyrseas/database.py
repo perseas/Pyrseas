@@ -125,13 +125,10 @@ class Database(object):
     def _link_refs(self, db):
         """Link related objects"""
         db.languages.link_refs(db.functions)
-        db.schemas.link_refs(db.types, db.tables, db.functions, db.operators,
-                             db.operfams, db.operclasses, db.conversions,
-                             db.tsconfigs, db.tsdicts, db.tsparsers,
-                             db.tstempls, db.ftables, db.collations)
         copycfg = {}
         if 'datacopy' in self.config:
             copycfg = self.config['datacopy']
+        db.schemas.link_refs(db, copycfg)
         db.tables.link_refs(db.columns, db.constraints, db.indexes,
                             db.rules, db.triggers, copycfg)
         db.functions.link_refs(db.eventtrigs)
@@ -301,9 +298,7 @@ class Database(object):
         dbmap.update(self.db.casts.to_map(opts))
         dbmap.update(self.db.fdwrappers.to_map(opts))
         dbmap.update(self.db.eventtrigs.to_map(opts))
-        opts.datacopy = None
         if 'datacopy' in self.config:
-            opts.datacopy = self.config['datacopy']
             opts.data_dir = self.config['files']['data_path']
             if not os.path.exists(opts.data_dir):
                 mkdir_parents(opts.data_dir)
@@ -381,5 +376,6 @@ class Database(object):
         stmts.append(self.db.fdwrappers._drop())
         stmts.append(self.db.languages._drop())
         if 'datacopy' in self.config:
-            stmts.append(self.ndb.tables.data_import())
+            opts.data_dir = self.config['files']['data_path']
+            stmts.append(self.db.schemas.data_import(opts))
         return [s for s in flatten(stmts)]

@@ -8,6 +8,7 @@
     MaterializedView derived from View, and ClassDict derived from
     DbObjectDict.
 """
+import os
 import sys
 
 from pyrseas.lib.pycompat import PY2
@@ -437,14 +438,24 @@ class Table(DbClass):
 
         return stmts
 
-    def data_import(self):
+    def data_export(self, dbconn, dirpath):
+        """Copy table data out to a file
+
+        :param dbconn: database connection to use
+        :param dirpath: full path to the directory for the file to be created
+        """
+        filepath = os.path.join(dirpath, self.extern_filename('data'))
+        dbconn.copy_to(filepath, self.qualname())
+
+    def data_import(self, dirpath):
         """Generate SQL to import data into a table
 
+        :param dirpath: full path for the directory for the file
         :return: list of SQL statements
         """
+        filepath = os.path.join(dirpath, self.extern_filename('data'))
         stmts = ["TRUNCATE ONLY %s" % self.qualname()]
-        stmts.append("\\copy %s from '%s.%s.data' csv" % (
-            self.qualname(), self.objtype.lower(), self.name))
+        stmts.append("\\copy %s from '%s' csv" % (self.qualname(), filepath))
         return stmts
 
 
@@ -758,13 +769,13 @@ class ClassDict(DbObjectDict):
         `dbtriggers` dictionaries, which are keyed by schema, table
         and constraint, index or trigger name.
         """
-        for (sch, tbl) in list(dbcolumns.keys()):
+        for (sch, tbl) in dbcolumns:
             if (sch, tbl) in self:
                 assert isinstance(self[(sch, tbl)], Table)
                 self[(sch, tbl)].columns = dbcolumns[(sch, tbl)]
                 for col in dbcolumns[(sch, tbl)]:
                     col._table = self[(sch, tbl)]
-        for (sch, tbl) in list(self.keys()):
+        for (sch, tbl) in self:
             table = self[(sch, tbl)]
             if isinstance(table, Sequence) and hasattr(table, 'owner_table'):
                 if isinstance(table.owner_column, int):
@@ -778,7 +789,7 @@ class ClassDict(DbObjectDict):
                     if not hasattr(parent, 'descendants'):
                         parent.descendants = []
                     parent.descendants.append(table)
-        for (sch, tbl, cns) in list(dbconstrs.keys()):
+        for (sch, tbl, cns) in dbconstrs:
             constr = dbconstrs[(sch, tbl, cns)]
             if hasattr(constr, 'target'):
                 continue
@@ -803,34 +814,22 @@ class ClassDict(DbObjectDict):
                 if not hasattr(table, 'unique_constraints'):
                     table.unique_constraints = {}
                 table.unique_constraints.update({cns: constr})
-        for (sch, tbl, idx) in list(dbindexes.keys()):
-            assert self[(sch, tbl)]
-            table = self[(sch, tbl)]
-            if not hasattr(table, 'indexes'):
-                table.indexes = {}
-            table.indexes.update({idx: dbindexes[(sch, tbl, idx)]})
-        for (sch, tbl, rul) in list(dbrules.keys()):
-            assert self[(sch, tbl)]
-            table = self[(sch, tbl)]
-            if not hasattr(table, 'rules'):
-                table.rules = {}
-            table.rules.update({rul: dbrules[(sch, tbl, rul)]})
+
+        def link_one(targdict, schema, tbl, objkey, objtype):
+            table = self[(schema, tbl)]
+            if not hasattr(table, objtype):
+                setattr(table, objtype, {})
+            objdict = getattr(table, objtype)
+            objdict.update({objkey: targdict[(schema, tbl, objkey)]})
+
+        for (sch, tbl, idx) in dbindexes:
+            link_one(dbindexes, sch, tbl, idx, 'indexes')
+        for (sch, tbl, rul) in dbrules:
+            link_one(dbrules, sch, tbl, rul, 'rules')
             dbrules[(sch, tbl, rul)]._table = self[(sch, tbl)]
-        for (sch, tbl, trg) in list(dbtriggers.keys()):
-            assert self[(sch, tbl)]
-            table = self[(sch, tbl)]
-            if not hasattr(table, 'triggers'):
-                table.triggers = {}
-            table.triggers.update({trg: dbtriggers[(sch, tbl, trg)]})
+        for (sch, tbl, trg) in dbtriggers:
+            link_one(dbtriggers, sch, tbl, trg, 'triggers')
             dbtriggers[(sch, tbl, trg)]._table = self[(sch, tbl)]
-        if datacopy and not hasattr(self, 'datacopy'):
-            self.datacopy = []
-            for key in datacopy.keys():
-                if not key.startswith('schema '):
-                    raise KeyError("Unrecognized object type: %s" % key)
-                sch = key[7:]
-                for tbl in datacopy[key]:
-                    self.datacopy.append(self[(sch, tbl)])
 
     def _rename(self, obj, objtype):
         """Process a RENAME"""
@@ -845,23 +844,6 @@ class ClassDict(DbObjectDict):
                 oldname, objtype, obj.name), )
             raise
         return stmt
-
-    def data_export(self):
-        """Iterate over tables to be copied
-        """
-        for tbl in self.datacopy:
-            self.dbconn.copy_to("%s.%s.data" % tbl.objtype.lower(), tbl.name,
-                                tbl.qualname())
-
-    def data_import(self):
-        """Iterate over tables to be imported
-
-        :return: list of SQL statements
-        """
-        stmts = []
-        for tbl in self.datacopy:
-            stmts.append(tbl.data_import())
-        return stmts
 
     def diff_map(self, intables):
         """Generate SQL to transform existing tables and sequences

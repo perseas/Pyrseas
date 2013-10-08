@@ -174,9 +174,10 @@ class DbObject(object):
         """
         return '%s %s' % (self.objtype.lower(), self.name)
 
-    def extern_filename(self):
-        """Return a filename to be used to output external maps
+    def extern_filename(self, ext='yaml'):
+        """Return a filename to be used to output external files
 
+        :param ext: file extension
         :return: filename string
 
         This is used for the first two levels of external maps.  The
@@ -201,13 +202,13 @@ class DbObject(object):
             if objid:
                 if PY2:
                     objid = objid.decode('utf_8')
-                filename = '%s.%.*s.yaml' % (
+                filename = '%s.%.*s.%s' % (
                     objtype, MAX_IDENT_LEN, re.sub(
-                        NON_FILENAME_CHARS, '_', objid))
+                        NON_FILENAME_CHARS, '_', objid), ext)
                 if PY2:
                     filename = filename.encode('utf_8')
             else:
-                filename = '%s.yaml' % objtype.replace(' ', '_')
+                filename = '%s.%s' % (objtype.replace(' ', '_'), ext)
             return filename.lower()
 
         if hasattr(self, 'single_extern_file') and self.single_extern_file:
