@@ -28,6 +28,8 @@ course the identifying attribute in the :class:`Schema`
 
 .. automethod:: Schema.create
 
+.. automethod:: Schema.data_import
+
 Schema Dictionary
 -----------------
 
@@ -54,3 +56,5 @@ filled in as the recursive interpretation proceeds.
 .. automethod:: SchemaDict.to_map
 
 .. automethod:: SchemaDict.diff_map
+
+.. automethod:: SchemaDict.data_import

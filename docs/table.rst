@@ -115,6 +115,8 @@ such specification.
 
 .. automethod:: Table.diff_map
 
+.. automethod:: Table.data_export
+
 .. automethod:: Table.data_import
 
 View
@@ -169,9 +171,5 @@ of tables, views and sequences in a database.
 .. automethod:: ClassDict.from_map
 
 .. automethod:: ClassDict.link_refs
-
-.. automethod:: ClassDict.data_export
-
-.. automethod:: ClassDict.data_import
 
 .. automethod:: ClassDict.diff_map
