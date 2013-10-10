@@ -103,9 +103,11 @@ class Function(Proc):
             src = "$$%s$$" % (newsrc or self.source)
         else:
             src = "$_$%s$_$" % (newsrc or self.source)
-        volat = strict = secdef = cost = rows = config = ''
+        volat = leakproof = strict = secdef = cost = rows = config = ''
         if hasattr(self, 'volatility'):
             volat = ' ' + VOLATILITY_TYPES[self.volatility].upper()
+        if hasattr(self, 'leakproof') and self.leakproof is True:
+            leakproof = ' LEAKPROOF'
         if hasattr(self, 'strict') and self.strict:
             strict = ' STRICT'
         if hasattr(self, 'security_definer') and self.security_definer:
@@ -125,9 +127,9 @@ class Function(Proc):
 
         args = self.allargs if hasattr(self, 'allargs') else self.arguments
         stmts.append("CREATE%s FUNCTION %s(%s) RETURNS %s\n    LANGUAGE %s"
-                     "%s%s%s%s%s%s\n    AS %s" % (
+                     "%s%s%s%s%s%s%s\n    AS %s" % (
                      newsrc and " OR REPLACE" or '', self.qualname(),
-                     args, self.returns, self.language, volat,
+                     args, self.returns, self.language, volat, leakproof,
                      strict, secdef, cost, rows, config, src))
         return stmts
 
@@ -148,6 +150,15 @@ class Function(Proc):
         if hasattr(infunction, 'owner'):
             if infunction.owner != self.owner:
                 stmts.append(self.alter_owner(infunction.owner))
+        if hasattr(self, 'leakproof') and self.leakproof is True:
+            if hasattr(infunction, 'leakproof') and \
+                    infunction.leakproof is True:
+                stmts.append("ALTER FUNCTION %s LEAKPROOF" % self.identifier())
+            else:
+                stmts.append("ALTER FUNCTION %s NOT LEAKPROOF"
+                             % self.identifier())
+        elif hasattr(infunction, 'leakproof') and infunction.leakproof is True:
+            stmts.append("ALTER FUNCTION %s LEAKPROOF" % self.qualname())
         stmts.append(self.diff_privileges(infunction))
         stmts.append(self.diff_description(infunction))
         return stmts
@@ -190,6 +201,32 @@ class Aggregate(Proc):
                 self.arguments, self.sfunc, self.stype,
                 opt_clauses and ',\n    ' or '', ',\n    '.join(opt_clauses))]
 
+QUERY_PRE92 = \
+    """SELECT nspname AS schema, proname AS name,
+              pg_get_function_identity_arguments(p.oid) AS arguments,
+              pg_get_function_arguments(p.oid) AS allargs,
+              pg_get_function_result(p.oid) AS returns,
+              rolname AS owner, array_to_string(proacl, ',') AS privileges,
+              l.lanname AS language, provolatile AS volatility,
+              proisstrict AS strict, proisagg, prosrc AS source,
+              probin::text AS obj_file, proconfig AS configuration,
+              prosecdef AS security_definer, procost AS cost,
+              aggtransfn::regproc AS sfunc, aggtranstype::regtype AS stype,
+              aggfinalfn::regproc AS finalfunc,
+              agginitval AS initcond, aggsortop::regoper AS sortop,
+              obj_description(p.oid, 'pg_proc') AS description,
+              prorows::integer AS rows
+       FROM pg_proc p
+            JOIN pg_roles r ON (r.oid = proowner)
+            JOIN pg_namespace n ON (pronamespace = n.oid)
+            JOIN pg_language l ON (prolang = l.oid)
+            LEFT JOIN pg_aggregate a ON (p.oid = aggfnoid)
+       WHERE (nspname != 'pg_catalog' AND nspname != 'information_schema')
+         AND p.oid NOT IN (
+             SELECT objid FROM pg_depend WHERE deptype = 'e'
+                          AND classid = 'pg_proc'::regclass)
+       ORDER BY nspname, proname"""
+
 
 class ProcDict(DbObjectDict):
     "The collection of regular and aggregate functions in a database"
@@ -205,8 +242,8 @@ class ProcDict(DbObjectDict):
                   proisstrict AS strict, proisagg, prosrc AS source,
                   probin::text AS obj_file, proconfig AS configuration,
                   prosecdef AS security_definer, procost AS cost,
-                  aggtransfn::regproc AS sfunc,
-                  aggtranstype::regtype AS stype,
+                  proleakproof AS leakproof,
+                  aggtransfn::regproc AS sfunc, aggtranstype::regtype AS stype,
                   aggfinalfn::regproc AS finalfunc,
                   agginitval AS initcond, aggsortop::regoper AS sortop,
                   obj_description(p.oid, 'pg_proc') AS description,
@@ -224,6 +261,8 @@ class ProcDict(DbObjectDict):
 
     def _from_catalog(self):
         """Initialize the dictionary of procedures by querying the catalogs"""
+        if self.dbconn.version < 90200:
+            self.query = QUERY_PRE92
         for proc in self.fetch():
             if hasattr(proc, 'privileges'):
                 proc.privileges = proc.privileges.split(',')
@@ -250,7 +289,7 @@ class ProcDict(DbObjectDict):
         :param schema: schema owning the functions
         :param infuncs: YAML map defining the functions
         """
-        for key in list(infuncs.keys()):
+        for key in infuncs:
             (objtype, spc, fnc) = key.partition(' ')
             if spc != ' ' or objtype not in ['function', 'aggregate']:
                 raise KeyError("Unrecognized object type: %s" % key)
@@ -269,8 +308,8 @@ class ProcDict(DbObjectDict):
                 func.language = 'internal'
             if not infunc:
                 raise ValueError("Function '%s' has no specification" % fnc)
-            for attr, val in list(infunc.items()):
-                setattr(func, attr, val)
+            for attr in infunc:
+                setattr(func, attr, infunc[attr])
             if hasattr(func, 'volatility'):
                 func.volatility = func.volatility[:1].lower()
             if isinstance(func, Function):
@@ -291,7 +330,7 @@ class ProcDict(DbObjectDict):
         Fills in the `event_triggers` list for each function by
         traversing the `dbeventtrigs` dictionary.
         """
-        for key in list(dbeventtrigs.keys()):
+        for key in dbeventtrigs:
             evttrg = dbeventtrigs[key]
             (sch, fnc) = split_schema_obj(evttrg.procedure)
             func = self[(sch, fnc[:-2], '')]
@@ -312,7 +351,7 @@ class ProcDict(DbObjectDict):
         stmts = []
         created = False
         # check input functions
-        for (sch, fnc, arg) in list(infuncs.keys()):
+        for (sch, fnc, arg) in infuncs:
             infunc = infuncs[(sch, fnc, arg)]
             if isinstance(infunc, Aggregate):
                 continue
@@ -337,7 +376,7 @@ class ProcDict(DbObjectDict):
                 stmts.append(diff_stmts)
 
         # check input aggregates
-        for (sch, fnc, arg) in list(infuncs.keys()):
+        for (sch, fnc, arg) in infuncs:
             infunc = infuncs[(sch, fnc, arg)]
             if not isinstance(infunc, Aggregate):
                 continue
@@ -353,7 +392,7 @@ class ProcDict(DbObjectDict):
                 stmts.append(self[(sch, fnc, arg)].diff_map(infunc))
 
         # check existing functions
-        for (sch, fnc, arg) in list(self.keys()):
+        for (sch, fnc, arg) in self:
             func = self[(sch, fnc, arg)]
             # if missing, mark it for dropping
             if (sch, fnc, arg) not in infuncs:
@@ -369,12 +408,12 @@ class ProcDict(DbObjectDict):
         :return: SQL statements
         """
         stmts = []
-        for (sch, fnc, arg) in list(self.keys()):
+        for (sch, fnc, arg) in self:
             func = self[(sch, fnc, arg)]
             if isinstance(func, Aggregate) and hasattr(func, 'dropped'):
                 stmts.append(func.drop())
 
-        for (sch, fnc, arg) in list(self.keys()):
+        for (sch, fnc, arg) in self:
             func = self[(sch, fnc, arg)]
             if hasattr(func, 'dropped') and not hasattr(func, '_dep_type'):
                 stmts.append(func.drop())

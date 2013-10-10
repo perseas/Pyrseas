@@ -21,6 +21,10 @@ SOURCE3 = "SELECT * FROM generate_series($1, $2)"
 CREATE_STMT3 = "CREATE FUNCTION f2(integer, integer) RETURNS SETOF integer " \
     "ROWS 20 LANGUAGE sql IMMUTABLE AS $_$%s$_$" % SOURCE3
 
+SOURCE4 = "SELECT $1 + $2"
+CREATE_STMT4 = "CREATE FUNCTION f1(integer, integer) RETURNS integer " \
+    "LANGUAGE sql IMMUTABLE LEAKPROOF AS $_$%s$_$" % SOURCE4
+
 
 class FunctionToMapTestCase(DatabaseToMapTestCase):
     """Test mapping of existing functions"""
@@ -109,6 +113,16 @@ class FunctionToMapTestCase(DatabaseToMapTestCase):
         dbmap = self.to_map([CREATE_STMT3])
         assert dbmap['schema public']['function f2(integer, integer)'][
             'rows'] == 20
+
+    def test_map_function_leakproof(self):
+        "Map a function with LEAKPROOF qualifier"
+        if self.db.version < 90200:
+            self.skipTest('Only available on PG 9.2 or later')
+        dbmap = self.to_map([CREATE_STMT4], superuser=True)
+        expmap = {'language': 'sql', 'returns': 'integer', 'leakproof': True,
+                  'source': SOURCE4, 'volatility': 'immutable'}
+        assert dbmap['schema public']['function f1(integer, integer)'] == \
+            expmap
 
 
 class FunctionToSqlTestCase(InputMapToSqlTestCase):
@@ -275,6 +289,33 @@ class FunctionToSqlTestCase(InputMapToSqlTestCase):
         sql = self.to_sql(inmap, stmts)
         assert sql == ["COMMENT ON FUNCTION f1(integer, integer) IS "
                        "'Changed function f1'"]
+
+    def test_function_leakproof(self):
+        "Create a function with LEAKPROOF qualifier"
+        if self.db.version < 90200:
+            self.skipTest('Only available on PG 9.2 or later')
+        inmap = self.std_map()
+        inmap['schema public'].update({
+            'function f1(integer, integer)': {
+                'language': 'sql', 'returns': 'integer', 'leakproof': True,
+                'source': SOURCE4, 'volatility': 'immutable'}})
+        sql = self.to_sql(inmap, superuser=True)
+        assert fix_indent(sql[1]) == "CREATE FUNCTION f1(integer, integer) " \
+            "RETURNS integer LANGUAGE sql IMMUTABLE LEAKPROOF AS " \
+            "$_$%s$_$" % SOURCE4
+
+    def test_alter_function_leakproof(self):
+        "Change a function with LEAKPROOF qualifier"
+        if self.db.version < 90200:
+            self.skipTest('Only available on PG 9.2 or later')
+        inmap = self.std_map()
+        inmap['schema public'].update({
+            'function f1(integer, integer)': {
+                'language': 'sql', 'returns': 'integer',
+                'source': SOURCE4, 'volatility': 'immutable'}})
+        sql = self.to_sql(inmap, [CREATE_STMT4], superuser=True)
+        assert fix_indent(sql[0]) == \
+            "ALTER FUNCTION f1(integer, integer) NOT LEAKPROOF"
 
 
 class AggregateToMapTestCase(DatabaseToMapTestCase):
