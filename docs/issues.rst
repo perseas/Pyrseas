@@ -26,3 +26,37 @@ The tag has to be added manually to a YAML specification for yamltodb
 to act on it and cannot be kept in the YAML file for subsequent runs.
 This is not entirely satisfactory for storing the YAML file in a
 version control system.
+
+Multiline Strings
+-----------------
+
+The text of function source code, view definitions or object COMMENTs
+present a problem when they span multiple lines.  The default YAML
+output format is to enclose the entire string in double quotes, to
+show newlines that are part of the text as escaped characters (i.e.,
+``\n``) and to break the text into lines with a
+backslash-newline-indentation-backslash pattern.  For example::
+
+ source: "\n     SELECT inventory_id\n     FROM inventory\n     WHERE film_id =\
+   \ $1\n     AND store_id = $2\n     AND inventory_in_stock(inventory_id);\n"
+
+This is not very readable, but it does allow YAML to read it back and
+correctly reconstruct the original string.  To improve readability,
+Pyrseas 0.7 introduced special processing for these strings.  By using
+YAML notation, the same string is represented as follows::
+
+ source: |2
+
+       SELECT inventory_id
+       FROM inventory
+       WHERE film_id = $1
+       AND store_id = $2
+       AND NOT inventory_in_stock(inventory_id);
+
+However, due to Python 2.x issues with Unicode, the more readable
+format is *only* available if using Python 3.x.
+
+Note also that if your function source code has trailing spaces at the
+end of lines, they would normally be represented in the original
+default format.  However, in the interest of readability,
+:program:`dbtoyaml` will remove the trailing spaces from the text.
