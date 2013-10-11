@@ -148,8 +148,9 @@ class DbObject(object):
                         newval.append(line)
                     strval = '\n'.join(newval)
                     if PY2:
-                        strval = strval.decode('utf_8')
-                    val = MultiLineStr(strval)
+                        val = strval.encode('utf_8').decode('utf_8')
+                    else:
+                        val = MultiLineStr(strval)
                 setattr(self, key, val)
 
     def extern_key(self):
