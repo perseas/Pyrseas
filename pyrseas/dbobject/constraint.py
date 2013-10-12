@@ -356,7 +356,7 @@ class ConstraintDict(DbObjectDict):
         """
         if 'check_constraints' in inconstrs:
             chks = inconstrs['check_constraints']
-            for cns in list(chks.keys()):
+            for cns in chks:
                 check = CheckConstraint(table=table.name, schema=table.schema,
                                         name=cns)
                 val = chks[cns]
@@ -391,7 +391,7 @@ class ConstraintDict(DbObjectDict):
             self[(table.schema, table.name, cns)] = pkey
         if 'foreign_keys' in inconstrs:
             fkeys = inconstrs['foreign_keys']
-            for cns in list(fkeys.keys()):
+            for cns in fkeys:
                 fkey = ForeignKey(table=table.name, schema=table.schema,
                                   name=cns)
                 val = fkeys[cns]
@@ -448,7 +448,7 @@ class ConstraintDict(DbObjectDict):
                 self[(table.schema, table.name, cns)] = fkey
         if 'unique_constraints' in inconstrs:
             uconstrs = inconstrs['unique_constraints']
-            for cns in list(uconstrs.keys()):
+            for cns in uconstrs:
                 unq = UniqueConstraint(table=table.name, schema=table.schema,
                                        name=cns)
                 val = uconstrs[cns]
@@ -477,7 +477,7 @@ class ConstraintDict(DbObjectDict):
         # constraints cannot be renamed
         for turn in (1, 2):
             # check database constraints
-            for (sch, tbl, cns) in list(self.keys()):
+            for (sch, tbl, cns) in self:
                 constr = self[(sch, tbl, cns)]
                 if isinstance(constr, ForeignKey):
                     if turn == 1:
@@ -489,7 +489,7 @@ class ConstraintDict(DbObjectDict):
                         and not hasattr(constr, 'target'):
                     stmts.append(constr.drop())
             # check input constraints
-            for (sch, tbl, cns) in list(inconstrs.keys()):
+            for (sch, tbl, cns) in inconstrs:
                 inconstr = inconstrs[(sch, tbl, cns)]
                 # skip DOMAIN constraints
                 if hasattr(inconstr, 'target'):

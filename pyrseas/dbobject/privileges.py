@@ -184,11 +184,11 @@ def diff_privs(currobj, currlist, newobj, newlist, subobj=''):
     for privspec in newlist:
         (usr, privcodes, grantor) = _split_privs(privspec)
         newprivs[(usr, grantor)] = privcodes
-    for (usr, gtor) in list(currprivs.keys()):
+    for (usr, gtor) in currprivs:
         if (usr, gtor) not in newprivs:
             stmts.append(add_revoke(currobj, rejoin(currprivs, usr, gtor),
                                     subobj))
-    for (usr, gtor) in list(newprivs.keys()):
+    for (usr, gtor) in newprivs:
         if (usr, gtor) not in currprivs:
             stmts.append(add_grant(newobj, rejoin(newprivs, usr, gtor),
                                    subobj))

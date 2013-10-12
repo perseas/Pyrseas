@@ -62,7 +62,7 @@ def tuple_values_dict(currtuple, newtuple=None):
     :return: dictionary of attributes and values
     """
     valdict = {}
-    for attr in list(currtuple.__dict__.keys()):
+    for attr in currtuple.__dict__:
         if attr in RESERVED_ATTRIBUTE_NAMES:
             continue
         currval = getattr(currtuple, attr)
@@ -82,7 +82,7 @@ def tuple_values_dict(currtuple, newtuple=None):
             if diff:
                 valdict.update({attr: newval})
     if newtuple is not None:
-        for newattr in list(newtuple.__dict__.keys()):
+        for newattr in newtuple.__dict__:
             if newattr in RESERVED_ATTRIBUTE_NAMES:
                 continue
             if newattr not in currtuple.__dict__:

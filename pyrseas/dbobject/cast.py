@@ -96,7 +96,7 @@ class CastDict(DbObjectDict):
         :param incasts: YAML map defining the casts
         :param newdb: collection of dictionaries defining the database
         """
-        for key in list(incasts.keys()):
+        for key in incasts:
             if not key.startswith('cast (') or ' AS ' not in key.upper() \
                     or key[-1:] != ')':
                 raise KeyError("Unrecognized object type: %s" % key)
@@ -130,7 +130,7 @@ class CastDict(DbObjectDict):
         """
         stmts = []
         # check input casts
-        for (src, trg) in list(incasts.keys()):
+        for (src, trg) in incasts:
             incast = incasts[(src, trg)]
             # does it exist in the database?
             if (src, trg) not in self:
@@ -141,7 +141,7 @@ class CastDict(DbObjectDict):
                 stmts.append(self[(src, trg)].diff_map(incast))
 
         # check existing casts
-        for (src, trg) in list(self.keys()):
+        for (src, trg) in self:
             cast = self[(src, trg)]
             # if missing, mark it for dropping
             if (src, trg) not in incasts:

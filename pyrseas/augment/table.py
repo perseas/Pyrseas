@@ -44,7 +44,7 @@ class AugClassDict(DbAugmentDict):
         :param inobjs: YAML map defining the schema objects
         :param augdb: collection of dictionaries defining the augmentations
         """
-        for k in list(inobjs.keys()):
+        for k in inobjs:
             (objtype, spc, key) = k.partition(' ')
             if spc != ' ' or objtype not in ['table']:
                 raise KeyError("Unrecognized object type: %s" % k)
@@ -54,7 +54,7 @@ class AugClassDict(DbAugmentDict):
                 intable = inobjs[k]
                 if not intable:
                     raise ValueError("Table '%s' has no specification" % k)
-                for attr in list(intable.keys()):
+                for attr in intable:
                     if attr == 'audit_columns':
                         setattr(table, attr, intable[attr])
                     else:
@@ -68,7 +68,7 @@ class AugClassDict(DbAugmentDict):
 
         :param tables: tables in current schema
         """
-        for (sch, tbl) in list(self.keys()):
+        for (sch, tbl) in self:
             if not (sch, tbl) in tables:
                 raise KeyError("Table %s.%s not in current database" % (
                     sch, tbl))

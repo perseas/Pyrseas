@@ -296,7 +296,7 @@ class TypeDict(DbObjectDict):
         :param inobjs: YAML map defining the schema objects
         :param newdb: collection of dictionaries defining the database
         """
-        for k in list(inobjs.keys()):
+        for k in inobjs:
             (objtype, spc, key) = k.partition(' ')
             if spc != ' ' or not objtype in ['domain', 'type']:
                 raise KeyError("Unrecognized object type: %s" % k)
@@ -351,13 +351,13 @@ class TypeDict(DbObjectDict):
         list for composite types. Fills the dependent functions
         dictionary for base types.
         """
-        for (sch, typ) in list(dbcolumns.keys()):
+        for (sch, typ) in dbcolumns:
             if (sch, typ) in self:
                 assert isinstance(self[(sch, typ)], Composite)
                 self[(sch, typ)].attributes = dbcolumns[(sch, typ)]
                 for attr in dbcolumns[(sch, typ)]:
                     attr._type = self[(sch, typ)]
-        for (sch, typ, cns) in list(dbconstrs.keys()):
+        for (sch, typ, cns) in dbconstrs:
             constr = dbconstrs[(sch, typ, cns)]
             if not hasattr(constr, 'target') or constr.target != 'd':
                 continue
@@ -413,7 +413,7 @@ class TypeDict(DbObjectDict):
         """
         stmts = []
         # check input types
-        for (sch, typ) in list(intypes.keys()):
+        for (sch, typ) in intypes:
             intype = intypes[(sch, typ)]
             # does it exist in the database?
             if (sch, typ) not in self:
@@ -425,7 +425,7 @@ class TypeDict(DbObjectDict):
                     del self[(sch, intype.oldname)]
 
         # check existing types
-        for (sch, typ) in list(self.keys()):
+        for (sch, typ) in self:
             dbtype = self[(sch, typ)]
             # if missing, mark it for dropping
             if (sch, typ) not in intypes:
@@ -442,12 +442,12 @@ class TypeDict(DbObjectDict):
         :return: SQL statements
         """
         stmts = []
-        for (sch, typ) in list(self.keys()):
+        for (sch, typ) in self:
             dbtype = self[(sch, typ)]
             if hasattr(dbtype, 'dropped'):
                 stmts.append(dbtype.drop())
                 if isinstance(dbtype, BaseType):
-                    for func in list(dbtype.dep_funcs.keys()):
+                    for func in dbtype.dep_funcs:
                         if func in ['typmod_in', 'typmod_out', 'analyze']:
                             stmts.append(dbtype.dep_funcs[func].drop())
         return stmts

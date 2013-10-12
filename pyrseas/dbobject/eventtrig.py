@@ -62,7 +62,7 @@ class EventTriggerDict(DbObjectDict):
         :param intriggers: YAML map defining the event triggers
         :param newdb: dictionary of input database
         """
-        for key in list(intriggers.keys()):
+        for key in intriggers:
             if not key.startswith('event trigger '):
                 raise KeyError("Unrecognized object type: %s" % key)
             trg = key[14:]
@@ -90,7 +90,7 @@ class EventTriggerDict(DbObjectDict):
         """
         stmts = []
         # check input triggers
-        for trg in list(intriggers.keys()):
+        for trg in intriggers:
             intrig = intriggers[trg]
             # does it exist in the database?
             if trg not in self:
@@ -104,7 +104,7 @@ class EventTriggerDict(DbObjectDict):
                 stmts.append(self[trg].diff_map(intrig))
 
         # check existing triggers
-        for trg in list(self.keys()):
+        for trg in self:
             trig = self[trg]
             # if missing, drop them
             if trg not in intriggers:

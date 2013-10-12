@@ -49,7 +49,7 @@ class CollationDict(DbObjectDict):
         :param schema: the schema owing the collations
         :param inmap: the input YAML map defining the collations
         """
-        for key in list(inmap.keys()):
+        for key in inmap:
             if not key.startswith('collation '):
                 raise KeyError("Unrecognized object type: %s" % key)
             cll = key[10:]
@@ -82,7 +82,7 @@ class CollationDict(DbObjectDict):
         """
         stmts = []
         # check input collations
-        for cll in list(incolls.keys()):
+        for cll in incolls:
             incoll = incolls[cll]
             # does it exist in the database?
             if cll in self:
@@ -102,7 +102,7 @@ class CollationDict(DbObjectDict):
                     # create new collation
                     stmts.append(incoll.create())
         # check database collations
-        for (sch, cll) in list(self.keys()):
+        for (sch, cll) in self:
             # if missing, drop it
             if (sch, cll) not in incolls:
                 stmts.append(self[(sch, cll)].drop())

@@ -140,7 +140,7 @@ class TriggerDict(DbObjectDict):
         :param table: table owning the triggers
         :param intriggers: YAML map defining the triggers
         """
-        for trg in list(intriggers.keys()):
+        for trg in intriggers:
             intrig = intriggers[trg]
             if not intrig:
                 raise ValueError("Trigger '%s' has no specification" % trg)
@@ -167,7 +167,7 @@ class TriggerDict(DbObjectDict):
         """
         stmts = []
         # check input triggers
-        for (sch, tbl, trg) in list(intriggers.keys()):
+        for (sch, tbl, trg) in intriggers:
             intrig = intriggers[(sch, tbl, trg)]
             # does it exist in the database?
             if (sch, tbl, trg) not in self:
@@ -181,7 +181,7 @@ class TriggerDict(DbObjectDict):
                 stmts.append(self[(sch, tbl, trg)].diff_map(intrig))
 
         # check existing triggers
-        for (sch, tbl, trg) in list(self.keys()):
+        for (sch, tbl, trg) in self:
             trig = self[(sch, tbl, trg)]
             # if missing, drop them
             if (sch, tbl, trg) not in intriggers:

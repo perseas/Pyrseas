@@ -54,13 +54,13 @@ class CfgAuditColumnDict(DbAugmentDict):
 
         :param inaudcols: YAML map defining the audit column configuration
         """
-        for aud in list(inaudcols.keys()):
+        for aud in inaudcols:
             audcol = CfgAuditColumn(name=aud)
-            for attr in list(inaudcols[aud].keys()):
+            for attr in inaudcols[aud]:
                 if attr == 'columns':
                     audcol.columns = [col for col in inaudcols[aud][attr]]
                 elif attr == 'triggers':
                     audcol.triggers = {}
-                    for trg in list(inaudcols[aud][attr].keys()):
+                    for trg in inaudcols[aud][attr]:
                         audcol.triggers.update(inaudcols[aud][attr][trg])
             self[audcol.name] = audcol

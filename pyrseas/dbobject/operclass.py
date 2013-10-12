@@ -142,7 +142,7 @@ class OperatorClassDict(DbObjectDict):
         :param schema: schema owning the operator classes
         :param inopcls: YAML map defining the operator classes
         """
-        for key in list(inopcls.keys()):
+        for key in inopcls:
             if not key.startswith('operator class ') or not ' using ' in key:
                 raise KeyError("Unrecognized object type: %s" % key)
             pos = key.rfind(' using ')
@@ -172,7 +172,7 @@ class OperatorClassDict(DbObjectDict):
         """
         stmts = []
         # check input operator classes
-        for (sch, opc, idx) in list(inopcls.keys()):
+        for (sch, opc, idx) in inopcls:
             inoper = inopcls[(sch, opc, idx)]
             # does it exist in the database?
             if (sch, opc, idx) not in self:
@@ -186,7 +186,7 @@ class OperatorClassDict(DbObjectDict):
                 stmts.append(self[(sch, opc, idx)].diff_map(inoper))
 
         # check existing operators
-        for (sch, opc, idx) in list(self.keys()):
+        for (sch, opc, idx) in self:
             oper = self[(sch, opc, idx)]
             # if missing, mark it for dropping
             if (sch, opc, idx) not in inopcls:
@@ -200,7 +200,7 @@ class OperatorClassDict(DbObjectDict):
         :return: SQL statements
         """
         stmts = []
-        for (sch, opc, idx) in list(self.keys()):
+        for (sch, opc, idx) in self:
             oper = self[(sch, opc, idx)]
             if hasattr(oper, 'dropped'):
                 stmts.append(oper.drop())

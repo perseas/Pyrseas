@@ -51,7 +51,7 @@ class AugSchemaDict(DbAugmentDict):
         construction of the internal collection of dictionaries
         describing the database objects.
         """
-        for key in list(augmap.keys()):
+        for key in augmap:
             (objtype, spc, sch) = key.partition(' ')
             if spc != ' ' or objtype != 'schema':
                 raise KeyError("Unrecognized object type: %s" % key)
@@ -59,7 +59,7 @@ class AugSchemaDict(DbAugmentDict):
             inschema = augmap[key]
             augtables = {}
             augfuncs = {}
-            for key in list(inschema.keys()):
+            for key in inschema:
                 if key.startswith('table '):
                     augtables.update({key: inschema[key]})
                 elif key.startswith('function '):
@@ -73,7 +73,7 @@ class AugSchemaDict(DbAugmentDict):
 
         :param schemas: schemas in current database
         """
-        for sch in list(self.keys()):
+        for sch in self:
             if not sch in schemas:
                 raise KeyError("Schema %s not in current database" % sch)
             if not hasattr(self[sch], 'current'):
@@ -87,7 +87,7 @@ class AugSchemaDict(DbAugmentDict):
         Fills in the `tables` dictionary for each schema by
         traversing the `dbtables` dictionary.
         """
-        for (sch, tbl) in list(dbtables.keys()):
+        for (sch, tbl) in dbtables:
             table = dbtables[(sch, tbl)]
             assert self[sch]
             schema = self[sch]

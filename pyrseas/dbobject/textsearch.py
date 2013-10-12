@@ -67,7 +67,7 @@ class TSConfigurationDict(DbObjectDict):
         :param schema: schema owning the configurations
         :param inconfigs: input YAML map defining the configurations
         """
-        for key in list(inconfigs.keys()):
+        for key in inconfigs:
             if not key.startswith('text search configuration '):
                 raise KeyError("Unrecognized object type: %s" % key)
             tsc = key[26:]
@@ -95,7 +95,7 @@ class TSConfigurationDict(DbObjectDict):
         """
         stmts = []
         # check input configurations
-        for (sch, tsc) in list(inconfigs.keys()):
+        for (sch, tsc) in inconfigs:
             intsc = inconfigs[(sch, tsc)]
             # does it exist in the database?
             if (sch, tsc) in self:
@@ -115,7 +115,7 @@ class TSConfigurationDict(DbObjectDict):
                     # create new configuration
                     stmts.append(intsc.create())
         # check database configurations
-        for (sch, tsc) in list(self.keys()):
+        for (sch, tsc) in self:
             # if missing, drop it
             if (sch, tsc) not in inconfigs:
                 stmts.append(self[(sch, tsc)].drop())
@@ -164,7 +164,7 @@ class TSDictionaryDict(DbObjectDict):
         :param schema: schema owning the dictionaries
         :param indicts: input YAML map defining the dictionaries
         """
-        for key in list(indicts.keys()):
+        for key in indicts:
             if not key.startswith('text search dictionary '):
                 raise KeyError("Unrecognized object type: %s" % key)
             tsd = key[23:]
@@ -192,7 +192,7 @@ class TSDictionaryDict(DbObjectDict):
         """
         stmts = []
         # check input dictionaries
-        for (sch, tsd) in list(indicts.keys()):
+        for (sch, tsd) in indicts:
             intsd = indicts[(sch, tsd)]
             # does it exist in the database?
             if (sch, tsd) in self:
@@ -212,7 +212,7 @@ class TSDictionaryDict(DbObjectDict):
                     # create new dictionary
                     stmts.append(intsd.create())
         # check database dictionaries
-        for (sch, tsd) in list(self.keys()):
+        for (sch, tsd) in self:
             # if missing, drop it
             if (sch, tsd) not in indicts:
                 stmts.append(self[(sch, tsd)].drop())
@@ -263,7 +263,7 @@ class TSParserDict(DbObjectDict):
         :param schema: schema owning the parsers
         :param inparsers: input YAML map defining the parsers
         """
-        for key in list(inparsers.keys()):
+        for key in inparsers:
             if not key.startswith('text search parser '):
                 raise KeyError("Unrecognized object type: %s" % key)
             tsp = key[19:]
@@ -291,7 +291,7 @@ class TSParserDict(DbObjectDict):
         """
         stmts = []
         # check input parsers
-        for (sch, tsp) in list(inparsers.keys()):
+        for (sch, tsp) in inparsers:
             intsp = inparsers[(sch, tsp)]
             # does it exist in the database?
             if (sch, tsp) in self:
@@ -311,7 +311,7 @@ class TSParserDict(DbObjectDict):
                     # create new parser
                     stmts.append(intsp.create())
         # check database parsers
-        for (sch, tsp) in list(self.keys()):
+        for (sch, tsp) in self:
             # if missing, drop it
             if (sch, tsp) not in inparsers:
                 stmts.append(self[(sch, tsp)].drop())
@@ -358,7 +358,7 @@ class TSTemplateDict(DbObjectDict):
         :param schema: schema owning the templates
         :param intemplates: input YAML map defining the templates
         """
-        for key in list(intemplates.keys()):
+        for key in intemplates:
             if not key.startswith('text search template '):
                 raise KeyError("Unrecognized object type: %s" % key)
             tst = key[21:]
@@ -386,7 +386,7 @@ class TSTemplateDict(DbObjectDict):
         """
         stmts = []
         # check input templates
-        for (sch, tst) in list(intemplates.keys()):
+        for (sch, tst) in intemplates:
             intst = intemplates[(sch, tst)]
             # does it exist in the database?
             if (sch, tst) in self:
@@ -406,7 +406,7 @@ class TSTemplateDict(DbObjectDict):
                     # create new template
                     stmts.append(intst.create())
         # check database templates
-        for (sch, tst) in list(self.keys()):
+        for (sch, tst) in self:
             # if missing, drop it
             if (sch, tst) not in intemplates:
                 stmts.append(self[(sch, tst)].drop())

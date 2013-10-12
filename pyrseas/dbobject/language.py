@@ -66,7 +66,7 @@ class LanguageDict(DbObjectDict):
 
         :param inmap: the input YAML map defining the languages
         """
-        for key in list(inmap.keys()):
+        for key in inmap:
             (objtype, spc, lng) = key.partition(' ')
             if spc != ' ' or objtype != 'language':
                 raise KeyError("Unrecognized object type: %s" % key)
@@ -87,7 +87,7 @@ class LanguageDict(DbObjectDict):
         traversing the `dbfunctions` dictionary, which is keyed by
         schema and function name.
         """
-        for (sch, fnc, arg) in list(dbfunctions.keys()):
+        for (sch, fnc, arg) in dbfunctions:
             func = dbfunctions[(sch, fnc, arg)]
             if func.language in ['sql', 'c', 'internal']:
                 continue
@@ -114,7 +114,7 @@ class LanguageDict(DbObjectDict):
         """
         stmts = []
         # check input languages
-        for lng in list(inlanguages.keys()):
+        for lng in inlanguages:
             inlng = inlanguages[lng]
             # does it exist in the database?
             if lng in self:
@@ -135,7 +135,7 @@ class LanguageDict(DbObjectDict):
                     # create new language
                     stmts.append(inlng.create())
         # check database languages
-        for lng in list(self.keys()):
+        for lng in self:
             # if missing, drop it
             if lng not in inlanguages:
                 # special case: plpgsql is installed in 9.0
@@ -151,7 +151,7 @@ class LanguageDict(DbObjectDict):
         :return: SQL statements
         """
         stmts = []
-        for lng in list(self.keys()):
+        for lng in self:
             if hasattr(self[lng], 'dropped'):
                 stmts.append(self[lng].drop())
         return stmts

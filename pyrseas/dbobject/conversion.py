@@ -53,7 +53,7 @@ class ConversionDict(DbObjectDict):
         :param schema: the schema owing the conversions
         :param inmap: the input YAML map defining the conversions
         """
-        for key in list(inmap.keys()):
+        for key in inmap:
             if not key.startswith('conversion '):
                 raise KeyError("Unrecognized object type: %s" % key)
             cnv = key[11:]
@@ -79,7 +79,7 @@ class ConversionDict(DbObjectDict):
         """
         stmts = []
         # check input conversions
-        for cnv in list(inconvs.keys()):
+        for cnv in inconvs:
             inconv = inconvs[cnv]
             # does it exist in the database?
             if cnv in self:
@@ -99,7 +99,7 @@ class ConversionDict(DbObjectDict):
                     # create new conversion
                     stmts.append(inconv.create())
         # check database conversions
-        for (sch, cnv) in list(self.keys()):
+        for (sch, cnv) in self:
             # if missing, drop it
             if (sch, cnv) not in inconvs:
                 stmts.append(self[(sch, cnv)].drop())

@@ -104,8 +104,8 @@ class JoinRelation(object):
             attrs.update({attr.name: (expr, attr.type)})
         subclauses = []
         params = {}
-        for name in list(qry_args.keys()):
-            if name not in list(attrs.keys()):
+        for name in qry_args:
+            if name not in attrs:
                 raise KeyError("Attribute '%s' not allowed in query string" %
                                name)
             (expr, type_) = attrs[name]

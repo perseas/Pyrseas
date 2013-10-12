@@ -82,7 +82,7 @@ class RuleDict(DbObjectDict):
 
         :param inmap: the input YAML map defining the rules
         """
-        for rul in list(inmap.keys()):
+        for rul in inmap:
             inrule = inmap[rul]
             rule = Rule(table=table.name, schema=table.schema, name=rul,
                         **inrule)
@@ -106,7 +106,7 @@ class RuleDict(DbObjectDict):
         """
         stmts = []
         # check input rules
-        for rul in list(inrules.keys()):
+        for rul in inrules:
             inrul = inrules[rul]
             # does it exist in the database?
             if rul in self:
@@ -126,7 +126,7 @@ class RuleDict(DbObjectDict):
                     # create new rule
                     stmts.append(inrul.create())
         # check database rules
-        for (sch, tbl, rul) in list(self.keys()):
+        for (sch, tbl, rul) in self:
             # if missing, drop it
             if (sch, tbl, rul) not in inrules:
                 stmts.append(self[(sch, tbl, rul)].drop())

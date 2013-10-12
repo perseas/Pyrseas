@@ -116,7 +116,7 @@ class OperatorDict(DbObjectDict):
         :param schema: schema owning the operators
         :param inopers: YAML map defining the operators
         """
-        for key in list(inopers.keys()):
+        for key in inopers:
             (objtype, spc, opr) = key.partition(' ')
             if spc != ' ' or objtype != 'operator':
                 raise KeyError("Unrecognized object type: %s" % key)
@@ -151,7 +151,7 @@ class OperatorDict(DbObjectDict):
         """
         stmts = []
         # check input operators
-        for (sch, opr, lft, rgt) in list(inopers.keys()):
+        for (sch, opr, lft, rgt) in inopers:
             inoper = inopers[(sch, opr, lft, rgt)]
             # does it exist in the database?
             if (sch, opr, lft, rgt) not in self:
@@ -165,7 +165,7 @@ class OperatorDict(DbObjectDict):
                 stmts.append(self[(sch, opr, lft, rgt)].diff_map(inoper))
 
         # check existing operators
-        for (sch, opr, lft, rgt) in list(self.keys()):
+        for (sch, opr, lft, rgt) in self:
             oper = self[(sch, opr, lft, rgt)]
             # if missing, mark it for dropping
             if (sch, opr, lft, rgt) not in inopers:
@@ -179,7 +179,7 @@ class OperatorDict(DbObjectDict):
         :return: SQL statements
         """
         stmts = []
-        for (sch, opr, lft, rgt) in list(self.keys()):
+        for (sch, opr, lft, rgt) in self:
             oper = self[(sch, opr, lft, rgt)]
             if hasattr(oper, 'dropped'):
                 stmts.append(oper.drop())

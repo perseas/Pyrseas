@@ -94,7 +94,7 @@ class AugmentDatabase(Database):
         """
         self.adb = self.AugDicts(cfg_section(self.config, 'augmenter'))
         aug_schemas = {}
-        for key in list(aug_map.keys()):
+        for key in aug_map:
             if key == 'augmenter':
                 self._from_cfgmap(aug_map[key])
             elif key.startswith('schema '):
@@ -114,7 +114,7 @@ class AugmentDatabase(Database):
         DbAugmentDict-derived classes by traversing the YAML
         configuration map.
         """
-        for key in list(cfg_map.keys()):
+        for key in cfg_map:
             if key == 'columns':
                 self.adb.columns.from_map(cfg_map[key])
             elif key in ['function templates', 'function segments']:

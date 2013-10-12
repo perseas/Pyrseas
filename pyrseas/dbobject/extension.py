@@ -61,7 +61,7 @@ class ExtensionDict(DbObjectDict):
         :param langtempls: list of language templates
         :param newdb: dictionary of input database
         """
-        for key in list(inexts.keys()):
+        for key in inexts:
             if not key.startswith('extension '):
                 raise KeyError("Unrecognized object type: %s" % key)
             ext = key[10:]
@@ -85,7 +85,7 @@ class ExtensionDict(DbObjectDict):
         """
         stmts = []
         # check input extensions
-        for ext in list(inexts.keys()):
+        for ext in inexts:
             inexten = inexts[ext]
             # does it exist in the database?
             if ext not in self:
@@ -99,7 +99,7 @@ class ExtensionDict(DbObjectDict):
                 stmts.append(self[ext].diff_map(inexten))
 
         # check existing extensions
-        for ext in list(self.keys()):
+        for ext in self:
             exten = self[ext]
             # if missing, drop them
             if ext not in inexts:
@@ -113,7 +113,7 @@ class ExtensionDict(DbObjectDict):
         :return: SQL statements
         """
         stmts = []
-        for ext in list(self.keys()):
+        for ext in self:
             if hasattr(self[ext], 'dropped'):
                 stmts.append(self[ext].drop())
         return stmts

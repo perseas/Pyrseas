@@ -683,7 +683,7 @@ class ClassDict(DbObjectDict):
         :param inobjs: YAML map defining the schema objects
         :param newdb: collection of dictionaries defining the database
         """
-        for k in list(inobjs.keys()):
+        for k in inobjs:
             inobj = inobjs[k]
             objtype = None
             for typ in OBJTYPES:
@@ -857,7 +857,7 @@ class ClassDict(DbObjectDict):
         """
         stmts = []
         # first pass: sequences owned by a table
-        for (sch, seq) in list(intables.keys()):
+        for (sch, seq) in intables:
             inseq = intables[(sch, seq)]
             if not isinstance(inseq, Sequence) or \
                     not hasattr(inseq, 'owner_table'):
@@ -871,7 +871,7 @@ class ClassDict(DbObjectDict):
 
         # check input tables
         inhstack = []
-        for (sch, tbl) in list(intables.keys()):
+        for (sch, tbl) in intables:
             intable = intables[(sch, tbl)]
             if not isinstance(intable, Table):
                 continue
@@ -897,7 +897,7 @@ class ClassDict(DbObjectDict):
                 inhstack.insert(0, intable)
 
         # check input views
-        for (sch, tbl) in list(intables.keys()):
+        for (sch, tbl) in intables:
             intable = intables[(sch, tbl)]
             if not isinstance(intable, View):
                 continue
@@ -910,7 +910,7 @@ class ClassDict(DbObjectDict):
                     stmts.append(intable.create())
 
         # second pass: input sequences not owned by tables
-        for (sch, seq) in list(intables.keys()):
+        for (sch, seq) in intables:
             inseq = intables[(sch, seq)]
             if not isinstance(inseq, Sequence):
                 continue
@@ -925,7 +925,7 @@ class ClassDict(DbObjectDict):
                     stmts.append(inseq.create())
 
         # check database tables, sequences and views
-        for (sch, tbl) in list(self.keys()):
+        for (sch, tbl) in self:
             table = self[(sch, tbl)]
             # if missing, mark it for dropping
             if (sch, tbl) not in intables:
@@ -935,7 +935,7 @@ class ClassDict(DbObjectDict):
                 stmts.append(table.diff_map(intables[(sch, tbl)]))
 
         # now drop the marked tables
-        for (sch, tbl) in list(self.keys()):
+        for (sch, tbl) in self:
             table = self[(sch, tbl)]
             if isinstance(table, Sequence) and hasattr(table, 'owner_table'):
                 continue
@@ -956,7 +956,7 @@ class ClassDict(DbObjectDict):
                     stmts.append(table.drop())
 
         inhstack = []
-        for (sch, tbl) in list(self.keys()):
+        for (sch, tbl) in self:
             table = self[(sch, tbl)]
             if (isinstance(table, Sequence)
                     and (hasattr(table, 'owner_table')
@@ -997,7 +997,7 @@ class ClassDict(DbObjectDict):
                 stmts.append(table.drop())
             else:
                 inhstack.insert(0, table)
-        for (sch, tbl) in list(self.keys()):
+        for (sch, tbl) in self:
             table = self[(sch, tbl)]
             if isinstance(table, Sequence) \
                     and hasattr(table, 'dependent_table') \
@@ -1005,7 +1005,7 @@ class ClassDict(DbObjectDict):
                 stmts.append(table.drop())
 
         # last pass to deal with nextval DEFAULTs
-        for (sch, tbl) in list(intables.keys()):
+        for (sch, tbl) in intables:
             intable = intables[(sch, tbl)]
             if not isinstance(intable, Table):
                 continue

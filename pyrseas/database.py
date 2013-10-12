@@ -148,11 +148,11 @@ class Database(object):
                         'tsdicts', 'tsparsers', 'tsconfigs', 'extensions',
                         'collations', 'eventtrigs']:
             objdict = getattr(self.db, objtype)
-            for obj in list(objdict.keys()):
+            for obj in objdict:
                 # obj[0] is the schema name in all these dicts
                 if obj[0] not in schemas:
                     del objdict[obj]
-        for sch in list(self.db.schemas.keys()):
+        for sch in self.db.schemas:
             if sch not in schemas:
                 del self.db.schemas[sch]
         # exclude database-wide objects
@@ -191,7 +191,7 @@ class Database(object):
         input_fdws = {}
         input_ums = {}
         input_evttrigs = {}
-        for key in list(input_map.keys()):
+        for key in input_map:
             if key.startswith('schema '):
                 input_schemas.update({key: input_map[key]})
             elif key.startswith('extension '):
@@ -326,7 +326,7 @@ class Database(object):
         opts = self.config['options']
         if opts.schemas:
             schlist = ['schema ' + sch for sch in opts.schemas]
-            for sch in list(input_map.keys()):
+            for sch in input_map:
                 if sch not in schlist and sch.startswith('schema '):
                     del input_map[sch]
             self._trim_objects(opts.schemas)

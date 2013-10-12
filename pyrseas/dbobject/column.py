@@ -244,7 +244,7 @@ class ColumnDict(DbObjectDict):
         cols = self[(table.schema, table.name)] = []
 
         for incol in incols:
-            for key in list(incol.keys()):
+            for key in incol:
                 if isinstance(incol[key], dict):
                     arg = incol[key]
                 else:
@@ -278,8 +278,8 @@ class ColumnDict(DbObjectDict):
         if not incols or not self:
             return stmts
 
-        for (sch, tbl) in list(incols.keys()):
-            if (sch, tbl) in list(self.keys()):
+        for (sch, tbl) in incols:
+            if (sch, tbl) in self:
                 for col in self[(sch, tbl)]:
                     if col.name not in [c.name for c in incols[(sch, tbl)]] \
                             and not hasattr(col, 'dropped') \
