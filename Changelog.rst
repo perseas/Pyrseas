@@ -1,3 +1,53 @@
+0.7.0beta (15-Oct-2013)
+
+  * Added support for:
+
+    - Postgres 9.3, specifically
+
+      + EVENT TRIGGER
+      + MATERIALIZED VIEWS
+
+    - CLUSTER
+    - Storage parameters in CREATE and ALTER TABLE
+    - ALTER COLUMN SET STATISTICS
+    - LEAKPROOF qualifier for FUNCTIONs
+    - YAML multi-line string formatting for view definitions,
+      function source text and object comments
+
+  * Configuration files
+
+    All Pyrseas utilities can now use YAML-formatted configuration
+    files, in addition to command line options
+
+  * Multiple-file input or output
+
+    Spread database object information across a version control
+    repository
+
+  * Data export/import
+
+    Load a database with static data in production or data subsets
+    for testing
+
+  * dbtoyaml/yamltodb
+
+    - Added --quote-reserved option to yamltodb
+    - Exclude arguments from sfunc and finalfunc attributes of
+      aggregate functions (#54)
+    - Correct generation of SQL for functions with DEFAULT
+      arguments (#52)
+
+  * Augmenter
+
+    New utility (dbaugment) to consistently add objects to an
+    existent database.  This is currently an experimental
+    feature and covers adding audit columns to tables.
+
+  * TTM-inspired relational interface
+
+    A new interface to Postgres, inspired by *The Third Manifesto*
+
+
 0.6.1 (31-Jan-2013)
 
   * Add support for INSTEAD OF triggers on views (#50).

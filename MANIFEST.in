@@ -1,4 +1,4 @@
-include AUTHORS CHANGES.txt LICENSE Makefile META.json
+include AUTHORS.rst Changelog.rst LICENSE Makefile META.json
 recursive-include config *.yaml
 recursive-include tests *.py
 recursive-include docs *

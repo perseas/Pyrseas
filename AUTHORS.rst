@@ -1,6 +1,6 @@
 Pyrseas was started in 2010.
 
-The PRIMARY AUTHORS are (and/or have been):
+The PRIMARY AUTHORS are or have been:
 
     * Joe Abbate
     * Ronan Dunklau
