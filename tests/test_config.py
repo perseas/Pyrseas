@@ -37,9 +37,11 @@ def test_user_config(tmpdir):
 
 def test_repo_config(tmpdir):
     "Test a repository configuration file"
+    ucfg = tmpdir.join(CFG_FILE)
+    ucfg.write(yamldump({'repository': {'path': tmpdir.strpath}}))
     f = tmpdir.join("config.yaml")
     f.write(yamldump(CFG_DATA))
-    os.environ["PYRSEAS_REPO_DIR"] = tmpdir.strpath
+    os.environ["PYRSEAS_USER_CONFIG"] = ucfg.strpath
     cfg = Config()
     assert cfg['dataload'] == CFG_TABLE_DATA
 
@@ -50,7 +52,6 @@ def test_cmd_parser(tmpdir):
     f.write(yamldump(CFG_DATA))
     sys.argv = ['testprog', 'testdb', '--config', f.strpath]
     os.environ["PYRSEAS_USER_CONFIG"] = ''
-    os.environ["PYRSEAS_REPO_DIR"] = ''
     parser = cmd_parser("Test description", '0.0.1')
     cfg = parse_args(parser)
     assert cfg['dataload'] == CFG_TABLE_DATA
