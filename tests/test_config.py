@@ -11,7 +11,7 @@ from pyrseas.yamlutil import yamldump
 USER_CFG_DATA = {'database': {'port': 5433},
                  'output': {'version_comment': True}}
 CFG_TABLE_DATA = {'schema public': ['t1', 't2']}
-CFG_DATA = {'dataload': CFG_TABLE_DATA}
+CFG_DATA = {'datacopy': CFG_TABLE_DATA}
 CFG_FILE = 'testcfg.yaml'
 
 
@@ -43,7 +43,7 @@ def test_repo_config(tmpdir):
     f.write(yamldump(CFG_DATA))
     os.environ["PYRSEAS_USER_CONFIG"] = ucfg.strpath
     cfg = Config()
-    assert cfg['dataload'] == CFG_TABLE_DATA
+    assert cfg['datacopy'] == CFG_TABLE_DATA
 
 
 def test_cmd_parser(tmpdir):
@@ -54,7 +54,7 @@ def test_cmd_parser(tmpdir):
     os.environ["PYRSEAS_USER_CONFIG"] = ''
     parser = cmd_parser("Test description", '0.0.1')
     cfg = parse_args(parser)
-    assert cfg['dataload'] == CFG_TABLE_DATA
+    assert cfg['datacopy'] == CFG_TABLE_DATA
 
 
 def test_repo_user_config(tmpdir):
@@ -66,4 +66,4 @@ def test_repo_user_config(tmpdir):
     repof = tmpdir.join("config.yaml")
     repof.write(yamldump(CFG_DATA))
     cfg = Config()
-    assert cfg['dataload'] == CFG_TABLE_DATA
+    assert cfg['datacopy'] == CFG_TABLE_DATA
