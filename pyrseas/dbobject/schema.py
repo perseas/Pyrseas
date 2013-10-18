@@ -304,7 +304,7 @@ class SchemaDict(DbObjectDict):
             if not hasattr(schema, 'datacopy'):
                 schema.datacopy = []
             for tbl in datacopy[key]:
-                if tbl in schema.tables:
+                if hasattr(schema, 'tables') and tbl in schema.tables:
                     schema.datacopy.append(tbl)
 
     def to_map(self, opts):

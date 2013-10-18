@@ -751,8 +751,7 @@ class ClassDict(DbObjectDict):
                     obj.privileges = privileges_from_map(
                         inobj['privileges'], obj.allprivs, obj.owner)
 
-    def link_refs(self, dbcolumns, dbconstrs, dbindexes, dbrules, dbtriggers,
-                  datacopy):
+    def link_refs(self, dbcolumns, dbconstrs, dbindexes, dbrules, dbtriggers):
         """Connect columns, constraints, etc. to their respective tables
 
         :param dbcolumns: dictionary of columns
@@ -760,7 +759,6 @@ class ClassDict(DbObjectDict):
         :param dbindexes: dictionary of indexes
         :param dbrules: dictionary of rules
         :param dbtriggers: dictionary of triggers
-        :param datacopy: dictionary of data copying info
 
         Links each list of table columns in `dbcolumns` to the
         corresponding table. Fills the `foreign_keys`,
