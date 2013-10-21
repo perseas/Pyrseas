@@ -18,7 +18,7 @@ CFG_FILE = 'testcfg.yaml'
 def test_defaults():
     "Create a configuration with defaults"
     cfg = Config()
-    for key in ['audit_columns', 'functions', 'func_templates', 'columns',
+    for key in ['audit_columns', 'functions', 'function_templates', 'columns',
                 'triggers']:
         assert key in cfg['augmenter']
     for key in ['metadata', 'data']:

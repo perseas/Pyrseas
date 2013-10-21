@@ -173,3 +173,53 @@ class AuditColumnsTestCase(AugmentToMapTestCase):
                   {'modified_timestamp': {'type': 'timestamp with time zone',
                                           'not_null': True}}]
         assert expmap == dbmap['schema public']['table t1']['columns']
+
+    def test_custom_function_template(self):
+        "Add new (non-predefined) audit trigger using a function template"
+        template = """
+        BEGIN
+          NEW.{{modified_by_user}} = SESSION_USER;
+          NEW.{{modified_timestamp}} = CURRENT_TIMESTAMP::timestamp(0);
+          RETURN NEW;
+        END"""
+        source = """
+        BEGIN
+          NEW.modified_by_user = SESSION_USER;
+          NEW.modified_timestamp = CURRENT_TIMESTAMP::timestamp(0);
+          RETURN NEW;
+        END"""
+        augmap = {
+            'augmenter': { 
+                'audit_columns': {'custom': {
+                    'columns': ['modified_by_user', 'modified_timestamp'],
+                    'triggers': ['custom_audit']}},
+                'function_templates': {'custom_template': template},
+                'functions': { 'custom_audit()': {
+                    'description': 'Maintain custom audit columns',
+                    'language': 'plpgsql',
+                    'returns': 'trigger',
+                    'security_definer': True,
+                    'source': '{{custom_template}}'}},
+                'triggers': { 'custom_audit': {
+                    'events': ['insert', 'update'],
+                    'level': 'row',
+                    'name': '{{table_name}}_20_custom_audit',
+                    'procedure': 'custom_audit()',
+                    'timing': 'before'}}},
+            'schema public': {'table t1': {
+                'audit_columns': 'custom'}}}
+        dbmap = self.to_map([CREATE_STMT], augmap)
+        expmap = {'columns': [
+            {'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}},
+            {'modified_by_user': {'type': 'character varying(63)',
+                                  'not_null': True}},
+            {'modified_timestamp': {'type': 'timestamp with time zone',
+                                    'not_null': True}}],
+            'triggers': {'t1_20_custom_audit': {
+                'events': ['insert', 'update'], 'level': 'row',
+                'procedure': 'custom_audit()', 'timing': 'before'}}}
+        assert expmap == dbmap['schema public']['table t1']
+        assert dbmap['schema public']['function custom_audit()'][
+            'returns'] == 'trigger'
+        assert dbmap['schema public']['function custom_audit()'][
+            'source'] == source
