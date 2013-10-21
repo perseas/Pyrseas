@@ -47,7 +47,7 @@ augmenter:
     modified_timestamp:
       not_null: true
       type: timestamp with time zone
-  func_templates:
+  function_templates:
     functempl_audit_default: |2-
 
       BEGIN

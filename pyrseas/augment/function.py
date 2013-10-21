@@ -85,6 +85,13 @@ class CfgFunctionSourceDict(DbAugmentDict):
             dct = {'source': src}
             self[templ] = CfgFunctionTemplate(name=templ, **dct)
 
+    def from_map(self, intempls):
+        """Initialize the dictionary of function templates by converting the input list
+
+        :param intempls: YAML list defining the function templates
+        """
+        for templ in intempls:
+            self[templ] = CfgFunctionTemplate(name=templ, source=intempls[templ])
 
 class CfgFunction(DbAugment):
     "A configuration function definition"

@@ -60,7 +60,5 @@ class CfgAuditColumnDict(DbAugmentDict):
                 if attr == 'columns':
                     audcol.columns = [col for col in inaudcols[aud][attr]]
                 elif attr == 'triggers':
-                    audcol.triggers = {}
-                    for trg in inaudcols[aud][attr]:
-                        audcol.triggers.update(inaudcols[aud][attr][trg])
+                    audcol.triggers = [col for col in inaudcols[aud][attr]]
             self[audcol.name] = audcol

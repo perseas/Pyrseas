@@ -42,8 +42,8 @@ class AugmentDatabase(Database):
             self.tables = AugClassDict()
             self.columns = CfgColumnDict(cfg_section(config, 'columns'))
             self.funcsrcs = CfgFunctionSourceDict(
-                cfg_section(config, 'func_templates'),
-                cfg_section(config, 'func_segments'))
+                cfg_section(config, 'function_templates'),
+                cfg_section(config, 'function_segments'))
             self.functions = CfgFunctionDict(cfg_section(config, 'functions'))
             self.triggers = CfgTriggerDict(cfg_section(config, 'triggers'))
             self.auditcols = CfgAuditColumnDict(
@@ -117,7 +117,7 @@ class AugmentDatabase(Database):
         for key in cfg_map:
             if key == 'columns':
                 self.adb.columns.from_map(cfg_map[key])
-            elif key in ['function templates', 'function segments']:
+            elif key in ['function_templates', 'function_segments']:
                 self.adb.funcsrcs.from_map(cfg_map[key])
             elif key == 'functions':
                 self.adb.functions.from_map(cfg_map[key])
