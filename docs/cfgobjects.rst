@@ -16,16 +16,11 @@ invoked by triggers used to maintain audit columns.  The
 :class:`CfgFunctionDict` class holds all the :class:`CfgFunction`
 objects, indexed by the function name and its arguments.  A
 :class:`CfgFunctionSource` class represents the source code for a
-function or part of that source code.  A :class:`CfgFunctionSegment`
-class specifies a segment of the function code that is logically
-repeatable.  For example, a function template (see below) may
-act --generically-- on several columns of a target table.  Each column
-name can be defined in a function segment.  A
-:class:`CfgFunctionTemplate` class represents the source code for a
-function, which may include segments or other elements that can be
-substituted in the final result.  The class
-:class:`CfgFunctionSourceDict` holds all the templates and segments
-currently defined.
+function or part of that source code.  A :class:`CfgFunctionTemplate`
+class represents the source code for a function, which may include
+other elements that can be substituted in the final result.  The class
+:class:`CfgFunctionSourceDict` holds all the templates currently
+defined.
 
 .. autoclass:: CfgFunction
 
@@ -38,10 +33,6 @@ currently defined.
 .. automethod:: CfgFunctionDict.from_map
 
 .. autoclass:: CfgFunctionSource
-
-.. autoclass:: CfgFunctionSegment
-
-.. automethod:: CfgFunctionSegment.replace
 
 .. autoclass:: CfgFunctionTemplate
 

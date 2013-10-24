@@ -42,8 +42,7 @@ class AugmentDatabase(Database):
             self.tables = AugClassDict()
             self.columns = CfgColumnDict(cfg_section(config, 'columns'))
             self.funcsrcs = CfgFunctionSourceDict(
-                cfg_section(config, 'function_templates'),
-                cfg_section(config, 'function_segments'))
+                cfg_section(config, 'function_templates'))
             self.functions = CfgFunctionDict(cfg_section(config, 'functions'))
             self.triggers = CfgTriggerDict(cfg_section(config, 'triggers'))
             self.auditcols = CfgAuditColumnDict(
