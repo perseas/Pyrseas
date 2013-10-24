@@ -51,25 +51,30 @@ augmenter:
     functempl_audit_default: |2-
 
       BEGIN
-        NEW.{{modified_by_user}} = CURRENT_USER;
+        NEW.{{modified_by_user}} = SESSION_USER;
         NEW.{{modified_timestamp}} = CURRENT_TIMESTAMP;
         RETURN NEW;
       END
     functempl_audit_full: |2-
 
+      DECLARE
+        user_name name := pyrseas.get_session_variable('audit_user',
+            SESSION_USER::varchar);
+        ip_address inet := pyrseas.get_session_variable('audit_ip_address',
+            COALESCE(pg_catalog.inet_client_addr()::varchar, '0.0.0.0'));
       BEGIN
         IF TG_OP = 'INSERT' THEN
           NEW.{{created_timestamp}} = CURRENT_TIMESTAMP;
-          NEW.{{created_by_user}} = pyrseas.get_session_variable('audit_user');
-          NEW.{{created_by_ip_address}} = pyrseas.get_session_variable('audit_ip_address');
+          NEW.{{created_by_user}} = user_name;
+          NEW.{{created_by_ip_address}} = ip_address;
         ELSIF TG_OP = 'UPDATE' THEN
           NEW.{{created_timestamp}} = OLD.created_timestamp;
           NEW.{{created_by_user}} = OLD.created_by_user;
           NEW.{{created_by_ip_address}} = OLD.created_by_ip_address;
         END IF;
         NEW.{{modified_timestamp}} = CURRENT_TIMESTAMP;
-        NEW.{{modified_by_user}} = pyrseas.get_session_variable('audit_user');
-        NEW.{{modified_by_ip_address}} = pyrseas.get_session_variable('audit_ip_address');
+        NEW.{{modified_by_user}} = user_name;
+        NEW.{{modified_by_ip_address}} = ip_address;
         RETURN NEW;
       END
     functempl_audit_modified: |2-
