@@ -8,7 +8,7 @@ from pyrseas.testutils import AugmentToMapTestCase
 CREATE_STMT = "CREATE TABLE t1 (c1 integer, c2 text)"
 FUNC_SRC1 = """
 BEGIN
-  NEW.modified_by_user = CURRENT_USER;
+  NEW.modified_by_user = SESSION_USER;
   NEW.modified_timestamp = CURRENT_TIMESTAMP;
   RETURN NEW;
 END"""
