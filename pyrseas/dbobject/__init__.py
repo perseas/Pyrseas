@@ -22,6 +22,7 @@ VALID_FIRST_CHARS = string.ascii_lowercase + '_'
 VALID_CHARS = string.ascii_lowercase + string.digits + '_$'
 RESERVED_WORDS = []
 NON_FILENAME_CHARS = re.compile(r'\W', re.U)
+MAX_PG_IDENT_LEN = 63
 MAX_IDENT_LEN = int(os.environ.get("PYRSEAS_MAX_IDENT_LEN", 16))
 
 
@@ -175,10 +176,11 @@ class DbObject(object):
         """
         return '%s %s' % (self.objtype.lower(), self.name)
 
-    def extern_filename(self, ext='yaml'):
+    def extern_filename(self, ext='yaml', truncate=False):
         """Return a filename to be used to output external files
 
         :param ext: file extension
+        :param truncate: truncate filename to MAX_IDENT_LEN
         :return: filename string
 
         This is used for the first two levels of external maps.  The
@@ -192,6 +194,7 @@ class DbObject(object):
         an object name that has characters not allowed in filesystems,
         the characters are replaced by underscores.
         """
+        max_len = MAX_IDENT_LEN if truncate else MAX_PG_IDENT_LEN
 
         def xfrm_filename(objtype, objid=None):
             """Generic transformation of object identifier to a filename
@@ -204,8 +207,8 @@ class DbObject(object):
                 if PY2:
                     objid = objid.decode('utf_8')
                 filename = '%s.%.*s.%s' % (
-                    objtype, MAX_IDENT_LEN, re.sub(
-                        NON_FILENAME_CHARS, '_', objid), ext)
+                    objtype, max_len, re.sub(NON_FILENAME_CHARS, '_', objid),
+                    ext)
                 if PY2:
                     filename = filename.encode('utf_8')
             else:
@@ -411,6 +414,14 @@ class DbSchemaObject(DbObject):
         """Adjust the schema and table name if the latter is qualified"""
         if hasattr(self, 'table') and '.' in self.table:
             (sch, self.table) = split_schema_obj(self.table, self.schema)
+
+    def extern_filename(self, ext='yaml'):
+        """Return a filename to be used to output external files
+
+        :param ext: file extension
+        :return: filename string
+        """
+        return super(DbSchemaObject, self).extern_filename(ext, True)
 
     def drop(self):
         """Return a SQL DROP statement for the schema object

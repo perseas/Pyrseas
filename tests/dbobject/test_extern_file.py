@@ -241,6 +241,12 @@ class ExternalFilenameTestCase(PyrseasTestCase):
         obj = Schema(name="A/C Schema")
         assert obj.extern_filename() == 'schema.a_c_schema.yaml'
 
+    def test_long_name_schema(self):
+        "Map a schema with a long name"
+        nm = 'a_schema_with_a_very_but_very_very_long_long_long_loooonng_name'
+        obj = Schema(name=nm)
+        assert obj.extern_filename() == 'schema.%s.yaml' % nm
+
     def test_table(self):
         "Map a table"
         obj = Table(name="Weird/Or-what?HOW.WeiRD")
