@@ -85,9 +85,11 @@ class ExtensionToSqlTestCase(InputMapToSqlTestCase):
         if self.db.version < 90100:
             self.skipTest('Only available on PG 9.1')
         inmap = self.std_map()
-        inmap.update({'extension pg_trgm': {'schema': 's1', 'version': '1.0'}})
-        sql = self.to_sql(inmap, ["CREATE SCHEMA s1"])
-        assert fix_indent(sql[0]) == \
+        inmap.update({'schema s1': {},
+                      'extension pg_trgm': {'schema': 's1', 'version': '1.0'}})
+        sql = self.to_sql(inmap)
+        assert sql[0] == 'CREATE SCHEMA s1'
+        assert fix_indent(sql[1]) == \
             "CREATE EXTENSION pg_trgm SCHEMA s1 VERSION '1.0'"
 
     def test_create_lang_extension(self):
