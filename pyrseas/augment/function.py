@@ -63,8 +63,10 @@ class CfgFunction(DbAugment):
             suffix = src[suf + 2:]
             tmplkey = src[pref + 2:suf]
             if tmplkey not in augdb.funcsrcs:
-                raise KeyError("Function template '%s' not found" % tmplkey)
-            newfunc.source = prefix + augdb.funcsrcs[tmplkey].source + suffix
+                if '{{'+tmplkey+'}}' not in [pat for (pat, repl) in trans_tbl]:
+                    raise KeyError("Function template '%s' not found" % tmplkey)
+            else:
+                newfunc.source = prefix + augdb.funcsrcs[tmplkey].source + suffix
 
         for (pat, repl) in trans_tbl:
             if '{{' in newfunc.source:
