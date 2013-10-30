@@ -51,7 +51,7 @@ class Column(DbSchemaObject):
             if not self.default.startswith('nextval'):
                 stmt += ' DEFAULT ' + self.default
         if hasattr(self, 'collation') and self.collation != 'default':
-            stmt += ' COLLATE ' + self.collation
+            stmt += " COLLATE '%s'" % self.collation
         return (stmt, '' if not hasattr(self, 'description')
                 else self.comment())
 

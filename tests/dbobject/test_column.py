@@ -157,7 +157,8 @@ class ColumnToSqlTestCase(InputMapToSqlTestCase):
         inmap['schema public'].update({'table t1': {
             'columns': [{'c1': {'type': 'integer', 'not_null': True,
                                 'default': "nextval('t1_c1_seq'::regclass)"}},
-                        {'c2': {'type': 'text', 'not_null': True}},
+                        {'c2': {'type': 'text', 'not_null': True,
+                                'collation': 'en_US.utf8'}},
                         {'c3': {'type': 'date', 'not_null': True,
                                 'default': "('now'::text)::date"}}]},
             'sequence t1_c1_seq': {
@@ -165,7 +166,8 @@ class ColumnToSqlTestCase(InputMapToSqlTestCase):
                 'min_value': None, 'start_value': 1}})
         sql = self.to_sql(inmap)
         assert fix_indent(sql[0]) == "CREATE TABLE t1 (c1 integer NOT NULL, " \
-            "c2 text NOT NULL, c3 date NOT NULL DEFAULT ('now'::text)::date)"
+            "c2 text NOT NULL COLLATE 'en_US.utf8', c3 date NOT NULL " \
+            "DEFAULT ('now'::text)::date)"
         assert fix_indent(sql[1]) == "CREATE SEQUENCE t1_c1_seq " \
             "START WITH 1 INCREMENT BY 1 NO MAXVALUE NO MINVALUE CACHE 1"
         assert sql[2] == "ALTER TABLE t1 ALTER COLUMN c1 " \

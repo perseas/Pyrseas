@@ -126,7 +126,7 @@ class CollationToSqlTestCase(InputMapToSqlTestCase):
                         {'c2': {'type': 'text', 'collation': 'c1'}}]}})
         sql = self.to_sql(inmap)
         assert fix_indent(sql[0]) == "CREATE TABLE t1 (c1 integer NOT NULL, " \
-            "c2 text COLLATE c1)"
+            "c2 text COLLATE 'c1')"
 
     def test_create_index_collation(self):
         "Create an index with column collation"
@@ -151,4 +151,4 @@ class CollationToSqlTestCase(InputMapToSqlTestCase):
                            {'y': {'type': 'text', 'collation': 'c1'}}]}})
         sql = self.to_sql(inmap)
         assert fix_indent(sql[0]) == "CREATE TYPE t1 AS (x integer, " \
-            "y text COLLATE c1)"
+            "y text COLLATE 'c1')"
