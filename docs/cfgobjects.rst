@@ -24,8 +24,6 @@ defined.
 
 .. autoclass:: CfgFunction
 
-.. automethod:: CfgFunction.adjust_name
-
 .. automethod:: CfgFunction.apply
 
 .. autoclass:: CfgFunctionDict

@@ -60,3 +60,21 @@ Note also that if your function source code has trailing spaces at the
 end of lines, they would normally be represented in the original
 default format.  However, in the interest of readability,
 :program:`dbtoyaml` will remove the trailing spaces from the text.
+
+Views Dependent on Primary Key
+------------------------------
+
+:program:`yamltodb` may fail to recreate a view if it takes advantage
+of the Postgres enhancement, introduced in version 9.1, where a
+``SELECT`` with ``GROUP BY`` includes columns which are functionally
+dependent on the grouped columns and the latter are the primary key of
+the table containing the additional columns.  Please refer to the
+`GROUP BY dcoumentation
+<http://www.postgresql.org/docs/9.1/static/sql-select.html#SQL-GROUPBY>`_
+for further details.
+
+A potential workaround, that may be used if such views are not
+referenced elsewhere, would be to edit the YAML specification to
+remove the views (either all or those affected by this) from a first
+pass through :program:`yamltodb`. This should create the tables with
+their primary keys and then a second pass will create the views.
