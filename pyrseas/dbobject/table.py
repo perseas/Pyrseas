@@ -454,7 +454,13 @@ class Table(DbClass):
         :return: list of SQL statements
         """
         filepath = os.path.join(dirpath, self.extern_filename('data'))
-        stmts = ["TRUNCATE ONLY %s" % self.qualname()]
+        stmts = []
+        if hasattr(self, 'referred_by'):
+            stmts.append("ALTER TABLE %s DROP CONSTRAINT %s" % (
+                    self.referred_by._table.qualname(), self.referred_by.name))
+        stmts.append("TRUNCATE ONLY %s" % self.qualname())
+        if hasattr(self, 'referred_by'):
+            stmts.append(self.referred_by.add())
         stmts.append("\\copy %s from '%s' csv" % (self.qualname(), filepath))
         return stmts
 

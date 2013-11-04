@@ -49,3 +49,29 @@ class StaticTableToSqlTestCase(InputMapToSqlTestCase):
             self.cfg['files']['data_path'], "schema.public", FILE_PATH)
         assert fix_indent(sql[0]) == "TRUNCATE ONLY t1"
         assert fix_indent(sql[1]) == copy_stmt
+
+    def test_load_static_table_fk(self):
+        "Truncate and load a table which has a foreign key dependency"
+        stmts = ["CREATE TABLE t1 (pc1 integer PRIMARY KEY, pc2 text)",
+                 "CREATE TABLE t2 (c1 integer, c2 integer REFERENCES t1, "
+                 "c3 text)"]
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+            'columns': [{'pc1': {'type': 'integer', 'not_null': True}},
+                        {'pc2': {'type': 'text'}}],
+            'primary_key': {'t1_pkey': {'columns': ['pc1']}}}, 'table t2': {
+                'columns': [{'c1': {'type': 'integer'}},
+                            {'c2': {'type': 'integer'}},
+                            {'c3': {'type': 'text'}}],
+                'foreign_keys': {'t2_c2_fkey': {'columns': ['c2'],
+                'references': {'schema': 'public', 'table': 't1',
+                               'columns': ['pc1']}}}}})
+        cfg = {'datacopy': {'schema public': ['t1']}}
+        sql = self.to_sql(inmap, stmts, config=cfg)
+        copy_stmt = "\\copy t1 from '%s' csv" % os.path.join(
+            self.cfg['files']['data_path'], "schema.public", FILE_PATH)
+        assert sql[0] == "ALTER TABLE t2 DROP CONSTRAINT t2_c2_fkey"
+        assert sql[1] == "TRUNCATE ONLY t1"
+        assert sql[2] == "ALTER TABLE t2 ADD CONSTRAINT t2_c2_fkey " \
+            "FOREIGN KEY (c2) REFERENCES t1 (pc1)"
+        assert sql[3] == copy_stmt
