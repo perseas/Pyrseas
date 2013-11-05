@@ -72,6 +72,6 @@ class StaticTableToSqlTestCase(InputMapToSqlTestCase):
             self.cfg['files']['data_path'], "schema.public", FILE_PATH)
         assert sql[0] == "ALTER TABLE t2 DROP CONSTRAINT t2_c2_fkey"
         assert sql[1] == "TRUNCATE ONLY t1"
-        assert sql[2] == "ALTER TABLE t2 ADD CONSTRAINT t2_c2_fkey " \
+        assert sql[2] == copy_stmt
+        assert sql[3] == "ALTER TABLE t2 ADD CONSTRAINT t2_c2_fkey " \
             "FOREIGN KEY (c2) REFERENCES t1 (pc1)"
-        assert sql[3] == copy_stmt
