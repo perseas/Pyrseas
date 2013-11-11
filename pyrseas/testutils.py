@@ -458,7 +458,7 @@ class DbMigrateTestCase(TestCase):
             lines = f.readlines()
         return lines
 
-    def run_pg_dump(self, dumpfile, srcdb=False):
+    def run_pg_dump(self, dumpfile, srcdb=False, incldata=False):
         """Run pg_dump using special scripts or directly (on Travis-CI)
 
         :param dumpfile: path to the pg_dump output file
@@ -475,7 +475,9 @@ class DbMigrateTestCase(TestCase):
         dbname = self.srcdb.name if srcdb else self.db.name
         args = [pg_dumpver]
         args.extend(self._db_params())
-        args.extend(['-s', '-f', dumpfile, dbname])
+        if not incldata:
+            args.extend(['-s'])
+        args.extend(['-f', dumpfile, dbname])
         subprocess.check_call(args)
 
     def invoke(self, args):

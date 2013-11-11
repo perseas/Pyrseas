@@ -46,13 +46,21 @@ def main():
         fd = output or sys.stdout
         if options.onetrans or options.update:
             print("BEGIN;", file=fd)
-        print(";\n\n".join(stmts) + ';', file=fd)
+        for stmt in stmts:
+            if isinstance(stmt, tuple):
+                print("".join(stmt) + '\n', file=fd)
+            else:
+                print("%s;\n" % stmt, file=fd)
         if options.onetrans or options.update:
             print("COMMIT;", file=fd)
         if options.update:
             try:
                 for stmt in stmts:
-                    db.dbconn.execute(stmt)
+                    if isinstance(stmt, tuple):
+                        # expected format: (\copy, table, from, path, csv)
+                        db.dbconn.copy_from(stmt[3], stmt[1])
+                    else:
+                        db.dbconn.execute(stmt)
             except:
                 db.dbconn.rollback()
                 raise
