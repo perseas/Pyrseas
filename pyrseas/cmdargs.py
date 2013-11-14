@@ -96,14 +96,15 @@ def parse_args(parser):
     for key in ['output', 'config']:
         tfr('files', key, args[key])
 
+    if 'config' in _cfg['files'] and _cfg['files']['config']:
+        _cfg.merge(yaml.safe_load(_cfg['files']['config']))
     if 'repository' in args:
-        _cfg['repository']['path'] = args['repository']
+        if args['repository'] != os.getcwd():
+            _cfg['repository']['path'] = args['repository']
         del args['repository']
 
     _cfg['files']['metadata_path'] = _repo_path(_cfg, 'metadata')
     _cfg['files']['data_path'] = _repo_path(_cfg, 'data')
 
-    if 'config' in _cfg['files'] and _cfg['files']['config']:
-        _cfg.merge(yaml.safe_load(_cfg['files']['config']))
     _cfg['options'] = arg_opts
     return _cfg
