@@ -49,6 +49,16 @@ class IndexToMapTestCase(DatabaseToMapTestCase):
                                            'access_method': 'gin'}}}
         assert dbmap['schema public']['table t1'] == expmap
 
+    def test_map_index_partial(self):
+        "Map a table with a partial index"
+        dbmap = self.to_map([CREATE_TABLE_STMT,
+                             "CREATE INDEX t1_idx ON t1 (c2) WHERE c1 > 42"])
+        expmap = {'columns': [{'c1': {'type': 'integer'}},
+                              {'c2': {'type': 'text'}}],
+                  'indexes': {'t1_idx': {'keys': ['c2'],
+                                         'predicate': '(c1 > 42)'}}}
+        assert dbmap['schema public']['table t1'] == expmap
+
     def test_index_function(self):
         "Map an index using a function"
         stmts = [CREATE_TABLE_STMT, "CREATE INDEX t1_idx ON t1 ((lower(c2)))"]
@@ -184,6 +194,18 @@ class IndexToSqlTestCase(InputMapToSqlTestCase):
             'indexes': {'t1_idx': {'access_method': 'btree'}}}})
         with pytest.raises(KeyError):
             self.to_sql(inmap)
+
+    def test_create_partial(self):
+        "Create a partial index"
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+            'columns': [{'c1': {'type': 'integer'}},
+                        {'c2': {'type': 'text'}}],
+            'indexes': {'t1_idx': {'keys': ['c2'],
+                                   'predicate': '(c1 > 42)'}}}})
+        sql = self.to_sql(inmap, [CREATE_TABLE_STMT])
+        assert fix_indent(sql[0]) == \
+            "CREATE INDEX t1_idx ON t1 (c2) WHERE (c1 > 42)"
 
     def test_create_index_function(self):
         "Create an index which uses a function"

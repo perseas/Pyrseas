@@ -89,9 +89,12 @@ class Index(DbSchemaObject):
         tblspc = ''
         if hasattr(self, 'tablespace'):
             tblspc = '\n    TABLESPACE %s' % self.tablespace
-        stmts.append("CREATE %sINDEX %s ON %s %s(%s)%s" % (
+        pred = ''
+        if hasattr(self, 'predicate'):
+            pred = '\n    WHERE %s' % self.predicate
+        stmts.append("CREATE %sINDEX %s ON %s %s(%s)%s%s" % (
             'UNIQUE ' if unq else '', quote_id(self.name),
-            quote_id(self.table), acc, self.key_expressions(), tblspc))
+            quote_id(self.table), acc, self.key_expressions(), tblspc, pred))
         if hasattr(self, 'cluster') and self.cluster:
             stmts.append("CLUSTER %s USING %s" % (
                 quote_id(self.table), quote_id(self.name)))
@@ -146,6 +149,7 @@ class IndexDict(DbObjectDict):
                   c.relname AS name, amname AS access_method,
                   indisunique AS unique, indkey AS keycols,
                   pg_get_expr(indexprs, indrelid) AS keyexprs,
+                  pg_get_expr(indpred, indrelid) AS predicate,
                   pg_get_indexdef(indexrelid) AS defn,
                   spcname AS tablespace, indisclustered AS cluster,
                   obj_description (c.oid, 'pg_class') AS description
@@ -167,7 +171,8 @@ class IndexDict(DbObjectDict):
             index.unqualify()
             sch, tbl, idx = index.key()
             sch, tbl = split_schema_obj('%s.%s' % (sch, tbl))
-            keydefs = index.defn[index.defn.find(' USING ') + 7:]
+            keydefs, _, _ = index.defn.partition(' WHERE ')
+            _, _, keydefs = keydefs.partition(' USING ')
             keydefs = keydefs[keydefs.find(' (') + 2:-1]
             # split expressions (result of pg_get_expr)
             if hasattr(index, 'keyexprs'):
@@ -244,7 +249,8 @@ class IndexDict(DbObjectDict):
                 idx.keys = val['columns']
             else:
                 raise KeyError("Index '%s' is missing keys specification" % i)
-            for attr in ['access_method', 'unique', 'tablespace', 'cluster']:
+            for attr in ['access_method', 'unique', 'tablespace', 'predicate',
+                         'cluster']:
                 if attr in val:
                     setattr(idx, attr, val[attr])
             if not hasattr(idx, 'access_method'):
