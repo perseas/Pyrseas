@@ -194,13 +194,13 @@ class AuditColumnsTestCase(AugmentToMapTestCase):
                     'columns': ['modified_by_user', 'modified_timestamp'],
                     'triggers': ['custom_audit']}},
                 'function_templates': {'custom_template': template},
-                'functions': { 'custom_audit()': {
+                'functions': {'custom_audit()': {
                     'description': 'Maintain custom audit columns',
                     'language': 'plpgsql',
                     'returns': 'trigger',
                     'security_definer': True,
                     'source': '{{custom_template}}'}},
-                'triggers': { 'custom_audit': {
+                'triggers': {'custom_audit': {
                     'events': ['insert', 'update'],
                     'level': 'row',
                     'name': '{{table_name}}_20_custom_audit',
@@ -243,13 +243,13 @@ class AuditColumnsTestCase(AugmentToMapTestCase):
                 'audit_columns': {'custom': {
                     'columns': ['modified_by_user', 'modified_timestamp'],
                     'triggers': ['custom_audit']}},
-                'functions': { 'custom_audit()': {
+                'functions': {'custom_audit()': {
                     'description': 'Maintain custom audit columns',
                     'language': 'plpgsql',
                     'returns': 'trigger',
                     'security_definer': True,
                     'source': template}},
-                'triggers': { 'custom_audit': {
+                'triggers': {'custom_audit': {
                     'events': ['insert', 'update'],
                     'level': 'row',
                     'name': '{{table_name}}_20_custom_audit',

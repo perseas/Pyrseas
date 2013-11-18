@@ -43,7 +43,7 @@ class Attribute(object):
                     raise ValueError("No value provided for %r" % self)
         else:  # nullable
             if (type_ == int and value == 0) or (
-                    type_ == bool and value == False) or (
+                    type_ == bool and value is False) or (
                     type_ == str and value == '') or (
                     type_ == float and value == 0):
                 self.value = None

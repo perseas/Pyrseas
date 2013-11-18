@@ -457,7 +457,7 @@ class Table(DbClass):
         stmts = []
         if hasattr(self, 'referred_by'):
             stmts.append("ALTER TABLE %s DROP CONSTRAINT %s" % (
-                    self.referred_by._table.qualname(), self.referred_by.name))
+                self.referred_by._table.qualname(), self.referred_by.name))
         stmts.append("TRUNCATE ONLY %s" % self.qualname())
         stmts.append(("\\copy ", self.qualname(), " from '", filepath,
                       "' csv"))

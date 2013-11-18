@@ -3,7 +3,7 @@
 import os
 
 from pyrseas.testutils import DatabaseToMapTestCase
-from pyrseas.testutils import InputMapToSqlTestCase, fix_indent
+from pyrseas.testutils import InputMapToSqlTestCase
 
 CREATE_STMT = "CREATE TABLE t1 (c1 integer, c2 text)"
 FILE_PATH = 'table.t1.data'
