@@ -170,7 +170,7 @@ class ColumnToSqlTestCase(InputMapToSqlTestCase):
         assert fix_indent(sql[0]) == "CREATE SEQUENCE s1.t1_c1_seq " \
             "START WITH 1 INCREMENT BY 1 NO MAXVALUE NO MINVALUE CACHE 1"
         assert fix_indent(sql[1]) == "CREATE TABLE s1.t1 (" \
-            "c1 integer NOT NULL, c2 text NOT NULL COLLATE 'en_US.utf8', " \
+            'c1 integer NOT NULL, c2 text NOT NULL COLLATE "en_US.utf8", ' \
             "c3 date NOT NULL DEFAULT ('now'::text)::date)"
         assert sql[2] == "ALTER SEQUENCE s1.t1_c1_seq OWNED BY s1.t1.c1"
         assert sql[3] == "ALTER TABLE s1.t1 ALTER COLUMN c1 " \
