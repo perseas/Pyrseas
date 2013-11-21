@@ -137,11 +137,8 @@ class Sequence(DbClass):
         :return: SQL statement
         """
         stmts = []
-        pth = self.set_search_path()
-        if pth:
-            stmts.append(pth)
         stmts.append("ALTER SEQUENCE %s OWNED BY %s.%s" % (
-            quote_id(self.name), quote_id(self.owner_table),
+            self.qualname(), self.qualname(self.owner_table),
             quote_id(self.owner_column)))
         return stmts
 

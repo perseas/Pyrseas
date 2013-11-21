@@ -400,15 +400,17 @@ class DbSchemaObject(DbObject):
         """
         return self.qualname()
 
-    def qualname(self):
-        """Return the schema-qualified name of the object
+    def qualname(self, objname=None):
+        """Return the schema-qualified name of self or a related object
 
         :return: string
 
         No qualification is used if the schema is 'public'.
         """
-        return self.schema == 'public' and quote_id(self.name) \
-            or "%s.%s" % (quote_id(self.schema), quote_id(self.name))
+        if objname is None:
+            objname = self.name
+        return self.schema == 'public' and quote_id(objname) \
+            or "%s.%s" % (quote_id(self.schema), quote_id(objname))
 
     def unqualify(self):
         """Adjust the schema and table name if the latter is qualified"""
@@ -441,16 +443,6 @@ class DbSchemaObject(DbObject):
         """
         return "ALTER %s %s RENAME TO %s" % (self.objtype, self.qualname(),
                                              newname)
-
-    def set_search_path(self):
-        """Return a SQL SET search_path if not in the 'public' schema
-
-        :return: SQL statement
-        """
-        stmt = ''
-        if self.schema != 'public':
-            stmt = "SET search_path TO %s, pg_catalog" % quote_id(self.schema)
-        return stmt
 
 
 class DbObjectDict(dict):

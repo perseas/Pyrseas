@@ -154,24 +154,27 @@ class ColumnToSqlTestCase(InputMapToSqlTestCase):
     def test_create_table_with_defaults(self):
         "Create a table with two column DEFAULTs, one referring to a SEQUENCE"
         inmap = self.std_map()
-        inmap['schema public'].update({'table t1': {
+        inmap.update({'schema s1': {'table t1': {
             'columns': [{'c1': {'type': 'integer', 'not_null': True,
-                                'default': "nextval('t1_c1_seq'::regclass)"}},
+                                'default':
+                                    "nextval('s1.t1_c1_seq'::regclass)"}},
                         {'c2': {'type': 'text', 'not_null': True,
                                 'collation': 'en_US.utf8'}},
                         {'c3': {'type': 'date', 'not_null': True,
                                 'default': "('now'::text)::date"}}]},
             'sequence t1_c1_seq': {
                 'cache_value': 1, 'increment_by': 1, 'max_value': None,
-                'min_value': None, 'start_value': 1}})
-        sql = self.to_sql(inmap)
-        assert fix_indent(sql[0]) == "CREATE TABLE t1 (c1 integer NOT NULL, " \
-            "c2 text NOT NULL COLLATE 'en_US.utf8', c3 date NOT NULL " \
-            "DEFAULT ('now'::text)::date)"
-        assert fix_indent(sql[1]) == "CREATE SEQUENCE t1_c1_seq " \
+                'min_value': None, 'start_value': 1,
+                'owner_table': 't1', 'owner_column': 'c1'}}})
+        sql = self.to_sql(inmap, ["CREATE SCHEMA s1"])
+        assert fix_indent(sql[0]) == "CREATE SEQUENCE s1.t1_c1_seq " \
             "START WITH 1 INCREMENT BY 1 NO MAXVALUE NO MINVALUE CACHE 1"
-        assert sql[2] == "ALTER TABLE t1 ALTER COLUMN c1 " \
-            "SET DEFAULT nextval('t1_c1_seq'::regclass)"
+        assert fix_indent(sql[1]) == "CREATE TABLE s1.t1 (" \
+            "c1 integer NOT NULL, c2 text NOT NULL COLLATE 'en_US.utf8', " \
+            "c3 date NOT NULL DEFAULT ('now'::text)::date)"
+        assert sql[2] == "ALTER SEQUENCE s1.t1_c1_seq OWNED BY s1.t1.c1"
+        assert sql[3] == "ALTER TABLE s1.t1 ALTER COLUMN c1 " \
+            "SET DEFAULT nextval('s1.t1_c1_seq'::regclass)"
 
     def test_set_column_not_null(self):
         "Change a nullable column to NOT NULL"

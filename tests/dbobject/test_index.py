@@ -172,6 +172,20 @@ class IndexToSqlTestCase(InputMapToSqlTestCase):
         sql = self.to_sql(inmap, stmts)
         assert sql == ["CREATE UNIQUE INDEX t1_idx ON t1 (c2, c1)"]
 
+    def test_add_index_schema(self):
+        "Add an index to an existing table in a non-public schema"
+        stmts = ["CREATE SCHEMA s1",
+                 "CREATE TABLE s1.t1 (c1 INTEGER NOT NULL, "
+                 "c2 INTEGER NOT NULL, c3 TEXT)"]
+        inmap = self.std_map()
+        inmap.update({'schema s1': {'table t1': {
+            'columns': [{'c1': {'type': 'integer', 'not_null': True}},
+                        {'c2': {'type': 'integer', 'not_null': True}},
+                        {'c3': {'type': 'text'}}],
+            'indexes': {'t1_idx': {'keys': ['c2', 'c1'], 'unique': True}}}}})
+        sql = self.to_sql(inmap, stmts)
+        assert sql == ["CREATE UNIQUE INDEX t1_idx ON s1.t1 (c2, c1)"]
+
     def test_add_index_back_compat(self):
         "Add a index to an existing table accepting back-compatible spec"
         stmts = ["CREATE TABLE t1 (c1 INTEGER NOT NULL, "

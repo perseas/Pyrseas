@@ -100,5 +100,3 @@ certain common methods. This is different from the
 .. automethod:: DbSchemaObject.drop
 
 .. automethod:: DbSchemaObject.rename
-
-.. automethod:: DbSchemaObject.set_search_path

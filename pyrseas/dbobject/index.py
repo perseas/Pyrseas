@@ -79,9 +79,6 @@ class Index(DbSchemaObject):
         :return: SQL statements
         """
         stmts = []
-        pth = self.set_search_path()
-        if pth:
-            stmts.append(pth)
         unq = hasattr(self, 'unique') and self.unique
         acc = ''
         if hasattr(self, 'access_method') and self.access_method != 'btree':
@@ -94,7 +91,8 @@ class Index(DbSchemaObject):
             pred = '\n    WHERE %s' % self.predicate
         stmts.append("CREATE %sINDEX %s ON %s %s(%s)%s%s" % (
             'UNIQUE ' if unq else '', quote_id(self.name),
-            quote_id(self.table), acc, self.key_expressions(), tblspc, pred))
+            self.qualname(self.table), acc, self.key_expressions(), tblspc,
+            pred))
         if hasattr(self, 'cluster') and self.cluster:
             stmts.append("CLUSTER %s USING %s" % (
                 quote_id(self.table), quote_id(self.name)))
