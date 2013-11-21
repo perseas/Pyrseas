@@ -51,7 +51,7 @@ class Column(DbSchemaObject):
             if not self.default.startswith('nextval'):
                 stmt += ' DEFAULT ' + self.default
         if hasattr(self, 'collation') and self.collation != 'default':
-            stmt += ' COLLATE ' + self.collation
+            stmt += ' COLLATE "%s"' % self.collation
         return (stmt, '' if not hasattr(self, 'description')
                 else self.comment())
 
@@ -130,11 +130,8 @@ class Column(DbSchemaObject):
         :return: list of SQL statements
         """
         stmts = []
-        pth = self.set_search_path()
-        if pth:
-            stmts.append(pth)
         stmts.append("ALTER TABLE %s ALTER COLUMN %s SET DEFAULT %s" % (
-            quote_id(self.table), quote_id(self.name), self.default))
+            self.qualname(self.table), quote_id(self.name), self.default))
         return stmts
 
     def diff_map(self, incol):

@@ -137,11 +137,8 @@ class Sequence(DbClass):
         :return: SQL statement
         """
         stmts = []
-        pth = self.set_search_path()
-        if pth:
-            stmts.append(pth)
         stmts.append("ALTER SEQUENCE %s OWNED BY %s.%s" % (
-            quote_id(self.name), quote_id(self.owner_table),
+            self.qualname(), self.qualname(self.owner_table),
             quote_id(self.owner_column)))
         return stmts
 
@@ -454,8 +451,15 @@ class Table(DbClass):
         :return: list of SQL statements
         """
         filepath = os.path.join(dirpath, self.extern_filename('data'))
-        stmts = ["TRUNCATE ONLY %s" % self.qualname()]
-        stmts.append("\\copy %s from '%s' csv" % (self.qualname(), filepath))
+        stmts = []
+        if hasattr(self, 'referred_by'):
+            stmts.append("ALTER TABLE %s DROP CONSTRAINT %s" % (
+                self.referred_by._table.qualname(), self.referred_by.name))
+        stmts.append("TRUNCATE ONLY %s" % self.qualname())
+        stmts.append(("\\copy ", self.qualname(), " from '", filepath,
+                      "' csv"))
+        if hasattr(self, 'referred_by'):
+            stmts.append(self.referred_by.add())
         return stmts
 
 

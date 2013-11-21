@@ -377,5 +377,5 @@ class Database(object):
         stmts.append(self.db.languages._drop())
         if 'datacopy' in self.config:
             opts.data_dir = self.config['files']['data_path']
-            stmts.append(self.db.schemas.data_import(opts))
+            stmts.append(self.ndb.schemas.data_import(opts))
         return [s for s in flatten(stmts)]

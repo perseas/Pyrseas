@@ -43,6 +43,7 @@ Contents
    overview
    install
    config
+   configitems
    devel
    testing
    issues

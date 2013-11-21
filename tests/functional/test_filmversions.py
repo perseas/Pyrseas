@@ -4,7 +4,9 @@
 See https://pyrseas.wordpress.com/2011/02/07/
 version-control-part-2-sql-databases/
 """
+import os
 from pyrseas.testutils import DbMigrateTestCase
+from pyrseas.yamlutil import yamldump
 
 
 class FilmTestCase(DbMigrateTestCase):
@@ -80,9 +82,15 @@ class FilmTestCase(DbMigrateTestCase):
 
         # Run pg_dump against source database
         srcdump = self.tempfile_path('film-0.3-src.dump')
-        self.run_pg_dump(srcdump, True)
+        self.run_pg_dump(srcdump, True, True)
 
         # Create source YAML file
+        usercfg = self.tempfile_path("usercfg.yaml")
+        with open(usercfg, 'w') as f:
+            f.write(yamldump({'repository': {'path': self.tempfile_path('')}}))
+        os.environ["PYRSEAS_USER_CONFIG"] = usercfg
+        with open(self.tempfile_path("config.yaml"), 'w') as f:
+            f.write(yamldump({'datacopy': {'schema public': ['genre']}}))
         srcyaml = self.tempfile_path('film-0.3-src.yaml')
         self.create_yaml(srcyaml, True)
 
@@ -91,7 +99,7 @@ class FilmTestCase(DbMigrateTestCase):
 
         # Run pg_dump against target database
         targdump = self.tempfile_path('film-0.3.dump')
-        self.run_pg_dump(targdump)
+        self.run_pg_dump(targdump, False, True)
 
         # Create target YAML file
         targyaml = self.tempfile_path('film-0.3.yaml')

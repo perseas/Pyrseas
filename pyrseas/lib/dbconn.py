@@ -125,3 +125,20 @@ class DbConnection(object):
             except:
                 curs.close()
                 raise
+
+    def copy_from(self, path, table, sep=','):
+        """Execute a COPY command from a file
+
+        :param path: file name/path to copy from
+        :param table: possibly schema qualified table name
+        :param sep: separator between columns
+        """
+        if self.conn is None or self.conn.closed:
+            self.connect()
+        with open(path, 'r') as f:
+            curs = self.conn.cursor()
+            try:
+                curs.copy_from(f, table, sep)
+            except:
+                curs.close()
+                raise
