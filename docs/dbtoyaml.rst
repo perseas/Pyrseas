@@ -172,7 +172,7 @@ different arguments are written to a single file, e.g.,
 ``function.foo.yaml`` in the first example above.  Identifiers are
 also converted to all lowercase, non-alphanumeric characters
 (excluding underscore) are converted to underscores and, by default,
-schema object names are truncated to 16 characters.
+schema object names are truncated to 32 characters.
 
 If two object names, thus transformed, map to the same string, then
 the objects' information is written to the same file, e.g.,
