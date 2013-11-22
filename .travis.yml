@@ -7,7 +7,7 @@ before_install:
   - sudo mkdir -p /extra/pg/9.1/ts1 /extra/pg/9.1/ts2
   - sudo chown postgres:postgres /extra/pg/9.1/ts1 /extra/pg/9.1/ts2
   - sudo apt-get update -qq
-  - sudo apt-get install -qq postgresql-plperl postgresql-plpython
+  - sudo apt-get install -qq postgresql-plperl
 before_script:
   - psql -Upostgres -c "CREATE TABLESPACE ts1 LOCATION '/extra/pg/9.1/ts1'"
   - psql -Upostgres -c "CREATE TABLESPACE ts2 LOCATION '/extra/pg/9.1/ts2'"
