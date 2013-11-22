@@ -2,8 +2,8 @@
 Pyrseas
 =======
 
-.. image:: https://api.travis-ci.org/jmafc/Pyrseas.png?branch=master
-           :target: https://travis-ci.org/jmafc/Pyrseas
+.. image:: https://api.travis-ci.org/pyrseas/Pyrseas.png?branch=master
+           :target: https://travis-ci.org/pyrseas/Pyrseas
 
 .. image:: https://pypip.in/v/Pyrseas/badge.png
            :target: https://crate.io/packages/Pyrseas/
