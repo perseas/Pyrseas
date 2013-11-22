@@ -179,14 +179,16 @@ class ExternalFilenameMapTestCase(DatabaseToMapTestCase):
 
     def test_map_tables_merged(self):
         "Map tables into a merged file"
-        self.to_map(["CREATE TABLE account_transfers_1 (c1 integer, c2 text)",
-                     "CREATE TABLE account_transfers_2 (c1 integer, c2 text)"],
+        self.to_map(["CREATE TABLE account_transfers_with_extra_padding_1 "
+                     "(c1 integer, c2 text)",
+                     "CREATE TABLE account_transfers_with_extra_padding_2 "
+                     "(c1 integer, c2 text)"],
                     multiple_files=True)
-        expmap = {'table account_transfers_1': {'columns': [
+        expmap = {'table account_transfers_with_extra_padding_1': {'columns': [
             {'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}]},
-            'table account_transfers_2': {'columns': [
+            'table account_transfers_with_extra_padding_2': {'columns': [
             {'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}]}}
-        assert self.yaml_load('table.account_transfer.yaml',
+        assert self.yaml_load('table.account_transfers_with_extra_pad.yaml',
                               'schema.public') == expmap
 
     def test_map_textsearch(self):
@@ -250,19 +252,19 @@ class ExternalFilenameTestCase(PyrseasTestCase):
     def test_table(self):
         "Map a table"
         obj = Table(name="Weird/Or-what?HOW.WeiRD")
-        assert obj.extern_filename() == 'table.weird_or_what_ho.yaml'
+        assert obj.extern_filename() == 'table.weird_or_what_how_weird.yaml'
 
     def test_table_unicode(self):
         "Map a table with Unicode characters"
         obj = Table(name="Fundação\\Größe таблица")
-        assert obj.extern_filename() == 'table.fundação_größe_т.yaml'
+        assert obj.extern_filename() == 'table.fundação_größe_таблица.yaml'
 
     def test_sequence(self):
         "Map a sequence"
         obj = Sequence(name="Weird/Or-what?_seq")
-        assert obj.extern_filename() == 'sequence.weird_or_what__s.yaml'
+        assert obj.extern_filename() == 'sequence.weird_or_what__seq.yaml'
 
     def test_view(self):
         "Map a view"
         obj = View(name="Weirder/Don't You Think?")
-        assert obj.extern_filename() == 'view.weirder_don_t_yo.yaml'
+        assert obj.extern_filename() == 'view.weirder_don_t_you_think_.yaml'
