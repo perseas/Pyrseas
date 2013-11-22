@@ -23,7 +23,7 @@ VALID_CHARS = string.ascii_lowercase + string.digits + '_$'
 RESERVED_WORDS = []
 NON_FILENAME_CHARS = re.compile(r'\W', re.U)
 MAX_PG_IDENT_LEN = 63
-MAX_IDENT_LEN = int(os.environ.get("PYRSEAS_MAX_IDENT_LEN", 16))
+MAX_IDENT_LEN = int(os.environ.get("PYRSEAS_MAX_IDENT_LEN", 32))
 
 
 def fetch_reserved_words(db):
