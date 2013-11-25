@@ -1,4 +1,4 @@
-0.7.0beta (15-Oct-2013)
+0.7.0 (25-Nov-2013)
 
   * Added support for:
 
@@ -8,6 +8,7 @@
       + MATERIALIZED VIEWS
 
     - CLUSTER
+    - Partial indexes
     - Storage parameters in CREATE and ALTER TABLE
     - ALTER COLUMN SET STATISTICS
     - LEAKPROOF qualifier for FUNCTIONs
