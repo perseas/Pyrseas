@@ -2,6 +2,8 @@ language: python
 python:
   - "3.3"
   - "2.7"
+addons:
+  postgresql: "9.3"
 before_install:
   - sudo locale-gen --no-archive fr_FR.UTF-8
   - sudo mkdir -p /extra/pg/9.1/ts1 /extra/pg/9.1/ts2
