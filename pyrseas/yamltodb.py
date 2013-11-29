@@ -48,9 +48,9 @@ def main():
             print("BEGIN;", file=fd)
         for stmt in stmts:
             if isinstance(stmt, tuple):
-                print("".join(stmt) + '\n', file=fd)
+                print(("".join(stmt) + '\n').encode('utf-8'), file=fd)
             else:
-                print("%s;\n" % stmt, file=fd)
+                print(("%s;\n" % stmt).encode('utf-8'), file=fd)
         if options.onetrans or options.update:
             print("COMMIT;", file=fd)
         if options.update:
