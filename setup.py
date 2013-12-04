@@ -27,7 +27,7 @@ setup(
     version='0.7.0',
     packages=['pyrseas', 'pyrseas.dbobject', 'pyrseas.lib', 'pyrseas.augment',
               'pyrseas.relation'],
-    data_files=[('config', ['config/config.yaml'])],
+    package_data={'pyrseas': ['config.yaml']},
     entry_points={
         'console_scripts': [
             'dbtoyaml = pyrseas.dbtoyaml:main',

@@ -37,9 +37,8 @@ class Config(dict):
 
     def __init__(self, sys_only=False):
         self.update(_load_cfg(
-            os.environ.get("PYRSEAS_SYS_CONFIG",
-                           os.path.abspath(os.path.join(
-                           os.path.dirname(__file__), '..', 'config')))))
+            os.environ.get("PYRSEAS_SYS_CONFIG", os.path.abspath(os.path.join(
+                           os.path.dirname(__file__))))))
         if sys_only:
             return
         self.merge(_load_cfg(os.environ.get("PYRSEAS_USER_CONFIG",
