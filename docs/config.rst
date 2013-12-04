@@ -16,8 +16,7 @@ System Configuration
 --------------------
 
 The system configuration file is distributed with Pyrseas and is
-normally installed in the ``config`` directory adjacent to the
-``pyrseas`` library directory.
+normally installed in the ``pyrseas`` library directory.
 
 If desired, you can override this using the ``PYRSEAS_SYS_CONFIG``
 environment variable.  This can be defined as a full path, including a
