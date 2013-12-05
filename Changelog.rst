@@ -1,3 +1,11 @@
+0.7.1 (5-Dec-2013)
+
+  * Moved ``config.yaml`` under ``pyrseas`` directory and use
+    ``package_data`` to install (#77)
+
+  * yamltodb output to a file is encoded using utf-8 (#78)
+
+
 0.7.0 (25-Nov-2013)
 
   * Added support for:
