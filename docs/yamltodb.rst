@@ -90,6 +90,14 @@ addition to the :doc:`cmdargs`):
     Normally, only identifiers with embedded spaces or other
     disallowed characters are quoted.
 
+.. cmdoption:: --revert
+
+    Generate SQL in reversion mode, that is, to undo the changes that
+    would normally be generated.  For example, if without this option,
+    the SQL would be a ``DROP TABLE``, the :option:`--revert` option
+    generates a ``CREATE TABLE`` with all the columns, constraints and
+    other objects associated with the table being dropped.
+
 Examples
 --------
 

@@ -165,12 +165,13 @@ class Column(DbSchemaObject):
         if hasattr(self, 'default') and not hasattr(incol, 'default'):
             stmts.append(base + "DROP DEFAULT")
         # check STATISTICS
-        if self.statistics == -1 and (hasattr(incol, 'statistics') and
-                                      incol.statistics != -1):
-            stmts.append(base + "SET STATISTICS %d" % incol.statistics)
-        if self.statistics != -1 and (not hasattr(incol, 'statistics') or
-                                      incol.statistics == -1):
-            stmts.append(base + "SET STATISTICS -1")
+        if hasattr(self, 'statistics'):
+            if self.statistics == -1 and (
+                hasattr(incol, 'statistics') and incol.statistics != -1):
+                stmts.append(base + "SET STATISTICS %d" % incol.statistics)
+            if self.statistics != -1 and (
+                not hasattr(incol, 'statistics') or incol.statistics == -1):
+                stmts.append(base + "SET STATISTICS -1")
 
         return (", ".join(stmts), self.diff_description(incol))
 

@@ -97,3 +97,35 @@ class SchemaToSqlTestCase(InputMapToSqlTestCase):
         stmts = [CREATE_STMT, COMMENT_STMT]
         sql = self.to_sql(inmap, stmts)
         assert sql == ["COMMENT ON SCHEMA s1 IS 'Changed schema s1'"]
+
+class SchemaUndoSqlTestCase(InputMapToSqlTestCase):
+    """Test SQL generation to revert schemas"""
+
+    _schmap = {'schema s1': {'description': 'Test schema s1'}}
+
+    def test_undo_create_schema(self):
+        "Revert a schema creation"
+        inmap = self.std_map()
+        inmap.update({'schema s1': {}})
+        sql = self.to_sql(inmap, revert=True)
+        assert sql == ["DROP SCHEMA s1"]
+
+    def test_undo_drop_schema(self):
+        "Revert dropping a schema"
+        sql = self.to_sql(self.std_map(), [CREATE_STMT], revert=True)
+        assert sql[0] == CREATE_STMT
+
+    def test_undo_comment_on_schema(self):
+        "Revert creating comment on a schema"
+        inmap = self.std_map()
+        inmap.update(self._schmap)
+        sql = self.to_sql(inmap, [CREATE_STMT], revert=True)
+        assert sql == ["COMMENT ON SCHEMA s1 IS NULL"]
+
+    def test_undo_drop_schema_comment(self):
+        "Revert dropping comment on a schema"
+        inmap = self.std_map()
+        inmap.update({'schema s1': {}})
+        stmts = [CREATE_STMT, COMMENT_STMT]
+        sql = self.to_sql(inmap, stmts, revert=True)
+        assert sql == [COMMENT_STMT]

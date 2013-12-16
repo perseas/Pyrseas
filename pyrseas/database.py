@@ -339,6 +339,8 @@ class Database(object):
             langs = [lang[0] for lang in self.dbconn.fetchall(
                 "SELECT tmplname FROM pg_pltemplate")]
         self.from_map(input_map, langs)
+        if opts.revert:
+            (self.db, self.ndb) = (self.ndb, self.db)
         stmts = self.db.schemas.diff_map(self.ndb.schemas)
         stmts.append(self.db.extensions.diff_map(self.ndb.extensions))
         stmts.append(self.db.languages.diff_map(self.ndb.languages))

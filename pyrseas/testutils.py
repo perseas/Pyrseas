@@ -367,7 +367,7 @@ class InputMapToSqlTestCase(PyrseasTestCase):
     superuser = False
 
     def to_sql(self, inmap, stmts=None, config={}, superuser=False, schemas=[],
-               quote_reserved=False):
+               revert=False, quote_reserved=False):
         """Execute statements and compare database to input map.
 
         :param inmap: dictionary defining target database
@@ -375,6 +375,7 @@ class InputMapToSqlTestCase(PyrseasTestCase):
         :param config: dictionary of configuration information
         :param superuser: indicates test requires superuser privilege
         :param schemas: list of schemas to diff
+        :param revert: generate statements to back out changes
         :param quote_reserved: fetch reserved words
         :return: list of SQL statements
         """
@@ -388,7 +389,8 @@ class InputMapToSqlTestCase(PyrseasTestCase):
         if 'datacopy' in config:
             self.cfg.merge({'files': {'data_path': os.path.join(
                             TEST_DIR, self.cfg['repository']['data'])}})
-        self.config_options(schemas=schemas, quote_reserved=quote_reserved)
+        self.config_options(schemas=schemas, revert=revert,
+                            quote_reserved=quote_reserved)
         self.cfg.merge(config)
         return self.database().diff_map(inmap)
 

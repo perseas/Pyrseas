@@ -357,7 +357,8 @@ class SchemaDict(DbObjectDict):
                         raise
                 else:
                     # create new schema
-                    stmts.append(insch.create())
+                    if insch.name not in ['pg_catalog']:
+                        stmts.append(insch.create())
         # check database schemas
         for sch in self:
             # if missing and not 'public', drop it
