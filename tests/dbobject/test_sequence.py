@@ -134,3 +134,40 @@ class SequenceToSqlTestCase(InputMapToSqlTestCase):
             'description': "Changed sequence seq1"}})
         sql = self.to_sql(inmap, stmts)
         assert sql, ["COMMENT ON SEQUENCE seq1 IS 'Changed sequence seq1'"]
+
+
+class SequenceUndoSqlTestCase(InputMapToSqlTestCase):
+    """Test SQL generation to revert sequences"""
+
+    def test_undo_create_sequence(self):
+        "Revert a sequence creation"
+        inmap = self.std_map()
+        inmap['schema public'].update({'sequence seq1': {
+            'start_value': 1, 'increment_by': 1, 'max_value': None,
+            'min_value': None, 'cache_value': 1}})
+        sql = self.to_sql(inmap, revert=True)
+        assert sql == ["DROP SEQUENCE seq1"]
+
+    def test_undo_create_sequence_in_schema(self):
+        "Revert creating a sequence in a non-public schema"
+        inmap = self.std_map()
+        inmap.update({'schema s1': {'sequence seq1': {
+            'start_value': 1, 'increment_by': 1, 'max_value': None,
+            'min_value': None, 'cache_value': 1}}})
+        sql = self.to_sql(inmap, ["CREATE SCHEMA s1"], revert=True)
+        assert sql == ["DROP SEQUENCE s1.seq1"]
+
+    def test_undo_drop_sequence(self):
+        "Revert dropping a sequence"
+        sql = self.to_sql(self.std_map(), [CREATE_STMT], revert=True)
+        assert fix_indent(sql[0]) == CREATE_STMT_FULL
+
+    def test_undo_change_sequence(self):
+        "Revert changing sequence attributes"
+        inmap = self.std_map()
+        inmap['schema public'].update({'sequence seq1': {
+            'start_value': 5, 'increment_by': 10, 'max_value': None,
+            'min_value': None, 'cache_value': 30}})
+        sql = self.to_sql(inmap, [CREATE_STMT], revert=True)
+        assert fix_indent(sql[0]) == "ALTER SEQUENCE seq1 START WITH 1 " \
+            "INCREMENT BY 1 NO MAXVALUE NO MINVALUE CACHE 1"

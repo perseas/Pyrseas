@@ -22,6 +22,18 @@ from pyrseas.dbobject.privileges import privileges_from_map, add_grant
 MAX_BIGINT = 9223372036854775807
 
 
+def seq_max_value(seq):
+    if seq.max_value is None or seq.max_value == MAX_BIGINT:
+        return " NO MAXVALUE"
+    return " MAXVALUE %d" % seq.max_value
+
+
+def seq_min_value(seq):
+    if seq.min_value is None or seq.min_value == 1:
+        return " NO MINVALUE"
+    return " MINVALUE %d" % seq.min_value
+
+
 class DbClass(DbSchemaObject):
     """A table, sequence or view"""
 
@@ -119,17 +131,13 @@ class Sequence(DbClass):
 
         :return: SQL statements
         """
-        maxval = self.max_value and ("MAXVALUE %d" % self.max_value) \
-            or "NO MAXVALUE"
-        minval = self.min_value and ("MINVALUE %d" % self.min_value) \
-            or "NO MINVALUE"
         return ["""CREATE SEQUENCE %s
     START WITH %d
     INCREMENT BY %d
-    %s
-    %s
+   %s
+   %s
     CACHE %d""" % (self.qualname(), self.start_value, self.increment_by,
-                   maxval, minval, self.cache_value)]
+                   seq_max_value(self), seq_min_value(self), self.cache_value)]
 
     def add_owner(self):
         """Return statement to ALTER the sequence to indicate its owner table
@@ -162,21 +170,19 @@ class Sequence(DbClass):
         if maxval == MAX_BIGINT:
             maxval = None
         if maxval != inseq.max_value:
-            stmt += inseq.max_value and (" MAXVALUE %d" % inseq.max_value) \
-                or " NO MAXVALUE"
+            stmt += seq_max_value(inseq)
         minval = self.min_value
         if minval == 1:
             minval = None
         if minval != inseq.min_value:
-            stmt += inseq.min_value and (" MINVALUE %d" % inseq.min_value) \
-                or " NO MINVALUE"
+            stmt += seq_min_value(inseq)
         if self.cache_value != inseq.cache_value:
             stmt += " CACHE %d" % inseq.cache_value
         if stmt:
             stmts.append("ALTER SEQUENCE %s" % self.qualname() + stmt)
 
         if hasattr(inseq, 'owner'):
-            if inseq.owner != self.owner:
+            if hasattr(self, 'owner') and inseq.owner != self.owner:
                 stmts.append(self.alter_owner(inseq.owner))
         stmts.append(self.diff_privileges(inseq))
         stmts.append(self.diff_description(inseq))
