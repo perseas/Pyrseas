@@ -88,6 +88,18 @@ class TableToMapTestCase(DatabaseToMapTestCase):
             'table t1': {'columns': [{'c1': {'type': 'integer'}},
                                      {'c2': {'type': 'text'}}]}}
 
+    def test_map_table_quoted(self):
+        "Map a schema and a table both of which need to be quoted"
+        stmts = ['CREATE SCHEMA "a schema"',
+                 'CREATE TABLE "a schema"."The.Table" ("column" SERIAL, '
+                 'c2 TEXT)']
+        dbmap = self.to_map(stmts)
+        assert dbmap['schema a schema']['table The.Table'] == {
+            'columns': [{'column': {'type': 'integer', 'not_null': True,
+            'default':
+            'nextval(\'"a schema"."The.Table_column_seq"\'::regclass)'}},
+            {'c2': {'type': 'text'}}]}
+
     def test_map_select_tables(self):
         "Map two tables out of three present"
         stmts = [CREATE_STMT, "CREATE TABLE t2 (c1 integer, c2 text)",
