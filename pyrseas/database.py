@@ -148,11 +148,11 @@ class Database(object):
                         'tsdicts', 'tsparsers', 'tsconfigs', 'extensions',
                         'collations', 'eventtrigs']:
             objdict = getattr(self.db, objtype)
-            for obj in objdict:
+            for obj in list(objdict.keys()):
                 # obj[0] is the schema name in all these dicts
                 if obj[0] not in schemas:
                     del objdict[obj]
-        for sch in self.db.schemas:
+        for sch in list(self.db.schemas.keys()):
             if sch not in schemas:
                 del self.db.schemas[sch]
         # exclude database-wide objects
