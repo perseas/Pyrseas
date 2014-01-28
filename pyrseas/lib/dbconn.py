@@ -126,6 +126,22 @@ class DbConnection(object):
                 curs.close()
                 raise
 
+    def sql_copy_to(self, sql, path):
+        """Execute an SQL COPY command to a file
+
+        :param sql: SQL copy command
+        :param path: file name/path to copy into
+        """
+        if self.conn is None or self.conn.closed:
+            self.connect()
+        with open(path, 'w') as f:
+            curs = self.conn.cursor()
+            try:
+                curs.copy_expert(sql, f)
+            except:
+                curs.close()
+                raise
+
     def copy_from(self, path, table, sep=','):
         """Execute a COPY command from a file
 

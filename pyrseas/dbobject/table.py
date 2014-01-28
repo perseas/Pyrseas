@@ -448,7 +448,14 @@ class Table(DbClass):
         :param dirpath: full path to the directory for the file to be created
         """
         filepath = os.path.join(dirpath, self.extern_filename('data'))
-        dbconn.copy_to(filepath, self.qualname())
+        if hasattr(self, 'primary_key'):
+            order_by = [self.columns[col - 1].name
+                        for col in self.primary_key.keycols]
+        else:
+            order_by = ['%d' % (n + 1) for n in range(len(self.columns))]
+        dbconn.sql_copy_to(
+            "COPY (SELECT * FROM %s ORDER BY %s) TO STDOUT WITH CSV" % (
+            self.qualname(), ', '.join(order_by)), filepath)
 
     def data_import(self, dirpath):
         """Generate SQL to import data into a table

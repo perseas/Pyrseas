@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Test loading of data into static tables"""
+"""Test loading of data from and into static tables"""
 import os
 
 from pyrseas.testutils import DatabaseToMapTestCase
@@ -8,6 +8,8 @@ from pyrseas.testutils import InputMapToSqlTestCase
 CREATE_STMT = "CREATE TABLE t1 (c1 integer, c2 text)"
 FILE_PATH = 'table.t1.data'
 TABLE_DATA = [(1, 'abc'), (2, 'def'), (3, 'ghi')]
+TABLE_DATA2 = [(1, 'abc', 'row 1'), (3, 'ghi', 'row 2'), (2, 'def', 'row 3'),
+               (3, 'def', 'row 4')]
 
 
 class StaticTableToMapTestCase(DatabaseToMapTestCase):
@@ -32,6 +34,27 @@ class StaticTableToMapTestCase(DatabaseToMapTestCase):
                 (c1, c2) = line.split(',')
                 recs.append((int(c1), c2.rstrip()))
         assert recs == TABLE_DATA
+
+    def test_copy_static_table_pk(self):
+        "Copy a table that has a primary key"
+        self.db.execute("CREATE TABLE t1 (c1 integer, c2 char(3), c3 text,"
+                        "PRIMARY KEY (c2, c1))")
+        for row in TABLE_DATA2:
+            self.db.execute("INSERT INTO t1 VALUES (%s, %s, %s)", row)
+        cfg = {'datacopy': {'schema public': ['t1']}}
+        dbmap = self.to_map([], config=cfg)
+        assert dbmap['schema public']['table t1'] == {
+            'columns': [{'c1': {'type': 'integer', 'not_null': True}},
+                        {'c2': {'type': 'character(3)', 'not_null': True}},
+                        {'c3': {'type': 'text'}}],
+            'primary_key': {'t1_pkey': {'columns': ['c2', 'c1']}}}
+        recs = []
+        with open(os.path.join(self.cfg['files']['data_path'],
+                               "schema.public", FILE_PATH)) as f:
+            for line in f:
+                (c1, c2, c3) = line.split(',')
+                recs.append((int(c1), c2, c3.rstrip()))
+        assert recs == sorted(TABLE_DATA2)
 
 
 class StaticTableToSqlTestCase(InputMapToSqlTestCase):
