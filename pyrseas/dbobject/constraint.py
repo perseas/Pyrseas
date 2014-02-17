@@ -58,7 +58,7 @@ class Constraint(DbSchemaObject):
         if not hasattr(self, 'dropped') or not self.dropped:
             self.dropped = True
             return "ALTER TABLE %s DROP CONSTRAINT %s" % (
-                self._table.qualname(), self.name)
+                self._table.qualname(), quote_id(self.name))
         return []
 
     def comment(self):
@@ -98,7 +98,7 @@ class CheckConstraint(Constraint):
         :return: SQL statement
         """
         return ["ALTER TABLE %s ADD CONSTRAINT %s %s (%s)" % (
-                self._table.qualname(), self.name, self.objtype,
+                self._table.qualname(), quote_id(self.name), self.objtype,
                 self.expression)]
 
     def diff_map(self, inchk):
@@ -211,7 +211,7 @@ class ForeignKey(Constraint):
 
         return "ALTER TABLE %s ADD CONSTRAINT %s FOREIGN KEY (%s) " \
             "REFERENCES %s (%s)%s%s" % (
-            self._table.qualname(), self.name, self.key_columns(),
+            self._table.qualname(), quote_id(self.name), self.key_columns(),
             self.references.qualname(), self.ref_columns(), match, actions)
 
     def diff_map(self, infk):
