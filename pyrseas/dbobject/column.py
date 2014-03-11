@@ -145,7 +145,7 @@ class Column(DbSchemaObject):
         input.
         """
         stmts = []
-        base = "ALTER COLUMN %s " % self.name
+        base = "ALTER COLUMN %s " % quote_id(self.name)
         # check NOT NULL
         if not hasattr(self, 'not_null') and hasattr(incol, 'not_null'):
             stmts.append(base + "SET NOT NULL")
