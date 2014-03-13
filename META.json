@@ -27,7 +27,7 @@
      }
    },
    "resources": {
-      "homepage": "http://pyrseas.org/",
+      "homepage": "http://pyrseas.projects.pgfoundry.org/",
       "bugtracker": {
          "web": "https://github.com/jmafc/Pyrseas/issues"
       },
