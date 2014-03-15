@@ -339,10 +339,11 @@ class DbObject(object):
         """
         return "ALTER %s %s RENAME TO %s" % (self.objtype, self.name, newname)
 
-    def diff_map(self, inobj):
+    def diff_map(self, inobj, no_owner=False):
         """Generate SQL to transform an existing object
 
         :param inobj: a YAML map defining the new object
+        :param no_owner: exclude object owner information
         :return: list of SQL statements
 
         Compares the object to an input object and generates SQL
@@ -351,7 +352,7 @@ class DbObject(object):
         comments.
         """
         stmts = []
-        if hasattr(inobj, 'owner') and hasattr(self, 'owner'):
+        if not no_owner and hasattr(inobj, 'owner') and hasattr(self, 'owner'):
             if inobj.owner != self.owner:
                 stmts.append(self.alter_owner(inobj.owner))
         stmts.append(self.diff_privileges(inobj))

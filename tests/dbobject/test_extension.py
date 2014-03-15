@@ -117,3 +117,17 @@ class ExtensionToSqlTestCase(InputMapToSqlTestCase):
             'schema': 'public', 'description': "Trigram extension"}})
         sql = self.to_sql(inmap, [CREATE_STMT], superuser=True)
         assert sql == ["COMMENT ON EXTENSION pg_trgm IS 'Trigram extension'"]
+
+    def test_no_alter_owner_extension(self):
+        """Do not alter the owner of an existing extension.
+
+        ALTER EXTENSION extension_name OWNER is not a valid form.
+        """
+        if self.db.version < 90100:
+            self.skipTest('Only available on PG 9.1')
+        # create a new owner that is different from self.db.user
+        new_owner = 'new_%s' % self.db.user
+        inmap = self.std_map()
+        inmap.update({'extension pg_trgm': {'schema': 'public', 'owner': new_owner}})
+        sql = self.to_sql(inmap, [CREATE_STMT], superuser=True)
+        assert 'ALTER EXTENSION pg_trgm OWNER TO %s' % new_owner not in sql
