@@ -94,9 +94,10 @@ class ExtensionDict(DbObjectDict):
                     stmts.append(inexten.create())
                 else:
                     stmts.append(self[ext].rename(inexten))
+            # check extension objects
             else:
-                # check extension objects
-                stmts.append(self[ext].diff_map(inexten))
+                # extension owner cannot be altered, set no_owner to True
+                stmts.append(self[ext].diff_map(inexten, no_owner=True))
 
         # check existing extensions
         for ext in self:
