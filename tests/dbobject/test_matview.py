@@ -33,6 +33,17 @@ class MatViewToMapTestCase(DatabaseToMapTestCase):
         assert dbmap['schema public']['materialized view mv1'][
             'description'] == 'Test matview mv1'
 
+    def test_map_view_index(self):
+        "Map a materialized view with an index"
+        if self.db.version < 90300:
+            self.skipTest('Only available on PG 9.3')
+        stmts = [CREATE_TABLE, CREATE_STMT,
+                 "CREATE INDEX idx1 ON mv1 (mc3)"]
+        dbmap = self.to_map(stmts)
+        expmap = {'definition': VIEW_DEFN, 'with_data': True,
+                  'indexes': {'idx1': {'keys': ['mc3']}}}
+        assert dbmap['schema public']['materialized view mv1'] == expmap
+
 
 class MatViewToSqlTestCase(InputMapToSqlTestCase):
     """Test SQL generation from input materialized views"""
