@@ -45,21 +45,35 @@ class Language(DbObject):
         return stmts
 
 
+QUERY_PRE91 = \
+        """SELECT lanname AS name, lanpltrusted AS trusted,
+                  rolname AS owner, array_to_string(lanacl, ',') AS privileges,
+                  obj_description(l.oid, 'pg_language') AS description
+           FROM pg_language l
+                JOIN pg_roles r ON (r.oid = lanowner)
+           WHERE lanispl
+           ORDER BY lanname"""
+
+
 class LanguageDict(DbObjectDict):
     "The collection of procedural languages in a database."
 
     cls = Language
     query = \
-        """SELECT lanname AS name, lanpltrusted AS trusted, deptype AS _ext,
+        """SELECT lanname AS name, lanpltrusted AS trusted,
                   rolname AS owner, array_to_string(lanacl, ',') AS privileges,
                   obj_description(l.oid, 'pg_language') AS description
            FROM pg_language l
                 JOIN pg_roles r ON (r.oid = lanowner)
-                LEFT JOIN pg_depend d ON (l.oid = d.objid
-                     AND classid = 'pg_language'::regclass
-                     AND refclassid != 'pg_proc'::regclass)
            WHERE lanispl
+             AND lanname NOT IN (SELECT tmplname FROM pg_pltemplate)
            ORDER BY lanname"""
+
+    def _from_catalog(self):
+        """Initialize the dictionary of languages by querying the catalogs"""
+        if self.dbconn.version < 90100:
+            self.query = QUERY_PRE91
+        super(LanguageDict, self)._from_catalog()
 
     def from_map(self, inmap):
         """Initialize the dictionary of languages by examining the input map

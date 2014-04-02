@@ -556,7 +556,13 @@ class MaterializedView(View):
         if hasattr(opts, 'excl_tables') and opts.excl_tables \
                 and self.name in opts.excl_tables:
             return None
-        return self._base_map(opts.no_owner, opts.no_privs)
+        mvw = self._base_map(opts.no_owner, opts.no_privs)
+        if hasattr(self, 'indexes'):
+            if not 'indexes' in mvw:
+                mvw['indexes'] = {}
+            for k in list(self.indexes.values()):
+                mvw['indexes'].update(self.indexes[k.name].to_map())
+        return mvw
 
     @commentable
     @grantable
