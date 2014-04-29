@@ -12,6 +12,7 @@ import yaml
 from pyrseas import __version__
 from pyrseas.database import Database
 from pyrseas.cmdargs import cmd_parser, parse_args
+from pyrseas.lib.pycompat import PY2
 
 
 def main():
@@ -48,9 +49,12 @@ def main():
             print("BEGIN;", file=fd)
         for stmt in stmts:
             if isinstance(stmt, tuple):
-                print(("".join(stmt) + '\n').encode('utf-8'), file=fd)
+                outstmt = "".join(stmt) + '\n'
             else:
-                print(("%s;\n" % stmt).encode('utf-8'), file=fd)
+                outstmt = "%s;\n" % stmt
+            if PY2:
+                outstmt = outstmt.encode('utf-8')
+            print(outstmt, file=fd)
         if options.onetrans or options.update:
             print("COMMIT;", file=fd)
         if options.update:
