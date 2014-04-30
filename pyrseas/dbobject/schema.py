@@ -115,12 +115,13 @@ class Schema(DbObject):
                     filepath = os.path.join(dir, obj.extern_filename())
                     with open(filepath, 'a') as f:
                         f.write(yamldump({extkey: objmap}))
-                    outobj = {extkey: filepath}
+                    outobj = {extkey:
+                              os.path.relpath(filepath, opts.metadata_dir)}
                 filemap.update(outobj)
             # always write the schema YAML file
-            filepath = os.path.join(opts.metadata_dir, self.extern_filename())
+            filepath = self.extern_filename()
             extkey = self.extern_key()
-            with open(filepath, 'a') as f:
+            with open(os.path.join(opts.metadata_dir, filepath), 'a') as f:
                 f.write(yamldump({extkey: schbase}))
             filemap.update(schema=filepath)
             return {extkey: filemap}
