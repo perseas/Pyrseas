@@ -44,7 +44,10 @@ class Config(dict):
         self.merge(_load_cfg(os.environ.get("PYRSEAS_USER_CONFIG",
                              os.path.join(_home_dir(), 'pyrseas'))))
         if 'repository' in self and 'path' in self['repository']:
-            self.merge(_load_cfg(self['repository']['path']))
+            cfgpath = self['repository']['path']
+        else:
+            cfgpath = os.getcwd()
+        self.merge(_load_cfg(cfgpath))
 
     def merge(self, cfg):
         """Merge extra configuration

@@ -57,6 +57,18 @@ def test_cmd_parser(tmpdir):
     assert cfg['datacopy'] == CFG_TABLE_DATA
 
 
+def test_parse_repo_config(tmpdir):
+    "Test parsing a repository configuration file in the current directory"
+    f = tmpdir.join('config.yaml')
+    f.write(yamldump(CFG_DATA))
+    os.chdir(tmpdir.strpath)
+    sys.argv = ['testprog', 'testdb']
+    os.environ["PYRSEAS_USER_CONFIG"] = ''
+    parser = cmd_parser("Test description", '0.0.1')
+    cfg = parse_args(parser)
+    assert cfg['datacopy'] == CFG_TABLE_DATA
+
+
 def test_repo_user_config(tmpdir):
     "Test a repository path specified in the user config"
     usercfg = {'repository': {'path': tmpdir.strpath}}
