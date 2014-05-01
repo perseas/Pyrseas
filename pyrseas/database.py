@@ -283,15 +283,18 @@ class Database(object):
                 for obj, val in objmap.items():
                     if isinstance(val, dict):
                         dirpath = ''
-                        for schobj, filepath in val.items():
+                        for schobj, fpath in val.items():
+                            filepath = os.path.join(opts.metadata_dir, fpath)
                             if os.path.exists(filepath):
                                 os.remove(filepath)
                                 if schobj == 'schema':
                                     (dirpath, ext) = os.path.splitext(filepath)
                         if os.path.exists(dirpath):
                             os.rmdir(dirpath)
-                    elif os.path.exists(val):
-                        os.remove(val)
+                    else:
+                        filepath = os.path.join(opts.metadata_dir, val)
+                        if (os.path.exists(filepath)):
+                            os.remove(filepath)
 
         dbmap = self.db.extensions.to_map(opts)
         dbmap.update(self.db.languages.to_map(opts))

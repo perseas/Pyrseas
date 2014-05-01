@@ -501,9 +501,9 @@ class DbObjectDict(dict):
                 extkey = obj.extern_key()
                 outobj = {extkey: objmap}
                 if opts.multiple_files:
-                    filepath = os.path.join(opts.metadata_dir,
-                                            obj.extern_filename())
-                    with open(filepath, 'a') as f:
+                    filepath = obj.extern_filename()
+                    with open(os.path.join(opts.metadata_dir, filepath),
+                              'a') as f:
                         f.write(yamldump(outobj))
                     outobj = {extkey: filepath}
                 objdict.update(outobj)
