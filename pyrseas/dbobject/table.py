@@ -486,6 +486,8 @@ class View(DbClass):
                 and self.name in opts.excl_tables:
             return None
         view = self._base_map(opts.no_owner, opts.no_privs)
+        if 'dependent_funcs' in view:
+            del view['dependent_funcs']
         if hasattr(self, 'triggers'):
             for key in list(self.triggers.values()):
                 view['triggers'].update(self.triggers[key.name].to_map())
