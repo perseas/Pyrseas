@@ -54,13 +54,28 @@ class Sequence(DbClass):
 
         :param dbconn: a DbConnection object
         """
+
+        def split_table(obj, sch):
+            schema = sch or 'public'
+            tbl = obj
+            quoted = '"%s".' % schema
+            if obj.startswith(schema):
+                tbl = obj[len(schema) + 1:]
+            elif obj.startswith(quoted):
+                tbl = obj[len(quoted):]
+            elif sch is None:
+                raise ValueError("Invalid schema.table: %s" % obj)
+            if tbl[0] == '"' and tbl[-1:] == '"':
+                tbl = tbl[1:-1]
+            return tbl
+
         data = dbconn.fetchone(
             """SELECT refobjid::regclass, refobjsubid
                FROM pg_depend
                WHERE objid = '%s'::regclass
                  AND refclassid = 'pg_class'::regclass""" % self.qualname())
         if data:
-            (sch, self.owner_table) = split_schema_obj(data[0], self.schema)
+            self.owner_table = split_table(data[0], self.schema)
             self.owner_column = data[1]
             return
         data = dbconn.fetchone(
@@ -69,8 +84,7 @@ class Sequence(DbClass):
                WHERE refobjid = '%s'::regclass
                AND classid = 'pg_attrdef'::regclass""" % self.qualname())
         if data:
-            (sch, self.dependent_table) = split_schema_obj(
-                data[0], self.schema)
+            self.dependent_table = split_table(data[0], self.schema)
 
     def to_map(self, opts):
         """Convert a sequence definition to a YAML-suitable format
