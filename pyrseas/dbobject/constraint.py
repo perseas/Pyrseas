@@ -282,8 +282,8 @@ class ConstraintDict(DbObjectDict):
     cls = Constraint
     query = \
         """SELECT nspname AS schema,
-                  CASE WHEN contypid = 0 THEN conrelid::regclass::name
-                       ELSE contypid::regtype::name END AS table,
+                  CASE WHEN contypid = 0 THEN conrelid::regclass::text
+                       ELSE contypid::regtype::text END AS table,
                   conname AS name,
                   CASE WHEN contypid != 0 THEN 'd' ELSE '' END AS target,
                   contype AS type, conkey AS keycols,
