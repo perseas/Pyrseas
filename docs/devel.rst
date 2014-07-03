@@ -30,7 +30,7 @@ Version Control
 
 Pyrseas uses `Git <http://git-scm.com/>`_ to control changes to its
 source code. As mentioned under :ref:`download`, the master Git
-`repository <https://github.com/jmafc/Pyrseas>`_ is located at GitHub.
+`repository <https://github.com/perseas/Pyrseas>`_ is located at GitHub.
 
 To install Git, either `download and install
 <http://git-scm.com/download>`_ the latest stable release for your
@@ -45,11 +45,11 @@ from a Linux/Unix background.
 Once Git is installed, change to a suitable directory and clone the
 master repository::
 
- git clone git://github.com/jmafc/Pyrseas.git
+ git clone git://github.com/perseas/Pyrseas.git
 
 or::
 
- git clone https://github.com/jmafc/Pyrseas.git
+ git clone https://github.com/perseas/Pyrseas.git
 
 To be able to create a fork on GitHub, open an issue or participate in
 Pyrseas development, you'll first have to `create a GitHub account

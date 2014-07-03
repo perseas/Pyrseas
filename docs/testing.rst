@@ -83,7 +83,7 @@ privileges, at either the operating system or PostgreSQL level.
  - Install Git using package manager or from
    http://git-scm.com/download (on Windows, prefer Git Bash)
 
- - ``git clone git://github.com/jmafc/Pyrseas.git``
+ - ``git clone git://github.com/perseas/Pyrseas.git``
 
  - Install Python 2.7 and 3.2, using package manager or from
    installers at http://www.python.org/download/.
