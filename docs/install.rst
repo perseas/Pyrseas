@@ -10,7 +10,7 @@ For the latest release, use::
 
 For development::
 
- git clone git://github.com/jmafc/Pyrseas.git
+ git clone git://github.com/perseas/Pyrseas.git
  cd Pyrseas
  python setup.py install
 
@@ -62,7 +62,7 @@ Pyrseas is available at the following locations:
  - `Python Package Index (PyPI) <http://pypi.python.org/pypi/Pyrseas>`_
  - `PostgreSQL Extension Network (PGXN) <http://pgxn.org/dist/pyrseas/>`_
  - `PgFoundry <http://pgfoundry.org/projects/pyrseas/>`_
- - `GitHub repository <https://github.com/jmafc/Pyrseas>`_
+ - `GitHub repository <https://github.com/perseas/Pyrseas>`_
 
 You can download the distribution from PyPI in gzip-compressed tar or
 ZIP archive format, but you can download *and* install it using either
@@ -84,11 +84,11 @@ downloaded from the `Git download page
 <http://git-scm.com/download>`_.  You can fetch the Pyrseas sources by
 issuing one of the following commands::
 
- git clone git://github.com/jmafc/Pyrseas.git
+ git clone git://github.com/perseas/Pyrseas.git
 
 or::
 
- git clone https://github.com/jmafc/Pyrseas.git
+ git clone https://github.com/perseas/Pyrseas.git
 
 This will create a ``Pyrseas`` directory tree (you can use a different
 target name by adding it to the above commands).  To list available
