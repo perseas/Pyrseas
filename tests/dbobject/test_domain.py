@@ -4,6 +4,8 @@
 from pyrseas.testutils import DatabaseToMapTestCase
 from pyrseas.testutils import InputMapToSqlTestCase, fix_indent
 
+CREATEFUNC_STMT = ("CREATE FUNCTION dc1(int) RETURNS bool AS 'select true' "
+                   "LANGUAGE sql IMMUTABLE")
 CREATE_STMT = "CREATE DOMAIN d1 AS integer"
 DROP_STMT = "DROP DOMAIN IF EXISTS d1"
 COMMENT_STMT = "COMMENT ON DOMAIN d1 IS 'Test domain d1'"
@@ -34,6 +36,17 @@ class DomainToMapTestCase(DatabaseToMapTestCase):
         dbmap = self.to_map([CREATE_STMT + " CHECK (VALUE >= 1888)"])
         expmap = {'type': 'integer', 'check_constraints': {
             'd1_check': {'expression': '(VALUE >= 1888)'}}}
+        assert dbmap['schema public']['domain d1'] == expmap
+
+    def test_dependency(self):
+        "A domain is created after a function it depends on"
+        dbmap = self.to_map([CREATEFUNC_STMT,
+                             CREATE_STMT + " CHECK (dc1(VALUE))"])
+        expmap = {'type': 'integer',
+                  'check_constraints': {
+                      'd1_check': {
+                          'expression': 'dc1(VALUE)',
+                          'depends_on': ['function dc1(integer)']}}}
         assert dbmap['schema public']['domain d1'] == expmap
 
 
@@ -77,3 +90,23 @@ class DomainToSqlTestCase(InputMapToSqlTestCase):
             'oldname': 'd1', 'type': 'integer'}})
         sql = self.to_sql(inmap, [CREATE_STMT])
         assert sql == ["ALTER DOMAIN d1 RENAME TO d2"]
+
+    def test_dependency(self):
+        "Check that the domain is created after a func it depends on"
+        inmap = self.std_map()
+        inmap['schema public'].update({
+            'domain d1': {
+                'type': 'integer',
+                'check_constraints': {
+                    'd1_check': {
+                        'expression': 'dc1(VALUE)',
+                        'depends_on': ['function dc1(integer)']}}},
+            'function dc1(integer)': {
+                'language': 'sql', 'returns': 'integer',
+                'source': 'select true', 'volatility': 'immutable'}})
+        sql = self.to_sql(inmap)
+        idom = [i for i, s in enumerate(sql) if s.startswith('CREATE DOMAIN')]
+        assert len(idom) == 1
+        ifun = [i for i, s in enumerate(sql) if s.startswith('CREATE FUNCTION')]
+        assert len(ifun) == 1
+        assert ifun[0] < idom[0], sql
