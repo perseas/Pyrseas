@@ -19,6 +19,7 @@ class Proc(DbSchemaObject):
     """A procedure such as a FUNCTION or an AGGREGATE"""
 
     keylist = ['schema', 'name', 'arguments']
+    catalog_table = 'pg_proc'
 
     @property
     def allprivs(self):

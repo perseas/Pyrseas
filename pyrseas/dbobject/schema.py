@@ -23,6 +23,7 @@ class Schema(DbObject):
 
     keylist = ['name']
     objtype = 'SCHEMA'
+    catalog_table = 'pg_namespace'
 
     @property
     def allprivs(self):

@@ -21,6 +21,7 @@ class Constraint(DbSchemaObject):
        unique constraint"""
 
     keylist = ['schema', 'table', 'name']
+    catalog_table = 'pg_constraint'
 
     def key_columns(self):
         """Return comma-separated list of key column names

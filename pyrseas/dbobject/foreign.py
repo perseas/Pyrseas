@@ -80,6 +80,7 @@ class ForeignDataWrapper(DbObjectWithOptions):
 
     objtype = "FOREIGN DATA WRAPPER"
     single_extern_file = True
+    catalog_table = 'pg_foreign_data_wrapper'
 
     @property
     def allprivs(self):
@@ -263,6 +264,7 @@ class ForeignServer(DbObjectWithOptions):
     objtype = "SERVER"
     privobjtype = "FOREIGN SERVER"
     keylist = ['wrapper', 'name']
+    catalog_table = 'pg_foreign_server'
 
     @property
     def allprivs(self):
@@ -450,6 +452,7 @@ class UserMapping(DbObjectWithOptions):
     objtype = "USER MAPPING"
 
     keylist = ['wrapper', 'server', 'username']
+    catalog_table = 'pg_user_mappings'
 
     def extern_key(self):
         """Return the key to be used in external maps for this user mapping
@@ -569,6 +572,7 @@ class ForeignTable(DbObjectWithOptions, Table):
 
     objtype = "FOREIGN TABLE"
     privobjtype = "TABLE"
+    catalog_table = 'pg_foreign_table'
 
     def to_map(self, opts):
         """Convert a foreign table to a YAML-suitable format

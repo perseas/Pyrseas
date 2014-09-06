@@ -18,6 +18,7 @@ class Trigger(DbSchemaObject):
 
     keylist = ['schema', 'table', 'name']
     objtype = "TRIGGER"
+    catalog_table = 'pg_trigger'
 
     def identifier(self):
         """Returns a full identifier for the trigger

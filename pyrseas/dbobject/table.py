@@ -38,6 +38,7 @@ class DbClass(DbSchemaObject):
     """A table, sequence or view"""
 
     keylist = ['schema', 'name']
+    catalog_table = 'pg_class'
 
 
 class Sequence(DbClass):

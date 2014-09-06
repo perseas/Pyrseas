@@ -22,6 +22,7 @@ class DbType(DbSchemaObject):
 
     keylist = ['schema', 'name']
     objtype = "TYPE"
+    catalog_table = 'pg_type'
 
 
 class BaseType(DbType):

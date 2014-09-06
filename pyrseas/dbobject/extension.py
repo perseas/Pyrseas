@@ -16,6 +16,7 @@ class Extension(DbObject):
     keylist = ['name']
     objtype = "EXTENSION"
     single_extern_file = True
+    catalog_table = 'pg_extension'
 
     @commentable
     def create(self):

@@ -16,6 +16,7 @@ class Operator(DbSchemaObject):
     keylist = ['schema', 'name', 'leftarg', 'rightarg']
     objtype = "OPERATOR"
     single_extern_file = True
+    catalog_table = 'pg_operator'
 
     def extern_key(self):
         """Return the key to be used in external maps for this operator

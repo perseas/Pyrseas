@@ -18,6 +18,7 @@ class TSConfiguration(DbSchemaObject):
     keylist = ['schema', 'name']
     objtype = "TEXT SEARCH CONFIGURATION"
     single_extern_file = True
+    catalog_table = 'pg_ts_config'
 
     def to_map(self, no_owner):
         """Convert a text search configuration to a YAML-suitable format
@@ -128,6 +129,7 @@ class TSDictionary(DbSchemaObject):
     keylist = ['schema', 'name']
     objtype = "TEXT SEARCH DICTIONARY"
     single_extern_file = True
+    catalog_table = 'pg_ts_dict'
 
     @commentable
     @ownable
@@ -225,6 +227,7 @@ class TSParser(DbSchemaObject):
     keylist = ['schema', 'name']
     objtype = "TEXT SEARCH PARSER"
     single_extern_file = True
+    catalog_table = 'pg_ts_parser'
 
     @commentable
     @ownable
@@ -324,6 +327,7 @@ class TSTemplate(DbSchemaObject):
     keylist = ['schema', 'name']
     objtype = "TEXT SEARCH TEMPLATE"
     single_extern_file = True
+    catalog_table = 'pg_ts_template'
 
     @commentable
     def create(self):

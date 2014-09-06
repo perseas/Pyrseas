@@ -127,6 +127,10 @@ class DbObject(object):
     also used by :meth:`extern_key` in lowercase form.
     """
 
+    catalog_table = None
+    """The name of the catalog table where these objects live
+    """
+
     allprivs = ''
 
     def __init__(self, **attrs):

@@ -48,6 +48,7 @@ class Index(DbSchemaObject):
 
     keylist = ['schema', 'table', 'name']
     objtype = "INDEX"
+    catalog_table = 'pg_index'
 
     def key_expressions(self):
         """Return comma-separated list of key column names and qualifiers
