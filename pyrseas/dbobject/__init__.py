@@ -281,6 +281,9 @@ class DbObject(object):
                 dct['privileges'] = self.map_privs()
         # Never dump the oid
         dct.pop('oid', None)
+        # Only dump dependencies if there is some
+        if not dct.get('depends_on'):
+            dct.pop('depends_on', None)
         return dct
 
     def to_map(self, no_owner=False, no_privs=False):
@@ -401,6 +404,18 @@ class DbObject(object):
                 self.description = inobj.description
                 stmts.append(self.comment())
         return stmts
+
+    def add_dependency(self, db, tgt):
+        """Add a dependency to the list of dependencies.
+
+        Subclasses may override this function but it is advised they call up in
+        the inheritance chain to allow superclasses checks to be performed.
+        """
+        from pyrseas.dbobject.schema import Schema
+        if isinstance(tgt, Schema):
+            if getattr(self, 'schema', None) == tgt.key():
+                return
+        self.depends_on.append(tgt.extern_key())
 
 
 class DbSchemaObject(DbObject):
