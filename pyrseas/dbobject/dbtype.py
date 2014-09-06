@@ -233,7 +233,8 @@ class TypeDict(DbObjectDict):
 
     cls = DbType
     query = \
-        """SELECT nspname AS schema, typname AS name, typtype AS kind,
+        """SELECT t.oid,
+                  nspname AS schema, typname AS name, typtype AS kind,
                   format_type(typbasetype, typtypmod) AS type,
                   typnotnull AS not_null, typdefault AS default,
                   ARRAY(SELECT enumlabel FROM pg_enum e WHERE t.oid = enumtypid
@@ -264,6 +265,7 @@ class TypeDict(DbObjectDict):
     def _from_catalog(self):
         """Initialize the dictionary of types by querying the catalogs"""
         for dbtype in self.fetch():
+            oid = dbtype.oid
             sch, typ = dbtype.key()
             kind = dbtype.kind
             del dbtype.kind
@@ -274,21 +276,21 @@ class TypeDict(DbObjectDict):
                 del dbtype.internallength, dbtype.alignment, dbtype.storage
                 del dbtype.delimiter, dbtype.category
             if kind == 'd':
-                self[(sch, typ)] = Domain(**dbtype.__dict__)
+                self.by_oid[oid] = self[sch, typ] = Domain(**dbtype.__dict__)
             elif kind == 'e':
                 del dbtype.type
-                self[(sch, typ)] = Enum(**dbtype.__dict__)
-                if not hasattr(self[(sch, typ)], 'labels'):
+                self.by_oid[oid] = self[(sch, typ)] = Enum(**dbtype.__dict__)
+                if not hasattr(self[sch, typ], 'labels'):
                     self[(sch, typ)].labels = {}
             elif kind == 'c':
                 del dbtype.type
-                self[(sch, typ)] = Composite(**dbtype.__dict__)
+                self.by_oid[oid] = self[sch, typ] = Composite(**dbtype.__dict__)
             elif kind == 'b':
                 del dbtype.type
                 for attr in OPT_FUNCS:
                     if getattr(dbtype, attr) == '-':
                         delattr(dbtype, attr)
-                self[(sch, typ)] = BaseType(**dbtype.__dict__)
+                self.by_oid[oid] = self[sch, typ] = BaseType(**dbtype.__dict__)
 
     def from_map(self, schema, inobjs, newdb):
         """Initalize the dictionary of types by converting the input map

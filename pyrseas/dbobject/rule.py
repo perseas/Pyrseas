@@ -54,7 +54,8 @@ class RuleDict(DbObjectDict):
 
     cls = Rule
     query = \
-        """SELECT nspname AS schema, relname AS table, rulename AS name,
+        """SELECT r.oid,
+                  nspname AS schema, relname AS table, rulename AS name,
                   split_part('select,update,insert,delete', ',',
                       ev_type::int - 48) AS event, is_instead AS instead,
                   pg_get_ruledef(r.oid) AS definition,
@@ -76,7 +77,7 @@ class RuleDict(DbObjectDict):
                 do_loc += 8
             rule.actions = rule.definition[do_loc + 4:-1]
             del rule.definition
-            self[rule.key()] = rule
+            self.by_oid[rule.oid] = self[rule.key()] = rule
 
     def from_map(self, table, inmap):
         """Initialize the dictionary of rules by examining the input map

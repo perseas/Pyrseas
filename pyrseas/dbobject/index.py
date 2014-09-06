@@ -154,7 +154,8 @@ class IndexDict(DbObjectDict):
 
     cls = Index
     query = \
-        """SELECT nspname AS schema, indrelid::regclass AS table,
+        """SELECT c.oid,
+                  nspname AS schema, indrelid::regclass AS table,
                   c.relname AS name, amname AS access_method,
                   indisunique AS unique, indkey AS keycols,
                   pg_get_expr(indexprs, indrelid) AS keyexprs,
@@ -178,6 +179,7 @@ class IndexDict(DbObjectDict):
         """Initialize the dictionary of indexes by querying the catalogs"""
         for index in self.fetch():
             index.unqualify()
+            oid = index.oid
             sch, tbl, idx = index.key()
             sch, tbl = split_schema_obj('%s.%s' % (sch, tbl))
             keydefs, _, _ = index.defn.partition(' WHERE ')
@@ -241,7 +243,7 @@ class IndexDict(DbObjectDict):
                     key = {key: extra}
                 index.keys.append(key)
             del index.defn, index.keycols
-            self[(sch, tbl, idx)] = index
+            self.by_oid[oid] = self[(sch, tbl, idx)] = index
 
     def from_map(self, table, inindexes):
         """Initialize the dictionary of indexes by converting the input map

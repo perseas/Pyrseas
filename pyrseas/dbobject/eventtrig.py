@@ -39,7 +39,8 @@ class EventTriggerDict(DbObjectDict):
 
     cls = EventTrigger
     query = \
-        """SELECT evtname AS name, evtevent AS event, rolname AS owner,
+        """SELECT t.oid,
+                  evtname AS name, evtevent AS event, rolname AS owner,
                   evtenabled AS enabled, evtfoid::regprocedure AS procedure,
                   evttags AS tags,
                   obj_description(t.oid, 'pg_event_trigger') AS description
@@ -55,7 +56,7 @@ class EventTriggerDict(DbObjectDict):
             return
         for trig in self.fetch():
             trig.enabled = self.enable_modes[trig.enabled]
-            self[trig.key()] = trig
+            self.by_oid[trig.oid] = self[trig.key()] = trig
 
     def from_map(self, intriggers, newdb):
         """Initalize the dictionary of triggers by converting the input map

@@ -73,7 +73,8 @@ class CastDict(DbObjectDict):
 
     cls = Cast
     query = \
-        """SELECT castsource::regtype AS source,
+        """SELECT c.oid,
+                  castsource::regtype AS source,
                   casttarget::regtype AS target,
                   CASE WHEN castmethod = 'f' THEN castfunc::regprocedure
                        ELSE NULL::regprocedure END AS function,

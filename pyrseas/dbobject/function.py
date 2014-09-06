@@ -203,7 +203,8 @@ class Aggregate(Proc):
                 opt_clauses and ',\n    ' or '', ',\n    '.join(opt_clauses))]
 
 QUERY_PRE92 = \
-    """SELECT nspname AS schema, proname AS name,
+    """SELECT p.oid,
+              nspname AS schema, proname AS name,
               pg_get_function_identity_arguments(p.oid) AS arguments,
               pg_get_function_arguments(p.oid) AS allargs,
               pg_get_function_result(p.oid) AS returns,
@@ -234,7 +235,8 @@ class ProcDict(DbObjectDict):
 
     cls = Proc
     query = \
-        """SELECT nspname AS schema, proname AS name,
+        """SELECT p.oid,
+                  nspname AS schema, proname AS name,
                   pg_get_function_identity_arguments(p.oid) AS arguments,
                   pg_get_function_arguments(p.oid) AS allargs,
                   pg_get_function_result(p.oid) AS returns,
@@ -268,6 +270,7 @@ class ProcDict(DbObjectDict):
             if hasattr(proc, 'privileges'):
                 proc.privileges = proc.privileges.split(',')
             sch, prc, arg = proc.key()
+            oid = proc.oid
             if hasattr(proc, 'allargs') and proc.allargs == proc.arguments:
                 del proc.allargs
             if hasattr(proc, 'proisagg'):
@@ -280,9 +283,11 @@ class ProcDict(DbObjectDict):
                     del proc.finalfunc
                 if proc.sortop == '0':
                     del proc.sortop
-                self[(sch, prc, arg)] = Aggregate(**proc.__dict__)
+                self.by_oid[oid] = self[sch, prc, arg] \
+                    = Aggregate(**proc.__dict__)
             else:
-                self[(sch, prc, arg)] = Function(**proc.__dict__)
+                self.by_oid[oid] = self[sch, prc, arg] \
+                    = Function(**proc.__dict__)
 
     def from_map(self, schema, infuncs):
         """Initalize the dictionary of functions by converting the input map

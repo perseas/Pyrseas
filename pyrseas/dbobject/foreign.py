@@ -135,7 +135,8 @@ class ForeignDataWrapper(DbObjectWithOptions):
 
 
 QUERY_PRE91 = \
-    """SELECT fdwname AS name, CASE WHEN fdwvalidator = 0 THEN NULL
+    """SELECT w.oid,
+              fdwname AS name, CASE WHEN fdwvalidator = 0 THEN NULL
                 ELSE fdwvalidator::regproc END AS validator,
                 fdwoptions AS options, rolname AS owner,
               array_to_string(fdwacl, ',') AS privileges,
@@ -151,7 +152,8 @@ class ForeignDataWrapperDict(DbObjectDict):
 
     cls = ForeignDataWrapper
     query = \
-        """SELECT fdwname AS name, CASE WHEN fdwhandler = 0 THEN NULL
+        """SELECT w.oid,
+                  fdwname AS name, CASE WHEN fdwhandler = 0 THEN NULL
                       ELSE fdwhandler::regproc END AS handler,
                   CASE WHEN fdwvalidator = 0 THEN NULL
                       ELSE fdwvalidator::regproc END AS validator,
@@ -489,7 +491,8 @@ class UserMappingDict(DbObjectDict):
 
     cls = UserMapping
     query = \
-        """SELECT fdwname AS wrapper, s.srvname AS server,
+        """SELECT u.umid,
+                  fdwname AS wrapper, s.srvname AS server,
                   CASE umuser WHEN 0 THEN 'PUBLIC' ELSE
                   usename END AS username, umoptions AS options
            FROM pg_user_mappings u
@@ -653,7 +656,8 @@ class ForeignTableDict(ClassDict):
 
     cls = ForeignTable
     query = \
-        """SELECT nspname AS schema, relname AS name, srvname AS server,
+        """SELECT c.oid,
+                  nspname AS schema, relname AS name, srvname AS server,
                   ftoptions AS options, rolname AS owner,
                   array_to_string(relacl, ',') AS privileges,
                   obj_description(c.oid, 'pg_class') AS description

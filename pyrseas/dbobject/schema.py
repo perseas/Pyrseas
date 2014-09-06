@@ -177,7 +177,8 @@ class SchemaDict(DbObjectDict):
 
     cls = Schema
     query = \
-        """SELECT nspname AS name, rolname AS owner,
+        """SELECT n.oid,
+                  nspname AS name, rolname AS owner,
                   array_to_string(nspacl, ',') AS privileges,
                   obj_description(n.oid, 'pg_namespace') AS description
            FROM pg_namespace n

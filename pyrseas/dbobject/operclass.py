@@ -71,7 +71,8 @@ class OperatorClassDict(DbObjectDict):
 
     cls = OperatorClass
     query = \
-        """SELECT nspname AS schema, opcname AS name, rolname AS owner,
+        """SELECT o.oid,
+                  nspname AS schema, opcname AS name, rolname AS owner,
                   amname AS index_method, opfname AS family,
                   opcintype::regtype AS type, opcdefault AS default,
                   opckeytype::regtype AS storage,
@@ -121,7 +122,8 @@ class OperatorClassDict(DbObjectDict):
         for opclass in self.fetch():
             if opclass.storage == '-':
                 del opclass.storage
-            self[opclass.key()] = OperatorClass(**opclass.__dict__)
+            self.by_oid[opclass.oid] = self[opclass.key()] \
+                = OperatorClass(**opclass.__dict__)
         opers = self.dbconn.fetchall(self.opquery)
         self.dbconn.rollback()
         for (sch, opc, idx, strat, oper) in opers:

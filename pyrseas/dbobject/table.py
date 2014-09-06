@@ -617,7 +617,8 @@ class MaterializedView(View):
 
 
 QUERY_PRE91 = \
-    """SELECT nspname AS schema, relname AS name, relkind AS kind,
+    """SELECT c.oid,
+              nspname AS schema, relname AS name, relkind AS kind,
               reloptions AS options, spcname AS tablespace,
               rolname AS owner, array_to_string(relacl, ',') AS privileges,
               CASE WHEN relkind = 'v' THEN pg_get_viewdef(c.oid, TRUE)
@@ -633,7 +634,8 @@ QUERY_PRE91 = \
        ORDER BY nspname, relname"""
 
 QUERY_PRE93 = \
-    """SELECT nspname AS schema, relname AS name, relkind AS kind,
+    """SELECT c.oid,
+              nspname AS schema, relname AS name, relkind AS kind,
               reloptions AS options, relpersistence AS persistence,
               spcname AS tablespace, rolname AS owner,
               array_to_string(relacl, ',') AS privileges,
@@ -657,7 +659,8 @@ class ClassDict(DbObjectDict):
 
     cls = DbClass
     query = \
-        """SELECT nspname AS schema, relname AS name, relkind AS kind,
+        """SELECT c.oid,
+                  nspname AS schema, relname AS name, relkind AS kind,
                   reloptions AS options, relpersistence AS persistence,
                   spcname AS tablespace, rolname AS owner,
                   array_to_string(relacl, ',') AS privileges,
@@ -688,6 +691,7 @@ class ClassDict(DbObjectDict):
         elif self.dbconn.version < 90300:
             self.query = QUERY_PRE93
         for table in self.fetch():
+            oid = table.oid
             sch, tbl = table.key()
             if hasattr(table, 'privileges'):
                 table.privileges = table.privileges.split(',')
@@ -698,15 +702,17 @@ class ClassDict(DbObjectDict):
             kind = table.kind
             del table.kind
             if kind == 'r':
-                self[(sch, tbl)] = Table(**table.__dict__)
+                self.by_oid[oid] = self[sch, tbl] = Table(**table.__dict__)
             elif kind == 'S':
-                self[(sch, tbl)] = inst = Sequence(**table.__dict__)
+                self.by_oid[oid] = self[sch, tbl] = inst \
+                    = Sequence(**table.__dict__)
                 inst.get_attrs(self.dbconn)
                 inst.get_dependent_table(self.dbconn)
             elif kind == 'v':
-                self[(sch, tbl)] = View(**table.__dict__)
+                self.by_oid[oid] = self[sch, tbl] = View(**table.__dict__)
             elif kind == 'm':
-                self[(sch, tbl)] = MaterializedView(**table.__dict__)
+                self.by_oid[oid] = self[sch, tbl] \
+                    = MaterializedView(**table.__dict__)
         inhtbls = self.dbconn.fetchall(self.inhquery)
         self.dbconn.rollback()
         for (tbl, partbl, num) in inhtbls:

@@ -39,7 +39,8 @@ class ExtensionDict(DbObjectDict):
 
     cls = Extension
     query = \
-        """SELECT extname AS name, nspname AS schema, extversion AS version,
+        """SELECT oid,
+                  extname AS name, nspname AS schema, extversion AS version,
                   rolname AS owner,
                   obj_description(e.oid, 'pg_extension') AS description
            FROM pg_extension e
@@ -53,7 +54,7 @@ class ExtensionDict(DbObjectDict):
         if self.dbconn.version < 90100:
             return
         for ext in self.fetch():
-            self[ext.key()] = ext
+            self.by_oid[ext.oid] = self[ext.key()] = ext
 
     def from_map(self, inexts, langtempls, newdb):
         """Initalize the dictionary of extensions by converting the input map

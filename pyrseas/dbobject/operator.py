@@ -77,7 +77,8 @@ class OperatorDict(DbObjectDict):
 
     cls = Operator
     query = \
-        """SELECT nspname AS schema, oprname AS name, rolname AS owner,
+        """SELECT o.oid,
+                  nspname AS schema, oprname AS name, rolname AS owner,
                   oprleft::regtype AS leftarg, oprright::regtype AS rightarg,
                   oprcode AS procedure, oprcom::regoper AS commutator,
                   oprnegate::regoper AS negator, oprrest AS restrict,
@@ -96,6 +97,7 @@ class OperatorDict(DbObjectDict):
     def _from_catalog(self):
         """Initialize the dictionary of operators by querying the catalogs"""
         for oper in self.fetch():
+            oid = oper.oid
             sch, opr, lft, rgt = oper.key()
             if lft == '-':
                 lft = oper.leftarg = 'NONE'
@@ -109,7 +111,8 @@ class OperatorDict(DbObjectDict):
                 del oper.restrict
             if oper.join == '-':
                 del oper.join
-            self[(sch, opr, lft, rgt)] = Operator(**oper.__dict__)
+            self.by_oid[oid] = self[(sch, opr, lft, rgt)] \
+                = Operator(**oper.__dict__)
 
     def from_map(self, schema, inopers):
         """Initalize the dictionary of operators by converting the input map

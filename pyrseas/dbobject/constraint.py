@@ -282,7 +282,8 @@ class ConstraintDict(DbObjectDict):
 
     cls = Constraint
     query = \
-        """SELECT nspname AS schema,
+        """SELECT c.oid,
+                  nspname AS schema,
                   CASE WHEN contypid = 0 THEN conrelid::regclass::text
                        ELSE contypid::regtype::text END AS table,
                   conname AS name,
@@ -312,6 +313,7 @@ class ConstraintDict(DbObjectDict):
             self.match_types = MATCHTYPES_PRE93
         for constr in self.fetch():
             constr.unqualify()
+            oid = constr.oid
             sch, tbl, cns = constr.key()
             sch, tbl = split_schema_obj('%s.%s' % (sch, tbl))
             constr_type = constr.type
@@ -322,9 +324,11 @@ class ConstraintDict(DbObjectDict):
                 del constr.on_delete
                 del constr.match
             if constr_type == 'c':
-                self[(sch, tbl, cns)] = CheckConstraint(**constr.__dict__)
+                self.by_oid[oid] = self[(sch, tbl, cns)] \
+                    = CheckConstraint(**constr.__dict__)
             elif constr_type == 'p':
-                self[(sch, tbl, cns)] = PrimaryKey(**constr.__dict__)
+                self.by_oid[oid] =self[(sch, tbl, cns)] \
+                    = PrimaryKey(**constr.__dict__)
             elif constr_type == 'f':
                 # normalize reference schema/table:
                 # if reftbl is qualified, split the schema out,

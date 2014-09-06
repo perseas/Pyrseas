@@ -69,7 +69,8 @@ class Trigger(DbSchemaObject):
 
 
 QUERY_PRE90 = \
-    """SELECT nspname AS schema, relname AS table,
+    """SELECT t.oid,
+              nspname AS schema, relname AS table,
               tgname AS name, tgisconstraint AS constraint,
               tgdeferrable AS deferrable,
               tginitdeferred AS initially_deferred,
@@ -91,7 +92,8 @@ class TriggerDict(DbObjectDict):
 
     cls = Trigger
     query = \
-        """SELECT nspname AS schema, relname AS table,
+        """SELECT t.oid,
+                  nspname AS schema, relname AS table,
                   tgname AS name, pg_get_triggerdef(t.oid) AS definition,
                   CASE WHEN contype = 't' THEN true ELSE false END AS
                        constraint,
@@ -133,7 +135,7 @@ class TriggerDict(DbObjectDict):
             trig.procedure = trig.definition[trig.definition.index(EXEC_PROC)
                                              + len(EXEC_PROC):]
             del trig.definition
-            self[trig.key()] = trig
+            self.by_oid[trig.oid] = self[trig.key()] = trig
 
     def from_map(self, table, intriggers):
         """Initalize the dictionary of triggers by converting the input map

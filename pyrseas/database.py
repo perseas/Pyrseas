@@ -12,12 +12,13 @@
 """
 import os
 import sys
+from collections import defaultdict
 
 import yaml
 
 from pyrseas.yamlutil import yamldump
 from pyrseas.lib.dbconn import DbConnection
-from pyrseas.dbobject import fetch_reserved_words
+from pyrseas.dbobject import fetch_reserved_words, DbObjectDict
 from pyrseas.dbobject.language import LanguageDict
 from pyrseas.dbobject.cast import CastDict
 from pyrseas.dbobject.schema import SchemaDict
@@ -111,6 +112,23 @@ class Database(object):
             self.collations = CollationDict(dbconn)
             self.eventtrigs = EventTriggerDict(dbconn)
 
+            # Populate a map from catalog table map to the dict responsible
+            self._table_map = {}
+            for attr in dir(self):
+                d = getattr(self, attr)
+                if not isinstance(d, DbObjectDict):
+                    continue
+
+                # It is none for the attribute, but the dependencies are on
+                # the table so it's fine.
+                if d.cls.catalog_table is None:
+                    continue
+
+                self._table_map[d.cls.catalog_table] = d
+
+        def dict_from_table(self, catalog_table):
+            return self._table_map.get(catalog_table)
+
     def __init__(self, config):
         """Initialize the database
 
@@ -141,6 +159,35 @@ class Database(object):
         db.servers.link_refs(db.usermaps)
         db.ftables.link_refs(db.columns)
         db.types.link_refs(db.columns, db.constraints, db.functions)
+
+    def _build_depends(self, db, dbconn):
+        """Build the dependency graph of the database objects
+        """
+        deps = defaultdict(list)
+        for r in dbconn.fetchall("""
+                SELECT classid::regclass, objid,
+                       refclassid::regclass, refobjid
+                FROM pg_depend
+                WHERE deptype = 'n'
+                """):
+            deps[r[0], r[1]].append((r[2], r[3]))
+
+        for (stbl, soid), deps in deps.iteritems():
+            sdict = db.dict_from_table(stbl)
+            if sdict is None:
+                continue
+            src = sdict.by_oid.get(soid)
+            if src is None:
+                continue
+            for ttbl, toid in deps:
+                tdict = db.dict_from_table(ttbl)
+                if tdict is None:
+                    continue
+                tgt = tdict.by_oid.get(toid)
+                if tgt is None:
+                    continue
+                src.depends_on.append((tgt.__class__, tgt.key()))
+
 
     def _trim_objects(self, schemas):
         """Remove unwanted schema objects
@@ -174,6 +221,7 @@ class Database(object):
         """
         self.db = self.Dicts(self.dbconn)
         if self.dbconn.conn:
+            self._build_depends(self.db, self.dbconn)
             self.dbconn.conn.close()
         self._link_refs(self.db)
 

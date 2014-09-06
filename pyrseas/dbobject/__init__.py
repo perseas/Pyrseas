@@ -142,6 +142,8 @@ class DbObject(object):
         are multi-line strings are treated specially so that YAML will
         output them in block style.
         """
+        self.depends_on = []
+
         for key, val in list(attrs.items()):
             if val or key in self.keylist:
                 if key in ['definition', 'description', 'source'] and \
@@ -475,6 +477,7 @@ class DbObjectDict(dict):
         initialize the dictionary from the catalogs.
         """
         dict.__init__(self)
+        self.by_oid = {}
         self.dbconn = dbconn
         if dbconn:
             self._from_catalog()
@@ -488,6 +491,8 @@ class DbObjectDict(dict):
             if hasattr(obj, 'privileges'):
                 obj.privileges = obj.privileges.split(',')
             self[obj.key()] = obj
+            if hasattr(obj, 'oid'):
+                self.by_oid[obj.oid] = obj
 
     def to_map(self,  opts):
         """Convert the object dictionary to a regular dictionary
@@ -522,4 +527,6 @@ class DbObjectDict(dict):
         """
         data = self.dbconn.fetchall(self.query)
         self.dbconn.rollback()
+        if data and self.cls.catalog_table:
+            assert 'oid' in data[0], self.__class__.__name__
         return [self.cls(**dict(row)) for row in data]

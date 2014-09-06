@@ -35,7 +35,8 @@ class CollationDict(DbObjectDict):
 
     cls = Collation
     query = \
-        """SELECT nspname AS schema, collname AS name, rolname AS owner,
+        """SELECT c.oid,
+                  nspname AS schema, collname AS name, rolname AS owner,
                   collcollate AS lc_collate, collctype AS lc_ctype,
                   obj_description(c.oid, 'pg_collation') AS description
            FROM pg_collation c
@@ -69,7 +70,7 @@ class CollationDict(DbObjectDict):
         if self.dbconn.version < 90100:
             return
         for coll in self.fetch():
-            self[coll.key()] = coll
+            self.by_oid[coll.id] = self[coll.key()] = coll
 
     def diff_map(self, incolls):
         """Generate SQL to transform existing collations

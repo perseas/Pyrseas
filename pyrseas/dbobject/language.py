@@ -47,7 +47,7 @@ class Language(DbObject):
 
 
 QUERY_PRE91 = \
-    """SELECT lanname AS name, lanpltrusted AS trusted,
+    """SELECT l.oid, lanname AS name, lanpltrusted AS trusted,
               rolname AS owner, array_to_string(lanacl, ',') AS privileges,
               obj_description(l.oid, 'pg_language') AS description
        FROM pg_language l
@@ -61,7 +61,7 @@ class LanguageDict(DbObjectDict):
 
     cls = Language
     query = \
-        """SELECT lanname AS name, lanpltrusted AS trusted,
+        """SELECT l.oid, lanname AS name, lanpltrusted AS trusted,
                   rolname AS owner, array_to_string(lanacl, ',') AS privileges,
                   obj_description(l.oid, 'pg_language') AS description
            FROM pg_language l
