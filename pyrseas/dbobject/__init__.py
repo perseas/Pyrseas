@@ -279,6 +279,8 @@ class DbObject(object):
                 del dct['privileges']
             else:
                 dct['privileges'] = self.map_privs()
+        # Never dump the oid
+        dct.pop('oid', None)
         return dct
 
     def to_map(self, no_owner=False, no_privs=False):
