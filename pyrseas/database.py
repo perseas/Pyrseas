@@ -186,8 +186,7 @@ class Database(object):
                 tgt = tdict.by_oid.get(toid)
                 if tgt is None:
                     continue
-                src.depends_on.append((tgt.__class__, tgt.key()))
-
+                src.depends_on.append(tgt.extern_key())
 
     def _trim_objects(self, schemas):
         """Remove unwanted schema objects
