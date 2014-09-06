@@ -158,6 +158,10 @@ class DbObject(object):
                         val = MultiLineStr(strval)
                 setattr(self, key, val)
 
+    def __repr__(self):
+        return "<%s %r at 0x%X>" % (
+            self.__class__.__name__, self.key(), id(self))
+
     def extern_key(self):
         """Return the key to be used in external maps for this object
 
