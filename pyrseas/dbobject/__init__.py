@@ -461,6 +461,25 @@ class DbObject(object):
 
         return rv
 
+    def get_dependencies(self, db):
+        """Return all the objects the object depends on
+
+        The base implementation returns the explicit dependencies. Subclasses
+        may extend this to include implicit ones, which are implied e.g. by
+        containment in the yaml (such as an object on the schema they are on, a
+        constraint on the domain it is defined for.
+
+        """
+        # The schema of the object (if any) is always a dependency
+        if hasattr(self, 'schema'):
+            if self.schema and self.schema != 'pg_catalog':
+                yield db.schemas[self.schema]
+
+        # The explicit dependencies
+        for dep in self.depends_on:
+            yield db._get_by_extkey(dep)
+
+
 class DbSchemaObject(DbObject):
     "A database object that is owned by a certain schema"
 

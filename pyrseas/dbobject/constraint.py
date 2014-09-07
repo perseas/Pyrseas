@@ -373,6 +373,7 @@ class ConstraintDict(DbObjectDict):
                     exc.args = ("Constraint '%s' is missing expression"
                                 % cns, )
                     raise
+                check.depends_on.extend(val.get('depends_on', ()))
                 if check.expression[0] == '(' and check.expression[-1] == ')':
                     check.expression = check.expression[1:-1]
                 if 'columns' in val:

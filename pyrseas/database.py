@@ -114,17 +114,53 @@ class Database(object):
 
             # Populate a map from catalog table map to the dict responsible
             self._table_map = {}
-            for attr in dir(self):
-                d = getattr(self, attr)
-                if not isinstance(d, DbObjectDict):
-                    continue
-
+            for _, d in self.alldicts():
                 # It is none for the attribute, but the dependencies are on
                 # the table so it's fine.
                 if d.cls.catalog_table is None:
                     continue
 
                 self._table_map[d.cls.catalog_table] = d
+
+            self._by_extkey = {}
+            """
+            Map from objects extkey to their (dict name, key)
+            """
+
+        def _get_by_extkey(self, extkey):
+            """Return any database item from its extkey
+
+            Note: probably doesn't work for all the objects, e.g. constraints
+            may clash because two in different tables have different extkeys.
+            However this shouldn't matter as such objects are generated as part
+            of the containing one and they should be returned by the
+            `get_dependencies()` implementation of specific classes (which
+            would look for the object in by key in the right dict instead,
+            (e.g.  check `Domain.get_dependencies()` implementation.
+
+            """
+            try:
+                return self._by_extkey[extkey]
+            except KeyError:
+                # TODO: Likely it's the first time we call this function so
+                # let's warm up the cache. But we should really define the life
+                # cycle of this object as trying and catching KeyError on it is
+                # *very* expensive!
+                for _, d in self.alldicts():
+                    for obj in d.itervalues():
+                        self._by_extkey[obj.extern_key()] = obj
+
+                return self._by_extkey[extkey]
+
+        def alldicts(self):
+            """Iterate over all the database objects dict
+
+            Yield pairs of (dict name, dict) for every database dict.
+            """
+            for attr in dir(self):
+                d = getattr(self, attr)
+                if isinstance(d, DbObjectDict):
+                    yield (attr, d)
 
         def dict_from_table(self, catalog_table):
             return self._table_map.get(catalog_table)
@@ -399,22 +435,24 @@ class Database(object):
             self.db.languages.dbconn = self.dbconn
 
         changes = {}
+        all_objs = []
         # TODO: this ordering is only for testing: force 'domain' to be
         # emitted before 'function' to test the topo sort
-        for attr in sorted(dir(self.db)):
-            d = getattr(self.db, attr)
-            if not isinstance(d, DbObjectDict):
-                continue
+        for dname, d in sorted(self.db.alldicts()):
             # TODO: drop this check: it's only to test with a subset of all
             # the classes
             if not hasattr(d, '_diff_map'):
                 continue
-            changes.update(d._diff_map(getattr(self.ndb, attr)))
+            all_objs.extend(getattr(self.ndb, dname).itervalues())
+            changes.update(d._diff_map(getattr(self.ndb, dname)))
+
+        all_objs = self.dep_sorted(all_objs, self.ndb)
 
         stmts = []
-        for v in changes.itervalues():
-            stmts.extend(v)
+        for obj in all_objs:
+            stmts.extend(changes.get(obj, ()))
 
+        # TODO: drop the objects in reversed topo-order
         stmts.append(self.db.operators._drop())
         stmts.append(self.db.operclasses._drop())
         stmts.append(self.db.operfams._drop())
@@ -429,3 +467,54 @@ class Database(object):
             opts.data_dir = self.config['files']['data_path']
             stmts.append(self.ndb.schemas.data_import(opts))
         return [s for s in flatten(stmts)]
+
+    def dep_sorted(self, objs, db):
+        """Sort `objs` in order of dependency.
+
+        The function implements the classic Kahn 62 algorighm, see
+        <http://en.wikipedia.org/wiki/Topological_sorting>.
+
+
+        """
+        # List of objects to return
+        L = []
+
+        # Collect the graph edges.
+        # Note that our "dependencies" are sort of backwards compared to the
+        # terms used in the algorithm (an edge in the algo would be from the
+        # schema to the table, we have the table depending on the schema)
+        ein = defaultdict(set)
+        eout = defaultdict(set)
+        for obj in objs:
+            for dep in obj.get_dependencies(db):
+                eout[dep].add(obj)
+                ein[obj].add(dep)
+
+        # The objects with no dependency to start with
+        S = []
+        for obj in objs:
+            if obj not in ein:
+                S.append(obj)
+
+        while S:
+            # Objects with no dependencies can be emitted
+            obj = S.pop()
+            L.append(obj)
+
+            # Delete the edges and check if depending objects have no
+            # dependency now
+            while eout[obj]:
+                ch = eout[obj].pop()
+                ein[ch].remove(obj)
+                if not ein[ch]:
+                    del ein[ch]
+                    S.append(ch)
+
+            del eout[obj]   # remove the empty set
+
+        assert bool(ein) == bool(eout)
+        if not ein:
+            return L
+        else:
+            # is it possible? How do we deal with that?
+            raise Exception("the objects dependencies graph has loops")

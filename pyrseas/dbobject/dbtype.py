@@ -229,6 +229,13 @@ class Domain(DbType):
             create += ", ".join(cnslist)
         return [create]
 
+    def get_dependencies(self, db):
+        for d in super(Domain, self).get_dependencies(db):
+            yield d
+
+        for c in getattr(self, 'check_constraints', ()):
+            yield db.constraints[self.schema, self.name, c]
+
 
 class TypeDict(DbObjectDict):
     "The collection of domains and enums in a database"
