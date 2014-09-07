@@ -114,10 +114,21 @@ class Sequence(DbClass):
             return None
         seq = {}
         for key, val in list(self.__dict__.items()):
-            if key in self.keylist or key == 'dependent_table' or (
-                    key == 'owner' and opts.no_owner) or (
-                    key == 'privileges' and opts.no_privs):
+            if key in self.keylist:
                 continue
+            if key in ('oid', 'depends_on', 'dependent_table'):
+                continue
+            if key == 'owner' and opts.no_owner:
+                continue
+            if key == 'privileges' and opts.no_privs:
+                continue
+
+            # TODO: why doesn't this call _base_map(), where oid and deps
+            # are taken care of?
+            deps = self.get_dump_dependencies()
+            if deps:
+                seq['depends_on'] = [ dep.extern_key() for dep in deps ]
+
             if key == 'privileges':
                 seq[key] = self.map_privs()
             elif key == 'max_value' and val == MAX_BIGINT:
