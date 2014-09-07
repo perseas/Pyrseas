@@ -166,13 +166,13 @@ class DbObject(object):
             self.extern_key(), id(self))
 
 
-    # It is possible to put the whole object in a dict.
+    # hash and eq allow to use the objects as dict keys
     def __hash__(self):
-        return hash(self.extern_key())
+        return hash((self.__class__, self.key()))
 
     def __eq__(self, other):
         if self.__class__ is other.__class__:
-            return self.extern_key() == other.extern_key()
+            return self.key() == other.key()
         else:
             return False
 
