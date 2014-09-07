@@ -281,9 +281,12 @@ class DbObject(object):
                 dct['privileges'] = self.map_privs()
         # Never dump the oid
         dct.pop('oid', None)
+
         # Only dump dependencies if there is some
-        if not dct.get('depends_on'):
-            dct.pop('depends_on', None)
+        dct.pop('depends_on', None)
+        deps = self.get_dump_dependencies()
+        if deps:
+            dct['depends_on'] = [ dep.extern_key() for dep in deps ]
         return dct
 
     def to_map(self, no_owner=False, no_privs=False):
@@ -405,18 +408,25 @@ class DbObject(object):
                 stmts.append(self.comment())
         return stmts
 
-    def add_dependency(self, db, tgt):
-        """Add a dependency to the list of dependencies.
+    def get_dump_dependencies(self):
+        """Return the dependencies that shoud be saved into the map
+
+        Some dependencies are implict, such as the containing schema, so don't
+        dump them. However they are a valuable information so we keep them in
+        the object state.
 
         Subclasses may override this function but it is advised they call up in
         the inheritance chain to allow superclasses checks to be performed.
         """
+        rv = []
         from pyrseas.dbobject.schema import Schema
-        if isinstance(tgt, Schema):
-            if getattr(self, 'schema', None) == tgt.key():
-                return
-        self.depends_on.append(tgt.extern_key())
+        for dep in self.depends_on:
+            if isinstance(dep, Schema):
+                if getattr(self, 'schema', None) == dep.key():
+                    continue
+            rv.append(dep)
 
+        return rv
 
 class DbSchemaObject(DbObject):
     "A database object that is owned by a certain schema"
