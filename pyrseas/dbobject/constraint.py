@@ -8,6 +8,8 @@
     UniqueConstraint derived from Constraint, and ConstraintDict
     derived from DbObjectDict.
 """
+from collections import defaultdict
+
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
 from pyrseas.dbobject import quote_id, split_schema_obj, commentable
 
@@ -477,7 +479,10 @@ class ConstraintDict(DbObjectDict):
         the catalogs, to the input map and generates SQL statements to
         transform the constraints accordingly.
         """
-        stmts = []
+        return super(ConstraintDict, self).diff_map(inconstrs)
+
+    def _diff_map(self, inconstrs):
+        stmts = defaultdict(list)
         # foreign keys are processed in a second pass
         # constraints cannot be renamed
         for turn in (1, 2):
@@ -492,7 +497,7 @@ class ConstraintDict(DbObjectDict):
                 # if missing, drop it
                 if (sch, tbl, cns) not in inconstrs \
                         and not hasattr(constr, 'target'):
-                    stmts.append(constr.drop())
+                    stmts[constr].append(constr.drop())
             # check input constraints
             for (sch, tbl, cns) in inconstrs:
                 inconstr = inconstrs[(sch, tbl, cns)]
@@ -507,9 +512,9 @@ class ConstraintDict(DbObjectDict):
                 # does it exist in the database?
                 if (sch, tbl, cns) not in self:
                     # add the new constraint
-                    stmts.append(inconstr.add())
+                    stmts[inconstr].append(inconstr.add())
                 else:
                     # check constraint objects
-                    stmts.append(self[(sch, tbl, cns)].diff_map(inconstr))
+                    stmts[inconstr].append(self[(sch, tbl, cns)].diff_map(inconstr))
 
         return stmts

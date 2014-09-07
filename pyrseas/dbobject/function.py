@@ -7,6 +7,8 @@
     DbSchemaObject, Function and Aggregate derived from Proc, and
     FunctionDict derived from DbObjectDict.
 """
+from collections import defaultdict
+
 from pyrseas.lib.pycompat import strtypes
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
 from pyrseas.dbobject import commentable, ownable, grantable, split_schema_obj
@@ -354,7 +356,10 @@ class ProcDict(DbObjectDict):
         the catalogs, to the input map and generates SQL statements to
         transform the functions accordingly.
         """
-        stmts = []
+        return super(ProcDict, self).diff_map(infuncs)
+
+    def _diff_map(self, infuncs):
+        stmts = defaultdict(list)
         created = False
         # check input functions
         for (sch, fnc, arg) in infuncs:
@@ -365,10 +370,10 @@ class ProcDict(DbObjectDict):
             if (sch, fnc, arg) not in self:
                 if not hasattr(infunc, 'oldname'):
                     # create new function
-                    stmts.append(infunc.create())
+                    stmts[infunc].append(infunc.create())
                     created = True
                 else:
-                    stmts.append(self[(sch, fnc, arg)].rename(infunc))
+                    stmts[infunc].append(self[(sch, fnc, arg)].rename(infunc))
             else:
                 # check function objects
                 diff_stmts = self[(sch, fnc, arg)].diff_map(infunc)
@@ -379,7 +384,7 @@ class ProcDict(DbObjectDict):
                             stmt.startswith("CREATE "):
                         created = True
                         break
-                stmts.append(diff_stmts)
+                stmts[infunc].append(diff_stmts)
 
         # check input aggregates
         for (sch, fnc, arg) in infuncs:
@@ -390,12 +395,12 @@ class ProcDict(DbObjectDict):
             if (sch, fnc, arg) not in self:
                 if not hasattr(infunc, 'oldname'):
                     # create new function
-                    stmts.append(infunc.create())
+                    stmts[infunc].append(infunc.create())
                 else:
-                    stmts.append(self[(sch, fnc, arg)].rename(infunc))
+                    stmts[infunc].append(self[(sch, fnc, arg)].rename(infunc))
             else:
                 # check function objects
-                stmts.append(self[(sch, fnc, arg)].diff_map(infunc))
+                stmts[infunc].append(self[(sch, fnc, arg)].diff_map(infunc))
 
         # check existing functions
         for (sch, fnc, arg) in self:
@@ -404,8 +409,12 @@ class ProcDict(DbObjectDict):
             if (sch, fnc, arg) not in infuncs:
                 func.dropped = False
 
+        # TODO: more specific check, now it set this statements if *any*
+        # function is created. Which is probably ok anyway.
         if created:
-            stmts.insert(0, "SET check_function_bodies = false")
+            for v in stmts.itervalues():
+                v.insert(0, "SET check_function_bodies = false")
+
         return stmts
 
     def _drop(self):

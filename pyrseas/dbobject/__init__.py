@@ -11,6 +11,7 @@ import os
 import re
 import string
 from functools import wraps
+from collections import defaultdict
 
 from pyrseas.lib.pycompat import PY2, strtypes
 from pyrseas.yamlutil import MultiLineStr, yamldump
@@ -161,8 +162,23 @@ class DbObject(object):
                 setattr(self, key, val)
 
     def __repr__(self):
-        return "<%s %r at 0x%X>" % (
-            self.__class__.__name__, self.key(), id(self))
+        return "<%s at 0x%X>" % (
+            self.extern_key(), id(self))
+
+
+    # It is possible to put the whole object in a dict.
+    def __hash__(self):
+        return hash(self.extern_key())
+
+    def __eq__(self, other):
+        if self.__class__ is other.__class__:
+            return self.extern_key() == other.extern_key()
+        else:
+            return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
 
     def extern_key(self):
         """Return the key to be used in external maps for this object
@@ -355,7 +371,7 @@ class DbObject(object):
         """
         return "ALTER %s %s RENAME TO %s" % (self.objtype, self.name, newname)
 
-    def diff_map(self, inobj, no_owner=False):
+    def _diff_map(self, inobj, no_owner=False):
         """Generate SQL to transform an existing object
 
         :param inobj: a YAML map defining the new object
@@ -367,13 +383,30 @@ class DbObject(object):
         input.  This base implementation simply deals with owners and
         comments.
         """
-        stmts = []
+        stmts = defaultdict(list)
         if not no_owner and hasattr(inobj, 'owner') and hasattr(self, 'owner'):
             if inobj.owner != self.owner:
-                stmts.append(self.alter_owner(inobj.owner))
-        stmts.append(self.diff_privileges(inobj))
-        stmts.append(self.diff_description(inobj))
+                stmts[self].append(self.alter_owner(inobj.owner))
+        stmts[self].append(self.diff_privileges(inobj))
+        stmts[self].append(self.diff_description(inobj))
         return stmts
+
+    def diff_map(self, inobj):
+        """Generate SQL to transform existing schemas
+
+        :param input_map: a YAML map defining the new schemas
+        :return: list of SQL statements
+
+        Compares the existing schema definitions, as fetched from the
+        catalogs, to the input map and generates SQL statements to
+        transform the schemas accordingly.
+        """
+        stmts = []
+        for k, v in self._diff_map(inobj).iteritems():
+            for stmt in v:
+                stmts.append(stmt)
+
+        return stmt
 
     def diff_privileges(self, inobj):
         """Generate SQL statements to grant or revoke privileges

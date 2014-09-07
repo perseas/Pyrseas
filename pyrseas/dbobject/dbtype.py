@@ -7,6 +7,8 @@
     DbSchemaObject, BaseType, Composite, Domain and Enum derived from
     DbType, and DbTypeDict derived from DbObjectDict.
 """
+from collections import defaultdict
+
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
 from pyrseas.dbobject import split_schema_obj, commentable, ownable
 from pyrseas.dbobject.constraint import CheckConstraint
@@ -414,7 +416,10 @@ class TypeDict(DbObjectDict):
         the catalogs, to the input map and generates SQL statements to
         transform the domains/types accordingly.
         """
-        stmts = []
+        return super(TypeDict, self).diff_map(intypes)
+
+    def _diff_map(self, intypes):
+        stmts = defaultdict(list)
         # check input types
         for (sch, typ) in intypes:
             intype = intypes[(sch, typ)]
@@ -422,9 +427,9 @@ class TypeDict(DbObjectDict):
             if (sch, typ) not in self:
                 if not hasattr(intype, 'oldname'):
                     # create new type
-                    stmts.append(intype.create())
+                    stmts[intype].append(intype.create())
                 else:
-                    stmts.append(self[(sch, intype.oldname)].rename(typ))
+                    stmts[intype].append(self[(sch, intype.oldname)].rename(typ))
                     del self[(sch, intype.oldname)]
 
         # check existing types
@@ -435,7 +440,7 @@ class TypeDict(DbObjectDict):
                 dbtype.dropped = False
             else:
                 # check type objects
-                stmts.append(dbtype.diff_map(intypes[(sch, typ)]))
+                stmts[intype].append(dbtype.diff_map(intypes[(sch, typ)]))
 
         return stmts
 

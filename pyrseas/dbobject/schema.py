@@ -7,6 +7,7 @@
     DbObject and DbObjectDict, respectively.
 """
 import os
+from collections import defaultdict
 
 from pyrseas.yamlutil import yamldump
 from pyrseas.dbobject import DbObjectDict, DbObject
@@ -340,19 +341,33 @@ class SchemaDict(DbObjectDict):
         catalogs, to the input map and generates SQL statements to
         transform the schemas accordingly.
         """
+        # TODO: drop this check: it's only to test with a subset of all
+        # the classes
+        if not hasattr(self, '_diff_map'):
+            return []
+
         stmts = []
+        for k, v in self._diff_map(inschemas).iteritems():
+            for stmt in v:
+                stmts.append(stmt)
+
+        return stmt
+
+    def _diff_map(self, inschemas):
+        stmts = defaultdict(list)
+
         # check input schemas
         for sch in inschemas:
             insch = inschemas[sch]
             # does it exist in the database?
             if sch in self:
-                stmts.append(self[sch].diff_map(insch))
+                stmts[insch].append(self[sch].diff_map(insch))
             else:
                 # check for possible RENAME
                 if hasattr(insch, 'oldname'):
                     oldname = insch.oldname
                     try:
-                        stmts.append(self[oldname].rename(insch.name))
+                        stmts[insch].append(self[oldname].rename(insch.name))
                         del self[oldname]
                     except KeyError as exc:
                         exc.args = ("Previous name '%s' for schema '%s' "
@@ -361,7 +376,7 @@ class SchemaDict(DbObjectDict):
                 else:
                     # create new schema
                     if insch.name not in ['pg_catalog']:
-                        stmts.append(insch.create())
+                        stmts[insch].append(insch.create())
         # check database schemas
         for sch in self:
             # if missing and not 'public', drop it

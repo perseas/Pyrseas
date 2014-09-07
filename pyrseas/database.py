@@ -397,32 +397,24 @@ class Database(object):
         if opts.revert:
             (self.db, self.ndb) = (self.ndb, self.db)
             self.db.languages.dbconn = self.dbconn
-        stmts = self.db.schemas.diff_map(self.ndb.schemas)
-        stmts.append(self.db.extensions.diff_map(self.ndb.extensions))
-        stmts.append(self.db.languages.diff_map(self.ndb.languages))
-        stmts.append(self.db.types.diff_map(self.ndb.types))
-        stmts.append(self.db.functions.diff_map(self.ndb.functions))
-        stmts.append(self.db.operators.diff_map(self.ndb.operators))
-        stmts.append(self.db.operfams.diff_map(self.ndb.operfams))
-        stmts.append(self.db.operclasses.diff_map(self.ndb.operclasses))
-        stmts.append(self.db.eventtrigs.diff_map(self.ndb.eventtrigs))
-        stmts.append(self.db.tables.diff_map(self.ndb.tables))
-        stmts.append(self.db.constraints.diff_map(self.ndb.constraints))
-        stmts.append(self.db.indexes.diff_map(self.ndb.indexes))
-        stmts.append(self.db.columns.diff_map(self.ndb.columns))
-        stmts.append(self.db.triggers.diff_map(self.ndb.triggers))
-        stmts.append(self.db.rules.diff_map(self.ndb.rules))
-        stmts.append(self.db.conversions.diff_map(self.ndb.conversions))
-        stmts.append(self.db.tsdicts.diff_map(self.ndb.tsdicts))
-        stmts.append(self.db.tstempls.diff_map(self.ndb.tstempls))
-        stmts.append(self.db.tsparsers.diff_map(self.ndb.tsparsers))
-        stmts.append(self.db.tsconfigs.diff_map(self.ndb.tsconfigs))
-        stmts.append(self.db.casts.diff_map(self.ndb.casts))
-        stmts.append(self.db.collations.diff_map(self.ndb.collations))
-        stmts.append(self.db.fdwrappers.diff_map(self.ndb.fdwrappers))
-        stmts.append(self.db.servers.diff_map(self.ndb.servers))
-        stmts.append(self.db.usermaps.diff_map(self.ndb.usermaps))
-        stmts.append(self.db.ftables.diff_map(self.ndb.ftables))
+
+        changes = {}
+        # TODO: this ordering is only for testing: force 'domain' to be
+        # emitted before 'function' to test the topo sort
+        for attr in sorted(dir(self.db)):
+            d = getattr(self.db, attr)
+            if not isinstance(d, DbObjectDict):
+                continue
+            # TODO: drop this check: it's only to test with a subset of all
+            # the classes
+            if not hasattr(d, '_diff_map'):
+                continue
+            changes.update(d._diff_map(getattr(self.ndb, attr)))
+
+        stmts = []
+        for v in changes.itervalues():
+            stmts.extend(v)
+
         stmts.append(self.db.operators._drop())
         stmts.append(self.db.operclasses._drop())
         stmts.append(self.db.operfams._drop())
