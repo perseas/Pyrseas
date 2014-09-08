@@ -100,7 +100,7 @@ class Sequence(DbClass):
         if data:
             self.dependent_table = split_table(data[0], self.schema)
 
-    def to_map(self, opts):
+    def to_map(self, db, opts):
         """Convert a sequence definition to a YAML-suitable format
 
         :param opts: options to include/exclude tables, etc.
@@ -126,7 +126,8 @@ class Sequence(DbClass):
 
             # TODO: why doesn't this call _base_map(), where oid and deps
             # are taken care of?
-            deps = self.get_dump_dependencies()
+            deps = set(seq.pop('depends_on', ()))
+            deps -= self.get_implied_deps(db)
             if deps:
                 seq['depends_on'] = [ dep.extern_key() for dep in deps ]
 
@@ -247,7 +248,7 @@ class Table(DbClass):
         """
         return [c.name for c in self.columns]
 
-    def to_map(self, dbschemas, opts):
+    def to_map(self, db, dbschemas, opts):
         """Convert a table to a YAML-suitable format
 
         :param dbschemas: database dictionary of schemas
@@ -260,7 +261,7 @@ class Table(DbClass):
             return None
         cols = []
         for column in self.columns:
-            col = column.to_map(opts.no_privs)
+            col = column.to_map(db, opts.no_privs)
             if col:
                 cols.append(col)
         tbl = {'columns': cols}
@@ -275,17 +276,18 @@ class Table(DbClass):
                 tbl.update(check_constraints={})
             for k in list(self.check_constraints.values()):
                 tbl['check_constraints'].update(
-                    self.check_constraints[k.name].to_map(self.column_names()))
+                    self.check_constraints[k.name].to_map(
+                        db, self.column_names()))
         if hasattr(self, 'primary_key'):
             tbl.update(primary_key=self.primary_key.to_map(
-                self.column_names()))
+                db, self.column_names()))
         if hasattr(self, 'foreign_keys'):
             if not 'foreign_keys' in tbl:
                 tbl['foreign_keys'] = {}
             for k in list(self.foreign_keys.values()):
                 tbls = dbschemas[k.ref_schema].tables
                 tbl['foreign_keys'].update(self.foreign_keys[k.name].to_map(
-                    self.column_names(),
+                    db, self.column_names(),
                     tbls[self.foreign_keys[k.name].ref_table]. column_names()))
         if hasattr(self, 'unique_constraints'):
             if not 'unique_constraints' in tbl:
@@ -293,12 +295,12 @@ class Table(DbClass):
             for k in list(self.unique_constraints.values()):
                 tbl['unique_constraints'].update(
                     self.unique_constraints[k.name].to_map(
-                        self.column_names()))
+                        db, self.column_names()))
         if hasattr(self, 'indexes'):
             if not 'indexes' in tbl:
                 tbl['indexes'] = {}
             for k in list(self.indexes.values()):
-                tbl['indexes'].update(self.indexes[k.name].to_map())
+                tbl['indexes'].update(self.indexes[k.name].to_map(db))
         if hasattr(self, 'inherits'):
             if not 'inherits' in tbl:
                 tbl['inherits'] = self.inherits
@@ -306,19 +308,20 @@ class Table(DbClass):
             if not 'rules' in tbl:
                 tbl['rules'] = {}
             for k in list(self.rules.values()):
-                tbl['rules'].update(self.rules[k.name].to_map())
+                tbl['rules'].update(self.rules[k.name].to_map(db))
         if hasattr(self, 'triggers'):
             if not 'triggers' in tbl:
                 tbl['triggers'] = {}
             for k in list(self.triggers.values()):
-                tbl['triggers'].update(self.triggers[k.name].to_map())
+                tbl['triggers'].update(self.triggers[k.name].to_map(db))
 
         if not opts.no_privs and hasattr(self, 'privileges'):
             tbl.update({'privileges': self.map_privs()})
 
         # TODO: why doesn't this call _base_map(), where oid and deps
         # are taken care of?
-        deps = self.get_dump_dependencies()
+        deps = set(tbl.pop('depends_on', ()))
+        deps -= self.get_implied_deps(db)
         if deps:
             tbl['depends_on'] = [ dep.extern_key() for dep in deps ]
 
@@ -531,7 +534,7 @@ class View(DbClass):
     def allprivs(self):
         return 'arwdDxt'
 
-    def to_map(self, opts):
+    def to_map(self, db, opts):
         """Convert a view to a YAML-suitable format
 
         :param opts: options to include/exclude tables, etc.
@@ -540,12 +543,12 @@ class View(DbClass):
         if hasattr(opts, 'excl_tables') and opts.excl_tables \
                 and self.name in opts.excl_tables:
             return None
-        view = self._base_map(opts.no_owner, opts.no_privs)
+        view = self._base_map(db, opts.no_owner, opts.no_privs)
         if 'dependent_funcs' in view:
             del view['dependent_funcs']
         if hasattr(self, 'triggers'):
             for key in list(self.triggers.values()):
-                view['triggers'].update(self.triggers[key.name].to_map())
+                view['triggers'].update(self.triggers[key.name].to_map(db))
         return view
 
     @commentable
@@ -591,7 +594,7 @@ class MaterializedView(View):
 
     objtype = "MATERIALIZED VIEW"
 
-    def to_map(self, opts):
+    def to_map(self, db, opts):
         """Convert a materialized view to a YAML-suitable format
 
         :param opts: options to include/exclude tables, etc.
@@ -600,7 +603,7 @@ class MaterializedView(View):
         if hasattr(opts, 'excl_tables') and opts.excl_tables \
                 and self.name in opts.excl_tables:
             return None
-        mvw = self._base_map(opts.no_owner, opts.no_privs)
+        mvw = self._base_map(db, opts.no_owner, opts.no_privs)
         if hasattr(self, 'indexes'):
             if not 'indexes' in mvw:
                 mvw['indexes'] = {}

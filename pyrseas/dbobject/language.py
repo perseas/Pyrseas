@@ -20,7 +20,7 @@ class Language(DbObject):
     single_extern_file = True
     catalog_table = 'pg_language'
 
-    def to_map(self, no_owner, no_privs):
+    def to_map(self, db, no_owner, no_privs):
         """Convert language to a YAML-suitable format
 
         :param no_owner: exclude language owner information
@@ -28,7 +28,7 @@ class Language(DbObject):
         """
         if hasattr(self, '_ext'):
             return None
-        dct = self._base_map(no_owner, no_privs)
+        dct = self._base_map(db, no_owner, no_privs)
         if 'functions' in dct:
             del dct['functions']
         return dct

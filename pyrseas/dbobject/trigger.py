@@ -29,12 +29,12 @@ class Trigger(DbSchemaObject):
         """
         return "%s ON %s" % (quote_id(self.name), self._table.qualname())
 
-    def to_map(self):
+    def to_map(self, db):
         """Convert a trigger to a YAML-suitable format
 
         :return: dictionary
         """
-        dct = self._base_map()
+        dct = self._base_map(db)
         del dct['_table']
         if hasattr(self, 'columns'):
             dct['columns'] = [self._table.column_names()[int(k) - 1]

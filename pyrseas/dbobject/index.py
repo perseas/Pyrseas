@@ -75,12 +75,12 @@ class Index(DbSchemaObject):
                 colspec.append(clause)
         return ", ".join(colspec)
 
-    def to_map(self):
+    def to_map(self, db):
         """Convert an index definition to a YAML-suitable format
 
         :return: dictionary
         """
-        dct = self._base_map()
+        dct = self._base_map(db)
         if dct['access_method'] == 'btree':
             del dct['access_method']
         return {self.name: dct}

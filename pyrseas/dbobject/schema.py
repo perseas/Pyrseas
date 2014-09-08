@@ -39,7 +39,7 @@ class Schema(DbObject):
                                                    self.extern_filename()))
         return dir
 
-    def to_map(self, dbschemas, opts):
+    def to_map(self, db, dbschemas, opts):
         """Convert tables, etc., dictionaries to a YAML-suitable format
 
         :param dbschemas: dictionary of schemas
@@ -62,7 +62,7 @@ class Schema(DbObject):
             for objkey in self.tables:
                 if not seltbls or objkey in seltbls:
                     obj = self.tables[objkey]
-                    schobjs.append((obj, obj.to_map(dbschemas, opts)))
+                    schobjs.append((obj, obj.to_map(db, dbschemas, opts)))
 
         def mapper(objtypes):
             if hasattr(self, objtypes):
@@ -71,7 +71,7 @@ class Schema(DbObject):
                     if objtypes == 'sequences' or (
                             not seltbls or objkey in seltbls):
                         obj = schemadict[objkey]
-                        schobjs.append((obj, obj.to_map(opts)))
+                        schobjs.append((obj, obj.to_map(db, opts)))
 
         for objtypes in ['ftables', 'sequences', 'views', 'matviews']:
             mapper(objtypes)
@@ -81,7 +81,7 @@ class Schema(DbObject):
                 schemadict = getattr(self, objtypes)
                 for objkey in schemadict:
                     obj = schemadict[objkey]
-                    schobjs.append((obj, obj.to_map(no_owner)))
+                    schobjs.append((obj, obj.to_map(db, no_owner)))
 
         if hasattr(opts, 'tables') and not opts.tables or \
                 not hasattr(opts, 'tables'):
@@ -93,7 +93,7 @@ class Schema(DbObject):
             if hasattr(self, 'functions'):
                 for objkey in self.functions:
                     obj = self.functions[objkey]
-                    schobjs.append((obj, obj.to_map(no_owner, no_privs)))
+                    schobjs.append((obj, obj.to_map(db, no_owner, no_privs)))
 
         # special case for pg_catalog schema
         if self.name == 'pg_catalog' and not schobjs:
@@ -311,7 +311,7 @@ class SchemaDict(DbObjectDict):
                 if hasattr(schema, 'tables') and tbl in schema.tables:
                     schema.datacopy.append(tbl)
 
-    def to_map(self, opts):
+    def to_map(self, db, opts):
         """Convert the schema dictionary to a regular dictionary
 
         :param opts: options to include/exclude schemas/tables, etc.
@@ -327,7 +327,7 @@ class SchemaDict(DbObjectDict):
                 if hasattr(opts, 'excl_schemas') and opts.excl_schemas \
                         and sch in opts.excl_schemas:
                     continue
-                schemas.update(self[sch].to_map(self, opts))
+                schemas.update(self[sch].to_map(db, self, opts))
 
         return schemas
 

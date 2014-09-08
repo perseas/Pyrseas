@@ -89,14 +89,14 @@ class Function(Proc):
 
     objtype = "FUNCTION"
 
-    def to_map(self, no_owner, no_privs):
+    def to_map(self, db, no_owner, no_privs):
         """Convert a function to a YAML-suitable format
 
         :param no_owner: exclude function owner information
         :param no_privs: exclude privilege information
         :return: dictionary
         """
-        dct = self._base_map(no_owner)
+        dct = self._base_map(db, no_owner)
         if self.volatility == 'v':
             del dct['volatility']
         else:
@@ -218,6 +218,8 @@ class Function(Proc):
             if t.qualname() == rettype:
                 deps.add(t)
 
+        return deps
+
     def get_deps(self, db):
         deps = super(Function, self).get_deps(db)
 
@@ -248,14 +250,14 @@ class Aggregate(Proc):
 
     objtype = "AGGREGATE"
 
-    def to_map(self, no_owner, no_privs):
+    def to_map(self, db, no_owner, no_privs):
         """Convert an agggregate to a YAML-suitable format
 
         :param no_owner: exclude aggregate owner information
         :param no_privs: exclude privilege information
         :return: dictionary
         """
-        dct = self._base_map(no_owner, no_privs)
+        dct = self._base_map(db, no_owner, no_privs)
         del dct['language']
         return dct
 

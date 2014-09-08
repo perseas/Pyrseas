@@ -20,12 +20,12 @@ class TSConfiguration(DbSchemaObject):
     single_extern_file = True
     catalog_table = 'pg_ts_config'
 
-    def to_map(self, no_owner):
+    def to_map(self, db, no_owner):
         """Convert a text search configuration to a YAML-suitable format
 
         :return: dictionary
         """
-        dct = self._base_map(no_owner)
+        dct = self._base_map(db, no_owner)
         if '.' in self.parser:
             (sch, pars) = self.parser.split('.')
             if sch == self.schema:

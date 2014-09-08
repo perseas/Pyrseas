@@ -278,9 +278,10 @@ class DbObject(object):
         """
         return quote_id(self.__dict__[self.keylist[0]])
 
-    def _base_map(self, no_owner=False, no_privs=False):
+    def _base_map(self, db, no_owner=False, no_privs=False):
         """Return a base map, i.e., copy of attributes excluding keys
 
+        :param db: db used to tie the objects together
         :param no_owner: exclude object owner information
         :param no_privs: exclude privilege information
         :return: dictionary
@@ -299,15 +300,16 @@ class DbObject(object):
         dct.pop('oid', None)
 
         # Only dump dependencies that can't be inferred from the context
-        dct.pop('depends_on', None)
-        deps = self.get_deps() - self.get_implied_deps()
+        deps = set(dct.pop('depends_on', ()))
+        deps -= self.get_implied_deps(db)
         if deps:
             dct['depends_on'] = [ dep.extern_key() for dep in deps ]
         return dct
 
-    def to_map(self, no_owner=False, no_privs=False):
+    def to_map(self, db, no_owner=False, no_privs=False):
         """Convert an object to a YAML-suitable format
 
+        :param db: db used to tie the objects together
         :param no_owner: exclude object owner information
         :param no_privs: exclude privilege information
         :return: dictionary
@@ -317,7 +319,7 @@ class DbObject(object):
         returns a new dictionary using the :meth:`extern_key` result
         as the key.
         """
-        return self._base_map(no_owner, no_privs)
+        return self._base_map(db, no_owner, no_privs)
 
     def map_privs(self):
         """Return a list of access privileges on the current object
@@ -457,20 +459,17 @@ class DbObject(object):
         for dep in self.depends_on:
             deps.add(db._get_by_extkey(dep))
 
-        deps.update(self.get_implied_deps())
+        for dep in self.get_implied_deps(db):
+            deps.add(dep)
+
         return deps
 
     def get_implied_deps(self, db):
         """Return the dependencies the object can handle without being explicit
+
+        :return: set of `DbObject`
         """
-        deps = set()
-
-        # The schema of the object (if any) is always a dependency
-        if hasattr(self, 'schema'):
-            if self.schema and self.schema != 'pg_catalog':
-                deps.add(db.schemas[self.schema])
-
-        return deps
+        return set()
 
 
 class DbSchemaObject(DbObject):
@@ -527,6 +526,17 @@ class DbSchemaObject(DbObject):
         return "ALTER %s %s RENAME TO %s" % (self.objtype, self.qualname(),
                                              newname)
 
+    def get_implied_deps(self, db):
+        deps = super(DbSchemaObject, self).get_implied_deps(db)
+
+        # The schema of the object (if any) is always a dependency
+        if hasattr(self, 'schema'):
+            s = db.schemas.get(self.schema)
+            if s:
+                deps.add(s)
+
+        return deps
+
 
 class DbObjectDict(dict):
     """A dictionary of database objects, all of the same type"""
@@ -566,9 +576,10 @@ class DbObjectDict(dict):
             if hasattr(obj, 'oid'):
                 self.by_oid[obj.oid] = obj
 
-    def to_map(self,  opts):
+    def to_map(self, db, opts):
         """Convert the object dictionary to a regular dictionary
 
+        :param db: db used to tie the objects together
         :param opts: options to include/exclude information, etc.
         :return: dictionary
 
@@ -579,7 +590,7 @@ class DbObjectDict(dict):
         objdict = {}
         for objkey in sorted(self.keys()):
             obj = self[objkey]
-            objmap = obj.to_map(opts.no_owner, opts.no_privs)
+            objmap = obj.to_map(db, opts.no_owner, opts.no_privs)
             if objmap is not None:
                 extkey = obj.extern_key()
                 outobj = {extkey: objmap}

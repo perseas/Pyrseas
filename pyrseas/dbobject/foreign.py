@@ -86,18 +86,18 @@ class ForeignDataWrapper(DbObjectWithOptions):
     def allprivs(self):
         return 'U'
 
-    def to_map(self, no_owner, no_privs):
+    def to_map(self, db, no_owner, no_privs):
         """Convert wrappers and subsidiary objects to a YAML-suitable format
 
         :param no_owner: exclude object owner information
         :param no_privs: exclude privilege information
         :return: dictionary
         """
-        wrapper = self._base_map(no_owner, no_privs)
+        wrapper = self._base_map(db, no_owner, no_privs)
         if hasattr(self, 'servers'):
             srvs = {}
             for srv in self.servers:
-                srvs.update(self.servers[srv].to_map(no_owner, no_privs))
+                srvs.update(self.servers[srv].to_map(db, no_owner, no_privs))
             wrapper.update(srvs)
             del wrapper['servers']
         return wrapper
@@ -279,7 +279,7 @@ class ForeignServer(DbObjectWithOptions):
         """
         return quote_id(self.name)
 
-    def to_map(self, no_owner, no_privs):
+    def to_map(self, db, no_owner, no_privs):
         """Convert servers and subsidiary objects to a YAML-suitable format
 
         :param no_owner: exclude server owner information
@@ -287,11 +287,11 @@ class ForeignServer(DbObjectWithOptions):
         :return: dictionary
         """
         key = self.extern_key()
-        server = {key: self._base_map(no_owner, no_privs)}
+        server = {key: self._base_map(db, no_owner, no_privs)}
         if hasattr(self, 'usermaps'):
             umaps = {}
             for umap in self.usermaps:
-                umaps.update({umap: self.usermaps[umap].to_map()})
+                umaps.update({umap: self.usermaps[umap].to_map(db)})
             server[key]['user mappings'] = umaps
             del server[key]['usermaps']
         return server
@@ -370,7 +370,7 @@ class ForeignServerDict(DbObjectDict):
                     serv.privileges = privileges_from_map(
                         inserv['privileges'], serv.allprivs, serv.owner)
 
-    def to_map(self, no_owner, no_privs):
+    def to_map(self, db, no_owner, no_privs):
         """Convert the server dictionary to a regular dictionary
 
         :param no_owner: exclude server owner information
@@ -382,7 +382,7 @@ class ForeignServerDict(DbObjectDict):
         """
         servers = {}
         for srv in self:
-            servers.update(self[srv].to_map(no_owner, no_privs))
+            servers.update(self[srv].to_map(db, no_owner, no_privs))
         return servers
 
     def link_refs(self, dbusermaps):
@@ -517,7 +517,7 @@ class UserMappingDict(DbObjectDict):
                     del inusermap['oldname']
             self[(server.wrapper, server.name, key)] = usermap
 
-    def to_map(self):
+    def to_map(self, db):
         """Convert the user mapping dictionary to a regular dictionary
 
         :return: dictionary
@@ -527,7 +527,7 @@ class UserMappingDict(DbObjectDict):
         """
         usermaps = {}
         for um in self:
-            usermaps.update(self[um].to_map())
+            usermaps.update(self[um].to_map(db))
         return usermaps
 
     def diff_map(self, inusermaps):
@@ -577,7 +577,7 @@ class ForeignTable(DbObjectWithOptions, Table):
     privobjtype = "TABLE"
     catalog_table = 'pg_foreign_table'
 
-    def to_map(self, opts):
+    def to_map(self, db, opts):
         """Convert a foreign table to a YAML-suitable format
 
         :param opts: options to include/exclude tables, etc.
@@ -590,7 +590,7 @@ class ForeignTable(DbObjectWithOptions, Table):
             return {}
         cols = []
         for i in range(len(self.columns)):
-            col = self.columns[i].to_map(opts.no_privs)
+            col = self.columns[i].to_map(db, opts.no_privs)
             if col:
                 cols.append(col)
         tbl = {'columns': cols, 'server': self.server}

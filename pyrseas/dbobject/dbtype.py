@@ -30,13 +30,13 @@ class DbType(DbSchemaObject):
 class BaseType(DbType):
     """A composite type"""
 
-    def to_map(self, no_owner):
+    def to_map(self, db, no_owner):
         """Convert a type to a YAML-suitable format
 
         :param no_owner: exclude type owner information
         :return: dictionary
         """
-        dct = self._base_map(no_owner)
+        dct = self._base_map(db, no_owner)
         del dct['dep_funcs']
         if self.internallength < 0:
             dct['internallength'] = 'variable'
@@ -95,7 +95,7 @@ class BaseType(DbType):
 class Composite(DbType):
     """A composite type"""
 
-    def to_map(self, no_owner):
+    def to_map(self, db, no_owner):
         """Convert a type to a YAML-suitable format
 
         :param no_owner: exclude type owner information
@@ -105,7 +105,7 @@ class Composite(DbType):
             return
         attrs = []
         for attr in self.attributes:
-            att = attr.to_map(False)
+            att = attr.to_map(db, False)
             if att:
                 attrs.append(att)
         dct = {'attributes': attrs}
@@ -193,19 +193,19 @@ class Domain(DbType):
 
     objtype = "DOMAIN"
 
-    def to_map(self, no_owner):
+    def to_map(self, db, no_owner):
         """Convert a domain to a YAML-suitable format
 
         :param no_owner: exclude domain owner information
         :return: dictionary
         """
-        dct = self._base_map(no_owner)
+        dct = self._base_map(db, no_owner)
         if hasattr(self, 'check_constraints'):
             if not 'check_constraints' in dct:
                 dct.update(check_constraints={})
             for cns in list(self.check_constraints.values()):
                 dct['check_constraints'].update(
-                    self.check_constraints[cns.name].to_map(None))
+                    self.check_constraints[cns.name].to_map(db, None))
 
         return dct
 

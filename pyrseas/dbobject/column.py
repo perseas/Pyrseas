@@ -17,7 +17,7 @@ class Column(DbSchemaObject):
     keylist = ['schema', 'table']
     allprivs = 'arwx'
 
-    def to_map(self, no_privs):
+    def to_map(self, db, no_privs):
         """Convert a column to a YAML-suitable format
 
         :param no_privs: exclude privilege information
@@ -25,7 +25,7 @@ class Column(DbSchemaObject):
         """
         if hasattr(self, 'dropped'):
             return None
-        dct = self._base_map(False, no_privs)
+        dct = self._base_map(db, False, no_privs)
         del dct['number'], dct['name']
         if '_table' in dct:
             del dct['_table']

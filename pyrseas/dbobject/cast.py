@@ -38,12 +38,12 @@ class Cast(DbObject):
         """
         return "(%s AS %s)" % (self.source, self.target)
 
-    def to_map(self, no_owner=False, no_privs=False):
+    def to_map(self, db, no_owner=False, no_privs=False):
         """Convert a cast to a YAML-suitable format
 
         :return: dictionary
         """
-        dct = self._base_map()
+        dct = self._base_map(db)
         dct['context'] = CONTEXTS[self.context]
         dct['method'] = METHODS[self.method]
         return dct

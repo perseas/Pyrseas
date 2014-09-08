@@ -24,12 +24,12 @@ class Rule(DbSchemaObject):
         """
         return "%s ON %s" % (quote_id(self.name), self._table.qualname())
 
-    def to_map(self):
+    def to_map(self, db):
         """Convert rule to a YAML-suitable format
 
         :return: dictionary
         """
-        dct = self._base_map()
+        dct = self._base_map(db)
         del dct['_table']
         return {self.name: dct}
 

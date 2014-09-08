@@ -92,13 +92,13 @@ class CheckConstraint(Constraint):
 
     objtype = "CHECK"
 
-    def to_map(self, dbcols):
+    def to_map(self, db, dbcols):
         """Convert a check constraint definition to a YAML-suitable format
 
         :param dbcols: dictionary of dbobject columns
         :return: dictionary
         """
-        dct = self._base_map()
+        dct = self._base_map(db)
         if '_table' in dct:
             del dct['_table']
         if 'target' in dct:
@@ -139,13 +139,13 @@ class PrimaryKey(Constraint):
 
     objtype = "PRIMARY KEY"
 
-    def to_map(self, dbcols):
+    def to_map(self, db, dbcols):
         """Convert a primary key definition to a YAML-suitable format
 
         :param dbcols: dictionary of dbobject columns
         :return: dictionary
         """
-        dct = self._base_map()
+        dct = self._base_map(db)
         if dct['access_method'] == 'btree':
             del dct['access_method']
         del dct['_table']
@@ -188,13 +188,13 @@ class ForeignKey(Constraint):
         """
         return ", ".join(self.ref_cols)
 
-    def to_map(self, dbcols, refcols):
+    def to_map(self, db, dbcols, refcols):
         """Convert a foreign key definition to a YAML-suitable format
 
         :param dbcols: dictionary of dbobject columns
         :return: dictionary
         """
-        dct = self._base_map()
+        dct = self._base_map(db)
         del dct['_table']
         dct['columns'] = [dbcols[k - 1] for k in self.keycols]
         del dct['keycols']
@@ -252,13 +252,13 @@ class UniqueConstraint(Constraint):
 
     objtype = "UNIQUE"
 
-    def to_map(self, dbcols):
+    def to_map(self, db, dbcols):
         """Convert a unique constraint definition to a YAML-suitable format
 
         :param dbcols: dictionary of dbobject columns
         :return: dictionary
         """
-        dct = self._base_map()
+        dct = self._base_map(db)
         if dct['access_method'] == 'btree':
             del dct['access_method']
         del dct['_table']

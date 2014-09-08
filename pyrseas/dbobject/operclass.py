@@ -35,12 +35,12 @@ class OperatorClass(DbSchemaObject):
         """
         return "%s USING %s" % (self.qualname(), self.index_method)
 
-    def to_map(self, no_owner):
+    def to_map(self, db, no_owner):
         """Convert operator class to a YAML-suitable format
 
         :return: dictionary
         """
-        dct = self._base_map(no_owner)
+        dct = self._base_map(db, no_owner)
         if self.name == self.family:
             del dct['family']
         return dct

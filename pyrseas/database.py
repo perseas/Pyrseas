@@ -412,16 +412,16 @@ class Database(object):
                         if (os.path.exists(filepath)):
                             os.remove(filepath)
 
-        dbmap = self.db.extensions.to_map(opts)
-        dbmap.update(self.db.languages.to_map(opts))
-        dbmap.update(self.db.casts.to_map(opts))
-        dbmap.update(self.db.fdwrappers.to_map(opts))
-        dbmap.update(self.db.eventtrigs.to_map(opts))
+        dbmap = self.db.extensions.to_map(self.db, opts)
+        dbmap.update(self.db.languages.to_map(self.db, opts))
+        dbmap.update(self.db.casts.to_map(self.db, opts))
+        dbmap.update(self.db.fdwrappers.to_map(self.db, opts))
+        dbmap.update(self.db.eventtrigs.to_map(self.db, opts))
         if 'datacopy' in self.config:
             opts.data_dir = self.config['files']['data_path']
             if not os.path.exists(opts.data_dir):
                 mkdir_parents(opts.data_dir)
-        dbmap.update(self.db.schemas.to_map(opts))
+        dbmap.update(self.db.schemas.to_map(self.db, opts))
 
         if opts.multiple_files:
             with open(dbfilepath, 'w') as f:
