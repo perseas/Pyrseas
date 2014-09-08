@@ -183,7 +183,7 @@ class IndexDict(DbObjectDict):
                  AND c.relname NOT IN (
                      SELECT conname FROM pg_constraint
                      WHERE contype = 'u')
-           ORDER BY schema, 2, name"""
+           ORDER BY schema, "table", name"""
 
     def _from_catalog(self):
         """Initialize the dictionary of indexes by querying the catalogs"""

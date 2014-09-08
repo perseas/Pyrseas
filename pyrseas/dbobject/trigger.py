@@ -86,7 +86,7 @@ QUERY_PRE90 = \
             LEFT JOIN pg_constraint cn ON (tgconstraint = cn.oid)
        WHERE contype != 'f' OR contype IS NULL
          AND (nspname != 'pg_catalog' AND nspname != 'information_schema')
-       ORDER BY 1, 2, 3"""
+       ORDER BY schema, "table", name"""
 
 
 class TriggerDict(DbObjectDict):
@@ -110,7 +110,7 @@ class TriggerDict(DbObjectDict):
                 LEFT JOIN pg_constraint cn ON (tgconstraint = cn.oid)
            WHERE NOT tgisinternal
              AND (nspname != 'pg_catalog' AND nspname != 'information_schema')
-           ORDER BY 1, 2, 3"""
+           ORDER BY schema, "table", name"""
 
     def _from_catalog(self):
         """Initialize the dictionary of triggers by querying the catalogs"""

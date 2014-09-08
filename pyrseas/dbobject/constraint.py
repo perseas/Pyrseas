@@ -320,7 +320,7 @@ class ConstraintDict(DbObjectDict):
                 LEFT JOIN pg_am on (relam = pg_am.oid)
            WHERE (nspname != 'pg_catalog' AND nspname != 'information_schema')
                  AND conislocal
-           ORDER BY schema, 2, name"""
+           ORDER BY schema, "table", name"""
     match_types = {'f': 'full', 'p': 'partial', 's': 'simple'}
 
     def _from_catalog(self):
