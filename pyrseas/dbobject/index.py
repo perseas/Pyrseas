@@ -177,12 +177,11 @@ class IndexDict(DbObjectDict):
                 JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
                 JOIN pg_am ON (relam = pg_am.oid)
                 LEFT JOIN pg_tablespace t ON (c.reltablespace = t.oid)
-           WHERE NOT indisprimary
-                 AND (nspname != 'pg_catalog'
-                      AND nspname != 'information_schema')
-                 AND c.relname NOT IN (
-                     SELECT conname FROM pg_constraint
-                     WHERE contype = 'u')
+           WHERE nspname not in ('pg_catalog', 'pg_toast', 'information_schema')
+                 AND NOT EXISTS (
+                    SELECT 1 FROM pg_constraint
+                    WHERE contype in ('p', 'u')
+                    AND conindid = c.oid)
            ORDER BY schema, "table", name"""
 
     def _from_catalog(self):
