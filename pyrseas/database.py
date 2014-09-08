@@ -329,7 +329,7 @@ class Database(object):
         opts = self.config['options']
         if opts.schemas:
             schlist = ['schema ' + sch for sch in opts.schemas]
-            for sch in input_map:
+            for sch in input_map.keys():
                 if sch not in schlist and sch.startswith('schema '):
                     del input_map[sch]
             self._trim_objects(opts.schemas)
