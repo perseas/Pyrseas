@@ -12,13 +12,14 @@
 """
 import os
 import sys
-from collections import defaultdict
+from operator import itemgetter
+from collections import defaultdict, deque
 
 import yaml
 
 from pyrseas.yamlutil import yamldump
 from pyrseas.lib.dbconn import DbConnection
-from pyrseas.dbobject import fetch_reserved_words, DbObjectDict
+from pyrseas.dbobject import fetch_reserved_words, DbObjectDict, DbSchemaObject
 from pyrseas.dbobject.language import LanguageDict
 from pyrseas.dbobject.cast import CastDict
 from pyrseas.dbobject.schema import SchemaDict
@@ -155,8 +156,9 @@ class Database(object):
         def alldicts(self):
             """Iterate over all the database objects dict
 
-            Yield pairs of (dict name, dict) for every database dict.
+            :return: list of (dict name, dict) for every database dict.
             """
+            rv = []
             for attr in dir(self):
                 d = getattr(self, attr)
                 if isinstance(d, DbObjectDict):
@@ -164,7 +166,14 @@ class Database(object):
                     # and internally has lists, not objects
                     if isinstance(d, ColumnDict):
                         continue
-                    yield (attr, d)
+                    rv.append((attr, d))
+
+            # first return the dicts for non-schema objects, then the
+            # others, each group sorted alphabetically.
+            rv.sort(key=lambda (attr, d):
+                (issubclass(d.cls, DbSchemaObject), d.cls.objtype))
+
+            return rv
 
         def dict_from_table(self, catalog_table):
             return self._table_map.get(catalog_table)
@@ -464,15 +473,15 @@ class Database(object):
 
         changes = {}
         all_objs = []
-        # TODO: this ordering is only for testing: force 'domain' to be
-        # emitted before 'function' to test the topo sort
-        for dname, d in sorted(self.db.alldicts()):
+        for dname, d in self.db.alldicts():
+            nd = getattr(self.ndb, dname)
             # TODO: drop this check: it's only to test with a subset of all
             # the classes
-            if not getattr(self.ndb, dname):
-                continue
-            all_objs.extend(getattr(self.ndb, dname).itervalues())
-            changes.update(d._diff_map(getattr(self.ndb, dname)))
+            if not nd: continue
+            pairs = nd.items()
+            pairs.sort()
+            all_objs.extend(map(itemgetter(1), pairs))
+            changes.update(d._diff_map(nd))
 
         all_objs = self.dep_sorted(all_objs, self.ndb)
 
@@ -510,27 +519,27 @@ class Database(object):
         # terms used in the algorithm (an edge in the algo would be from the
         # schema to the table, we have the table depending on the schema)
         ein = defaultdict(set)
-        eout = defaultdict(set)
+        eout = defaultdict(deque)
         for obj in objs:
             for dep in obj.get_deps(db):
-                eout[dep].add(obj)
+                eout[dep].append(obj)
                 ein[obj].add(dep)
 
         # The objects with no dependency to start with
-        S = []
+        S = deque()
         for obj in objs:
             if obj not in ein:
                 S.append(obj)
 
         while S:
             # Objects with no dependencies can be emitted
-            obj = S.pop()
+            obj = S.popleft()
             L.append(obj)
 
             # Delete the edges and check if depending objects have no
             # dependency now
             while eout[obj]:
-                ch = eout[obj].pop()
+                ch = eout[obj].popleft()
                 ein[ch].remove(obj)
                 if not ein[ch]:
                     del ein[ch]
