@@ -41,26 +41,9 @@ class Proc(DbSchemaObject):
         """
         return "%s(%s)" % (self.qualname(), self.arguments)
 
-    def get_dump_dependencies(self):
-        # avoid circular import dependencies
-        from pyrseas.dbobject.language import Language
-        from pyrseas.dbobject.dbtype import DbType
-
-        # Dependency on the language and argument types is implicit
-        argtypes = set(self._argtypes())
-        rv = []
-        for dep in super(Proc, self).get_dump_dependencies():
-            if isinstance(dep, DbType) and dep.qualname() in argtypes:
-                continue
-            if isinstance(dep, Language) and dep.name == self.language:
-                continue
-            rv.append(dep)
-
-        return rv
-
-    def get_dependencies(self, db):
+    def get_implied_deps(self, db):
         # List the previous dependencies
-        deps = super(Proc, self).get_dependencies(db)
+        deps = super(Proc, self).get_implied_deps(db)
 
         # Add back the language
         if getattr(self, 'language', None):
@@ -225,34 +208,21 @@ class Function(Proc):
         stmts.append(self.diff_description(infunction))
         return stmts
 
-    def get_dump_dependencies(self):
-        """Dependency on the return type is implicit
-        """
-        # avoid circular import dependencies
-        from pyrseas.dbobject.dbtype import DbType
-
-        rettype = self._rettype()
-
-        rv = []
-        for dep in super(Function, self).get_dump_dependencies():
-            if isinstance(dep, DbType) and dep.qualname() == rettype:
-                continue
-            rv.append(dep)
-
-        return rv
-
-    def get_dependencies(self, db):
-        # avoid circular import dependencies
-        from pyrseas.dbobject.dbtype import DbType
-
+    def get_implied_deps(self, db):
         # List the previous dependencies
-        deps = super(Function, self).get_dependencies(db)
+        deps = super(Function, self).get_implied_deps(db)
 
         # Add back the return type
         rettype = self._rettype()
         for t in db.types.itervalues():
             if t.qualname() == rettype:
                 deps.add(t)
+
+    def get_deps(self, db):
+        deps = super(Function, self).get_deps(db)
+
+        # avoid circular import dependencies
+        from pyrseas.dbobject.dbtype import DbType
 
         # drop the dependency on the type if this function is an in/out
         # because there is a loop here.

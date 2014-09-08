@@ -229,8 +229,8 @@ class Domain(DbType):
             create += ", ".join(cnslist)
         return [create]
 
-    def get_dependencies(self, db):
-        deps = super(Domain, self).get_dependencies(db)
+    def get_implied_deps(self, db):
+        deps = super(Domain, self).get_implied_deps(db)
 
         # curiously there is no pg_depend entry from the domain to the
         # constraint (PG 9.3)

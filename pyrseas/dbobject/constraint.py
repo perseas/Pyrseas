@@ -72,8 +72,8 @@ class Constraint(DbSchemaObject):
         return "COMMENT ON CONSTRAINT %s ON %s IS %s" % (
             quote_id(self.name), self._table.qualname(), self._comment_text())
 
-    def get_dependencies(self, db):
-        deps = super(Constraint, self).get_dependencies(db)
+    def get_implied_deps(self, db):
+        deps = super(Constraint, self).get_implied_deps(db)
 
         # add the table we are defined into
         try:

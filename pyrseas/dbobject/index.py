@@ -150,8 +150,8 @@ class Index(DbSchemaObject):
         stmts.append(self.diff_description(inindex))
         return stmts
 
-    def get_dependencies(self, db):
-        deps = super(Index, self).get_dependencies(db)
+    def get_implied_deps(self, db):
+        deps = super(Index, self).get_implied_deps(db)
 
         # add the table we are defined into
         deps.add(db.tables[self.schema, self.table])

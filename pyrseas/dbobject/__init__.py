@@ -298,9 +298,9 @@ class DbObject(object):
         # Never dump the oid
         dct.pop('oid', None)
 
-        # Only dump dependencies if there is some
+        # Only dump dependencies that can't be inferred from the context
         dct.pop('depends_on', None)
-        deps = self.get_dump_dependencies()
+        deps = self.get_deps() - self.get_implied_deps()
         if deps:
             dct['depends_on'] = [ dep.extern_key() for dep in deps ]
         return dct
@@ -441,29 +441,7 @@ class DbObject(object):
                 stmts.append(self.comment())
         return stmts
 
-    def get_dump_dependencies(self):
-        """Return the dependencies that shoud be saved into the map
-
-        Some dependencies are implict, such as the containing schema, so don't
-        dump them. However they are a valuable information so we keep them in
-        the object state.
-
-        Subclasses may override this function but it is advised they call up in
-        the inheritance chain to allow superclasses checks to be performed.
-
-        :return: list of `DbObject`
-        """
-        rv = set()
-        from pyrseas.dbobject.schema import Schema
-        for dep in self.depends_on:
-            if isinstance(dep, Schema):
-                if getattr(self, 'schema', None) == dep.key():
-                    continue
-            rv.add(dep)
-
-        return sorted(rv, key=lambda dep: dep.extern_key())
-
-    def get_dependencies(self, db):
+    def get_deps(self, db):
         """Return all the objects the object depends on
 
         The base implementation returns the explicit dependencies. Subclasses
@@ -475,16 +453,25 @@ class DbObject(object):
         """
         deps = set()
 
+        # The explicit dependencies
+        for dep in self.depends_on:
+            deps.add(db._get_by_extkey(dep))
+
+        deps.update(self.get_implied_deps())
+        return deps
+
+    def get_implied_deps(self, db):
+        """Return the dependencies the object can handle without being explicit
+        """
+        deps = set()
+
         # The schema of the object (if any) is always a dependency
         if hasattr(self, 'schema'):
             if self.schema and self.schema != 'pg_catalog':
                 deps.add(db.schemas[self.schema])
 
-        # The explicit dependencies
-        for dep in self.depends_on:
-            deps.add(db._get_by_extkey(dep))
-
         return deps
+
 
 class DbSchemaObject(DbObject):
     "A database object that is owned by a certain schema"

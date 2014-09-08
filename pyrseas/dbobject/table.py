@@ -215,8 +215,8 @@ class Sequence(DbClass):
         stmts.append(self.diff_description(inseq))
         return stmts
 
-    def get_dependencies(self, db):
-        deps = super(Sequence, self).get_dependencies(db)
+    def get_implied_deps(self, db):
+        deps = super(Sequence, self).get_implied_deps(db)
 
         t = getattr(self, 'owner_table', None)
         if t:

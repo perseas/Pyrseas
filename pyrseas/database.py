@@ -134,9 +134,9 @@ class Database(object):
             may clash because two in different tables have different extkeys.
             However this shouldn't matter as such objects are generated as part
             of the containing one and they should be returned by the
-            `get_dependencies()` implementation of specific classes (which
+            `get_implied_deps()` implementation of specific classes (which
             would look for the object in by key in the right dict instead,
-            (e.g.  check `Domain.get_dependencies()` implementation.
+            (e.g.  check `Domain.get_implied_deps()` implementation.
 
             """
             try:
@@ -512,7 +512,7 @@ class Database(object):
         ein = defaultdict(set)
         eout = defaultdict(set)
         for obj in objs:
-            for dep in obj.get_dependencies(db):
+            for dep in obj.get_deps(db):
                 eout[dep].add(obj)
                 ein[obj].add(dep)
 
