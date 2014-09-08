@@ -824,6 +824,9 @@ class ClassDict(DbObjectDict):
                     obj.privileges = privileges_from_map(
                         inobj['privileges'], obj.allprivs, obj.owner)
 
+            if 'depends_on' in inobj:
+                obj.depends_on.extend(inobj['depends_on'])
+
     def link_refs(self, dbcolumns, dbconstrs, dbindexes, dbrules, dbtriggers):
         """Connect columns, constraints, etc. to their respective tables
 
