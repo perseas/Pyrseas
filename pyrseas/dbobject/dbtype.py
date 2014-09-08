@@ -230,11 +230,14 @@ class Domain(DbType):
         return [create]
 
     def get_dependencies(self, db):
-        for d in super(Domain, self).get_dependencies(db):
-            yield d
+        deps = super(Domain, self).get_dependencies(db)
 
+        # curiously there is no pg_depend entry from the domain to the
+        # constraint (PG 9.3)
         for c in getattr(self, 'check_constraints', ()):
-            yield db.constraints[self.schema, self.name, c]
+            deps.add(db.constraints[self.schema, self.name, c])
+
+        return deps
 
 
 class TypeDict(DbObjectDict):

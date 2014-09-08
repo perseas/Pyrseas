@@ -41,6 +41,65 @@ class Proc(DbSchemaObject):
         """
         return "%s(%s)" % (self.qualname(), self.arguments)
 
+    def get_dump_dependencies(self):
+        # avoid circular import dependencies
+        from pyrseas.dbobject.language import Language
+        from pyrseas.dbobject.dbtype import DbType
+
+        # Dependency on the language and argument types is implicit
+        argtypes = set(self._argtypes())
+        rv = []
+        for dep in super(Proc, self).get_dump_dependencies():
+            if isinstance(dep, DbType) and dep.qualname() in argtypes:
+                continue
+            if isinstance(dep, Language) and dep.name == self.language:
+                continue
+            rv.append(dep)
+
+        return rv
+
+    def get_dependencies(self, db):
+        # List the previous dependencies
+        deps = super(Proc, self).get_dependencies(db)
+
+        # Add back the language
+        if getattr(self, 'language', None):
+            lang = db.languages.get(self.language)
+            if lang:
+                deps.add(lang)
+
+        # Add back the types
+        argtypes = set(self._argtypes())
+        for t in db.types.itervalues():
+            if t.qualname() in argtypes:
+                deps.add(t)
+
+        return deps
+
+    def _argtypes(self):
+        """Return the list of types from an arguments list
+
+        This is the hard way of doing it, the catalog has better info. However
+        this works from the yaml too, so let's suck.
+        """
+        tokens = self.arguments.split(',')
+        # this split "decimal(10,2)" in two tokens, but who cares:
+        # the first will have the tail stripped, the second will result empty
+        # and discarded.
+        rv = []
+        for token in tokens:
+            token = token.strip()
+            token.rstrip('[](,)0123456789')  # strip array and modifiers
+            if not token:
+                continue
+
+            # note: this is wrong because there are types with more than one
+            # word (timestamp with time zone). However this only happens for
+            # builtin types, which don't make a dependency
+            rv.append(token.split()[-1])
+
+        return rv
+
 
 class Function(Proc):
     """A procedural language function"""
@@ -165,6 +224,53 @@ class Function(Proc):
         stmts.append(self.diff_privileges(infunction))
         stmts.append(self.diff_description(infunction))
         return stmts
+
+    def get_dump_dependencies(self):
+        """Dependency on the return type is implicit
+        """
+        # avoid circular import dependencies
+        from pyrseas.dbobject.dbtype import DbType
+
+        rettype = self._rettype()
+
+        rv = []
+        for dep in super(Function, self).get_dump_dependencies():
+            if isinstance(dep, DbType) and dep.qualname() == rettype:
+                continue
+            rv.append(dep)
+
+        return rv
+
+    def get_dependencies(self, db):
+        # avoid circular import dependencies
+        from pyrseas.dbobject.dbtype import DbType
+
+        # List the previous dependencies
+        deps = super(Function, self).get_dependencies(db)
+
+        # Add back the return type
+        rettype = self._rettype()
+        for t in db.types.itervalues():
+            if t.qualname() == rettype:
+                deps.add(t)
+
+        # drop the dependency on the type if this function is an in/out
+        # because there is a loop here.
+        for dep in list(deps):
+            if isinstance(dep, DbType):
+                for attr in ('input', 'output', 'send', 'receive'):
+                    fname = getattr(dep, attr, None)
+                    if fname and fname == self.qualname():
+                        deps.remove(dep)
+                        break
+
+        return deps
+
+    def _rettype(self):
+        rettype = self.returns
+        if rettype.upper().startswith("SETOF "):
+            rettype = rettype.split(None, 1)[-1]
+        return rettype
 
 
 class Aggregate(Proc):

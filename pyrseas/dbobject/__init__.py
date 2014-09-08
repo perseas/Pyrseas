@@ -450,16 +450,18 @@ class DbObject(object):
 
         Subclasses may override this function but it is advised they call up in
         the inheritance chain to allow superclasses checks to be performed.
+
+        :return: list of `DbObject`
         """
-        rv = []
+        rv = set()
         from pyrseas.dbobject.schema import Schema
         for dep in self.depends_on:
             if isinstance(dep, Schema):
                 if getattr(self, 'schema', None) == dep.key():
                     continue
-            rv.append(dep)
+            rv.add(dep)
 
-        return rv
+        return sorted(rv, key=lambda dep: dep.extern_key())
 
     def get_dependencies(self, db):
         """Return all the objects the object depends on
@@ -469,16 +471,20 @@ class DbObject(object):
         containment in the yaml (such as an object on the schema they are on, a
         constraint on the domain it is defined for.
 
+        :return: set of `DbObject`
         """
+        deps = set()
+
         # The schema of the object (if any) is always a dependency
         if hasattr(self, 'schema'):
             if self.schema and self.schema != 'pg_catalog':
-                yield db.schemas[self.schema]
+                deps.add(db.schemas[self.schema])
 
         # The explicit dependencies
         for dep in self.depends_on:
-            yield db._get_by_extkey(dep)
+            deps.add(db._get_by_extkey(dep))
 
+        return deps
 
 class DbSchemaObject(DbObject):
     "A database object that is owned by a certain schema"

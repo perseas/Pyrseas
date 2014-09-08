@@ -215,6 +215,15 @@ class Sequence(DbClass):
         stmts.append(self.diff_description(inseq))
         return stmts
 
+    def get_dependencies(self, db):
+        deps = super(Sequence, self).get_dependencies(db)
+
+        t = getattr(self, 'owner_table', None)
+        if t:
+            deps.add(db.tables[self.schema, t])
+
+        return deps
+
 
 class Table(DbClass):
     """A database table definition
@@ -306,6 +315,12 @@ class Table(DbClass):
 
         if not opts.no_privs and hasattr(self, 'privileges'):
             tbl.update({'privileges': self.map_privs()})
+
+        # TODO: why doesn't this call _base_map(), where oid and deps
+        # are taken care of?
+        deps = self.get_dump_dependencies()
+        if deps:
+            tbl['depends_on'] = [ dep.extern_key() for dep in deps ]
 
         return tbl
 

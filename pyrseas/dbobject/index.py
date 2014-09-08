@@ -150,6 +150,14 @@ class Index(DbSchemaObject):
         stmts.append(self.diff_description(inindex))
         return stmts
 
+    def get_dependencies(self, db):
+        deps = super(Index, self).get_dependencies(db)
+
+        # add the table we are defined into
+        deps.add(db.tables[self.schema, self.table])
+
+        return deps
+
 
 class IndexDict(DbObjectDict):
     "The collection of indexes on tables in a database"

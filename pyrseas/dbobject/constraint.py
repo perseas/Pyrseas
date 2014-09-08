@@ -72,6 +72,20 @@ class Constraint(DbSchemaObject):
         return "COMMENT ON CONSTRAINT %s ON %s IS %s" % (
             quote_id(self.name), self._table.qualname(), self._comment_text())
 
+    def get_dependencies(self, db):
+        deps = super(Constraint, self).get_dependencies(db)
+
+        # add the table we are defined into
+        try:
+            deps.add(db.tables[self.schema, self.table])
+        except KeyError:
+            # mmm... maybe it was a type then?
+            # but the types work in a different way and it's the type to
+            # depend on the costraint, so we don't do anything
+            assert db.types[self.schema, self.table]
+
+        return deps
+
 
 class CheckConstraint(Constraint):
     "A check constraint definition"
