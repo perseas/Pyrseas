@@ -365,9 +365,11 @@ class ConstraintDict(DbObjectDict):
                 reftbl = constr.ref_table
                 (constr.ref_schema, constr.ref_table) = split_schema_obj(
                     reftbl)
-                self[(sch, tbl, cns)] = ForeignKey(**constr.__dict__)
+                self.by_oid[oid] = self[(sch, tbl, cns)] \
+                    = ForeignKey(**constr.__dict__)
             elif constr_type == 'u':
-                self[(sch, tbl, cns)] = UniqueConstraint(**constr.__dict__)
+                self.by_oid[oid] = self[(sch, tbl, cns)] \
+                    = UniqueConstraint(**constr.__dict__)
 
     def from_map(self, table, inconstrs, target=''):
         """Initialize the dictionary of constraints by converting the input map
