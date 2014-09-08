@@ -160,6 +160,10 @@ class Database(object):
             for attr in dir(self):
                 d = getattr(self, attr)
                 if isinstance(d, DbObjectDict):
+                    # skip this as not needed for dependency tracking
+                    # and internally has lists, not objects
+                    if isinstance(d, ColumnDict):
+                        continue
                     yield (attr, d)
 
         def dict_from_table(self, catalog_table):
@@ -473,8 +477,6 @@ class Database(object):
 
         The function implements the classic Kahn 62 algorighm, see
         <http://en.wikipedia.org/wiki/Topological_sorting>.
-
-
         """
         # List of objects to return
         L = []
