@@ -6,6 +6,8 @@
     This module defines two classes: Cast derived from DbObject and
     CastDict derived from DbObjectDict.
 """
+from collections import defaultdict
+
 from pyrseas.dbobject import DbObject, DbObjectDict, commentable
 
 
@@ -130,23 +132,27 @@ class CastDict(DbObjectDict):
         catalogs, to the input map and generates SQL statements to
         transform the casts accordingly.
         """
-        stmts = []
+        return super(CastDict, self).diff_map(incasts)
+
+    def _diff_map(self, incasts):
+        stmts = defaultdict(list)
+
         # check input casts
         for (src, trg) in incasts:
             incast = incasts[(src, trg)]
             # does it exist in the database?
             if (src, trg) not in self:
                 # create new cast
-                stmts.append(incast.create())
+                stmts[incast].append(incast.create())
             else:
                 # check cast objects
-                stmts.append(self[(src, trg)].diff_map(incast))
+                stmts[incast].append(self[(src, trg)].diff_map(incast))
 
         # check existing casts
         for (src, trg) in self:
             cast = self[(src, trg)]
             # if missing, mark it for dropping
             if (src, trg) not in incasts:
-                stmts.append(cast.drop())
+                stmts[incast].append(cast.drop())
 
         return stmts

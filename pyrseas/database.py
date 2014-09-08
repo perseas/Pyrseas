@@ -441,7 +441,7 @@ class Database(object):
         for dname, d in sorted(self.db.alldicts()):
             # TODO: drop this check: it's only to test with a subset of all
             # the classes
-            if not hasattr(d, '_diff_map'):
+            if not getattr(self.ndb, dname):
                 continue
             all_objs.extend(getattr(self.ndb, dname).itervalues())
             changes.update(d._diff_map(getattr(self.ndb, dname)))

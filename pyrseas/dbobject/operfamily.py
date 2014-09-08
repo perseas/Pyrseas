@@ -6,6 +6,8 @@
     This module defines two classes: OperatorFamily derived from
     DbSchemaObject and OperatorFamilyDict derived from DbObjectDict.
 """
+from collections import defaultdict
+
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
 from pyrseas.dbobject import commentable, ownable
 
@@ -95,7 +97,10 @@ class OperatorFamilyDict(DbObjectDict):
         from the catalogs, to the input map and generates SQL
         statements to transform the operator families accordingly.
         """
-        stmts = []
+        return super(OperatorFamilyDict, self).diff_map(inopfams)
+
+    def _diff_map(self, inopfams):
+        stmts = defaultdict(list)
         # check input operator families
         for (sch, opf, idx) in inopfams:
             inopfam = inopfams[(sch, opf, idx)]
@@ -103,12 +108,12 @@ class OperatorFamilyDict(DbObjectDict):
             if (sch, opf, idx) not in self:
                 if not hasattr(inopfam, 'oldname'):
                     # create new operator family
-                    stmts.append(inopfam.create())
+                    stmts[inopfam].append(inopfam.create())
                 else:
-                    stmts.append(self[(sch, opf, idx)].rename(inopfam))
+                    stmts[inopfam].append(self[(sch, opf, idx)].rename(inopfam))
             else:
                 # check operator family objects
-                stmts.append(self[(sch, opf, idx)].diff_map(inopfam))
+                stmts[inopfam].append(self[(sch, opf, idx)].diff_map(inopfam))
 
         # check existing operator families
         for (sch, opf, idx) in self:

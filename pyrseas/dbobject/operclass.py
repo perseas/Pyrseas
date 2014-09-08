@@ -6,6 +6,8 @@
     This module defines two classes: OperatorClass derived from
     DbSchemaObject and OperatorClassDict derived from DbObjectDict.
 """
+from collections import defaultdict
+
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
 from pyrseas.dbobject import commentable, ownable
 
@@ -173,7 +175,10 @@ class OperatorClassDict(DbObjectDict):
         from the catalogs, to the input map and generates SQL
         statements to transform the operator classes accordingly.
         """
-        stmts = []
+        return super(OperatorClassDict, self).diff_map(self, inopcls)
+
+    def _diff_map(self, inopcls):
+        stmts = defaultdict(list)
         # check input operator classes
         for (sch, opc, idx) in inopcls:
             inoper = inopcls[(sch, opc, idx)]
@@ -181,12 +186,12 @@ class OperatorClassDict(DbObjectDict):
             if (sch, opc, idx) not in self:
                 if not hasattr(inoper, 'oldname'):
                     # create new operator
-                    stmts.append(inoper.create())
+                    stmts[inoper].append(inoper.create())
                 else:
-                    stmts.append(self[(sch, opc, idx)].rename(inoper))
+                    stmts[inoper].append(self[(sch, opc, idx)].rename(inoper))
             else:
                 # check operator objects
-                stmts.append(self[(sch, opc, idx)].diff_map(inoper))
+                stmts[inoper].append(self[(sch, opc, idx)].diff_map(inoper))
 
         # check existing operators
         for (sch, opc, idx) in self:

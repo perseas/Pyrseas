@@ -6,6 +6,8 @@
     This defines two classes, Index and IndexDict, derived
     from DbSchemaObject and DbObjectDict, respectively.
 """
+from collections import defaultdict
+
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
 from pyrseas.dbobject import quote_id, split_schema_obj, commentable
 
@@ -284,7 +286,11 @@ class IndexDict(DbObjectDict):
         catalogs, to the input map and generates SQL statements to
         transform the indexes accordingly.
         """
-        stmts = []
+        return super(IndexDict, self).diff_map(inindexes)
+
+    def _diff_map(self, inindexes):
+        stmts = defaultdict(list)
+
         # check input indexes
         for (sch, tbl, idx) in inindexes:
             inidx = inindexes[(sch, tbl, idx)]
@@ -294,7 +300,7 @@ class IndexDict(DbObjectDict):
                 if hasattr(inidx, 'oldname'):
                     oldname = inidx.oldname
                     try:
-                        stmts.append(self[(sch, tbl, oldname)].rename(
+                        stmts[inidx].append(self[(sch, tbl, oldname)].rename(
                             inidx.name))
                         del self[(sch, tbl, oldname)]
                     except KeyError as exc:
@@ -303,16 +309,16 @@ class IndexDict(DbObjectDict):
                         raise
                 else:
                     # create new index
-                    stmts.append(inidx.create())
+                    stmts[inidx].append(inidx.create())
 
         # check database indexes
         for (sch, tbl, idx) in self:
             index = self[(sch, tbl, idx)]
             # if missing, drop it
             if (sch, tbl, idx) not in inindexes:
-                stmts.append(index.drop())
+                stmts[index].append(index.drop())
             else:
                 # compare index objects
-                stmts.append(index.diff_map(inindexes[(sch, tbl, idx)]))
+                stmts[index].append(index.diff_map(inindexes[(sch, tbl, idx)]))
 
         return stmts

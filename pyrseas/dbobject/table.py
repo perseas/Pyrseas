@@ -10,6 +10,7 @@
 """
 import os
 import sys
+from collections import defaultdict
 
 from pyrseas.lib.pycompat import PY2
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
@@ -910,7 +911,10 @@ class ClassDict(DbObjectDict):
         from the catalogs, to the input map and generates SQL
         statements to transform the tables/sequences accordingly.
         """
-        stmts = []
+        return super(ClassDict, self).diff_map(intables)
+
+    def _diff_map(self, intables):
+        stmts = defaultdict(list)
         # first pass: sequences owned by a table
         for (sch, seq) in intables:
             inseq = intables[(sch, seq)]
@@ -919,10 +923,10 @@ class ClassDict(DbObjectDict):
                 continue
             if (sch, seq) not in self:
                 if hasattr(inseq, 'oldname'):
-                    stmts.append(self._rename(inseq, "sequence"))
+                    stmts[inseq].append(self._rename(inseq, "sequence"))
                 else:
                     # create new sequence
-                    stmts.append(inseq.create())
+                    stmts[inseq].append(inseq.create())
 
         # check input tables
         inhstack = []
@@ -937,9 +941,9 @@ class ClassDict(DbObjectDict):
                     if hasattr(intable, 'inherits'):
                         inhstack.append(intable)
                     else:
-                        stmts.append(intable.create())
+                        stmts[intable].append(intable.create())
                 else:
-                    stmts.append(self._rename(intable, "table"))
+                    stmts[intable].append(self._rename(intable, "table"))
         while len(inhstack):
             intable = inhstack.pop()
             createit = True
@@ -947,7 +951,7 @@ class ClassDict(DbObjectDict):
                 if intables[split_schema_obj(partbl)] in inhstack:
                     createit = False
             if createit:
-                stmts.append(intable.create())
+                stmts[intable].append(intable.create())
             else:
                 inhstack.insert(0, intable)
 
@@ -959,10 +963,10 @@ class ClassDict(DbObjectDict):
             # does it exist in the database?
             if (sch, tbl) not in self:
                 if hasattr(intable, 'oldname'):
-                    stmts.append(self._rename(intable, "view"))
+                    stmts[intable].append(self._rename(intable, "view"))
                 else:
                     # create new view
-                    stmts.append(intable.create())
+                    stmts[intable].append(intable.create())
 
         # second pass: input sequences not owned by tables
         for (sch, seq) in intables:
@@ -972,12 +976,12 @@ class ClassDict(DbObjectDict):
             # does it exist in the database?
             if (sch, seq) not in self:
                 if hasattr(inseq, 'oldname'):
-                    stmts.append(self._rename(inseq, "sequence"))
+                    stmts[inseq].append(self._rename(inseq, "sequence"))
                 elif hasattr(inseq, 'owner_table'):
-                    stmts.append(inseq.add_owner())
+                    stmts[inseq].append(inseq.add_owner())
                 else:
                     # create new sequence
-                    stmts.append(inseq.create())
+                    stmts[inseq].append(inseq.create())
 
         # check database tables, sequences and views
         for (sch, tbl) in self:
@@ -987,7 +991,7 @@ class ClassDict(DbObjectDict):
                 table.dropped = False
             else:
                 # check table/sequence/view objects
-                stmts.append(table.diff_map(intables[(sch, tbl)]))
+                stmts[table].append(table.diff_map(intables[(sch, tbl)]))
 
         # now drop the marked tables
         for (sch, tbl) in self:
@@ -998,17 +1002,17 @@ class ClassDict(DbObjectDict):
                 # first, drop all foreign keys
                 if hasattr(table, 'foreign_keys'):
                     for fgn in table.foreign_keys:
-                        stmts.append(table.foreign_keys[fgn].drop())
+                        stmts[table].append(table.foreign_keys[fgn].drop())
                 # and drop the triggers
                 if hasattr(table, 'triggers'):
                     for trg in table.triggers:
-                        stmts.append(table.triggers[trg].drop())
+                        stmts[table].append(table.triggers[trg].drop())
                 if hasattr(table, 'rules'):
                     for rul in table.rules:
-                        stmts.append(table.rules[rul].drop())
+                        stmts[table].append(table.rules[rul].drop())
                 # drop views
                 if isinstance(table, View):
-                    stmts.append(table.drop())
+                    stmts[table].append(table.drop())
 
         inhstack = []
         for (sch, tbl) in self:
@@ -1022,26 +1026,26 @@ class ClassDict(DbObjectDict):
                 # next, drop other subordinate objects
                 if hasattr(table, 'check_constraints'):
                     for chk in table.check_constraints:
-                        stmts.append(table.check_constraints[chk].drop())
+                        stmts[table].append(table.check_constraints[chk].drop())
                 if hasattr(table, 'unique_constraints'):
                     for unq in table.unique_constraints:
-                        stmts.append(table.unique_constraints[unq].drop())
+                        stmts[table].append(table.unique_constraints[unq].drop())
                 if hasattr(table, 'indexes'):
                     for idx in table.indexes:
-                        stmts.append(table.indexes[idx].drop())
+                        stmts[table].append(table.indexes[idx].drop())
                 if hasattr(table, 'rules'):
                     for rul in table.rules:
-                        stmts.append(table.rules[rul].drop())
+                        stmts[table].append(table.rules[rul].drop())
                 if hasattr(table, 'primary_key'):
                     # TODO there can be more than one referred_by
                     if hasattr(table, 'referred_by'):
-                        stmts.append(table.referred_by.drop())
-                    stmts.append(table.primary_key.drop())
+                        stmts[table].append(table.referred_by.drop())
+                    stmts[table].append(table.primary_key.drop())
                 # finally, drop the table itself
                 if hasattr(table, 'descendants'):
                     inhstack.append(table)
                 else:
-                    stmts.append(table.drop())
+                    stmts[table].append(table.drop())
         while len(inhstack):
             table = inhstack.pop()
             dropit = True
@@ -1049,7 +1053,7 @@ class ClassDict(DbObjectDict):
                 if self[(childtbl.schema, childtbl.name)] in inhstack:
                     dropit = False
             if dropit:
-                stmts.append(table.drop())
+                stmts[table].append(table.drop())
             else:
                 inhstack.insert(0, table)
         for (sch, tbl) in self:
@@ -1057,7 +1061,7 @@ class ClassDict(DbObjectDict):
             if isinstance(table, Sequence) \
                     and hasattr(table, 'dependent_table') \
                     and hasattr(table, 'dropped') and not table.dropped:
-                stmts.append(table.drop())
+                stmts[table].append(table.drop())
 
         # last pass to deal with nextval DEFAULTs
         for (sch, tbl) in intables:
@@ -1068,6 +1072,6 @@ class ClassDict(DbObjectDict):
                 for col in intable.columns:
                     if hasattr(col, 'default') \
                             and col.default.startswith('nextval'):
-                        stmts.append(col.set_sequence_default())
+                        stmts[intable].append(col.set_sequence_default())
 
         return stmts

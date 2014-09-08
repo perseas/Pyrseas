@@ -6,6 +6,8 @@
     This module defines two classes: Trigger derived from
     DbSchemaObject, and TriggerDict derived from DbObjectDict.
 """
+from collections import defaultdict
+
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
 from pyrseas.dbobject import quote_id, commentable
 
@@ -168,7 +170,10 @@ class TriggerDict(DbObjectDict):
         the catalogs, to the input map and generates SQL statements to
         transform the triggers accordingly.
         """
-        stmts = []
+        return super(TriggerDict, self).diff_map(intriggers)
+
+    def _diff_map(self, intriggers):
+        stmts = defaultdict(list)
         # check input triggers
         for (sch, tbl, trg) in intriggers:
             intrig = intriggers[(sch, tbl, trg)]
@@ -176,18 +181,18 @@ class TriggerDict(DbObjectDict):
             if (sch, tbl, trg) not in self:
                 if not hasattr(intrig, 'oldname'):
                     # create new trigger
-                    stmts.append(intrig.create())
+                    stmts[intrig].append(intrig.create())
                 else:
-                    stmts.append(self[(sch, tbl, trg)].rename(intrig))
+                    stmts[intrig].append(self[(sch, tbl, trg)].rename(intrig))
             else:
                 # check trigger objects
-                stmts.append(self[(sch, tbl, trg)].diff_map(intrig))
+                stmts[intrig].append(self[(sch, tbl, trg)].diff_map(intrig))
 
         # check existing triggers
         for (sch, tbl, trg) in self:
             trig = self[(sch, tbl, trg)]
             # if missing, drop them
             if (sch, tbl, trg) not in intriggers:
-                    stmts.append(trig.drop())
+                stmts[trig].append(trig.drop())
 
         return stmts

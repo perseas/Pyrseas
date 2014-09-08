@@ -6,6 +6,8 @@
     This defines two classes, Language and LanguageDict, derived from
     DbObject and DbObjectDict, respectively.
 """
+from collections import defaultdict
+
 from pyrseas.dbobject import DbObjectDict, DbObject, quote_id
 from pyrseas.dbobject.function import Function
 
@@ -129,20 +131,24 @@ class LanguageDict(DbObjectDict):
         catalogs, to the input map and generates SQL statements to
         transform the languages accordingly.
         """
-        stmts = []
+        return super(LanguageDict, self).diff_map(inlanguages)
+
+    def _diff_map(self, inlanguages):
+        stmts = defaultdict(list)
+
         # check input languages
         for lng in inlanguages:
             inlng = inlanguages[lng]
             # does it exist in the database?
             if lng in self:
                 if not hasattr(inlng, '_ext'):
-                    stmts.append(self[lng].diff_map(inlng))
+                    stmts[inlng].append(self[lng].diff_map(inlng))
             else:
                 # check for possible RENAME
                 if hasattr(inlng, 'oldname'):
                     oldname = inlng.oldname
                     try:
-                        stmts.append(self[oldname].rename(inlng.name))
+                        stmts[inlng].append(self[oldname].rename(inlng.name))
                         del self[oldname]
                     except KeyError as exc:
                         exc.args = ("Previous name '%s' for language '%s' "
@@ -150,7 +156,7 @@ class LanguageDict(DbObjectDict):
                         raise
                 else:
                     # create new language
-                    stmts.append(inlng.create())
+                    stmts[inlng].append(inlng.create())
         # check database languages
         for lng in self:
             # if missing, drop it
@@ -160,6 +166,7 @@ class LanguageDict(DbObjectDict):
                         and self[lng].name == 'plpgsql':
                     continue
                 self[lng].dropped = True
+
         return stmts
 
     def _drop(self):

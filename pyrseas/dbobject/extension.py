@@ -6,6 +6,8 @@
     This module defines two classes: Extension derived from DbObject,
     and ExtensionDict derived from DbObjectDict.
 """
+from collections import defaultdict
+
 from pyrseas.dbobject import DbObjectDict, DbObject
 from pyrseas.dbobject import quote_id, commentable
 
@@ -85,7 +87,11 @@ class ExtensionDict(DbObjectDict):
         the catalogs, to the input map and generates SQL statements to
         transform the extensions accordingly.
         """
-        stmts = []
+        return super(ExtensionDict, self).diff_map(inexts)
+
+    def _diff_map(self, inexts):
+        stmts = defaultdict(list)
+
         # check input extensions
         for ext in inexts:
             inexten = inexts[ext]
@@ -93,13 +99,13 @@ class ExtensionDict(DbObjectDict):
             if ext not in self:
                 if not hasattr(inexten, 'oldname'):
                     # create new extension
-                    stmts.append(inexten.create())
+                    stmts[inexten].append(inexten.create())
                 else:
-                    stmts.append(self[ext].rename(inexten))
+                    stmts[inexten].append(self[ext].rename(inexten))
             # check extension objects
             else:
                 # extension owner cannot be altered, set no_owner to True
-                stmts.append(self[ext].diff_map(inexten, no_owner=True))
+                stmts[inexten].append(self[ext].diff_map(inexten), no_owner=True)
 
         # check existing extensions
         for ext in self:

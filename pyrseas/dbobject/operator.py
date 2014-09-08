@@ -6,6 +6,8 @@
     This module defines two classes: Operator derived from
     DbSchemaObject and OperatorDict derived from DbObjectDict.
 """
+from collections import defaultdict
+
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
 from pyrseas.dbobject import quote_id, commentable, ownable
 
@@ -153,7 +155,10 @@ class OperatorDict(DbObjectDict):
         the catalogs, to the input map and generates SQL statements to
         transform the operators accordingly.
         """
-        stmts = []
+        return super(OperatorDict, self).diff_map(inopers)
+
+    def _diff_map(self, inopers):
+        stmts = defaultdict(list)
         # check input operators
         for (sch, opr, lft, rgt) in inopers:
             inoper = inopers[(sch, opr, lft, rgt)]
@@ -161,12 +166,12 @@ class OperatorDict(DbObjectDict):
             if (sch, opr, lft, rgt) not in self:
                 if not hasattr(inoper, 'oldname'):
                     # create new operator
-                    stmts.append(inoper.create())
+                    stmts[inoper].append(inoper.create())
                 else:
-                    stmts.append(self[(sch, opr, lft, rgt)].rename(inoper))
+                    stmts[inoper].append(self[(sch, opr, lft, rgt)].rename(inoper))
             else:
                 # check operator objects
-                stmts.append(self[(sch, opr, lft, rgt)].diff_map(inoper))
+                stmts[inoper].append(self[(sch, opr, lft, rgt)].diff_map(inoper))
 
         # check existing operators
         for (sch, opr, lft, rgt) in self:
