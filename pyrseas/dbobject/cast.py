@@ -9,6 +9,7 @@
 from collections import defaultdict
 
 from pyrseas.dbobject import DbObject, DbObjectDict, commentable
+from pyrseas.dbobject import split_schema_obj
 
 
 CONTEXTS = {'a': 'assignment', 'e': 'explicit', 'i': 'implicit'}
@@ -68,6 +69,29 @@ class Cast(DbObject):
             as_clause = "\n    AS IMPLICIT"
         return ["CREATE CAST (%s AS %s)%s%s" % (
                 self.source, self.target, with_clause, as_clause)]
+
+    def get_implied_deps(self, db):
+        deps = super(Cast, self).get_implied_deps(db)
+
+        # Types may be not found because they can be builtins
+        source = split_schema_obj(self.source)
+        source = db.types.get((source[0], source[1].rstrip('[]')))
+        if source:
+            deps.add(source)
+
+        target = split_schema_obj(self.target)
+        target = db.types.get((target[0], target[1].rstrip('[]')))
+        if target:
+            deps.add(target)
+
+        # The function instead we expect it exists
+        if self.method == 'f':
+            # TODO: this is an ugly hack and I'd like to drop _get_by_extkey
+            # is there a better way to locate that func?
+            func = db._get_by_extkey('function %s' % self.function)
+            deps.add(func)
+
+        return deps
 
 
 class CastDict(DbObjectDict):
