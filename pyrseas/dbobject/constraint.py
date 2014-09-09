@@ -246,6 +246,14 @@ class ForeignKey(Constraint):
         stmts.append(self.diff_description(infk))
         return stmts
 
+    def get_implied_deps(self, db):
+        deps = super(ForeignKey, self).get_implied_deps(db)
+
+        # add the table we reference
+        deps.add(db.tables[self.ref_schema, self.ref_table])
+
+        return deps
+
 
 class UniqueConstraint(Constraint):
     "A unique constraint definition"
