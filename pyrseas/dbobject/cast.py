@@ -86,11 +86,10 @@ class Cast(DbObject):
 
         # The function instead we expect it exists
         if self.method == 'f':
-            # TODO: this is an ugly hack and I'd like to drop _get_by_extkey
-            # is there a better way to locate that func?
-            func = db._get_by_extkey('function %s' % self.function)
-            assert func
-            deps.add(func)
+            fschema, fname = split_schema_obj(self.function)
+            # TODO: broken with pathological function with a '(' in its name
+            fname, fargs = fname.split('(', 1)
+            deps.add(db.functions[fschema, fname, fargs[:-1]])
 
         return deps
 
