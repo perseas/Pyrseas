@@ -6,8 +6,12 @@ The PRIMARY AUTHORS are or have been:
     * Ronan Dunklau
     * Andjelko Horvat
     * Roger Hunwicks
+    * Ghislain Leveque
     * Chris Mayo
+    * Philippe Pepiot
     * Andrey Popp
+    * github.com/shirkey
+    * Paulo Tioseco
     * Daniele Varrazzo
 
 A big THANK YOU goes to the following individuals that provided
