@@ -9,7 +9,7 @@
 from collections import defaultdict
 
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
-from pyrseas.dbobject import quote_id, commentable, ownable
+from pyrseas.dbobject import quote_id, commentable, ownable, split_schema_obj
 
 
 class Operator(DbSchemaObject):
@@ -73,6 +73,37 @@ class Operator(DbSchemaObject):
                 self.qualname(), self.procedure,
                 ',\n    ' if opt_clauses else '', ',\n    '.join(opt_clauses))]
 
+    def get_implied_deps(self, db):
+        deps = super(Operator, self).get_implied_deps(db)
+
+        # Types may be not found because builtin, or the operator unary
+        leftarg = split_schema_obj(self.leftarg)
+        leftarg = db.types.get((leftarg[0], leftarg[1].rstrip('[]')))
+        if leftarg:
+            deps.add(leftarg)
+
+        rightarg = split_schema_obj(self.rightarg)
+        rightarg = db.types.get((rightarg[0], rightarg[1].rstrip('[]')))
+        if rightarg:
+            deps.add(rightarg)
+
+        # The function instead we expect it exists
+        # TODO: another ugly hack to locate the object
+        fschema, fname = split_schema_obj(self.procedure)
+        fargs = ', '.join(t for t in [self.leftarg, self.rightarg]
+            if t != 'NONE')
+        func = db.functions[fschema, fname, fargs]
+        deps.add(func)
+
+        # This helper function may be a builtin
+        if getattr(self, 'restrict', None):
+            fschema, fname = split_schema_obj(self.restrict)
+            func = db.functions.get((fschema, fname,
+                                    "internal, oid, internal, integer"))
+            if func:
+                deps.add(func)
+
+        return deps
 
 class OperatorDict(DbObjectDict):
     "The collection of operators in a database"

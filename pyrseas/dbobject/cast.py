@@ -89,6 +89,7 @@ class Cast(DbObject):
             # TODO: this is an ugly hack and I'd like to drop _get_by_extkey
             # is there a better way to locate that func?
             func = db._get_by_extkey('function %s' % self.function)
+            assert func
             deps.add(func)
 
         return deps
