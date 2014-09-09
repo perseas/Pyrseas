@@ -9,7 +9,7 @@
 from collections import defaultdict
 
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
-from pyrseas.dbobject import quote_id, commentable
+from pyrseas.dbobject import quote_id, commentable, split_schema_obj
 
 EXEC_PROC = 'EXECUTE PROCEDURE '
 EVENT_TYPES = ['INSERT', 'UPDATE', 'DELETE', 'TRUNCATE']
@@ -68,6 +68,21 @@ class Trigger(DbSchemaObject):
                 constr, quote_id(self.name), self.timing.upper(), evts,
                 self._table.qualname(), defer,
                 self.level.upper(), cond, self.procedure)]
+
+    def get_implied_deps(self, db):
+        deps = super(Trigger, self).get_implied_deps(db)
+
+        deps.add(db.tables[self.schema, self.table])
+
+        # the trigger procedure can have arguments, but the trigger definition
+        # has always none (they are accessed through `tg_argv`).
+        # TODO: this breaks if a function name contains a '('
+        # (another case for a robust lookup function in db)
+        fschema, fname = split_schema_obj(self.procedure)
+        fname, _ = fname.split('(', 1) # implicitly assert there is a (
+        deps.add(db.functions[fschema, fname, ''])
+
+        return deps
 
 
 QUERY_PRE90 = \
