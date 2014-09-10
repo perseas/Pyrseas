@@ -245,6 +245,20 @@ class Domain(DbType):
     def get_implied_deps(self, db):
         deps = super(Domain, self).get_implied_deps(db)
 
+        # depend on the base type
+        # don't give errors in case it's a builtin
+        tschema, tname = split_schema_obj(self.type)
+        type = db.types.get((tschema, tname))
+        if type:
+            deps.add(type)
+
+            # In my testing database there is a dependency on the output
+            # function of the base type. TODO: investigate more.
+            if hasattr(type, 'output'):
+                fschema, fname = split_schema_obj(type.output)
+                func = db.functions[fschema, fname, type.qualname()]
+                deps.add(func)
+
         # curiously there is no pg_depend entry from the domain to the
         # constraint (PG 9.3)
         for c in getattr(self, 'check_constraints', ()):
