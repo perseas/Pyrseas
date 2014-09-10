@@ -12,23 +12,33 @@ from pyrseas.dbobject import quote_id, split_schema_obj, commentable
 
 def split_exprs(idx_exprs):
     "Helper function to split index expressions from pg_get_expr()"
-    keyexprs = []
-    nopen = nclose = beg = curr = 0
-    for c in idx_exprs:
-        curr += 1
-        if c == '(':
-            nopen += 1
+    level = 0
+    in_literal = False
+    splits = []
+
+    # Split around commas but only at the first parens level.
+    # TODO: you can still fool this function with a string containing a quote.
+    start = 0
+    for i, c in enumerate(idx_exprs):
+        if c == "'":
+            in_literal = not in_literal
+            continue
+        if in_literal:
+            continue
+        elif c == '(':
+            level += 1
         elif c == ')':
-            nclose += 1
-            if nopen > 0 and nopen == nclose:
-                if idx_exprs[beg] == ',':
-                    beg += 1
-                if idx_exprs[beg] == ' ':
-                    beg += 1
-                keyexprs.append(idx_exprs[beg:curr])
-                beg = curr
-                nopen = nclose = 0
-    return keyexprs
+            level -= 1
+        elif c == ',' and level == 0:
+            splits.append((start, i))
+            start = i + 1
+            for s in idx_exprs[start:]:
+                if s == ' ':
+                    start += 1
+                else:
+                    break
+    splits.append((start, i+1))
+    return [idx_exprs[start:end] for start, end in splits]
 
 
 class Index(DbSchemaObject):
