@@ -91,6 +91,19 @@ class BaseType(DbType):
         """
         return ["DROP TYPE %s CASCADE" % self.qualname()]
 
+    def get_implied_deps(self, db):
+        deps = super(BaseType, self).get_implied_deps(db)
+        for attr, arg in [
+                ('input', 'cstring'), ('output', self.qualname()),
+                ('receive', 'internal'), ('send', self.qualname())]:
+            f = getattr(self, attr, None)
+            if not f:
+                continue
+            fschema, fname = split_schema_obj(f)
+            deps.add(db.functions[fschema, fname, arg])
+
+        return deps
+
 
 class Composite(DbType):
     """A composite type"""
