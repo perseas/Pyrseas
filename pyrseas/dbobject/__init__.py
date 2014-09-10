@@ -303,7 +303,7 @@ class DbObject(object):
         deps = set(dct.pop('depends_on', ()))
         deps -= self.get_implied_deps(db)
         if deps:
-            dct['depends_on'] = [ dep.extern_key() for dep in deps ]
+            dct['depends_on'] = sorted([ dep.extern_key() for dep in deps ])
         return dct
 
     def to_map(self, db, no_owner=False, no_privs=False):
