@@ -245,6 +245,35 @@ class Database(object):
                 """):
             deps[r[0], r[1]].append((r[2], r[3]))
 
+        # The dependencies across views is not in pg_depend. We have to parse
+        # the rewrite rule (TODO: only tested on PG 9.3):
+        for r in dbconn.fetchall("""
+                select distinct 'pg_class', ev_class,
+                    case when depid[1] = 'relid' then 'pg_class'
+                         when depid[1] = 'funcid' then 'pg_proc'
+                    end, depid[2]::oid
+                from (
+                    select ev_class,
+                        regexp_matches(ev_action,
+                            ':(relid|funcid)\s+(\d+)', 'g')
+                            as depid
+                    from pg_rewrite
+                    where rulename = '_RETURN') x
+
+                left join pg_class c
+                    on (depid[1], depid[2]::oid) = ('relid', c.oid)
+                left join pg_namespace cs on cs.oid = relnamespace
+
+                left join pg_proc p
+                    on (depid[1], depid[2]::oid) = ('funcid', p.oid)
+                left join pg_namespace ps on ps.oid = pronamespace
+
+                where ev_class <> depid[2]::oid
+                and coalesce(cs.nspname, ps.nspname)
+                    not in ('information_schema', 'pg_catalog')
+                """):
+            deps[r[0], r[1]].append((r[2], r[3]))
+
         for (stbl, soid), deps in deps.iteritems():
             sdict = db.dict_from_table(stbl)
             if sdict is None:
