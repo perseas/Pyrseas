@@ -144,6 +144,28 @@ class IndexToMapTestCase(DatabaseToMapTestCase):
         assert dbmap['schema public']['table t1']['indexes']['t1_idx'][
             'description'] == 'Test index t1_idx'
 
+    def test_bug_98(self):
+        "Map a multicol index with expressions"
+        dbmap = self.to_map(["CREATE TABLE holiday (id serial PRIMARY KEY,"
+                             "date date NOT NULL, recurring boolean NOT NULL)",
+                             "CREATE UNIQUE INDEX unique_date ON holiday (("
+                             "CASE WHEN recurring THEN (0)::double precision "
+                             "ELSE date_part('year'::text, date) END), "
+                             "date_part('month'::text, date), "
+                             "date_part('day'::text, date))"])
+        fmt = "(\nCASE\n    %s\n    %s\nEND)"
+        if self.db.version < 90300:
+            fmt = "(CASE %s %s END)"
+        assert dbmap['schema public']['table holiday']['indexes'][
+            'unique_date'] == {
+                'keys': [
+                {fmt % ("WHEN recurring THEN (0)::double precision",
+                        "ELSE date_part('year'::text, date)"):
+                {'type': 'expression'}},
+                {"date_part('month'::text, date)": {'type': 'expression'}},
+                {"date_part('day'::text, date)": {'type': 'expression'}}],
+                'unique': True}
+
 
 class IndexToSqlTestCase(InputMapToSqlTestCase):
     """Test SQL generation from input indexes"""
