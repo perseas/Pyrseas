@@ -344,6 +344,7 @@ class Database(object):
         self.from_map(input_map, langs)
         if opts.revert:
             (self.db, self.ndb) = (self.ndb, self.db)
+            self.db.languages.dbconn = self.dbconn
         stmts = self.db.schemas.diff_map(self.ndb.schemas)
         stmts.append(self.db.extensions.diff_map(self.ndb.extensions))
         stmts.append(self.db.languages.diff_map(self.ndb.languages))
