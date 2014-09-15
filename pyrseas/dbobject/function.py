@@ -170,6 +170,14 @@ class Function(Proc):
             if self.rows != 1000:
                 rows = " ROWS %s" % self.rows
 
+        # We may have to create a shell type if we are its input or output
+        # functions
+        if hasattr(self, '_defining_type'):
+            t = self._defining_type()   # resolve weakref
+            if not getattr(t, '_shell_created'):
+                t._shell_created = True
+                stmts.append("CREATE TYPE %s" % t.qualname())
+
         args = self.allargs if hasattr(self, 'allargs') else self.arguments
         stmts.append("CREATE%s FUNCTION %s(%s) RETURNS %s\n    LANGUAGE %s"
                      "%s%s%s%s%s%s%s\n    AS %s" % (

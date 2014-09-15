@@ -7,6 +7,7 @@
     DbSchemaObject, BaseType, Composite, Domain and Enum derived from
     DbType, and DbTypeDict derived from DbObjectDict.
 """
+import weakref
 from collections import defaultdict
 
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
@@ -100,7 +101,10 @@ class BaseType(DbType):
             if not f:
                 continue
             fschema, fname = split_schema_obj(f)
-            deps.add(db.functions[fschema, fname, arg])
+            f = db.functions[fschema, fname, arg]
+            # weakref because we are explicitly creating a loop
+            f._defining_type = weakref.ref(self)
+            deps.add(f)
 
         return deps
 
