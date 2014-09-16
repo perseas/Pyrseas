@@ -123,6 +123,8 @@ class Function(Proc):
                 del dct['privileges']
             else:
                 dct['privileges'] = self.map_privs()
+        if hasattr(self, '_defining_type'):
+            del dct['_defining_type']
 
         return dct
 
