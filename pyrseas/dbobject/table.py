@@ -129,7 +129,7 @@ class Sequence(DbClass):
             deps = set(self.depends_on)
             deps -= self.get_implied_deps(db)
             if deps:
-                seq['depends_on'] = [ dep.extern_key() for dep in deps ]
+                seq['depends_on'] = sorted([ dep.extern_key() for dep in deps ])
 
             if key == 'privileges':
                 seq[key] = self.map_privs()
@@ -323,7 +323,7 @@ class Table(DbClass):
         deps = set(self.depends_on)
         deps -= self.get_implied_deps(db)
         if deps:
-            tbl['depends_on'] = [ dep.extern_key() for dep in deps ]
+            tbl['depends_on'] = sorted([ dep.extern_key() for dep in deps ])
 
         return tbl
 
