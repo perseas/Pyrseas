@@ -126,7 +126,7 @@ class Sequence(DbClass):
 
             # TODO: why doesn't this call _base_map(), where oid and deps
             # are taken care of?
-            deps = set(seq.pop('depends_on', ()))
+            deps = set(self.depends_on)
             deps -= self.get_implied_deps(db)
             if deps:
                 seq['depends_on'] = [ dep.extern_key() for dep in deps ]
@@ -320,7 +320,7 @@ class Table(DbClass):
 
         # TODO: why doesn't this call _base_map(), where oid and deps
         # are taken care of?
-        deps = set(tbl.pop('depends_on', ()))
+        deps = set(self.depends_on)
         deps -= self.get_implied_deps(db)
         if deps:
             tbl['depends_on'] = [ dep.extern_key() for dep in deps ]
