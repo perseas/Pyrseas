@@ -508,7 +508,7 @@ class View(DbClass):
     @grantable
     @ownable
     def create(self, newdefn=None):
-        """Return SQL statements to CREATE the table
+        """Return SQL statements to CREATE the view
 
         :return: SQL statements
         """
