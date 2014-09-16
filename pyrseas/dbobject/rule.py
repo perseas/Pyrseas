@@ -30,7 +30,6 @@ class Rule(DbSchemaObject):
         :return: dictionary
         """
         dct = self._base_map(db)
-        del dct['_table']
         return {self.name: dct}
 
     @commentable

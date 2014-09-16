@@ -99,8 +99,6 @@ class CheckConstraint(Constraint):
         :return: dictionary
         """
         dct = self._base_map(db)
-        if '_table' in dct:
-            del dct['_table']
         if 'target' in dct:
             del dct['target']
         if dbcols:
@@ -148,7 +146,6 @@ class PrimaryKey(Constraint):
         dct = self._base_map(db)
         if dct['access_method'] == 'btree':
             del dct['access_method']
-        del dct['_table']
         dct['columns'] = [dbcols[k - 1] for k in self.keycols]
         del dct['keycols']
         return {self.name: dct}
@@ -195,7 +192,6 @@ class ForeignKey(Constraint):
         :return: dictionary
         """
         dct = self._base_map(db)
-        del dct['_table']
         dct['columns'] = [dbcols[k - 1] for k in self.keycols]
         del dct['keycols']
         refsch = hasattr(self, 'ref_schema') and self.ref_schema or self.schema
@@ -269,7 +265,6 @@ class UniqueConstraint(Constraint):
         dct = self._base_map(db)
         if dct['access_method'] == 'btree':
             del dct['access_method']
-        del dct['_table']
         dct['columns'] = []
         dct['columns'] = [dbcols[k - 1] for k in self.keycols]
         del dct['keycols']

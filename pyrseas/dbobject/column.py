@@ -27,10 +27,6 @@ class Column(DbSchemaObject):
             return None
         dct = self._base_map(db, False, no_privs)
         del dct['number'], dct['name']
-        if '_table' in dct:
-            del dct['_table']
-        if '_type' in dct:
-            del dct['_type']
         if 'collation' in dct and dct['collation'] == 'default':
             del dct['collation']
         if hasattr(self, 'inherited'):

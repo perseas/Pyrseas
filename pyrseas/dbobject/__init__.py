@@ -296,6 +296,7 @@ class DbObject(object):
                 del dct['privileges']
             else:
                 dct['privileges'] = self.map_privs()
+
         # Never dump the oid
         dct.pop('oid', None)
 
@@ -304,6 +305,12 @@ class DbObject(object):
         deps -= self.get_implied_deps(db)
         if deps:
             dct['depends_on'] = sorted([ dep.extern_key() for dep in deps ])
+
+        # Don't drop any private attribute
+        for k in dct.keys():
+            if k.startswith('_'):
+                del dct[k]
+
         return dct
 
     def to_map(self, db, no_owner=False, no_privs=False):

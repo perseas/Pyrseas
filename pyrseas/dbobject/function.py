@@ -106,8 +106,6 @@ class Function(Proc):
         if hasattr(self, 'obj_file'):
             dct['link_symbol'] = self.source
             del dct['source']
-        if hasattr(self, '_dep_type'):
-            del dct['_dep_type']
         if hasattr(self, 'cost') and self.cost != 0:
             if self.language in ['c', 'internal']:
                 if self.cost == 1:
@@ -123,8 +121,6 @@ class Function(Proc):
                 del dct['privileges']
             else:
                 dct['privileges'] = self.map_privs()
-        if hasattr(self, '_defining_type'):
-            del dct['_defining_type']
 
         return dct
 
