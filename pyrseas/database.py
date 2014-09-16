@@ -274,6 +274,19 @@ class Database(object):
                 """):
             deps[r[0], r[1]].append((r[2], r[3]))
 
+        # Add the dependencies between a table and other objects through the
+        # columns defaults
+        for r in dbconn.fetchall("""
+                select 'pg_class', adrelid,
+                    d.refclassid::regclass, d.refobjid
+                from pg_attrdef ad
+                join pg_depend d
+                    on classid = 'pg_attrdef'::regclass
+                    and objid = ad.oid
+                    and deptype = 'n'
+                """):
+            deps[r[0], r[1]].append((r[2], r[3]))
+
         for (stbl, soid), deps in deps.iteritems():
             sdict = db.dict_from_table(stbl)
             if sdict is None:
