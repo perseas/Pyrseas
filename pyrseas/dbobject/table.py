@@ -199,15 +199,6 @@ class Sequence(DbClass):
         stmts.append(self.diff_description(inseq))
         return stmts
 
-    def get_implied_deps(self, db):
-        deps = super(Sequence, self).get_implied_deps(db)
-
-        t = getattr(self, 'owner_table', None)
-        if t:
-            deps.add(db.tables[self.schema, t])
-
-        return deps
-
 
 class Table(DbClass):
     """A database table definition
@@ -961,7 +952,15 @@ class ClassDict(DbObjectDict):
                 if hasattr(inseq, 'oldname'):
                     stmts[inseq].append(self._rename(inseq, "sequence"))
                 elif hasattr(inseq, 'owner_table'):
-                    stmts[inseq].append(inseq.add_owner())
+                    owner = intables[sch, inseq.owner_table]
+                    # NOTE: usually the table depends on the sequence (because
+                    # the seq is the default of a field). So we emit the OWNED
+                    # BY with the table. To be really-really-sure that the
+                    # table is created after the sequence, even in a weird case
+                    # when the owning field doesn't have a nextval(), we also
+                    # inject an explicit dependency.
+                    owner.depends_on.append(inseq.extern_key())
+                    stmts[owner].append(inseq.add_owner())
                 else:
                     # create new sequence
                     stmts[inseq].append(inseq.create())
