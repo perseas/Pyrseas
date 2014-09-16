@@ -113,27 +113,10 @@ class Sequence(DbClass):
                      hasattr(opts, 'excl_tables') and opts.excl_tables
                      and self.name in opts.excl_tables):
             return None
-        seq = {}
-        for key, val in list(self.__dict__.items()):
-            if key in self.keylist:
-                continue
-            if key in ('oid', 'depends_on', 'dependent_table'):
-                continue
-            if key == 'owner' and opts.no_owner:
-                continue
-            if key == 'privileges' and opts.no_privs:
-                continue
-
-            # TODO: why doesn't this call _base_map(), where oid and deps
-            # are taken care of?
-            deps = set(self.depends_on)
-            deps -= self.get_implied_deps(db)
-            if deps:
-                seq['depends_on'] = sorted([ dep.extern_key() for dep in deps ])
-
-            if key == 'privileges':
-                seq[key] = self.map_privs()
-            elif key == 'max_value' and val == MAX_BIGINT:
+        seq = self._base_map(db, opts.no_owner, opts.no_privs)
+        seq.pop('dependent_table', None)
+        for key, val in list(seq.items()):
+            if key == 'max_value' and val == MAX_BIGINT:
                 seq[key] = None
             elif key == 'min_value' and val == 1:
                 seq[key] = None
@@ -259,71 +242,50 @@ class Table(DbClass):
                 and self.name in opts.excl_tables or \
                 not hasattr(self, 'columns'):
             return None
+
+        tbl = self._base_map(db, opts.no_owner, opts.no_privs)
+
         cols = []
         for column in self.columns:
             col = column.to_map(db, opts.no_privs)
             if col:
                 cols.append(col)
-        tbl = {'columns': cols}
-        attrlist = ['description', 'options', 'tablespace', 'unlogged']
-        if not opts.no_owner:
-            attrlist.append('owner')
-        for attr in attrlist:
-            if hasattr(self, attr):
-                tbl.update({attr: getattr(self, attr)})
+        tbl['columns'] = cols
+
         if hasattr(self, 'check_constraints'):
-            if not 'check_constraints' in tbl:
-                tbl.update(check_constraints={})
+            tbl['check_constraints'] = {}
             for k in list(self.check_constraints.values()):
                 tbl['check_constraints'].update(
                     self.check_constraints[k.name].to_map(
                         db, self.column_names()))
         if hasattr(self, 'primary_key'):
-            tbl.update(primary_key=self.primary_key.to_map(
-                db, self.column_names()))
+            tbl['primary_key'] = self.primary_key.to_map(
+                db, self.column_names())
         if hasattr(self, 'foreign_keys'):
-            if not 'foreign_keys' in tbl:
-                tbl['foreign_keys'] = {}
+            tbl['foreign_keys'] = {}
             for k in list(self.foreign_keys.values()):
                 tbls = dbschemas[k.ref_schema].tables
                 tbl['foreign_keys'].update(self.foreign_keys[k.name].to_map(
                     db, self.column_names(),
                     tbls[self.foreign_keys[k.name].ref_table]. column_names()))
         if hasattr(self, 'unique_constraints'):
-            if not 'unique_constraints' in tbl:
-                tbl.update(unique_constraints={})
+            tbl['unique_constraints'] = {}
             for k in list(self.unique_constraints.values()):
                 tbl['unique_constraints'].update(
                     self.unique_constraints[k.name].to_map(
                         db, self.column_names()))
         if hasattr(self, 'indexes'):
-            if not 'indexes' in tbl:
-                tbl['indexes'] = {}
+            tbl['indexes'] = {}
             for k in list(self.indexes.values()):
                 tbl['indexes'].update(self.indexes[k.name].to_map(db))
-        if hasattr(self, 'inherits'):
-            if not 'inherits' in tbl:
-                tbl['inherits'] = self.inherits
         if hasattr(self, 'rules'):
-            if not 'rules' in tbl:
-                tbl['rules'] = {}
+            tbl['rules'] = {}
             for k in list(self.rules.values()):
                 tbl['rules'].update(self.rules[k.name].to_map(db))
         if hasattr(self, 'triggers'):
-            if not 'triggers' in tbl:
-                tbl['triggers'] = {}
+            tbl['triggers'] = {}
             for k in list(self.triggers.values()):
                 tbl['triggers'].update(self.triggers[k.name].to_map(db))
-
-        if not opts.no_privs and hasattr(self, 'privileges'):
-            tbl.update({'privileges': self.map_privs()})
-
-        # TODO: why doesn't this call _base_map(), where oid and deps
-        # are taken care of?
-        deps = set(self.depends_on)
-        deps -= self.get_implied_deps(db)
-        if deps:
-            tbl['depends_on'] = sorted([ dep.extern_key() for dep in deps ])
 
         return tbl
 
@@ -378,8 +340,8 @@ class Table(DbClass):
         """
         stmts = []
         if not hasattr(self, 'dropped') or not self.dropped:
-            if hasattr(self, 'dependent_funcs'):
-                for fnc in self.dependent_funcs:
+            if hasattr(self, '_dependent_funcs'):
+                for fnc in self._dependent_funcs:
                     stmts.append(fnc.drop())
             self.dropped = True
             stmts.append("DROP TABLE %s" % self.identifier())
@@ -510,14 +472,14 @@ class Table(DbClass):
         """
         filepath = os.path.join(dirpath, self.extern_filename('data'))
         stmts = []
-        if hasattr(self, 'referred_by'):
+        if hasattr(self, '_referred_by'):
             stmts.append("ALTER TABLE %s DROP CONSTRAINT %s" % (
-                self.referred_by._table.qualname(), self.referred_by.name))
+                self._referred_by._table.qualname(), self._referred_by.name))
         stmts.append("TRUNCATE ONLY %s" % self.qualname())
         stmts.append(("\\copy ", self.qualname(), " from '", filepath,
                       "' csv"))
-        if hasattr(self, 'referred_by'):
-            stmts.append(self.referred_by.add())
+        if hasattr(self, '_referred_by'):
+            stmts.append(self._referred_by.add())
         return stmts
 
 
@@ -863,9 +825,9 @@ class ClassDict(DbObjectDict):
                     (parsch, partbl) = split_schema_obj(partbl)
                     assert self[(parsch, partbl)]
                     parent = self[(parsch, partbl)]
-                    if not hasattr(parent, 'descendants'):
-                        parent.descendants = []
-                    parent.descendants.append(table)
+                    if not hasattr(parent, '_descendants'):
+                        parent._descendants = []
+                    parent._descendants.append(table)
         for (sch, tbl, cns) in dbconstrs:
             constr = dbconstrs[(sch, tbl, cns)]
             if hasattr(constr, 'target'):
@@ -884,7 +846,7 @@ class ClassDict(DbObjectDict):
                 # link referenced and referrer
                 constr.references = self[(constr.ref_schema, constr.ref_table)]
                 # TODO: there can be more than one
-                self[(constr.ref_schema, constr.ref_table)].referred_by = \
+                self[(constr.ref_schema, constr.ref_table)]._referred_by = \
                     constr
                 table.foreign_keys.update({cns: constr})
             elif isinstance(constr, UniqueConstraint):
@@ -1058,19 +1020,19 @@ class ClassDict(DbObjectDict):
                     for rul in table.rules:
                         stmts[table].append(table.rules[rul].drop())
                 if hasattr(table, 'primary_key'):
-                    # TODO there can be more than one referred_by
-                    if hasattr(table, 'referred_by'):
-                        stmts[table].append(table.referred_by.drop())
+                    # TODO there can be more than one _referred_by
+                    if hasattr(table, '_referred_by'):
+                        stmts[table].append(table._referred_by.drop())
                     stmts[table].append(table.primary_key.drop())
                 # finally, drop the table itself
-                if hasattr(table, 'descendants'):
+                if hasattr(table, '_descendants'):
                     inhstack.append(table)
                 else:
                     stmts[table].append(table.drop())
         while len(inhstack):
             table = inhstack.pop()
             dropit = True
-            for childtbl in table.descendants:
+            for childtbl in table._descendants:
                 if self[(childtbl.schema, childtbl.name)] in inhstack:
                     dropit = False
             if dropit:

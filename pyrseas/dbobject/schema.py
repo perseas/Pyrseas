@@ -292,9 +292,9 @@ class SchemaDict(DbObjectDict):
                     deptbl = db.tables[(retsch, rettyp)]
                     if not hasattr(func, 'dependent_table'):
                         func.dependent_table = deptbl
-                    if not hasattr(deptbl, 'dependent_funcs'):
-                        deptbl.dependent_funcs = []
-                    deptbl.dependent_funcs.append(func)
+                    if not hasattr(deptbl, '_dependent_funcs'):
+                        deptbl._dependent_funcs = []
+                    deptbl._dependent_funcs.append(func)
         for objtype in ['operators', 'operclasses', 'operfams', 'conversions',
                         'tsconfigs', 'tsdicts', 'tsparsers', 'tstempls',
                         'ftables', 'collations']:
