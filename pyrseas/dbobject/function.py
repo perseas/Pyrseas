@@ -72,7 +72,7 @@ class Proc(DbSchemaObject):
         rv = []
         for token in tokens:
             token = token.strip()
-            token.rstrip('[](,)0123456789')  # strip array and modifiers
+            token = token.rstrip('[](,)0123456789')  # strip array and modifiers
             if not token:
                 continue
 
