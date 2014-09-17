@@ -301,6 +301,9 @@ class TypeDict(DbObjectDict):
                               AND classid = 'pg_type'::regclass)
            ORDER BY nspname, typname"""
 
+    # TODO: consider to fetch all the objects belonging to extensions:
+    # not to dump them but to trace dependency from objects to the extension
+
     def _from_catalog(self):
         """Initialize the dictionary of types by querying the catalogs"""
         for dbtype in self.fetch():
