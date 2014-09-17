@@ -7,6 +7,7 @@
     DbSchemaObject, Function and Aggregate derived from Proc, and
     FunctionDict derived from DbObjectDict.
 """
+from itertools import chain
 from collections import defaultdict
 
 from pyrseas.lib.pycompat import strtypes
@@ -52,10 +53,7 @@ class Proc(DbSchemaObject):
                 deps.add(lang)
 
         # Add back the types
-        argtypes = set(self._argtypes())
-        for t in db.types.itervalues():
-            if t.qualname() in argtypes:
-                deps.add(t)
+        deps.update(self._find_types(db, set(self._argtypes())))
 
         return deps
 
@@ -82,6 +80,13 @@ class Proc(DbSchemaObject):
             rv.append(token.split()[-1])
 
         return rv
+
+    def _find_types(self, db, qualnames):
+        """Return the db types matching the given sequence of qualnames"""
+        # tables and views are types too
+        return [ t
+            for t in chain(db.types.itervalues(), db.tables.itervalues())
+            if t.qualname() in qualnames ]
 
 
 class Function(Proc):
@@ -219,10 +224,7 @@ class Function(Proc):
         deps = super(Function, self).get_implied_deps(db)
 
         # Add back the return type
-        rettype = self._rettype()
-        for t in db.types.itervalues():
-            if t.qualname() == rettype:
-                deps.add(t)
+        deps.update(self._find_types(db, [self._rettype()]))
 
         return deps
 
