@@ -2,6 +2,7 @@
 """Test functions"""
 
 import pytest
+import psycopg2
 
 from pyrseas.testutils import DatabaseToMapTestCase
 from pyrseas.testutils import InputMapToSqlTestCase, fix_indent
@@ -123,6 +124,15 @@ class FunctionToMapTestCase(DatabaseToMapTestCase):
                   'source': SOURCE4, 'volatility': 'immutable'}
         assert dbmap['schema public']['function f1(integer, integer)'] == \
             expmap
+
+    def test_bug_103(self):
+        "Test a function created with language other than plpgsql or plperl"
+        try:
+            self.to_map(["CREATE OR REPLACE LANGUAGE plpythonu"])
+        except psycopg2.OperationalError as e:
+            self.skipTest("plpython installation failed: %s" % e)
+        self.to_map(["CREATE FUNCTION test103() RETURNS int AS "
+                     "'return 1' LANGUAGE plpythonu"])
 
 
 class FunctionToSqlTestCase(InputMapToSqlTestCase):

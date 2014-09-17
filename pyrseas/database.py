@@ -124,7 +124,10 @@ class Database(object):
 
     def _link_refs(self, db):
         """Link related objects"""
-        db.languages.link_refs(db.functions)
+        if self.dbconn.version >= 90100:
+            langs = [lang[0] for lang in self.dbconn.fetchall(
+                "SELECT tmplname FROM pg_pltemplate")]
+        db.languages.link_refs(db.functions, langs)
         copycfg = {}
         if 'datacopy' in self.config:
             copycfg = self.config['datacopy']
