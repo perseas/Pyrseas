@@ -903,31 +903,18 @@ class ClassDict(DbObjectDict):
                     stmts[inseq].append(inseq.create())
 
         # check input tables
-        inhstack = []
         for (sch, tbl) in intables:
             intable = intables[(sch, tbl)]
             if not isinstance(intable, Table):
                 continue
+
             # does it exist in the database?
             if (sch, tbl) not in self:
                 if not hasattr(intable, 'oldname'):
                     # create new table
-                    if hasattr(intable, 'inherits'):
-                        inhstack.append(intable)
-                    else:
-                        stmts[intable].append(intable.create())
+                    stmts[intable].append(intable.create())
                 else:
                     stmts[intable].append(self._rename(intable, "table"))
-        while len(inhstack):
-            intable = inhstack.pop()
-            createit = True
-            for partbl in intable.inherits:
-                if intables[split_schema_obj(partbl)] in inhstack:
-                    createit = False
-            if createit:
-                stmts[intable].append(intable.create())
-            else:
-                inhstack.insert(0, intable)
 
         # check input views
         for (sch, tbl) in intables:
@@ -976,6 +963,7 @@ class ClassDict(DbObjectDict):
                 stmts[table].append(table.diff_map(intables[(sch, tbl)]))
 
         # now drop the marked tables
+        # TODO: do that with the rest of the drop: the dependencies are revesed
         for (sch, tbl) in self:
             table = self[(sch, tbl)]
             if isinstance(table, Sequence) and hasattr(table, 'owner_table'):
