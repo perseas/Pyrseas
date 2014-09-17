@@ -38,7 +38,6 @@ class BaseType(DbType):
         :return: dictionary
         """
         dct = self._base_map(db, no_owner)
-        del dct['dep_funcs']
         if self.internallength < 0:
             dct['internallength'] = 'variable'
         dct['alignment'] = ALIGNMENT_TYPES[self.alignment]
@@ -56,12 +55,9 @@ class BaseType(DbType):
         """
         stmts = []
         stmts.append("CREATE TYPE %s" % self.qualname())
-        stmts.append(self.dep_funcs['input'].create(basetype=True))
-        stmts.append(self.dep_funcs['output'].create(basetype=True))
         opt_clauses = []
         for fnc in OPT_FUNCS:
             if fnc in self.dep_funcs:
-                stmts.append(self.dep_funcs[fnc].create(basetype=True))
                 opt_clauses.append("%s = %s" % (
                     fnc.upper(), self.dep_funcs[fnc].qualname()))
         if hasattr(self, 'internallength'):
@@ -424,11 +420,9 @@ class TypeDict(DbObjectDict):
                     args = 'cstring, oid, integer'
                 func = dbfuncs[(sch, infnc, args)]
                 dbtype.dep_funcs.update({'input': func})
-                func._dep_type = dbtype
                 (sch, outfnc) = split_schema_obj(dbtype.output, sch)
                 func = dbfuncs[(sch, outfnc, dbtype.qualname())]
                 dbtype.dep_funcs.update({'output': func})
-                func._dep_type = dbtype
                 for attr in OPT_FUNCS:
                     if hasattr(dbtype, attr):
                         (sch, fnc) = split_schema_obj(
@@ -445,7 +439,6 @@ class TypeDict(DbObjectDict):
                             arg = 'internal'
                         func = dbfuncs[(sch, fnc, arg)]
                         dbtype.dep_funcs.update({attr: func})
-                        func._dep_type = dbtype
 
     def diff_map(self, intypes):
         """Generate SQL to transform existing domains and types
@@ -495,8 +488,4 @@ class TypeDict(DbObjectDict):
             dbtype = self[(sch, typ)]
             if hasattr(dbtype, 'dropped'):
                 stmts.append(dbtype.drop())
-                if isinstance(dbtype, BaseType):
-                    for func in dbtype.dep_funcs:
-                        if func in ['typmod_in', 'typmod_out', 'analyze']:
-                            stmts.append(dbtype.dep_funcs[func].drop())
         return stmts

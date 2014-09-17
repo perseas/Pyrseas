@@ -137,8 +137,6 @@ class Function(Proc):
         :return: SQL statements
         """
         stmts = []
-        if hasattr(self, '_dep_type') and not basetype:
-            return stmts
         if hasattr(self, 'obj_file'):
             src = "'%s', '%s'" % (self.obj_file,
                                   hasattr(self, 'link_symbol')
@@ -512,7 +510,7 @@ class ProcDict(DbObjectDict):
 
         for (sch, fnc, arg) in self:
             func = self[(sch, fnc, arg)]
-            if hasattr(func, 'dropped') and not hasattr(func, '_dep_type'):
+            if hasattr(func, 'dropped'):
                 stmts.append(func.drop())
 
         return stmts
