@@ -106,8 +106,6 @@ class Function(Proc):
             del dct['volatility']
         else:
             dct['volatility'] = VOLATILITY_TYPES[self.volatility]
-        if hasattr(self, 'dependent_table'):
-            del dct['dependent_table']
         if hasattr(self, 'obj_file'):
             dct['link_symbol'] = self.source
             del dct['source']
@@ -141,8 +139,6 @@ class Function(Proc):
         stmts = []
         if hasattr(self, '_dep_type') and not basetype:
             return stmts
-        if hasattr(self, 'dependent_table'):
-            stmts.append(self.dependent_table.create())
         if hasattr(self, 'obj_file'):
             src = "'%s', '%s'" % (self.obj_file,
                                   hasattr(self, 'link_symbol')

@@ -285,9 +285,12 @@ class Table(DbClass):
 
         :return: SQL statements
         """
+        # TODO This was *maybe* in place to guard double creations caused by
+        # the functions. Leaving it here, to be dropped once I'm reasonably
+        # certain we get called only once, when expected.
+        assert not hasattr(self, 'created')
+
         stmts = []
-        if hasattr(self, 'created'):
-            return stmts
         cols = []
         colprivs = []
         for col in self.columns:

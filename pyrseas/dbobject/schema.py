@@ -281,20 +281,7 @@ class SchemaDict(DbObjectDict):
                 link_one(targ, type_, keys, 'views')
         targ = db.functions
         for keys in targ:
-            func = targ[keys]
             link_one(targ, 'functions', keys)
-            if hasattr(func, 'returns'):
-                rettype = func.returns
-                if rettype.upper().startswith("SETOF "):
-                    rettype = rettype[6:]
-                (retsch, rettyp) = split_schema_obj(rettype, keys[0])
-                if (retsch, rettyp) in db.tables:
-                    deptbl = db.tables[(retsch, rettyp)]
-                    if not hasattr(func, 'dependent_table'):
-                        func.dependent_table = deptbl
-                    if not hasattr(deptbl, '_dependent_funcs'):
-                        deptbl._dependent_funcs = []
-                    deptbl._dependent_funcs.append(func)
         for objtype in ['operators', 'operclasses', 'operfams', 'conversions',
                         'tsconfigs', 'tsdicts', 'tsparsers', 'tstempls',
                         'ftables', 'collations']:
