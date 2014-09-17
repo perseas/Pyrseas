@@ -92,7 +92,7 @@ class LanguageDict(DbObjectDict):
                 if 'oldname' in inlanguage:
                     del inlanguage['oldname']
 
-    def link_refs(self, dbfunctions):
+    def link_refs(self, dbfunctions, langs):
         """Connect functions to their respective languages
 
         :param dbfunctions: dictionary of functions
@@ -108,7 +108,7 @@ class LanguageDict(DbObjectDict):
             try:
                 language = self[(func.language)]
             except KeyError as exc:
-                if func.language == 'plpgsql':
+                if func.language in langs:
                     continue
                 raise exc
             if isinstance(func, Function):
