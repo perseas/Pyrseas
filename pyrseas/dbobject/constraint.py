@@ -25,6 +25,10 @@ class Constraint(DbSchemaObject):
     keylist = ['schema', 'table', 'name']
     catalog_table = 'pg_constraint'
 
+    def __init__(self, schema, table, **kwargs):
+        self._table_qualname = '%s.%s' % (quote_id(schema), quote_id(table))
+        super(Constraint, self).__init__(schema=schema, table=table, **kwargs)
+
     def key_columns(self):
         """Return comma-separated list of key column names
 
@@ -46,7 +50,7 @@ class Constraint(DbSchemaObject):
         if hasattr(self, 'tablespace'):
             tblspc = " USING INDEX TABLESPACE %s" % self.tablespace
         stmts.append("ALTER TABLE %s ADD CONSTRAINT %s %s (%s)%s" % (
-                     self._table.qualname(), quote_id(self.name),
+                     self._table_qualname, quote_id(self.name),
                      self.objtype, self.key_columns(), tblspc))
         if hasattr(self, 'cluster') and self.cluster:
             stmts.append("CLUSTER %s USING %s" % (
@@ -61,7 +65,7 @@ class Constraint(DbSchemaObject):
         if not hasattr(self, 'dropped') or not self.dropped:
             self.dropped = True
             return "ALTER TABLE %s DROP CONSTRAINT %s" % (
-                self._table.qualname(), quote_id(self.name))
+                self._table_qualname, quote_id(self.name))
         return []
 
     def comment(self):
@@ -70,7 +74,7 @@ class Constraint(DbSchemaObject):
         :return: SQL statement
         """
         return "COMMENT ON CONSTRAINT %s ON %s IS %s" % (
-            quote_id(self.name), self._table.qualname(), self._comment_text())
+            quote_id(self.name), self._table_qualname, self._comment_text())
 
     def get_implied_deps(self, db):
         deps = super(Constraint, self).get_implied_deps(db)
@@ -113,7 +117,7 @@ class CheckConstraint(Constraint):
         :return: SQL statement
         """
         return ["ALTER TABLE %s ADD CONSTRAINT %s %s (%s)" % (
-                self._table.qualname(), quote_id(self.name), self.objtype,
+                self._table_qualname, quote_id(self.name), self.objtype,
                 self.expression)]
 
     def diff_map(self, inchk):
@@ -223,9 +227,10 @@ class ForeignKey(Constraint):
             actions += " INITIALLY DEFERRED"
 
         return "ALTER TABLE %s ADD CONSTRAINT %s FOREIGN KEY (%s) " \
-            "REFERENCES %s (%s)%s%s" % (
-            self._table.qualname(), quote_id(self.name), self.key_columns(),
-            self.references.qualname(), self.ref_columns(), match, actions)
+            "REFERENCES %s.%s (%s)%s%s" % (
+            self._table_qualname, quote_id(self.name), self.key_columns(),
+            quote_id(self.ref_schema), quote_id(self.ref_table),
+            self.ref_columns(), match, actions)
 
     def diff_map(self, infk):
         """Generate SQL to transform an existing foreign key

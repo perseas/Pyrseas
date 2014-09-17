@@ -824,7 +824,7 @@ class ClassDict(DbObjectDict):
             if hasattr(constr, 'target'):
                 continue
             assert self[(sch, tbl)]
-            constr._table = table = self[(sch, tbl)]
+            table = self[(sch, tbl)]
             if isinstance(constr, CheckConstraint):
                 if not hasattr(table, 'check_constraints'):
                     table.check_constraints = {}
@@ -835,7 +835,6 @@ class ClassDict(DbObjectDict):
                 if not hasattr(table, 'foreign_keys'):
                     table.foreign_keys = {}
                 # link referenced and referrer
-                constr.references = self[(constr.ref_schema, constr.ref_table)]
                 # TODO: there can be more than one
                 self[(constr.ref_schema, constr.ref_table)]._referred_by = \
                     constr
