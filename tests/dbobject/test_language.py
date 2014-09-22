@@ -2,6 +2,7 @@
 """Test languages"""
 
 import pytest
+import psycopg2
 
 from pyrseas.testutils import DatabaseToMapTestCase
 from pyrseas.testutils import InputMapToSqlTestCase
