@@ -46,13 +46,13 @@ class Language(DbObject):
 
 
 QUERY_PRE91 = \
-        """SELECT lanname AS name, lanpltrusted AS trusted,
-                  rolname AS owner, array_to_string(lanacl, ',') AS privileges,
-                  obj_description(l.oid, 'pg_language') AS description
-           FROM pg_language l
-                JOIN pg_roles r ON (r.oid = lanowner)
-           WHERE lanispl
-           ORDER BY lanname"""
+    """SELECT lanname AS name, lanpltrusted AS trusted,
+              rolname AS owner, array_to_string(lanacl, ',') AS privileges,
+              obj_description(l.oid, 'pg_language') AS description
+       FROM pg_language l
+            JOIN pg_roles r ON (r.oid = lanowner)
+       WHERE lanispl
+       ORDER BY lanname"""
 
 
 class LanguageDict(DbObjectDict):
@@ -66,7 +66,9 @@ class LanguageDict(DbObjectDict):
            FROM pg_language l
                 JOIN pg_roles r ON (r.oid = lanowner)
            WHERE lanispl
-             AND lanname NOT IN (SELECT tmplname FROM pg_pltemplate)
+             AND l.oid NOT IN (
+                 SELECT objid FROM pg_depend WHERE deptype = 'e'
+                              AND classid = 'pg_language'::regclass)
            ORDER BY lanname"""
 
     def _from_catalog(self):

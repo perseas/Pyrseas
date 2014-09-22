@@ -30,6 +30,17 @@ class LanguageToMapTestCase(DatabaseToMapTestCase):
         assert dbmap['language plperl']['description'] == \
             'Test language PL/Perl'
 
+    def test_map_language_bug_103(self):
+        "Test a function created with language other than plpgsql/plperl"
+        try:
+            self.to_map(["CREATE OR REPLACE LANGUAGE plpythonu"])
+        except psycopg2.OperationalError as e:
+            self.skipTest("plpython installation failed: %s" % e)
+        m = self.to_map(["CREATE FUNCTION test103() RETURNS int AS "
+                         "'return 1' LANGUAGE plpythonu"])
+        self.to_map(["DROP LANGUAGE plpythonu CASCADE"])
+        assert 'language plpythonu' in m
+
 
 class LanguageToSqlTestCase(InputMapToSqlTestCase):
     """Test SQL generation for input languages"""
