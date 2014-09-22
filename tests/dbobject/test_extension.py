@@ -53,6 +53,16 @@ class ExtensionToMapTestCase(DatabaseToMapTestCase):
         assert dbmap['extension pg_trgm'] == {
             'schema': 's1', 'version': VERS, 'description': TRGM_COMMENT}
 
+    def test_map_extension_bug_103(self):
+        "Test a function created with extension other than plpgsql/plperl"
+        try:
+            self.to_map(["CREATE EXTENSION plpythonu"])
+        except psycopg2.OperationalError as e:
+            self.skipTest("plpython installation failed: %s" % e)
+        m = self.to_map(["CREATE FUNCTION test103() RETURNS int AS "
+                         "'return 1' LANGUAGE plpythonu"])
+        assert 'extension plpythonu' in m
+
 
 class ExtensionToSqlTestCase(InputMapToSqlTestCase):
     """Test SQL generation for input extensions"""
