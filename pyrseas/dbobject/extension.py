@@ -102,9 +102,9 @@ class ExtensionDict(DbObjectDict):
         # check existing extensions
         for ext in self:
             exten = self[ext]
-            # if missing, drop them
+            # if missing, mark it for dropping
             if ext not in inexts:
-                    stmts.append(exten.drop())
+                exten.dropped = False
 
         return stmts
 

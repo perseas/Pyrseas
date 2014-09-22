@@ -126,7 +126,9 @@ class Database(object):
         """Link related objects"""
         if self.dbconn.version >= 90100:
             langs = [lang[0] for lang in self.dbconn.fetchall(
-                "SELECT tmplname FROM pg_pltemplate")]
+                """SELECT lanname FROM pg_language l
+                     JOIN pg_depend p ON (l.oid = p.objid)
+                    WHERE deptype = 'e' """)]
         db.languages.link_refs(db.functions, langs)
         copycfg = {}
         if 'datacopy' in self.config:
@@ -376,11 +378,11 @@ class Database(object):
         stmts.append(self.db.operfams._drop())
         stmts.append(self.db.functions._drop())
         stmts.append(self.db.types._drop())
-        stmts.append(self.db.extensions._drop())
         stmts.append(self.db.schemas._drop())
         stmts.append(self.db.servers._drop())
         stmts.append(self.db.fdwrappers._drop())
         stmts.append(self.db.languages._drop())
+        stmts.append(self.db.extensions._drop())
         if 'datacopy' in self.config:
             opts.data_dir = self.config['files']['data_path']
             stmts.append(self.ndb.schemas.data_import(opts))
