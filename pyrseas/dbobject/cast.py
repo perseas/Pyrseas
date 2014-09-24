@@ -9,7 +9,7 @@
 from collections import defaultdict
 
 from pyrseas.dbobject import DbObject, DbObjectDict, commentable
-from pyrseas.dbobject import split_schema_obj
+from pyrseas.dbobject import split_func_args
 
 
 CONTEXTS = {'a': 'assignment', 'e': 'explicit', 'i': 'implicit'}
@@ -74,22 +74,19 @@ class Cast(DbObject):
         deps = super(Cast, self).get_implied_deps(db)
 
         # Types may be not found because they can be builtins
-        source = split_schema_obj(self.source)
-        source = db.types.get((source[0], source[1].rstrip('[]')))
+        source = db.find_type(self.source)
         if source:
             deps.add(source)
 
-        target = split_schema_obj(self.target)
-        target = db.types.get((target[0], target[1].rstrip('[]')))
+        target = db.find_type(self.target)
         if target:
             deps.add(target)
 
         # The function instead we expect it exists
         if self.method == 'f':
-            fschema, fname = split_schema_obj(self.function)
-            # TODO: broken with pathological function with a '(' in its name
-            fname, fargs = fname.split('(', 1)
-            deps.add(db.functions[fschema, fname, fargs[:-1]])
+            f = db.functions.find(*split_func_args(self.function))
+            if f is not None:
+                deps.add(f)
 
         return deps
 

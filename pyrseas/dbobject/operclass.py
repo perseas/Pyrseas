@@ -9,7 +9,7 @@
 from collections import defaultdict
 
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
-from pyrseas.dbobject import commentable, ownable, split_schema_obj
+from pyrseas.dbobject import commentable, ownable, split_func_args
 
 
 class OperatorClass(DbSchemaObject):
@@ -70,16 +70,24 @@ class OperatorClass(DbSchemaObject):
     def get_implied_deps(self, db):
         deps = super(OperatorClass, self).get_implied_deps(db)
 
-        tschema, tname = split_schema_obj(self.type)
-        type = db.types.get((tschema, tname.rstrip('[]')))
+        type = db.types.find(self.type)
         if type:
             deps.add(type)
 
         if getattr(self, 'storage', None):
-            tschema, tname = split_schema_obj(self.storage)
-            type = db.types.get((tschema, tname.rstrip('[]')))
+            type = db.types.find(self.storage)
             if type:
                 deps.add(type)
+
+        for f in self.functions.values():
+            f = db.functions.find(*split_func_args(f))
+            if f is not None:
+                deps.add(f)
+
+        for f in self.operators.values():
+            f = db.operators.find(f)
+            if f is not None:
+                deps.add(f)
 
         return deps
 

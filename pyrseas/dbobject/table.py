@@ -786,6 +786,17 @@ class ClassDict(DbObjectDict):
             if 'depends_on' in inobj:
                 obj.depends_on.extend(inobj['depends_on'])
 
+    def find(self, obj):
+        """Find a table given its name.
+
+        The name can contain array type modifiers such as '[]'
+
+        Return None if not found.
+        """
+        schema, name = split_schema_obj(obj)
+        name = name.rstrip('[]')
+        return self.get((schema, name))
+
     def link_refs(self, dbcolumns, dbconstrs, dbindexes, dbrules, dbtriggers):
         """Connect columns, constraints, etc. to their respective tables
 

@@ -185,6 +185,15 @@ class Composite(DbType):
 
         return stmts
 
+    def get_implied_deps(self, db):
+        deps = super(Composite, self).get_implied_deps(db)
+        for col in self.attributes:
+            type = db.find_type(col.type)
+            if type is not None:
+                deps.add(type)
+
+        return deps
+
 
 class Enum(DbType):
     "An enumerated type definition"
@@ -383,6 +392,18 @@ class TypeDict(DbObjectDict):
                     dtype.description = intype['description']
             else:
                 raise KeyError("Unrecognized object type: %s" % k)
+
+    def find(self, obj):
+        """Find a type given its name.
+
+        The name can contain modifiers such as arrays '[]' and attibutes '(3)'
+
+        Return None if not found.
+        """
+        schema, name = split_schema_obj(obj)
+        name = name.rstrip('[](,)0123456789')
+        return self.get((schema, name))
+
 
     def link_refs(self, dbcolumns, dbconstrs, dbfuncs):
         """Connect various objects to their corresponding types or domains

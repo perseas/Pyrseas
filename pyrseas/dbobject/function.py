@@ -53,40 +53,13 @@ class Proc(DbSchemaObject):
                 deps.add(lang)
 
         # Add back the types
-        deps.update(self._find_types(db, set(self._argtypes())))
+        if self.arguments:
+            for arg in self.arguments.split(', '):
+                arg = db.find_type(arg.split()[-1])
+                if arg is not None:
+                    deps.add(arg)
 
         return deps
-
-    def _argtypes(self):
-        """Return the list of types from an arguments list
-
-        This is the hard way of doing it, the catalog has better info. However
-        this works from the yaml too, so let's suck.
-        """
-        tokens = self.arguments.split(',')
-        # this split "decimal(10,2)" in two tokens, but who cares:
-        # the first will have the tail stripped, the second will result empty
-        # and discarded.
-        rv = []
-        for token in tokens:
-            token = token.strip()
-            token = token.rstrip('[](,)0123456789')  # strip array and modifiers
-            if not token:
-                continue
-
-            # note: this is wrong because there are types with more than one
-            # word (timestamp with time zone). However this only happens for
-            # builtin types, which don't make a dependency
-            rv.append(token.split()[-1])
-
-        return rv
-
-    def _find_types(self, db, qualnames):
-        """Return the db types matching the given sequence of qualnames"""
-        # tables and views are types too
-        return [ t
-            for t in chain(db.types.itervalues(), db.tables.itervalues())
-            if t.qualname() in qualnames ]
 
 
 class Function(Proc):
@@ -218,7 +191,12 @@ class Function(Proc):
         deps = super(Function, self).get_implied_deps(db)
 
         # Add back the return type
-        deps.update(self._find_types(db, [self._rettype()]))
+        rettype = self.returns
+        if rettype.upper().startswith("SETOF "):
+            rettype = rettype.split(None, 1)[-1]
+        rettype = db.find_type(rettype)
+        if rettype is not None:
+            deps.add(rettype)
 
         return deps
 
@@ -239,12 +217,6 @@ class Function(Proc):
                         break
 
         return deps
-
-    def _rettype(self):
-        rettype = self.returns
-        if rettype.upper().startswith("SETOF "):
-            rettype = rettype.split(None, 1)[-1]
-        return rettype
 
 
 class Aggregate(Proc):
@@ -409,6 +381,18 @@ class ProcDict(DbObjectDict):
             if 'privileges' in infunc:
                 func.privileges = privileges_from_map(
                     infunc['privileges'], func.allprivs, func.owner)
+
+    def find(self, func, args):
+        """Return a function given its name and arguments
+
+        :param func: name of the function, eventually with schema
+        :param args: list of type names
+
+        Return the function found, else None.
+        """
+        schema, name = split_schema_obj(func)
+        args = ', '.join(args)
+        return self.get((schema, name, args))
 
     def link_refs(self, dbeventtrigs):
         """Connect event triggers to the functions executed

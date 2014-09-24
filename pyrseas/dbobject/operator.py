@@ -9,7 +9,8 @@
 from collections import defaultdict
 
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
-from pyrseas.dbobject import quote_id, commentable, ownable, split_schema_obj
+from pyrseas.dbobject import quote_id, commentable, ownable
+from pyrseas.dbobject import split_schema_obj, split_func_args
 
 
 class Operator(DbSchemaObject):
@@ -77,13 +78,11 @@ class Operator(DbSchemaObject):
         deps = super(Operator, self).get_implied_deps(db)
 
         # Types may be not found because builtin, or the operator unary
-        leftarg = split_schema_obj(self.leftarg)
-        leftarg = db.types.get((leftarg[0], leftarg[1].rstrip('[]')))
+        leftarg = db.types.find(self.leftarg)
         if leftarg:
             deps.add(leftarg)
 
-        rightarg = split_schema_obj(self.rightarg)
-        rightarg = db.types.get((rightarg[0], rightarg[1].rstrip('[]')))
+        rightarg = db.types.find(self.rightarg)
         if rightarg:
             deps.add(rightarg)
 
@@ -146,6 +145,17 @@ class OperatorDict(DbObjectDict):
                 del oper.join
             self.by_oid[oid] = self[(sch, opr, lft, rgt)] \
                 = Operator(**oper.__dict__)
+
+    def find(self, oper):
+        """Return an operator given its signature
+
+        :param oper: a signature such as '#>=#(hstore,hstore)'
+
+        Return the operator found, else None.
+        """
+        schema, name = split_schema_obj(oper)
+        name, args = split_func_args(name)
+        return self.get((schema, name) + tuple(args))
 
     def from_map(self, schema, inopers):
         """Initalize the dictionary of operators by converting the input map

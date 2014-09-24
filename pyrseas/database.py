@@ -178,6 +178,18 @@ class Database(object):
         def dict_from_table(self, catalog_table):
             return self._table_map.get(catalog_table)
 
+        def find_type(self, name):
+            """Return a db type given a qualname
+
+            Note that tables and views are types too.
+            """
+            rv = self.types.find(name)
+            if rv is not None:
+                return rv
+
+            rv = self.tables.find(name)
+            return rv
+
     def __init__(self, config):
         """Initialize the database
 

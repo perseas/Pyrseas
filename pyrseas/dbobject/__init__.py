@@ -78,6 +78,22 @@ def split_schema_obj(obj, sch=None):
     return (sch, obj)
 
 
+def split_func_args(obj):
+    """Split function name and argument from a signature, e.g. fun(int, text)
+
+    :param obj: The string to parse
+    :return: 2-item tuple (name, args), args is a list of strings.
+
+    TODO: make it safer against pathologic input (names containing' '( and ',')
+    """
+    tokens = obj.split('(')
+    if len(tokens) != 2 or not tokens[1].endswith(')'):
+        raise ValueError("not a valid function signature: '%s'" % obj)
+    name = tokens[0]
+    args = [arg.strip() for arg in tokens[1][:-1].split(',')]
+    return name, args
+
+
 def commentable(func):
     """Decorator to add comments to various objects"""
     @wraps(func)
