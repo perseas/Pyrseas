@@ -281,6 +281,8 @@ class IndexDict(DbObjectDict):
                 idx.description = val['description']
             if 'oldname' in val:
                 idx.oldname = val['oldname']
+            if 'depends_on' in val:
+                idx.depends_on.extend(val['depends_on'])
             self[(table.schema, table.name, i)] = idx
 
     def diff_map(self, inindexes):

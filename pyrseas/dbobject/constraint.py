@@ -427,6 +427,7 @@ class ConstraintDict(DbObjectDict):
                 fkey = ForeignKey(table=table.name, schema=table.schema,
                                   name=cns)
                 val = fkeys[cns]
+                fkey.depends_on.extend(val.get('depends_on', ()))
                 if 'on_update' in val:
                     act = val['on_update']
                     if act.lower() not in list(ACTIONS.values()):
