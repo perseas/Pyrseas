@@ -7,7 +7,6 @@
     DbObject and DbObjectDict, respectively.
 """
 import os
-from collections import defaultdict
 
 from pyrseas.yamlutil import yamldump
 from pyrseas.dbobject import DbObjectDict, DbObject
@@ -141,6 +140,9 @@ class Schema(DbObject):
 
         :return: SQL statements
         """
+        # special case for --revert
+        if self.name == 'pg_catalog':
+            return []
         return ["CREATE SCHEMA %s" % quote_id(self.name)]
 
     def data_import(self, opts):
@@ -155,6 +157,12 @@ class Schema(DbObject):
             for tbl in self.datacopy:
                 stmts.append(self.tables[tbl].data_import(dir))
         return stmts
+
+    def drop_sql(self):
+        if self.name not in ('public', 'pg_catalog'):
+            return super(Schema, self).drop_sql()
+        else:
+            return []
 
 
 PREFIXES = {'domain ': 'types', 'type': 'types', 'table ': 'tables',
@@ -317,70 +325,6 @@ class SchemaDict(DbObjectDict):
                 schemas.update(self[sch].to_map(db, self, opts))
 
         return schemas
-
-    def diff_map(self, inschemas):
-        """Generate SQL to transform existing schemas
-
-        :param input_map: a YAML map defining the new schemas
-        :return: list of SQL statements
-
-        Compares the existing schema definitions, as fetched from the
-        catalogs, to the input map and generates SQL statements to
-        transform the schemas accordingly.
-        """
-        # TODO: drop this check: it's only to test with a subset of all
-        # the classes
-        if not hasattr(self, '_diff_map'):
-            return []
-
-        stmts = []
-        for k, v in self._diff_map(inschemas).iteritems():
-            for stmt in v:
-                stmts.append(stmt)
-
-        return stmt
-
-    def _diff_map(self, inschemas):
-        stmts = defaultdict(list)
-
-        # check input schemas
-        for sch in inschemas:
-            insch = inschemas[sch]
-            # does it exist in the database?
-            if sch in self:
-                stmts[insch].append(self[sch].diff_map(insch))
-            else:
-                # check for possible RENAME
-                if hasattr(insch, 'oldname'):
-                    oldname = insch.oldname
-                    try:
-                        stmts[insch].append(self[oldname].rename(insch.name))
-                        del self[oldname]
-                    except KeyError as exc:
-                        exc.args = ("Previous name '%s' for schema '%s' "
-                                    "not found" % (oldname, insch.name), )
-                        raise
-                else:
-                    # create new schema
-                    if insch.name not in ['pg_catalog']:
-                        stmts[insch].append(insch.create())
-        # check database schemas
-        for sch in self:
-            # if missing and not 'public', drop it
-            if sch not in ['public', 'pg_catalog'] and sch not in inschemas:
-                self[sch].dropped = True
-        return stmts
-
-    def _drop(self):
-        """Actually drop the schemas
-
-        :return: SQL statements
-        """
-        stmts = []
-        for sch in self:
-            if sch != 'public' and hasattr(self[sch], 'dropped'):
-                stmts.append(self[sch].drop())
-        return stmts
 
     def data_import(self, opts):
         """Iterate over schemas with tables to be imported

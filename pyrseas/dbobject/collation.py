@@ -72,6 +72,7 @@ class CollationDict(DbObjectDict):
         for coll in self.fetch():
             self.by_oid[coll.id] = self[coll.key()] = coll
 
+    # TODO: drop and refactor
     def diff_map(self, incolls):
         """Generate SQL to transform existing collations
 

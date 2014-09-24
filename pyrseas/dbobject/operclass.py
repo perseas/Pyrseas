@@ -6,8 +6,6 @@
     This module defines two classes: OperatorClass derived from
     DbSchemaObject and OperatorClassDict derived from DbObjectDict.
 """
-from collections import defaultdict
-
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
 from pyrseas.dbobject import commentable, ownable, split_func_args
 
@@ -188,52 +186,3 @@ class OperatorClassDict(DbObjectDict):
                 opclass.oldname = inopcl['oldname']
             if 'description' in inopcl:
                 opclass.description = inopcl['description']
-
-    def diff_map(self, inopcls):
-        """Generate SQL to transform existing operator classes
-
-        :param inopcls: a YAML map defining the new operator classes
-        :return: list of SQL statements
-
-        Compares the existing operator class definitions, as fetched
-        from the catalogs, to the input map and generates SQL
-        statements to transform the operator classes accordingly.
-        """
-        return super(OperatorClassDict, self).diff_map(self, inopcls)
-
-    def _diff_map(self, inopcls):
-        stmts = defaultdict(list)
-        # check input operator classes
-        for (sch, opc, idx) in inopcls:
-            inoper = inopcls[(sch, opc, idx)]
-            # does it exist in the database?
-            if (sch, opc, idx) not in self:
-                if not hasattr(inoper, 'oldname'):
-                    # create new operator
-                    stmts[inoper].append(inoper.create())
-                else:
-                    stmts[inoper].append(self[(sch, opc, idx)].rename(inoper))
-            else:
-                # check operator objects
-                stmts[inoper].append(self[(sch, opc, idx)].diff_map(inoper))
-
-        # check existing operators
-        for (sch, opc, idx) in self:
-            oper = self[(sch, opc, idx)]
-            # if missing, mark it for dropping
-            if (sch, opc, idx) not in inopcls:
-                oper.dropped = False
-
-        return stmts
-
-    def _drop(self):
-        """Actually drop the operator classes
-
-        :return: SQL statements
-        """
-        stmts = []
-        for (sch, opc, idx) in self:
-            oper = self[(sch, opc, idx)]
-            if hasattr(oper, 'dropped'):
-                stmts.append(oper.drop())
-        return stmts

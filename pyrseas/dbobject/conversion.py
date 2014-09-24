@@ -68,6 +68,7 @@ class ConversionDict(DbObjectDict):
                     conv.description = inconv['description']
             self[(schema.name, cnv)] = conv
 
+    # TODO: drop and refactor
     def diff_map(self, inconvs):
         """Generate SQL to transform existing conversions
 

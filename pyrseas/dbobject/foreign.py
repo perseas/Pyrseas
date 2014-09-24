@@ -720,6 +720,7 @@ class ForeignTableDict(ClassDict):
                 for col in dbcolumns[(sch, tbl)]:
                     col._table = self[(sch, tbl)]
 
+    # TODO: drop and refactor
     def diff_map(self, intables):
         """Generate SQL to transform existing foreign tables
 

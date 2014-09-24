@@ -84,6 +84,7 @@ class TSConfigurationDict(DbObjectDict):
                 if 'description' in inconfig:
                     config.description = inconfig['description']
 
+    # TODO: drop and refactor
     def diff_map(self, inconfigs):
         """Generate SQL to transform existing configurations
 
@@ -182,6 +183,7 @@ class TSDictionaryDict(DbObjectDict):
                 if 'description' in indict:
                     tsdict.description = indict['description']
 
+    # TODO: drop and refactor
     def diff_map(self, indicts):
         """Generate SQL to transform existing dictionaries
 
@@ -282,6 +284,7 @@ class TSParserDict(DbObjectDict):
                 if 'description' in inparser:
                     parser.description = inparser['description']
 
+    # TODO: drop and refactor
     def diff_map(self, inparsers):
         """Generate SQL to transform existing parsers
 
@@ -378,6 +381,7 @@ class TSTemplateDict(DbObjectDict):
                 if 'description' in intemplate:
                     template.description = intemplate['description']
 
+    # TODO: drop and refactor
     def diff_map(self, intemplates):
         """Generate SQL to transform existing templates
 

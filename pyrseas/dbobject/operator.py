@@ -6,8 +6,6 @@
     This module defines two classes: Operator derived from
     DbSchemaObject and OperatorDict derived from DbObjectDict.
 """
-from collections import defaultdict
-
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
 from pyrseas.dbobject import quote_id, commentable, ownable
 from pyrseas.dbobject import split_schema_obj, split_func_args
@@ -185,52 +183,3 @@ class OperatorDict(DbObjectDict):
                 oper.oldname = inoper['oldname']
             if 'description' in inoper:
                 oper.description = inoper['description']
-
-    def diff_map(self, inopers):
-        """Generate SQL to transform existing operators
-
-        :param inopers: a YAML map defining the new operators
-        :return: list of SQL statements
-
-        Compares the existing operator definitions, as fetched from
-        the catalogs, to the input map and generates SQL statements to
-        transform the operators accordingly.
-        """
-        return super(OperatorDict, self).diff_map(inopers)
-
-    def _diff_map(self, inopers):
-        stmts = defaultdict(list)
-        # check input operators
-        for (sch, opr, lft, rgt) in inopers:
-            inoper = inopers[(sch, opr, lft, rgt)]
-            # does it exist in the database?
-            if (sch, opr, lft, rgt) not in self:
-                if not hasattr(inoper, 'oldname'):
-                    # create new operator
-                    stmts[inoper].append(inoper.create())
-                else:
-                    stmts[inoper].append(self[(sch, opr, lft, rgt)].rename(inoper))
-            else:
-                # check operator objects
-                stmts[inoper].append(self[(sch, opr, lft, rgt)].diff_map(inoper))
-
-        # check existing operators
-        for (sch, opr, lft, rgt) in self:
-            oper = self[(sch, opr, lft, rgt)]
-            # if missing, mark it for dropping
-            if (sch, opr, lft, rgt) not in inopers:
-                oper.dropped = False
-
-        return stmts
-
-    def _drop(self):
-        """Actually drop the operators
-
-        :return: SQL statements
-        """
-        stmts = []
-        for (sch, opr, lft, rgt) in self:
-            oper = self[(sch, opr, lft, rgt)]
-            if hasattr(oper, 'dropped'):
-                stmts.append(oper.drop())
-        return stmts

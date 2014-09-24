@@ -6,8 +6,6 @@
     This defines two classes, Language and LanguageDict, derived from
     DbObject and DbObjectDict, respectively.
 """
-from collections import defaultdict
-
 from pyrseas.dbobject import DbObjectDict, DbObject, quote_id
 from pyrseas.dbobject.function import Function
 
@@ -46,6 +44,15 @@ class Language(DbObject):
             if hasattr(self, 'description'):
                 stmts.append(self.comment())
         return stmts
+
+    def drop_sql(self):
+        # TODO: this should not be special-cased
+        # remove it after merging with the master, where plpgsql should be
+        # treated normally
+        if self.name != 'plpgsql':
+            return super(Language, self).drop_sql()
+        else:
+            return []
 
 
 QUERY_PRE91 = \
@@ -120,62 +127,3 @@ class LanguageDict(DbObjectDict):
                 if not hasattr(language, 'functions'):
                     language.functions = {}
                 language.functions.update({fnc: func})
-
-    def diff_map(self, inlanguages):
-        """Generate SQL to transform existing languages
-
-        :param input_map: a YAML map defining the new languages
-        :return: list of SQL statements
-
-        Compares the existing language definitions, as fetched from the
-        catalogs, to the input map and generates SQL statements to
-        transform the languages accordingly.
-        """
-        return super(LanguageDict, self).diff_map(inlanguages)
-
-    def _diff_map(self, inlanguages):
-        stmts = defaultdict(list)
-
-        # check input languages
-        for lng in inlanguages:
-            inlng = inlanguages[lng]
-            # does it exist in the database?
-            if lng in self:
-                if not hasattr(inlng, '_ext'):
-                    stmts[inlng].append(self[lng].diff_map(inlng))
-            else:
-                # check for possible RENAME
-                if hasattr(inlng, 'oldname'):
-                    oldname = inlng.oldname
-                    try:
-                        stmts[inlng].append(self[oldname].rename(inlng.name))
-                        del self[oldname]
-                    except KeyError as exc:
-                        exc.args = ("Previous name '%s' for language '%s' "
-                                    "not found" % (oldname, inlng.name), )
-                        raise
-                else:
-                    # create new language
-                    stmts[inlng].append(inlng.create())
-        # check database languages
-        for lng in self:
-            # if missing, drop it
-            if lng not in inlanguages:
-                # special case: plpgsql is installed in 9.0
-                if self.dbconn.version >= 90000 \
-                        and self[lng].name == 'plpgsql':
-                    continue
-                self[lng].dropped = True
-
-        return stmts
-
-    def _drop(self):
-        """Actually drop the languages
-
-        :return: SQL statements
-        """
-        stmts = []
-        for lng in self:
-            if hasattr(self[lng], 'dropped'):
-                stmts.append(self[lng].drop())
-        return stmts

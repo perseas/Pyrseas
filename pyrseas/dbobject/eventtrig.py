@@ -80,6 +80,7 @@ class EventTriggerDict(DbObjectDict):
             if 'description' in intrig:
                 trig.description = intrig['description']
 
+    # TODO: drop and refactor
     def diff_map(self, intriggers):
         """Generate SQL to transform existing event triggers
 

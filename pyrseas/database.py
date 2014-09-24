@@ -525,38 +525,46 @@ class Database(object):
             (self.db, self.ndb) = (self.ndb, self.db)
             self.db.languages.dbconn = self.dbconn
 
-        changes = {}
-        all_objs = []
-        for dname, d in self.db.alldicts():
-            nd = getattr(self.ndb, dname)
-            # TODO: drop this check: it's only to test with a subset of all
-            # the classes
-            if not nd: continue
-            pairs = nd.items()
+        # First sort the objects in the new db in dependency order
+        new_objs = []
+        for _, d in self.ndb.alldicts():
+            pairs = d.items()
             pairs.sort()
-            all_objs.extend(map(itemgetter(1), pairs))
-            changes.update(d._diff_map(nd))
+            new_objs.extend(map(itemgetter(1), pairs))
 
-        all_objs = self.dep_sorted(all_objs, self.ndb)
+        new_objs = self.dep_sorted(new_objs, self.ndb)
+
+        # Then generate the sql for all the objects, walking in dependency
+        # order over all the db objects
 
         stmts = []
-        for obj in all_objs:
-            stmts.extend(changes.get(obj, ()))
+        for new in new_objs:
+            d = self.db.dict_from_table(new.catalog_table)
+            old = d.get(new.key())
+            if old is not None:
+                stmts.append(new.alter_sql(old))
+            else:
+                stmts.append(new.create_sql())
 
-        # TODO: drop the objects in reversed topo-order
-        stmts.append(self.db.operators._drop())
-        stmts.append(self.db.operclasses._drop())
-        stmts.append(self.db.operfams._drop())
-        stmts.append(self.db.functions._drop())
-        stmts.append(self.db.types._drop())
-        stmts.append(self.db.schemas._drop())
-        stmts.append(self.db.servers._drop())
-        stmts.append(self.db.fdwrappers._drop())
-        stmts.append(self.db.languages._drop())
-        stmts.append(self.db.extensions._drop())
+        # Order the old database objects in reverse dependency order
+        old_objs = []
+        for _, d in self.db.alldicts():
+            pairs = d.items()
+            pairs.sort
+            old_objs.extend(map(itemgetter(1), pairs))
+        old_objs = self.dep_sorted(old_objs, self.db)
+        old_objs.reverse()
+
+        # Drop the objects that don't appear in the new db
+        for old in old_objs:
+            d = self.ndb.dict_from_table(old.catalog_table)
+            if old.key not in d:
+                stmts.extend(old.drop_sql())
+
         if 'datacopy' in self.config:
             opts.data_dir = self.config['files']['data_path']
             stmts.append(self.ndb.schemas.data_import(opts))
+
         return [s for s in flatten(stmts)]
 
     def dep_sorted(self, objs, db):

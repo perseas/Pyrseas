@@ -6,8 +6,6 @@
     This module defines two classes: Cast derived from DbObject and
     CastDict derived from DbObjectDict.
 """
-from collections import defaultdict
-
 from pyrseas.dbobject import DbObject, DbObjectDict, commentable
 from pyrseas.dbobject import split_func_args
 
@@ -142,38 +140,3 @@ class CastDict(DbObjectDict):
             cast.method = cast.method[:1].lower()
             if 'description' in incast:
                 cast.description = incast['description']
-
-    def diff_map(self, incasts):
-        """Generate SQL to transform existing casts
-
-        :param incasts: a YAML map defining the new casts
-        :return: list of SQL statements
-
-        Compares the existing cast definitions, as fetched from the
-        catalogs, to the input map and generates SQL statements to
-        transform the casts accordingly.
-        """
-        return super(CastDict, self).diff_map(incasts)
-
-    def _diff_map(self, incasts):
-        stmts = defaultdict(list)
-
-        # check input casts
-        for (src, trg) in incasts:
-            incast = incasts[(src, trg)]
-            # does it exist in the database?
-            if (src, trg) not in self:
-                # create new cast
-                stmts[incast].append(incast.create())
-            else:
-                # check cast objects
-                stmts[incast].append(self[(src, trg)].diff_map(incast))
-
-        # check existing casts
-        for (src, trg) in self:
-            cast = self[(src, trg)]
-            # if missing, mark it for dropping
-            if (src, trg) not in incasts:
-                stmts[incast].append(cast.drop())
-
-        return stmts

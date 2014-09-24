@@ -11,7 +11,6 @@ import os
 import re
 import string
 from functools import wraps
-from collections import defaultdict
 
 from pyrseas.lib.pycompat import PY2, strtypes
 from pyrseas.yamlutil import MultiLineStr, yamldump
@@ -381,57 +380,35 @@ class DbObject(object):
         return "ALTER %s %s OWNER TO %s" % (
             self.objtype, self.identifier(), owner or self.owner)
 
-    def drop(self):
-        """Return SQL statement to DROP the object
-
-        :return: SQL statement
-        """
-        return "DROP %s %s" % (self.objtype, self.identifier())
-
-    def rename(self, newname):
+    def rename(self, oldname):
         """Return SQL statement to RENAME the object
 
         :param newname: the new name for the object
         :return: SQL statement
         """
-        return "ALTER %s %s RENAME TO %s" % (self.objtype, self.name, newname)
+        return "ALTER %s %s RENAME TO %s" % (
+            self.objtype, quote_id(self.name), quote_id(oldname))
 
-    def _diff_map(self, inobj, no_owner=False):
-        """Generate SQL to transform an existing object
+    def create(self):
+        raise NotImplementedError
 
-        :param inobj: a YAML map defining the new object
-        :param no_owner: exclude object owner information
-        :return: list of SQL statements
+    def create_sql(self):
+        if not hasattr(self, 'oldname'):
+            return self.create()
+        else:
+            return self.rename(self.oldname)
 
-        Compares the object to an input object and generates SQL
-        statements to transform it into the one represented by the
-        input.  This base implementation simply deals with owners and
-        comments.
-        """
-        stmts = defaultdict(list)
+    def alter_sql(self, inobj, no_owner=False):
+        stmts = []
         if not no_owner and hasattr(inobj, 'owner') and hasattr(self, 'owner'):
             if inobj.owner != self.owner:
-                stmts[self].append(self.alter_owner(inobj.owner))
-        stmts[self].append(self.diff_privileges(inobj))
-        stmts[self].append(self.diff_description(inobj))
+                stmts.append(self.alter_owner(inobj.owner))
+        stmts.append(self.diff_privileges(inobj))
+        stmts.append(self.diff_description(inobj))
         return stmts
 
-    def diff_map(self, inobj):
-        """Generate SQL to transform existing schemas
-
-        :param input_map: a YAML map defining the new schemas
-        :return: list of SQL statements
-
-        Compares the existing schema definitions, as fetched from the
-        catalogs, to the input map and generates SQL statements to
-        transform the schemas accordingly.
-        """
-        stmts = []
-        for k, v in self._diff_map(inobj).iteritems():
-            for stmt in v:
-                stmts.append(stmt)
-
-        return stmt
+    def drop_sql(self):
+        return [ "DROP %s %s" % (self.objtype, self.identifier()) ]
 
     def diff_privileges(self, inobj):
         """Generate SQL statements to grant or revoke privileges
@@ -480,7 +457,9 @@ class DbObject(object):
 
         # The explicit dependencies
         for dep in self.depends_on:
-            deps.add(db._get_by_extkey(dep))
+            if isinstance(dep, basestring):
+                dep = db._get_by_extkey(dep)
+            deps.add(dep)
 
         for dep in self.get_implied_deps(db):
             deps.add(dep)
@@ -530,24 +509,10 @@ class DbSchemaObject(DbObject):
         """
         return super(DbSchemaObject, self).extern_filename(ext, True)
 
-    def drop(self):
-        """Return a SQL DROP statement for the schema object
-
-        :return: SQL statement
-        """
-        if not hasattr(self, 'dropped') or not self.dropped:
-            self.dropped = True
-            return "DROP %s %s" % (self.objtype, self.identifier())
-        return []
-
     def rename(self, newname):
-        """Return a SQL ALTER statement to RENAME the schema object
-
-        :param newname: the new name of the object
-        :return: SQL statement
-        """
-        return "ALTER %s %s RENAME TO %s" % (self.objtype, self.qualname(),
-                                             newname)
+        return "ALTER %s %s.%s RENAME TO %s" % (
+            self.objtype, quote_id(self.schema), quote_id(self.name),
+            quote_id(newname))
 
     def get_implied_deps(self, db):
         deps = super(DbSchemaObject, self).get_implied_deps(db)

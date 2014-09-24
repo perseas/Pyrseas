@@ -6,8 +6,6 @@
     This defines two classes, Index and IndexDict, derived
     from DbSchemaObject and DbObjectDict, respectively.
 """
-from collections import defaultdict
-
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
 from pyrseas.dbobject import quote_id, split_schema_obj, commentable
 
@@ -284,50 +282,3 @@ class IndexDict(DbObjectDict):
             if 'depends_on' in val:
                 idx.depends_on.extend(val['depends_on'])
             self[(table.schema, table.name, i)] = idx
-
-    def diff_map(self, inindexes):
-        """Generate SQL to transform existing indexes
-
-        :param inindexes: a YAML map defining the new indexes
-        :return: list of SQL statements
-
-        Compares the existing index definitions, as fetched from the
-        catalogs, to the input map and generates SQL statements to
-        transform the indexes accordingly.
-        """
-        return super(IndexDict, self).diff_map(inindexes)
-
-    def _diff_map(self, inindexes):
-        stmts = defaultdict(list)
-
-        # check input indexes
-        for (sch, tbl, idx) in inindexes:
-            inidx = inindexes[(sch, tbl, idx)]
-            # does it exist in the database?
-            if (sch, tbl, idx) not in self:
-                # check for possible RENAME
-                if hasattr(inidx, 'oldname'):
-                    oldname = inidx.oldname
-                    try:
-                        stmts[inidx].append(self[(sch, tbl, oldname)].rename(
-                            inidx.name))
-                        del self[(sch, tbl, oldname)]
-                    except KeyError as exc:
-                        exc.args = ("Previous name '%s' for index '%s' "
-                                    "not found" % (oldname, inidx.name), )
-                        raise
-                else:
-                    # create new index
-                    stmts[inidx].append(inidx.create())
-
-        # check database indexes
-        for (sch, tbl, idx) in self:
-            index = self[(sch, tbl, idx)]
-            # if missing, drop it
-            if (sch, tbl, idx) not in inindexes:
-                stmts[index].append(index.drop())
-            else:
-                # compare index objects
-                stmts[index].append(index.diff_map(inindexes[(sch, tbl, idx)]))
-
-        return stmts

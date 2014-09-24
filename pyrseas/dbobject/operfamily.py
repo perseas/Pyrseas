@@ -6,8 +6,6 @@
     This module defines two classes: OperatorFamily derived from
     DbSchemaObject and OperatorFamilyDict derived from DbObjectDict.
 """
-from collections import defaultdict
-
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
 from pyrseas.dbobject import commentable, ownable
 
@@ -86,52 +84,3 @@ class OperatorFamilyDict(DbObjectDict):
                 opfam.oldname = inopfam['oldname']
             if 'description' in inopfam:
                 opfam.description = inopfam['description']
-
-    def diff_map(self, inopfams):
-        """Generate SQL to transform existing operator families
-
-        :param inopfams: a YAML map defining the new operator families
-        :return: list of SQL statements
-
-        Compares the existing operator family definitions, as fetched
-        from the catalogs, to the input map and generates SQL
-        statements to transform the operator families accordingly.
-        """
-        return super(OperatorFamilyDict, self).diff_map(inopfams)
-
-    def _diff_map(self, inopfams):
-        stmts = defaultdict(list)
-        # check input operator families
-        for (sch, opf, idx) in inopfams:
-            inopfam = inopfams[(sch, opf, idx)]
-            # does it exist in the database?
-            if (sch, opf, idx) not in self:
-                if not hasattr(inopfam, 'oldname'):
-                    # create new operator family
-                    stmts[inopfam].append(inopfam.create())
-                else:
-                    stmts[inopfam].append(self[(sch, opf, idx)].rename(inopfam))
-            else:
-                # check operator family objects
-                stmts[inopfam].append(self[(sch, opf, idx)].diff_map(inopfam))
-
-        # check existing operator families
-        for (sch, opf, idx) in self:
-            oper = self[(sch, opf, idx)]
-            # if missing, mark it for dropping
-            if (sch, opf, idx) not in inopfams:
-                oper.dropped = False
-
-        return stmts
-
-    def _drop(self):
-        """Actually drop the operator families
-
-        :return: SQL statements
-        """
-        stmts = []
-        for (sch, opf, idx) in self:
-            oper = self[(sch, opf, idx)]
-            if hasattr(oper, 'dropped'):
-                stmts.append(oper.drop())
-        return stmts

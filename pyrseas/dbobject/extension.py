@@ -6,8 +6,6 @@
     This module defines two classes: Extension derived from DbObject,
     and ExtensionDict derived from DbObjectDict.
 """
-from collections import defaultdict
-
 from pyrseas.dbobject import DbObjectDict, DbObject
 from pyrseas.dbobject import quote_id, commentable
 
@@ -34,6 +32,13 @@ class Extension(DbObject):
         return ["CREATE EXTENSION %s%s" % (
                 quote_id(self.name), ('\n    ' + '\n    '.join(opt_clauses))
                 if opt_clauses else '')]
+
+    def drop_sql(self):
+        # TODO: this should not be special-cased -- see Language
+        if self.name != 'plpgsql':
+            return super(Extension, self).drop_sql()
+        else:
+            return []
 
 
 class ExtensionDict(DbObjectDict):
@@ -77,52 +82,5 @@ class ExtensionDict(DbObjectDict):
                 lang = {'language %s' % exten.name: {'_ext': 'e'}}
                 newdb.languages.from_map(lang)
 
-    def diff_map(self, inexts):
-        """Generate SQL to transform existing extensions
-
-        :param inexts: a YAML map defining the new extensions
-        :return: list of SQL statements
-
-        Compares the existing extension definitions, as fetched from
-        the catalogs, to the input map and generates SQL statements to
-        transform the extensions accordingly.
-        """
-        return super(ExtensionDict, self).diff_map(inexts)
-
-    def _diff_map(self, inexts):
-        stmts = defaultdict(list)
-
-        # check input extensions
-        for ext in inexts:
-            inexten = inexts[ext]
-            # does it exist in the database?
-            if ext not in self:
-                if not hasattr(inexten, 'oldname'):
-                    # create new extension
-                    stmts[inexten].append(inexten.create())
-                else:
-                    stmts[inexten].append(self[ext].rename(inexten))
-            # check extension objects
-            else:
-                # extension owner cannot be altered, set no_owner to True
-                stmts[inexten].append(self[ext].diff_map(inexten), no_owner=True)
-
-        # check existing extensions
-        for ext in self:
-            exten = self[ext]
-            # if missing, mark it for dropping
-            if ext not in inexts:
-                exten.dropped = False
-
-        return stmts
-
-    def _drop(self):
-        """Actually drop the extension
-
-        :return: SQL statements
-        """
-        stmts = []
-        for ext in self:
-            if hasattr(self[ext], 'dropped'):
-                stmts.append(self[ext].drop())
-        return stmts
+    def alter_sql(self, inobj, no_owner=True):
+        return super(Extension, self).alter_sql(inobj, no_owner=no_owner)

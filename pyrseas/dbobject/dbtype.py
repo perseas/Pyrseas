@@ -7,8 +7,6 @@
     DbSchemaObject, BaseType, Composite, Domain and Enum derived from
     DbType, and DbTypeDict derived from DbObjectDict.
 """
-import weakref
-from collections import defaultdict
 
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
 from pyrseas.dbobject import split_schema_obj, commentable, ownable
@@ -54,7 +52,6 @@ class BaseType(DbType):
         :return: SQL statements
         """
         stmts = []
-        stmts.append("CREATE TYPE %s" % self.qualname())
         opt_clauses = []
         for fnc in OPT_FUNCS:
             if fnc in self.dep_funcs:
@@ -78,16 +75,6 @@ class BaseType(DbType):
                      ',\n    ' or '', ',\n    '.join(opt_clauses)))
         return stmts
 
-    def drop(self):
-        """Return SQL statement to DROP the base type
-
-        :return: SQL statement
-
-        We have to override the super method and add CASCADE to drop
-        dependent functions.
-        """
-        return ["DROP TYPE %s CASCADE" % self.qualname()]
-
     def get_implied_deps(self, db):
         deps = super(BaseType, self).get_implied_deps(db)
         for attr, arg in [
@@ -98,8 +85,6 @@ class BaseType(DbType):
                 continue
             fschema, fname = split_schema_obj(f)
             f = db.functions[fschema, fname, arg]
-            # weakref because we are explicitly creating a loop
-            f._defining_type = weakref.ref(self)
             deps.add(f)
 
         return deps
@@ -138,7 +123,7 @@ class Composite(DbType):
         attrs = []
         for att in self.attributes:
             attrs.append("    " + att.add()[0])
-        return ["CREATE TYPE %s AS (%s)" % (
+        return ["CREATE TYPE %s AS (\n%s)" % (
                 self.qualname(), ",\n".join(attrs))]
 
     def diff_map(self, intype):
@@ -463,53 +448,3 @@ class TypeDict(DbObjectDict):
                             arg = 'internal'
                         func = dbfuncs[(sch, fnc, arg)]
                         dbtype.dep_funcs.update({attr: func})
-
-    def diff_map(self, intypes):
-        """Generate SQL to transform existing domains and types
-
-        :param intypes: a YAML map defining the new domains/types
-        :return: list of SQL statements
-
-        Compares the existing domain/type definitions, as fetched from
-        the catalogs, to the input map and generates SQL statements to
-        transform the domains/types accordingly.
-        """
-        return super(TypeDict, self).diff_map(intypes)
-
-    def _diff_map(self, intypes):
-        stmts = defaultdict(list)
-        # check input types
-        for (sch, typ) in intypes:
-            intype = intypes[(sch, typ)]
-            # does it exist in the database?
-            if (sch, typ) not in self:
-                if not hasattr(intype, 'oldname'):
-                    # create new type
-                    stmts[intype].append(intype.create())
-                else:
-                    stmts[intype].append(self[(sch, intype.oldname)].rename(typ))
-                    del self[(sch, intype.oldname)]
-
-        # check existing types
-        for (sch, typ) in self:
-            dbtype = self[(sch, typ)]
-            # if missing, mark it for dropping
-            if (sch, typ) not in intypes:
-                dbtype.dropped = False
-            else:
-                # check type objects
-                stmts[intype].append(dbtype.diff_map(intypes[(sch, typ)]))
-
-        return stmts
-
-    def _drop(self):
-        """Actually drop the types
-
-        :return: SQL statements
-        """
-        stmts = []
-        for (sch, typ) in self:
-            dbtype = self[(sch, typ)]
-            if hasattr(dbtype, 'dropped'):
-                stmts.append(dbtype.drop())
-        return stmts

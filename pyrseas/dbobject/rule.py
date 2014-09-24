@@ -95,6 +95,7 @@ class RuleDict(DbObjectDict):
                     rule.description = inrule['description']
             self[(table.schema, table.name, rul)] = rule
 
+    # TODO: drop and refactor
     def diff_map(self, inrules):
         """Generate SQL to transform existing rules
 

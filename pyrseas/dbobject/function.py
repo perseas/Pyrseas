@@ -7,10 +7,6 @@
     DbSchemaObject, Function and Aggregate derived from Proc, and
     FunctionDict derived from DbObjectDict.
 """
-from itertools import chain
-from collections import defaultdict
-
-from pyrseas.lib.pycompat import strtypes
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
 from pyrseas.dbobject import commentable, ownable, grantable, split_schema_obj
 from pyrseas.dbobject.privileges import privileges_from_map
@@ -142,11 +138,15 @@ class Function(Proc):
 
         # We may have to create a shell type if we are its input or output
         # functions
-        if hasattr(self, '_defining_type'):
-            t = self._defining_type()   # resolve weakref
-            if not getattr(t, '_shell_created'):
+        t = getattr(self, '_defining', None)
+        if t is not None:
+            if not hasattr(t, '_shell_created'):
                 t._shell_created = True
                 stmts.append("CREATE TYPE %s" % t.qualname())
+
+        if not hasattr(Function, '_body_check_disabled'):
+            Function._body_check_disabled = True
+            stmts.append('SET check_function_bodies = false')
 
         args = self.allargs if hasattr(self, 'allargs') else self.arguments
         stmts.append("CREATE%s FUNCTION %s(%s) RETURNS %s\n    LANGUAGE %s"
@@ -156,7 +156,7 @@ class Function(Proc):
                      strict, secdef, cost, rows, config, src))
         return stmts
 
-    def diff_map(self, infunction):
+    def alter_sql(self, infunction):
         """Generate SQL to transform an existing function
 
         :param infunction: a YAML map defining the new function
@@ -214,6 +214,7 @@ class Function(Proc):
                     fname = getattr(dep, attr, None)
                     if fname and fname == self.qualname():
                         deps.remove(dep)
+                        self._defining = dep    # we may need a shell for this
                         break
 
         return deps
@@ -409,92 +410,3 @@ class ProcDict(DbObjectDict):
             if not hasattr(func, 'event_triggers'):
                 func.event_triggers = []
             func.event_triggers.append(evttrg.name)
-
-    def diff_map(self, infuncs):
-        """Generate SQL to transform existing functions
-
-        :param infuncs: a YAML map defining the new functions
-        :return: list of SQL statements
-
-        Compares the existing function definitions, as fetched from
-        the catalogs, to the input map and generates SQL statements to
-        transform the functions accordingly.
-        """
-        return super(ProcDict, self).diff_map(infuncs)
-
-    def _diff_map(self, infuncs):
-        stmts = defaultdict(list)
-        created = False
-        # check input functions
-        for (sch, fnc, arg) in infuncs:
-            infunc = infuncs[(sch, fnc, arg)]
-            if isinstance(infunc, Aggregate):
-                continue
-            # does it exist in the database?
-            if (sch, fnc, arg) not in self:
-                if not hasattr(infunc, 'oldname'):
-                    # create new function
-                    stmts[infunc].append(infunc.create())
-                    created = True
-                else:
-                    stmts[infunc].append(self[(sch, fnc, arg)].rename(infunc))
-            else:
-                # check function objects
-                diff_stmts = self[(sch, fnc, arg)].diff_map(infunc)
-                for stmt in diff_stmts:
-                    if isinstance(stmt, list) and stmt:
-                        stmt = stmt[0]
-                    if isinstance(stmt, strtypes) and \
-                            stmt.startswith("CREATE "):
-                        created = True
-                        break
-                stmts[infunc].append(diff_stmts)
-
-        # check input aggregates
-        for (sch, fnc, arg) in infuncs:
-            infunc = infuncs[(sch, fnc, arg)]
-            if not isinstance(infunc, Aggregate):
-                continue
-            # does it exist in the database?
-            if (sch, fnc, arg) not in self:
-                if not hasattr(infunc, 'oldname'):
-                    # create new function
-                    stmts[infunc].append(infunc.create())
-                else:
-                    stmts[infunc].append(self[(sch, fnc, arg)].rename(infunc))
-            else:
-                # check function objects
-                stmts[infunc].append(self[(sch, fnc, arg)].diff_map(infunc))
-
-        # check existing functions
-        for (sch, fnc, arg) in self:
-            func = self[(sch, fnc, arg)]
-            # if missing, mark it for dropping
-            if (sch, fnc, arg) not in infuncs:
-                func.dropped = False
-
-        # TODO: more specific check, now it set this statements if *any*
-        # function is created. Which is probably ok anyway.
-        if created:
-            for v in stmts.itervalues():
-                v.insert(0, "SET check_function_bodies = false")
-
-        return stmts
-
-    def _drop(self):
-        """Actually drop the functions
-
-        :return: SQL statements
-        """
-        stmts = []
-        for (sch, fnc, arg) in self:
-            func = self[(sch, fnc, arg)]
-            if isinstance(func, Aggregate) and hasattr(func, 'dropped'):
-                stmts.append(func.drop())
-
-        for (sch, fnc, arg) in self:
-            func = self[(sch, fnc, arg)]
-            if hasattr(func, 'dropped'):
-                stmts.append(func.drop())
-
-        return stmts
