@@ -293,6 +293,7 @@ class ConstraintDict(DbObjectDict):
                   confdeltype AS on_delete, confmatchtype AS match,
                   amname AS access_method, spcname AS tablespace,
                   indisclustered AS cluster,
+                  coninhcount > 0 AS inherited,
                   obj_description(c.oid, 'pg_constraint') AS description
            FROM pg_constraint c
                 JOIN pg_namespace ON (connamespace = pg_namespace.oid)
