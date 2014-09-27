@@ -53,10 +53,10 @@ class BaseType(DbType):
         """
         stmts = []
         opt_clauses = []
-        for fnc in OPT_FUNCS:
-            if fnc in self.dep_funcs:
-                opt_clauses.append("%s = %s" % (
-                    fnc.upper(), self.dep_funcs[fnc].qualname()))
+        if hasattr(self, 'send'):
+            opt_clauses.append("SEND = %s" % self.send)
+        if hasattr(self, 'receive'):
+            opt_clauses.append("RECEIVE = %s" % self.receive)
         if hasattr(self, 'internallength'):
             opt_clauses.append("INTERNALLENGTH = %s" % self.internallength)
         if hasattr(self, 'alignment'):
@@ -418,33 +418,3 @@ class TypeDict(DbObjectDict):
                 if not hasattr(dbtype, 'check_constraints'):
                     dbtype.check_constraints = {}
                 dbtype.check_constraints.update({cns: constr})
-        for (sch, typ) in self:
-            dbtype = self[(sch, typ)]
-            if isinstance(dbtype, BaseType):
-                if not hasattr(dbtype, 'dep_funcs'):
-                    dbtype.dep_funcs = {}
-                (sch, infnc) = split_schema_obj(dbtype.input, sch)
-                args = 'cstring'
-                if not (sch, infnc, args) in dbfuncs:
-                    args = 'cstring, oid, integer'
-                func = dbfuncs[(sch, infnc, args)]
-                dbtype.dep_funcs.update({'input': func})
-                (sch, outfnc) = split_schema_obj(dbtype.output, sch)
-                func = dbfuncs[(sch, outfnc, dbtype.qualname())]
-                dbtype.dep_funcs.update({'output': func})
-                for attr in OPT_FUNCS:
-                    if hasattr(dbtype, attr):
-                        (sch, fnc) = split_schema_obj(
-                            getattr(dbtype, attr), sch)
-                        if attr == 'receive':
-                            arg = 'internal'
-                        elif attr == 'send':
-                            arg = dbtype.qualname()
-                        elif attr == 'typmod_in':
-                            arg = 'cstring[]'
-                        elif attr == 'typmod_out':
-                            arg = 'integer'
-                        elif attr == 'analyze':
-                            arg = 'internal'
-                        func = dbfuncs[(sch, fnc, arg)]
-                        dbtype.dep_funcs.update({attr: func})
