@@ -475,6 +475,19 @@ class Table(DbClass):
             stmts.append(self._referred_by.add())
         return stmts
 
+    def get_implied_deps(self, db):
+        deps = super(Table, self).get_implied_deps(db)
+        for col in self.columns:
+            type = db.find_type(col.type)
+            if type is not None:
+                deps.add(type)
+
+        for pname in getattr(self, 'inherits', ()):
+            parent = db.tables.find(pname)
+            assert parent is not None, "couldn't find parent table %s" % pname
+            deps.add(parent)
+
+        return deps
 
 class View(DbClass):
     """A database view definition
