@@ -314,7 +314,8 @@ class UniqueConstraint(Constraint):
         return stmts
 
 MATCHTYPES_PRE93 = {'f': 'full', 'p': 'partial', 'u': 'simple'}
-COMMON_ATTRS = ['access_method', 'tablespace', 'description', 'cluster']
+COMMON_ATTRS = ['access_method', 'tablespace', 'description', 'cluster',
+                'depends_on']
 
 
 class ConstraintDict(DbObjectDict):
@@ -512,3 +513,15 @@ class ConstraintDict(DbObjectDict):
                     if attr in COMMON_ATTRS:
                         setattr(unq, attr, value)
                 self[(table.schema, table.name, cns)] = unq
+
+    def link_refs(self, db):
+        for c in self.values():
+            if not isinstance(c, (PrimaryKey, UniqueConstraint)):
+                continue
+
+            # The constraint creates implicitly an index, so it depends
+            # on any extra dependencies the index has. These may include e.g.
+            # an operator class for a non-builtin type.
+            idx = db.indexes.get((c.schema, c.table, c.name))
+            if idx:
+                c.depends_on.extend(idx.depends_on)

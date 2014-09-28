@@ -220,6 +220,7 @@ class Database(object):
         db.servers.link_refs(db.usermaps)
         db.ftables.link_refs(db.columns)
         db.types.link_refs(db.columns, db.constraints, db.functions)
+        db.constraints.link_refs(db)
 
     def _build_depends(self, db, dbconn):
         """Build the dependency graph of the database objects

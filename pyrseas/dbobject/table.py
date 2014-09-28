@@ -265,9 +265,16 @@ class Table(DbClass):
                     self.unique_constraints[k.name].to_map(
                         db, self.column_names()))
         if hasattr(self, 'indexes'):
-            tbl['indexes'] = {}
-            for k in list(self.indexes.values()):
-                tbl['indexes'].update(self.indexes[k.name].to_map(db))
+            idxs = {}
+            for idx in self.indexes.values():
+                if not getattr(idx, '_for_constraint', None):
+                    idxs.update(idx.to_map(db))
+            if idxs:
+                # we may have only indexes not to dump, e.g. the pkey one
+                tbl['indexes'] = idxs
+            else:
+                tbl.pop('indexes', None)
+
         if hasattr(self, 'rules'):
             tbl['rules'] = {}
             for k in list(self.rules.values()):

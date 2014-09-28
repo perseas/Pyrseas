@@ -90,6 +90,11 @@ class Index(DbSchemaObject):
         :return: SQL statements
         """
         stmts = []
+
+        # indexes defined by constraints are not to be dealt with as indexes
+        if getattr (self, '_for_constraint', None):
+            return stmts
+
         unq = hasattr(self, 'unique') and self.unique
         acc = ''
         if hasattr(self, 'access_method') and self.access_method != 'btree':
@@ -120,6 +125,11 @@ class Index(DbSchemaObject):
         input.
         """
         stmts = []
+
+        # indexes defined by constraints are not to be dealt with as indexes
+        if getattr (self, '_for_constraint', None):
+            return stmts
+
         if not hasattr(self, 'unique'):
             self.unique = False
         if self.access_method != inindex.access_method \
@@ -170,16 +180,16 @@ class IndexDict(DbObjectDict):
                   pg_get_expr(indpred, indrelid) AS predicate,
                   pg_get_indexdef(indexrelid) AS defn,
                   spcname AS tablespace, indisclustered AS cluster,
+                  EXISTS (
+                    SELECT 1 FROM pg_constraint
+                    WHERE contype in ('p', 'u')
+                    AND conindid = c.oid) AS _for_constraint,
                   obj_description (c.oid, 'pg_class') AS description
            FROM pg_index JOIN pg_class c ON (indexrelid = c.oid)
                 JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
                 JOIN pg_am ON (relam = pg_am.oid)
                 LEFT JOIN pg_tablespace t ON (c.reltablespace = t.oid)
            WHERE nspname not in ('pg_catalog', 'pg_toast', 'information_schema')
-                 AND NOT EXISTS (
-                    SELECT 1 FROM pg_constraint
-                    WHERE contype in ('p', 'u')
-                    AND conindid = c.oid)
            ORDER BY schema, "table", name"""
 
     def _from_catalog(self):
