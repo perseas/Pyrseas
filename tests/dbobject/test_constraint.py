@@ -32,6 +32,19 @@ class CheckConstraintToMapTestCase(DatabaseToMapTestCase):
                   'expression': '(((c2 * 100) / c1) <= 50)'}}}
         assert dbmap['schema public']['table t1'] == expmap
 
+    def test_check_constraint_inherited(self):
+        "Map a table with an inherited CHECK constraint"
+        stmts = ["CREATE TABLE t1 (c1 INTEGER, CONSTRAINT t1_c1_check "
+                 "CHECK (c1 > 0))", "CREATE TABLE t2 (c2 text) INHERITS (t1)"]
+        dbmap = self.to_map(stmts)
+        expmap = {'columns': [{'c1': {'type': 'integer', 'inherited': True}},
+                              {'c2': {'type': 'text'}}],
+                  'inherits': ['t1'],
+                  'check_constraints': {'t1_c1_check': {
+                  'columns': ['c1'], 'inherited': True,
+                  'expression': '(c1 > 0)'}}}
+        assert dbmap['schema public']['table t2'] == expmap
+
 
 class CheckConstraintToSqlTestCase(InputMapToSqlTestCase):
     """Test SQL generation from input CHECK constraints"""
@@ -65,6 +78,23 @@ class CheckConstraintToSqlTestCase(InputMapToSqlTestCase):
         sql = self.to_sql(inmap, stmts)
         assert fix_indent(sql[0]) == "ALTER TABLE t1 ADD CONSTRAINT " \
             "t1_check_2_1 CHECK (c2 != c1)"
+
+    def test_add_check_inherited(self):
+        "Add a table with an inherited CHECK constraint"
+        stmts = ["CREATE TABLE t1 (c1 INTEGER, CONSTRAINT t1_c1_check "
+                 "CHECK (c1 > 0))"]
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+            'columns': [{'c1': {'type': 'integer'}}], 'check_constraints': {
+                't1_c1_check': {'columns': ['c1'], 'expression': 'c1 > 0'}}},
+            'table t2': {
+                'columns': [{'c1': {'type': 'integer', 'inherited': True}},
+                            {'c2': {'type': 'text'}}], 'check_constraints': {
+                't1_c1_check': {'columns': ['c1'], 'expression': 'c1 > 0',
+                                'inherited': True}}, 'inherits': ['t1']}})
+        sql = self.to_sql(inmap, stmts)
+        assert fix_indent(sql[0]) == "CREATE TABLE t2 (c2 text) INHERITS (t1)"
+        assert len(sql) == 1
 
 
 class PrimaryKeyToMapTestCase(DatabaseToMapTestCase):
