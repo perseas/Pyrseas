@@ -292,7 +292,7 @@ class ConstraintDict(DbObjectDict):
                   consrc AS expression, confupdtype AS on_update,
                   confdeltype AS on_delete, confmatchtype AS match,
                   amname AS access_method, spcname AS tablespace,
-                  indisclustered AS cluster,
+                  indisclustered AS cluster, coninhcount > 0 AS inherited,
                   obj_description(c.oid, 'pg_constraint') AS description
            FROM pg_constraint c
                 JOIN pg_namespace ON (connamespace = pg_namespace.oid)
@@ -301,7 +301,6 @@ class ConstraintDict(DbObjectDict):
                 LEFT JOIN pg_tablespace t ON (cl.reltablespace = t.oid)
                 LEFT JOIN pg_am on (relam = pg_am.oid)
            WHERE (nspname != 'pg_catalog' AND nspname != 'information_schema')
-                 AND conislocal
            ORDER BY schema, 2, name"""
     match_types = {'f': 'full', 'p': 'partial', 's': 'simple'}
 
@@ -374,6 +373,8 @@ class ConstraintDict(DbObjectDict):
                     check.target = target
                 if 'description' in val:
                     check.description = val['description']
+                if 'inherited' in val:
+                    check.inherited = val['inherited']
                 self[(table.schema, table.name, cns)] = check
         if 'primary_key' in inconstrs:
             cns = list(inconstrs['primary_key'].keys())[0]
@@ -479,6 +480,9 @@ class ConstraintDict(DbObjectDict):
             # check database constraints
             for (sch, tbl, cns) in self:
                 constr = self[(sch, tbl, cns)]
+                # ignore inherited constraints
+                if getattr(constr, 'inherited', False):
+                    continue
                 if isinstance(constr, ForeignKey):
                     if turn == 1:
                         continue
@@ -491,6 +495,9 @@ class ConstraintDict(DbObjectDict):
             # check input constraints
             for (sch, tbl, cns) in inconstrs:
                 inconstr = inconstrs[(sch, tbl, cns)]
+                # ignore inherited constraints, take 2
+                if getattr(inconstr, 'inherited', False):
+                    continue
                 # skip DOMAIN constraints
                 if hasattr(inconstr, 'target'):
                     continue
