@@ -229,8 +229,7 @@ class Database(object):
         # This query wanted to be simple. it got complicated because:
         # 1) we don't handle indexes together with the other pg_class
         #    but in their own pg_index place (so fetch i1, i2)
-        # 2) fkeys depends on an index we don't fetch: we have the constraint
-        #    instead (so fetch c)
+        # 2) what point two?
         for r in dbconn.fetchall("""
                 SELECT
                     CASE WHEN i1.indexrelid IS NOT NULL
@@ -238,12 +237,10 @@ class Database(object):
                         ELSE classid::regclass END,
                     objid,
                     CASE
-                        WHEN c.conindid IS NOT NULL
-                            THEN 'pg_constraint'::regclass
                         WHEN i2.indexrelid IS NOT NULL
                             THEN 'pg_index'::regclass
                         ELSE refclassid::regclass END,
-                    coalesce(c.oid, refobjid)
+                    refobjid
                 FROM pg_depend
                 LEFT JOIN pg_index i1
                     ON classid = 'pg_class'::regclass
@@ -251,9 +248,6 @@ class Database(object):
                 LEFT JOIN pg_index i2
                     ON refclassid = 'pg_class'::regclass
                     AND refobjid = i2.indexrelid
-                LEFT JOIN pg_constraint c
-                    ON i2.indexrelid = c.conindid
-                    AND c.contype in ('u', 'p')
                 WHERE deptype = 'n'
                 """):
             deps[r[0], r[1]].append((r[2], r[3]))
