@@ -267,10 +267,39 @@ class ForeignKey(Constraint):
         deps = super(ForeignKey, self).get_implied_deps(db)
 
         # add the table we reference
-        deps.add(db.tables[self.ref_schema, self.ref_table])
+        ref_table = db.tables[self.ref_schema, self.ref_table]
+        deps.add(ref_table)
+
+        # A fkey needs a pkey, unique constraint or complete unique index
+        # defined on the fields it references to be restored.
+        deps.add(self._find_referenced_index(db, ref_table))
 
         return deps
 
+    def _find_referenced_index(self, db, ref_table):
+        pkey = getattr(ref_table, 'primary_key', None)
+        if pkey and pkey.keycols == self.ref_cols:
+            return pkey
+
+        if hasattr(ref_table, 'unique_constraints'):
+            for uc in ref_table.unique_constraints.itervalues():
+                if uc.keycols == self.ref_cols:
+                    return uc
+
+        if hasattr(ref_table, 'indexes'):
+            if isinstance(self.ref_cols[0], int):
+                col_names = [ ref_table.columns[i-1].name
+                    for i in self.ref_cols ]
+            else:
+                col_names = self.ref_cols
+
+            for idx in ref_table.indexes.itervalues():
+                if getattr(idx, 'unique', False) \
+                and not getattr(idx, 'predicate', None) \
+                and idx.keys == col_names:
+                    return idx
+
+        assert False, "failed to find referenced index"
 
 class UniqueConstraint(Constraint):
     "A unique constraint definition"
