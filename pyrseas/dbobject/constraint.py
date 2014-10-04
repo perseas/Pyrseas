@@ -10,6 +10,7 @@
 """
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
 from pyrseas.dbobject import quote_id, split_schema_obj, commentable
+from pyrseas.dbobject.index import Index
 
 
 ACTIONS = {'r': 'restrict', 'c': 'cascade', 'n': 'set null',
@@ -545,12 +546,20 @@ class ConstraintDict(DbObjectDict):
 
     def link_refs(self, db):
         for c in self.values():
-            if not isinstance(c, (PrimaryKey, UniqueConstraint)):
-                continue
+            if isinstance(c, ForeignKey):
+                # The constraint depends on an index. Which one is accidental:
+                # it depends e.g. on which suitable index was available when
+                # the constraint was defined. So here we drop the dependency
+                # on the introspected one, while in get_implied_deps we give
+                # our best shot to suggest one to depend on. This way we don't
+                # need expliciting the dependency in yaml.
+                c.depends_on = [ obj for obj in c.depends_on
+                    if not isinstance(obj, Index) ]
 
-            # The constraint creates implicitly an index, so it depends
-            # on any extra dependencies the index has. These may include e.g.
-            # an operator class for a non-builtin type.
-            idx = db.indexes.get((c.schema, c.table, c.name))
-            if idx:
-                c.depends_on.extend(idx.depends_on)
+            if isinstance(c, (PrimaryKey, UniqueConstraint)):
+                # The constraint creates implicitly an index, so it depends on
+                # any extra dependencies the index has. These may include e.g.
+                # an operator class for a non-builtin type.
+                idx = db.indexes.get((c.schema, c.table, c.name))
+                if idx:
+                    c.depends_on.extend(idx.depends_on)
