@@ -8,6 +8,8 @@
     MaterializedView derived from View, and ClassDict derived from
     DbObjectDict.
 """
+
+import re
 import os
 import sys
 
@@ -488,6 +490,16 @@ class Table(DbClass):
             type = db.find_type(col.type)
             if type is not None:
                 deps.add(type)
+
+            # Check if the column depends on a sequence to avoid stating the
+            # dependency explicitly.
+            d = getattr(col, 'default', None)
+            if d:
+                m = re.match(r"nextval\('(.*)'::regclass\)", d)
+                if m:
+                    seq = db.tables.find(m.group(1))
+                    if seq:
+                        deps.add(seq)
 
         for pname in getattr(self, 'inherits', ()):
             parent = db.tables.find(pname)
