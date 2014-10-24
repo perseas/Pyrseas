@@ -71,7 +71,7 @@ class Sequence(DbClass):
             schema = sch or 'public'
             tbl = obj
             quoted = '"%s".' % schema
-            if obj.startswith(schema):
+            if obj.startswith(schema+'.'):
                 tbl = obj[len(schema) + 1:]
             elif obj.startswith(quoted):
                 tbl = obj[len(quoted):]
