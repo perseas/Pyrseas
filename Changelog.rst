@@ -1,3 +1,25 @@
+0.7.2 (23-Jan-2015)
+
+  Fixed various issues, including:
+
+  * Do not error on tables whose names start with 'public' (#109)
+
+  * Deal properly with inherited constraints in children tables (#102)
+
+  * Handle external languages like plv8 correctly (#97)
+
+  * Correct quoting of mixed case constraint names (#83)
+
+  * Avoid problems with certain complex index definitions (#98)
+
+  * Have dbtoyaml output correctly a table with an embedded period in
+    the name and having an associated sequence (#79)
+
+  * Use relative paths in database summary for ``--multiple-files``
+    (#93)
+
+  * Support mapping of indexes on materialized views (#82)
+
 0.7.1 (5-Dec-2013)
 
   * Moved ``config.yaml`` under ``pyrseas`` directory and use
