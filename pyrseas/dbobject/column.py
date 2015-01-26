@@ -162,8 +162,11 @@ class Column(DbSchemaObject):
         # check DEFAULTs
         if not hasattr(self, 'default') and hasattr(incol, 'default'):
             stmts.append(base + "SET DEFAULT %s" % incol.default)
-        if hasattr(self, 'default') and not hasattr(incol, 'default'):
-            stmts.append(base + "DROP DEFAULT")
+        if hasattr(self, 'default'):
+            if not hasattr(incol, 'default'):
+                stmts.append(base + "DROP DEFAULT")
+            elif self.default != incol.default:
+                stmts.append(base + "SET DEFAULT %s" % incol.default)
         # check STATISTICS
         if hasattr(self, 'statistics'):
             if self.statistics == -1 and (
