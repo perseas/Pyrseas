@@ -10,6 +10,7 @@ The PRIMARY AUTHORS are or have been:
     * Chris Mayo
     * Philippe Pepiot
     * Andrey Popp
+    * Ross J. Reedstrom
     * github.com/shirkey
     * Paulo Tioseco
     * Daniele Varrazzo

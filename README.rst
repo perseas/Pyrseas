@@ -32,7 +32,7 @@ Features
 Requirements
 ------------
 
-- PostgreSQL 8.4 or higher
+- PostgreSQL 9.0 or higher
 
 - Python 2.6 or higher
 
