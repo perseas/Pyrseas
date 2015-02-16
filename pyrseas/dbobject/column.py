@@ -103,7 +103,7 @@ class Column(DbSchemaObject):
         else:
             raise TypeError("Cannot determine type of %s", self.name)
         return "ALTER %s %s DROP %s %s" % (comptype, compname, objtype,
-                                           self.name)
+                                           quote_id(self.name))
 
     def rename(self, newname):
         """Return SQL statement to RENAME the column
