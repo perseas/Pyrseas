@@ -227,6 +227,32 @@ class Domain(DbType):
         return [create]
 
 
+QUERY_PRE92 = \
+    """SELECT nspname AS schema, typname AS name, typtype AS kind,
+              format_type(typbasetype, typtypmod) AS type,
+              typnotnull AS not_null, typdefault AS default,
+              ARRAY(SELECT enumlabel FROM pg_enum e WHERE t.oid = enumtypid
+              ORDER BY e.oid) AS labels, rolname AS owner, NULL AS privileges,
+              typinput::regproc AS input, typoutput::regproc AS output,
+              typreceive::regproc AS receive, typsend::regproc AS send,
+              typmodin::regproc AS typmod_in, typmodout::regproc AS typmod_out,
+              typanalyze::regproc AS analyze, typlen AS internallength,
+              typalign AS alignment, typstorage AS storage,
+              typdelim AS delimiter, typcategory AS category,
+              typispreferred AS preferred,
+              obj_description(t.oid, 'pg_type') AS description
+         FROM pg_type t JOIN pg_roles r ON (r.oid = typowner)
+              JOIN pg_namespace n ON (typnamespace = n.oid)
+              LEFT JOIN pg_class c ON (typrelid = c.oid)
+        WHERE typisdefined AND (typtype in ('d', 'e')
+              OR (typtype = 'c' AND relkind = 'c')
+              OR (typtype = 'b' AND typarray != 0))
+          AND nspname NOT IN ('pg_catalog', 'pg_toast', 'information_schema')
+          AND t.oid NOT IN (SELECT objid FROM pg_depend WHERE deptype = 'e'
+                            AND classid = 'pg_type'::regclass)
+       ORDER BY nspname, typname"""
+
+
 class TypeDict(DbObjectDict):
     "The collection of domains and enums in a database"
 
@@ -237,6 +263,7 @@ class TypeDict(DbObjectDict):
                   typnotnull AS not_null, typdefault AS default,
                   ARRAY(SELECT enumlabel FROM pg_enum e WHERE t.oid = enumtypid
                   ORDER BY e.oid) AS labels, rolname AS owner,
+                  array_to_string(typacl, ',') AS privileges,
                   typinput::regproc AS input, typoutput::regproc AS output,
                   typreceive::regproc AS receive, typsend::regproc AS send,
                   typmodin::regproc AS typmod_in,
@@ -262,6 +289,8 @@ class TypeDict(DbObjectDict):
 
     def _from_catalog(self):
         """Initialize the dictionary of types by querying the catalogs"""
+        if self.dbconn.version < 90200:
+            self.query = QUERY_PRE92
         for dbtype in self.fetch():
             sch, typ = dbtype.key()
             kind = dbtype.kind
