@@ -106,9 +106,9 @@ class Composite(DbType):
             if att:
                 attrs.append(att)
         dct = {'attributes': attrs}
-        if not no_owner and hasattr(self, 'owner'):
+        if not no_owner and self.owner is not None:
             dct.update(owner=self.owner)
-        if hasattr(self, 'description'):
+        if self.description is not None:
             dct.update(description=self.description)
         return dct
 
@@ -162,7 +162,7 @@ class Composite(DbType):
                 if descr:
                     stmts.append(descr)
 
-        if hasattr(intype, 'owner'):
+        if intype.owner is not None:
             if intype.owner != self.owner:
                 stmts.append(self.alter_owner(intype.owner))
         stmts.append(self.diff_description(intype))

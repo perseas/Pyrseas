@@ -2,7 +2,6 @@
 """Test extensions"""
 
 import pytest
-import psycopg2
 
 from pyrseas.testutils import DatabaseToMapTestCase
 from pyrseas.testutils import InputMapToSqlTestCase, fix_indent
@@ -56,13 +55,12 @@ class ExtensionToMapTestCase(DatabaseToMapTestCase):
 
     def test_map_extension_bug_103(self):
         "Test a function created with extension other than plpgsql/plperl"
-        try:
-            self.to_map(["CREATE EXTENSION plpythonu"])
-        except psycopg2.OperationalError as e:
-            self.skipTest("plpython installation failed: %s" % e)
-        m = self.to_map(["CREATE FUNCTION test103() RETURNS int AS "
-                         "'return 1' LANGUAGE plpythonu"])
-        assert 'extension plpythonu' in m
+        if self.db.version < 90100:
+            self.skipTest('Only available on PG 9.1')
+        dbmap = self.to_map(["CREATE EXTENSION plpythonu",
+                             "CREATE FUNCTION test103() RETURNS int AS "
+                             "'return 1' LANGUAGE plpythonu"])
+        assert 'extension plpythonu' in dbmap
 
 
 class ExtensionToSqlTestCase(InputMapToSqlTestCase):

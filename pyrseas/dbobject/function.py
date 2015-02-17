@@ -51,7 +51,7 @@ class Function(Proc):
         :param no_privs: exclude privilege information
         :return: dictionary
         """
-        dct = self._base_map(no_owner)
+        dct = self._base_map(no_owner, no_privs)
         if self.volatility == 'v':
             del dct['volatility']
         else:
@@ -73,11 +73,6 @@ class Function(Proc):
         if hasattr(self, 'rows') and self.rows != 0:
             if self.rows == 1000:
                 del dct['rows']
-        if hasattr(self, 'privileges'):
-            if no_privs:
-                del dct['privileges']
-            else:
-                dct['privileges'] = self.map_privs()
 
         return dct
 
@@ -147,7 +142,7 @@ class Function(Proc):
         if hasattr(self, 'source') and hasattr(infunction, 'source'):
             if self.source != infunction.source:
                 stmts.append(self.create(infunction.source))
-        if hasattr(infunction, 'owner'):
+        if infunction.owner is not None:
             if infunction.owner != self.owner:
                 stmts.append(self.alter_owner(infunction.owner))
         if hasattr(self, 'leakproof') and self.leakproof is True:
@@ -264,8 +259,6 @@ class ProcDict(DbObjectDict):
         if self.dbconn.version < 90200:
             self.query = QUERY_PRE92
         for proc in self.fetch():
-            if hasattr(proc, 'privileges'):
-                proc.privileges = proc.privileges.split(',')
             sch, prc, arg = proc.key()
             if hasattr(proc, 'allargs') and proc.allargs == proc.arguments:
                 del proc.allargs
