@@ -41,7 +41,6 @@ class Cast(DbObject):
         :return: dictionary
         """
         dct = self._base_map()
-        del dct['name']
         dct['context'] = CONTEXTS[self.context]
         dct['method'] = METHODS[self.method]
         return dct

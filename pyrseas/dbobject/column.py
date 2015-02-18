@@ -52,15 +52,19 @@ class Column(DbSchemaObject):
                 stmt += ' DEFAULT ' + self.default
         if hasattr(self, 'collation') and self.collation != 'default':
             stmt += ' COLLATE "%s"' % self.collation
-        return (stmt, '' if self.description is None else self.comment())
+        return (stmt, '' if not hasattr(self, 'description')
+                else self.comment())
 
     def add_privs(self):
         """Generate SQL statements to grant privileges on new column
 
         :return: list of SQL statements
         """
-        return [add_grant(self._table, priv, self.name)
-                for priv in self.privileges]
+        stmts = []
+        if hasattr(self, 'privileges'):
+            for priv in self.privileges:
+                stmts.append(add_grant(self._table, priv, self.name))
+        return stmts
 
     def diff_privileges(self, incol):
         """Generate SQL statements to grant or revoke privileges
@@ -68,8 +72,12 @@ class Column(DbSchemaObject):
         :param incol: a YAML map defining the input column
         :return: list of SQL statements
         """
-        return [diff_privs(self._table, self.privileges, incol._table,
-                           incol.privileges, self.name)]
+        stmts = []
+        currprivs = self.privileges if hasattr(self, 'privileges') else {}
+        newprivs = incol.privileges if hasattr(incol, 'privileges') else {}
+        stmts.append(diff_privs(self._table, currprivs, incol._table, newprivs,
+                                self.name))
+        return stmts
 
     def comment(self):
         """Return a SQL COMMENT statement for the column
@@ -219,6 +227,8 @@ class ColumnDict(DbObjectDict):
         if self.dbconn.version < 90100:
             self.query = QUERY_PRE91
         for col in self.fetch():
+            if hasattr(col, 'privileges'):
+                col.privileges = col.privileges.split(',')
             sch, tbl = col.key()
             if (sch, tbl) not in self:
                 self[(sch, tbl)] = []
@@ -242,8 +252,8 @@ class ColumnDict(DbObjectDict):
                     arg = {'type': incol[key]}
                 col = Column(schema=table.schema, table=table.name, name=key,
                              **arg)
-                if len(col.privileges) > 0:
-                    if table.owner is None:
+                if hasattr(col, 'privileges'):
+                    if not hasattr(table, 'owner'):
                         raise ValueError("Column '%s.%s' has privileges but "
                                          "no owner information" % (
                                          table.name, key))

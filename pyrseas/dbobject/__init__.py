@@ -82,7 +82,7 @@ def commentable(func):
     @wraps(func)
     def add_comment(obj, *args, **kwargs):
         stmts = func(obj, *args, **kwargs)
-        if obj.description is not None:
+        if hasattr(obj, 'description'):
             stmts.append(obj.comment())
         return stmts
     return add_comment
@@ -93,8 +93,9 @@ def grantable(func):
     @wraps(func)
     def grant(obj, *args, **kwargs):
         stmts = func(obj, *args, **kwargs)
-        for priv in obj.privileges:
-            stmts.append(add_grant(obj, priv))
+        if hasattr(obj, 'privileges'):
+            for priv in obj.privileges:
+                stmts.append(add_grant(obj, priv))
         return stmts
     return grant
 
@@ -104,7 +105,8 @@ def ownable(func):
     @wraps(func)
     def add_alter(obj, *args, **kwargs):
         stmts = func(obj, *args, **kwargs)
-        stmts.append(obj.alter_owner())
+        if hasattr(obj, 'owner'):
+            stmts.append(obj.alter_owner())
         return stmts
     return add_alter
 
@@ -127,26 +129,15 @@ class DbObject(object):
 
     allprivs = ''
 
-    def __init__(self, name=None, description=None, owner=None,
-                 privileges=None, **attrs):
+    def __init__(self, **attrs):
         """Initialize the catalog object from a dictionary of attributes
 
-        :param name: name of object
-        :param description: comment text describing object
-        :param owner: name of user that owns the object
-        :param privileges: privileges on object
-        :param attrs: dictionary of other attributes
+        :param attrs: the dictionary of attributes
 
         Non-key attributes without a value are discarded. Values that
         are multi-line strings are treated specially so that YAML will
         output them in block style.
         """
-        self.name = name
-        self.description = description
-        self.owner = owner
-        if isinstance(privileges, strtypes):
-            privileges = privileges.split(',')
-        self.privileges = privileges or []
         for key, val in list(attrs.items()):
             if val or key in self.keylist:
                 if key in ['definition', 'description', 'source'] and \
@@ -271,14 +262,13 @@ class DbObject(object):
         dct = self.__dict__.copy()
         for key in self.keylist:
             del dct[key]
-        if self.description is None:
-            del dct['description']
-        if no_owner or self.owner is None:
+        if no_owner and hasattr(self, 'owner'):
             del dct['owner']
-        if len(self.privileges) == 0 or no_privs:
-            del dct['privileges']
-        else:
-            dct['privileges'] = self.map_privs()
+        if hasattr(self, 'privileges'):
+            if no_privs:
+                del dct['privileges']
+            else:
+                dct['privileges'] = self.map_privs()
         return dct
 
     def to_map(self, no_owner=False, no_privs=False):
@@ -301,8 +291,9 @@ class DbObject(object):
         :return: list
         """
         privlist = []
+        owner = self.owner if hasattr(self, 'owner') else ''
         for prv in self.privileges:
-            privlist.append(privileges_to_map(prv, self.allprivs, self.owner))
+            privlist.append(privileges_to_map(prv, self.allprivs, owner))
         return privlist
 
     def _comment_text(self):
@@ -310,7 +301,7 @@ class DbObject(object):
 
         :return: string
         """
-        if self.description is not None:
+        if hasattr(self, 'description'):
             return "'%s'" % self.description.replace("'", "''")
         else:
             return 'NULL'
@@ -328,11 +319,8 @@ class DbObject(object):
 
         :return: SQL statement
         """
-        if self.owner != owner:
-            return "ALTER %s %s OWNER TO %s" % (
-                self.objtype, self.identifier(), owner or self.owner)
-        else:
-            return []
+        return "ALTER %s %s OWNER TO %s" % (
+            self.objtype, self.identifier(), owner or self.owner)
 
     def drop(self):
         """Return SQL statement to DROP the object
@@ -362,7 +350,7 @@ class DbObject(object):
         comments.
         """
         stmts = []
-        if not no_owner and self.owner is not None and inobj.owner is not None:
+        if not no_owner and hasattr(inobj, 'owner') and hasattr(self, 'owner'):
             if inobj.owner != self.owner:
                 stmts.append(self.alter_owner(inobj.owner))
         stmts.append(self.diff_privileges(inobj))
@@ -375,7 +363,11 @@ class DbObject(object):
         :param inobj: a YAML map defining the input object
         :return: list of SQL statements
         """
-        return diff_privs(self, self.privileges, inobj, inobj.privileges)
+        stmts = []
+        currprivs = self.privileges if hasattr(self, 'privileges') else {}
+        newprivs = inobj.privileges if hasattr(inobj, 'privileges') else {}
+        stmts.append(diff_privs(self, currprivs, inobj, newprivs))
+        return stmts
 
     def diff_description(self, inobj):
         """Generate SQL statements to add or change COMMENTs
@@ -384,16 +376,16 @@ class DbObject(object):
         :return: list of SQL statements
         """
         stmts = []
-        if self.description is not None:
-            if inobj.description is not None:
+        if hasattr(self, 'description'):
+            if hasattr(inobj, 'description'):
                 if self.description != inobj.description:
                     self.description = inobj.description
                     stmts.append(self.comment())
             else:
-                self.description = None
+                del self.description
                 stmts.append(self.comment())
         else:
-            if inobj.description is not None:
+            if hasattr(inobj, 'description'):
                 self.description = inobj.description
                 stmts.append(self.comment())
         return stmts
@@ -401,21 +393,6 @@ class DbObject(object):
 
 class DbSchemaObject(DbObject):
     "A database object that is owned by a certain schema"
-
-    def __init__(self, schema, name, description=None, owner=None,
-                 privileges=None, **attrs):
-        """Initialize the catalog object from a dictionary of attributes
-
-        :param schema: name of the schema owning the object
-        :param name: name of object
-        :param description: comment text describing object
-        :param owner: name of user that owns the object
-        :param privileges: privileges on object
-        :param attrs: dictionary of other attributes
-        """
-        self.schema = schema
-        super(DbSchemaObject, self).__init__(name, description, owner,
-                                             privileges, **attrs)
 
     def identifier(self):
         """Return a full identifier for a schema object
@@ -500,6 +477,8 @@ class DbObjectDict(dict):
         This is may be overriden by derived classes as needed.
         """
         for obj in self.fetch():
+            if hasattr(obj, 'privileges'):
+                obj.privileges = obj.privileges.split(',')
             self[obj.key()] = obj
 
     def to_map(self,  opts):

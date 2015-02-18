@@ -126,7 +126,7 @@ class ForeignDataWrapper(DbObjectWithOptions):
         :return: list of SQL statements
         """
         stmts = super(ForeignDataWrapper, self).diff_map(inwrapper)
-        if inwrapper.owner is not None:
+        if hasattr(inwrapper, 'owner'):
             if inwrapper.owner != self.owner:
                 stmts.append(self.alter_owner(inwrapper.owner))
         stmts.append(self.diff_description(inwrapper))
@@ -320,7 +320,7 @@ class ForeignServer(DbObjectWithOptions):
         :return: list of SQL statements
         """
         stmts = super(ForeignServer, self).diff_map(inserver)
-        if inserver.owner is not None:
+        if hasattr(inserver, 'owner'):
             if inserver.owner != self.owner:
                 stmts.append(self.alter_owner(inserver.owner))
         stmts.append(self.diff_description(inserver))
@@ -449,14 +449,14 @@ class UserMapping(DbObjectWithOptions):
 
     objtype = "USER MAPPING"
 
-    keylist = ['wrapper', 'server', 'name']
+    keylist = ['wrapper', 'server', 'username']
 
     def extern_key(self):
         """Return the key to be used in external maps for this user mapping
 
         :return: string
         """
-        return self.name
+        return self.username
 
     def identifier(self):
         """Return a full identifier for a user mapping object
@@ -464,7 +464,7 @@ class UserMapping(DbObjectWithOptions):
         :return: string
         """
         return "FOR %s SERVER %s" % (
-            self.name == 'PUBLIC' and 'PUBLIC' or quote_id(self.name),
+            self.username == 'PUBLIC' and 'PUBLIC' or quote_id(self.username),
             quote_id(self.server))
 
     def create(self):
@@ -476,8 +476,8 @@ class UserMapping(DbObjectWithOptions):
         if hasattr(self, 'options'):
             options.append(self.options_clause())
         return ["CREATE USER MAPPING FOR %s\n    SERVER %s%s" % (
-                self.name == 'PUBLIC' and 'PUBLIC' or
-                quote_id(self.name), quote_id(self.server),
+                self.username == 'PUBLIC' and 'PUBLIC' or
+                quote_id(self.username), quote_id(self.server),
                 options and '\n    ' + ',\n    '.join(options) or '')]
 
 
@@ -488,7 +488,7 @@ class UserMappingDict(DbObjectDict):
     query = \
         """SELECT fdwname AS wrapper, s.srvname AS server,
                   CASE umuser WHEN 0 THEN 'PUBLIC' ELSE
-                  usename END AS name, umoptions AS options
+                  usename END AS username, umoptions AS options
            FROM pg_user_mappings u
                 JOIN pg_foreign_server s ON (u.srvid = s.oid)
                 JOIN pg_foreign_data_wrapper w ON (srvfdw = w.oid)
@@ -502,7 +502,7 @@ class UserMappingDict(DbObjectDict):
         """
         for key in inusermaps:
             usermap = UserMapping(wrapper=server.wrapper, server=server.name,
-                                  name=key)
+                                  username=key)
             inusermap = inusermaps[key]
             if inusermap:
                 for attr, val in list(inusermap.items()):
@@ -587,15 +587,13 @@ class ForeignTable(DbObjectWithOptions, Table):
             if col:
                 cols.append(col)
         tbl = {'columns': cols, 'server': self.server}
-        attrlist = ['options']
-        if self.description is not None:
-            attrlist.append('description')
+        attrlist = ['options', 'description']
         if not opts.no_owner:
             attrlist.append('owner')
         for attr in attrlist:
             if hasattr(self, attr):
                 tbl.update({attr: getattr(self, attr)})
-        if not opts.no_privs and self.privileges:
+        if not opts.no_privs and hasattr(self, 'privileges'):
             tbl.update({'privileges': self.map_privs()})
 
         return tbl
@@ -616,12 +614,12 @@ class ForeignTable(DbObjectWithOptions, Table):
         stmts.append("CREATE FOREIGN TABLE %s (\n%s)\n    SERVER %s%s" % (
             self.qualname(), ",\n".join(cols), self.server,
             options and '\n    ' + ',\n    '.join(options) or ''))
-        if self.owner is not None:
+        if hasattr(self, 'owner'):
             stmts.append(self.alter_owner())
-        if self.description is not None:
+        if hasattr(self, 'description'):
             stmts.append(self.comment())
         for col in self.columns:
-            if col.description is not None:
+            if hasattr(col, 'description'):
                 stmts.append(col.comment())
         return stmts
 
@@ -639,7 +637,7 @@ class ForeignTable(DbObjectWithOptions, Table):
         :return: list of SQL statements
         """
         stmts = super(ForeignTable, self).diff_map(intable)
-        if intable.owner is not None:
+        if hasattr(intable, 'owner'):
             if intable.owner != self.owner:
                 stmts.append(self.alter_owner(intable.owner))
         stmts.append(self.diff_description(intable))
@@ -669,6 +667,8 @@ class ForeignTableDict(ClassDict):
         if self.dbconn.version < 90100:
             return
         for tbl in self.fetch():
+            if hasattr(tbl, 'privileges'):
+                tbl.privileges = tbl.privileges.split(',')
             self[tbl.key()] = tbl
 
     def from_map(self, schema, inobjs, newdb):

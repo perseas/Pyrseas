@@ -124,7 +124,6 @@ class Database(object):
 
     def _link_refs(self, db):
         """Link related objects"""
-        langs = []
         if self.dbconn.version >= 90100:
             langs = [lang[0] for lang in self.dbconn.fetchall(
                 """SELECT lanname FROM pg_language l
