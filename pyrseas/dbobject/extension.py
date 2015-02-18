@@ -17,6 +17,12 @@ class Extension(DbObject):
     objtype = "EXTENSION"
     single_extern_file = True
 
+    def __init__(self, name, description, owner, schema, privileges=None,
+                 version=None):
+        super(Extension, self).__init__(name, description, owner, privileges)
+        self.schema = schema
+        self.version = version
+
     @commentable
     def create(self):
         """Return SQL statements to CREATE the extension
@@ -24,9 +30,10 @@ class Extension(DbObject):
         :return: SQL statements
         """
         opt_clauses = []
-        if hasattr(self, 'schema') and self.schema != 'public':
+        if self.schema is not None and self.schema not in (
+                'pg_catalog', 'public'):
             opt_clauses.append("SCHEMA %s" % quote_id(self.schema))
-        if hasattr(self, 'version'):
+        if self.version is not None:
             opt_clauses.append("VERSION '%s'" % self.version)
         return ["CREATE EXTENSION %s%s" % (
                 quote_id(self.name), ('\n    ' + '\n    '.join(opt_clauses))
@@ -66,11 +73,23 @@ class ExtensionDict(DbObjectDict):
                 raise KeyError("Unrecognized object type: %s" % key)
             ext = key[10:]
             inexten = inexts[key]
-            self[ext] = exten = Extension(name=ext)
-            for attr, val in list(inexten.items()):
-                setattr(exten, attr, val)
-            if exten.name in langtempls:
-                lang = {'language %s' % exten.name: {'_ext': 'e'}}
+            if 'description' in inexten:
+                description = inexten['description']
+            else:
+                description = None
+            if 'owner' in inexten:
+                owner = inexten['owner']
+            else:
+                owner = None
+            if 'version' in inexten:
+                version = inexten['version']
+            else:
+                version = None
+            self[ext] = Extension(name=ext, description=description,
+                                  owner=owner, schema=inexten['schema'],
+                                  version=version)
+            if self[ext].name in langtempls:
+                lang = {'language %s' % self[ext].name: {'_ext': 'e'}}
                 newdb.languages.from_map(lang)
 
     def diff_map(self, inexts):

@@ -106,8 +106,8 @@ class ExtensionToSqlTestCase(InputMapToSqlTestCase):
         if self.db.version < 90100:
             self.skipTest('Only available on PG 9.1')
         inmap = self.std_map()
-        inmap.update({'extension plperl': {
-            'description': "PL/Perl procedural language"}})
+        inmap.update({'extension plperl': {'schema': 'pg_catalog',
+                      'description': "PL/Perl procedural language"}})
         inmap['schema public'].update({'function f1()': {
             'language': 'plperl', 'returns': 'text',
             'source': "return \"dummy\";"}})
@@ -137,6 +137,7 @@ class ExtensionToSqlTestCase(InputMapToSqlTestCase):
         # create a new owner that is different from self.db.user
         new_owner = 'new_%s' % self.db.user
         inmap = self.std_map()
-        inmap.update({'extension pg_trgm': {'schema': 'public', 'owner': new_owner}})
+        inmap.update({'extension pg_trgm': {'schema': 'public',
+                                            'owner': new_owner}})
         sql = self.to_sql(inmap, [CREATE_STMT], superuser=True)
         assert 'ALTER EXTENSION pg_trgm OWNER TO %s' % new_owner not in sql
