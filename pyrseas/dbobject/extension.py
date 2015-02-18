@@ -73,21 +73,11 @@ class ExtensionDict(DbObjectDict):
                 raise KeyError("Unrecognized object type: %s" % key)
             ext = key[10:]
             inexten = inexts[key]
-            if 'description' in inexten:
-                description = inexten['description']
-            else:
-                description = None
-            if 'owner' in inexten:
-                owner = inexten['owner']
-            else:
-                owner = None
-            if 'version' in inexten:
-                version = inexten['version']
-            else:
-                version = None
-            self[ext] = Extension(name=ext, description=description,
-                                  owner=owner, schema=inexten['schema'],
-                                  version=version)
+            self[ext] = Extension(name=ext,
+                                  description=inexten.get('description'),
+                                  owner=inexten.get('owner'),
+                                  schema=inexten['schema'],
+                                  version=inexten.get('version'))
             if self[ext].name in langtempls:
                 lang = {'language %s' % self[ext].name: {'_ext': 'e'}}
                 newdb.languages.from_map(lang)
