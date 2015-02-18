@@ -176,6 +176,18 @@ class ColumnToSqlTestCase(InputMapToSqlTestCase):
         assert sql[3] == "ALTER TABLE s1.t1 ALTER COLUMN c1 " \
             "SET DEFAULT nextval('s1.t1_c1_seq'::regclass)"
 
+    def test_change_column_default(self):
+        "Change the default value for an existing column"
+        stmt = "CREATE TABLE t1 (c1 integer, c2 boolean default true)"
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+            'columns': [{'c1': {'type': 'integer'}},
+                        {'c2': {'type': 'boolean', 'default': 'false'}}]}})
+        sql = self.to_sql(inmap, [stmt])
+        print(sql)
+        assert fix_indent(sql[0]) == \
+            "ALTER TABLE t1 ALTER COLUMN c2 SET DEFAULT false"
+
     def test_set_column_not_null(self):
         "Change a nullable column to NOT NULL"
         inmap = self.std_map()

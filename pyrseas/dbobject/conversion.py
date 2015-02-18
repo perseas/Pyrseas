@@ -38,12 +38,13 @@ class ConversionDict(DbObjectDict):
 
     cls = Conversion
     query = \
-        """SELECT nspname AS schema, conname AS name,
+        """SELECT nspname AS schema, conname AS name, rolname AS owner,
                   pg_encoding_to_char(c.conforencoding) AS source_encoding,
                   pg_encoding_to_char(c.contoencoding) AS dest_encoding,
                   conproc AS function, condefault AS default,
                   obj_description(c.oid, 'pg_conversion') AS description
            FROM pg_conversion c
+                JOIN pg_roles r ON (r.oid = conowner)
                 JOIN pg_namespace n ON (connamespace = n.oid)
            WHERE (nspname != 'pg_catalog' AND nspname != 'information_schema')
            ORDER BY nspname, conname"""

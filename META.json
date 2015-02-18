@@ -1,14 +1,14 @@
 {
    "name": "Pyrseas",
    "abstract": "Framework and utilities to upgrade and maintain databases",
-   "description": "Pyrseas provides a framework and utilities to upgrade and maintain a PostgreSQL database.  Its utilities output a database schema in YAML format suitable for committing to a version control system and read this format to generate SQL to sync to another database.  Supports PostgreSQL 8.4, 9.0, 9.1, 9.2 and 9.3.",
-   "version": "0.7.1",
+   "description": "Pyrseas provides a framework and utilities to upgrade and maintain a PostgreSQL database.  Its utilities output a database schema in YAML format suitable for committing to a version control system and read this format to generate SQL to sync to another database.  Supports PostgreSQL 9.0, 9.1, 9.2, 9.3 and 9.4.",
+   "version": "0.7.2",
    "maintainer": "Joe Abbate <jma@freedomcircle.com>",
    "license": "bsd",
    "prereqs": {
       "runtime": {
          "requires": {
-            "PostgreSQL": "8.4.0"
+            "PostgreSQL": "9.0.0"
          }
       }
    },
@@ -16,24 +16,24 @@
      "dbtoyaml": {
        "file": "pyrseas/dbtoyaml.py",
        "docfile": "docs/dbtoyaml.rst",
-       "version": "0.7.1",
+       "version": "0.7.2",
        "abstract": "Output PostgreSQL schemas in YAML format"
      },
      "yamltodb": {
        "file": "pyrseas/yamltodb.py",
        "docfile": "docs/yamltodb.rst",
-       "version": "0.7.1",
+       "version": "0.7.2",
        "abstract": "Generate SQL to sync a database with a YAML schema spec"
      }
    },
    "resources": {
       "homepage": "http://pyrseas.projects.pgfoundry.org/",
       "bugtracker": {
-         "web": "https://github.com/jmafc/Pyrseas/issues"
+         "web": "https://github.com/perseas/Pyrseas/issues"
       },
       "repository": {
-        "url":  "git://github.com/jmafc/Pyrseas.git",
-        "web":  "https://github.com/jmafc/Pyrseas",
+        "url":  "git://github.com/perseas/Pyrseas.git",
+        "web":  "https://github.com/perseas/Pyrseas",
         "type": "git"
       }
    },
