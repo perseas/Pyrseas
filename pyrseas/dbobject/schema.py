@@ -52,7 +52,7 @@ class Schema(DbObject):
         schbase = {} if no_owner else {'owner': self.owner}
         if not no_privs and hasattr(self, 'privileges'):
             schbase.update({'privileges': self.map_privs()})
-        if hasattr(self, 'description'):
+        if self.description is not None:
             schbase.update(description=self.description)
 
         schobjs = []

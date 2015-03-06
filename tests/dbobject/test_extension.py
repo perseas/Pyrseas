@@ -2,7 +2,6 @@
 """Test extensions"""
 
 import pytest
-import psycopg2
 
 from pyrseas.testutils import DatabaseToMapTestCase
 from pyrseas.testutils import InputMapToSqlTestCase, fix_indent
@@ -56,13 +55,12 @@ class ExtensionToMapTestCase(DatabaseToMapTestCase):
 
     def test_map_extension_bug_103(self):
         "Test a function created with extension other than plpgsql/plperl"
-        try:
-            self.to_map(["CREATE EXTENSION plpythonu"])
-        except psycopg2.OperationalError as e:
-            self.skipTest("plpython installation failed: %s" % e)
-        m = self.to_map(["CREATE FUNCTION test103() RETURNS int AS "
-                         "'return 1' LANGUAGE plpythonu"])
-        assert 'extension plpythonu' in m
+        if self.db.version < 90100:
+            self.skipTest('Only available on PG 9.1')
+        dbmap = self.to_map(["CREATE EXTENSION plpythonu",
+                             "CREATE FUNCTION test103() RETURNS int AS "
+                             "'return 1' LANGUAGE plpythonu"])
+        assert 'extension plpythonu' in dbmap
 
 
 class ExtensionToSqlTestCase(InputMapToSqlTestCase):
@@ -108,7 +106,7 @@ class ExtensionToSqlTestCase(InputMapToSqlTestCase):
         if self.db.version < 90100:
             self.skipTest('Only available on PG 9.1')
         inmap = self.std_map()
-        inmap.update({'extension plperl': {
+        inmap.update({'extension plperl': {'schema': 'pg_catalog',
             'description': "PL/Perl procedural language"}})
         inmap['schema public'].update({'function f1()': {
             'language': 'plperl', 'returns': 'text',
@@ -139,6 +137,7 @@ class ExtensionToSqlTestCase(InputMapToSqlTestCase):
         # create a new owner that is different from self.db.user
         new_owner = 'new_%s' % self.db.user
         inmap = self.std_map()
-        inmap.update({'extension pg_trgm': {'schema': 'public', 'owner': new_owner}})
+        inmap.update({'extension pg_trgm': {'schema': 'public',
+                                            'owner': new_owner}})
         sql = self.to_sql(inmap, [CREATE_STMT], superuser=True)
         assert 'ALTER EXTENSION pg_trgm OWNER TO %s' % new_owner not in sql

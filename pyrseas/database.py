@@ -148,7 +148,7 @@ class Database(object):
                 # cycle of this object as trying and catching KeyError on it is
                 # *very* expensive!
                 for _, d in self.alldicts():
-                    for obj in d.itervalues():
+                    for obj in list(d.values()):
                         self._by_extkey[obj.extern_key()] = obj
 
                 return self._by_extkey[extkey]
@@ -159,7 +159,7 @@ class Database(object):
             :return: list of (dict name, dict) for every database dict.
             """
             rv = []
-            for attr in dir(self):
+            for attr in self.__dict__:
                 d = getattr(self, attr)
                 if isinstance(d, DbObjectDict):
                     # skip this as not needed for dependency tracking
@@ -170,8 +170,8 @@ class Database(object):
 
             # first return the dicts for non-schema objects, then the
             # others, each group sorted alphabetically.
-            rv.sort(key=lambda (attr, d):
-                (issubclass(d.cls, DbSchemaObject), d.cls.objtype))
+            rv.sort(key=lambda pair: (issubclass(pair[1].cls, DbSchemaObject),
+                                      pair[1].cls.objtype))
 
             return rv
 
@@ -203,6 +203,7 @@ class Database(object):
 
     def _link_refs(self, db):
         """Link related objects"""
+        langs = []
         if self.dbconn.version >= 90100:
             langs = [lang[0] for lang in self.dbconn.fetchall(
                 """SELECT lanname FROM pg_language l
@@ -294,7 +295,7 @@ class Database(object):
                 """):
             deps[r[0], r[1]].append((r[2], r[3]))
 
-        for (stbl, soid), deps in deps.iteritems():
+        for (stbl, soid), deps in list(deps.items()):
             sdict = db.dict_from_table(stbl)
             if sdict is None:
                 continue
@@ -454,10 +455,10 @@ class Database(object):
             if os.path.exists(dbfilepath):
                 with open(dbfilepath, 'r') as f:
                     objmap = yaml.safe_load(f)
-                for obj, val in objmap.items():
+                for obj, val in list(objmap.items()):
                     if isinstance(val, dict):
                         dirpath = ''
-                        for schobj, fpath in val.items():
+                        for schobj, fpath in list(val.items()):
                             filepath = os.path.join(opts.metadata_dir, fpath)
                             if os.path.exists(filepath):
                                 os.remove(filepath)
@@ -503,7 +504,7 @@ class Database(object):
         opts = self.config['options']
         if opts.schemas:
             schlist = ['schema ' + sch for sch in opts.schemas]
-            for sch in input_map.keys():
+            for sch in list(input_map.keys()):
                 if sch not in schlist and sch.startswith('schema '):
                     del input_map[sch]
             self._trim_objects(opts.schemas)
@@ -523,9 +524,9 @@ class Database(object):
         # First sort the objects in the new db in dependency order
         new_objs = []
         for _, d in self.ndb.alldicts():
-            pairs = d.items()
+            pairs = list(d.items())
             pairs.sort()
-            new_objs.extend(map(itemgetter(1), pairs))
+            new_objs.extend(list(map(itemgetter(1), pairs)))
 
         new_objs = self.dep_sorted(new_objs, self.ndb)
 
@@ -537,23 +538,23 @@ class Database(object):
             d = self.db.dict_from_table(new.catalog_table)
             old = d.get(new.key())
             if old is not None:
-                stmts.append(new.alter_sql(old))
+                stmts.append(old.alter_sql(new))
             else:
                 stmts.append(new.create_sql())
 
         # Order the old database objects in reverse dependency order
         old_objs = []
         for _, d in self.db.alldicts():
-            pairs = d.items()
+            pairs = list(d.items())
             pairs.sort
-            old_objs.extend(map(itemgetter(1), pairs))
+            old_objs.extend(list(map(itemgetter(1), pairs)))
         old_objs = self.dep_sorted(old_objs, self.db)
         old_objs.reverse()
 
         # Drop the objects that don't appear in the new db
         for old in old_objs:
             d = self.ndb.dict_from_table(old.catalog_table)
-            if old.key not in d:
+            if old.key() not in d:
                 stmts.extend(old.drop_sql())
 
         if 'datacopy' in self.config:

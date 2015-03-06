@@ -18,6 +18,27 @@ class Extension(DbObject):
     single_extern_file = True
     catalog_table = 'pg_extension'
 
+    def __init__(self, name, description, owner, schema, privileges=None,
+                 version=None, oid=None):
+        super(Extension, self).__init__(name, description, owner, privileges)
+        self.schema = schema
+        self.version = version
+        self.oid = oid
+
+    def get_implied_deps(self, db):
+        """Return the implied dependencies of the object
+
+        :param db: the database where this object exists
+        :return: set of `DbObject`
+        """
+        deps = super(Extension, self).get_implied_deps(db)
+        if self.schema is not None:
+            s = db.schemas.get(self.schema)
+            if s:
+                deps.add(s)
+
+        return deps
+
     @commentable
     def create(self):
         """Return SQL statements to CREATE the extension
@@ -25,13 +46,17 @@ class Extension(DbObject):
         :return: SQL statements
         """
         opt_clauses = []
-        if hasattr(self, 'schema') and self.schema != 'public':
+        if self.schema is not None and self.schema not in (
+                'pg_catalog', 'public'):
             opt_clauses.append("SCHEMA %s" % quote_id(self.schema))
-        if hasattr(self, 'version'):
+        if self.version is not None:
             opt_clauses.append("VERSION '%s'" % self.version)
         return ["CREATE EXTENSION %s%s" % (
                 quote_id(self.name), ('\n    ' + '\n    '.join(opt_clauses))
                 if opt_clauses else '')]
+
+    def alter_sql(self, inobj, no_owner=True):
+        return super(Extension, self).alter_sql(inobj, no_owner=no_owner)
 
     def drop_sql(self):
         # TODO: this should not be special-cased -- see Language
@@ -75,12 +100,11 @@ class ExtensionDict(DbObjectDict):
                 raise KeyError("Unrecognized object type: %s" % key)
             ext = key[10:]
             inexten = inexts[key]
-            self[ext] = exten = Extension(name=ext)
-            for attr, val in list(inexten.items()):
-                setattr(exten, attr, val)
-            if exten.name in langtempls:
-                lang = {'language %s' % exten.name: {'_ext': 'e'}}
+            self[ext] = Extension(name=ext,
+                                  description=inexten.get('description'),
+                                  owner=inexten.get('owner'),
+                                  schema=inexten['schema'],
+                                  version=inexten.get('version'))
+            if self[ext].name in langtempls:
+                lang = {'language %s' % self[ext].name: {'_ext': 'e'}}
                 newdb.languages.from_map(lang)
-
-    def alter_sql(self, inobj, no_owner=True):
-        return super(Extension, self).alter_sql(inobj, no_owner=no_owner)

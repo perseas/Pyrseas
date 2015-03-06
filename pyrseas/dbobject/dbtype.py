@@ -262,7 +262,7 @@ class Domain(DbType):
 
 
 QUERY_PRE92 = \
-    """SELECT nspname AS schema, typname AS name, typtype AS kind,
+    """SELECT t.oid, nspname AS schema, typname AS name, typtype AS kind,
               format_type(typbasetype, typtypmod) AS type,
               typnotnull AS not_null, typdefault AS default,
               ARRAY(SELECT enumlabel FROM pg_enum e WHERE t.oid = enumtypid

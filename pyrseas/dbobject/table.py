@@ -193,8 +193,8 @@ class Sequence(DbClass):
         if stmt:
             stmts.append("ALTER SEQUENCE %s" % self.qualname() + stmt)
 
-        if hasattr(inseq, 'owner'):
-            if hasattr(self, 'owner') and inseq.owner != self.owner:
+        if inseq.owner is not None:
+            if self.owner is not None and inseq.owner != self.owner:
                 stmts.append(self.alter_owner(inseq.owner))
         stmts.append(self.diff_privileges(inseq))
         stmts.append(self.diff_description(inseq))
@@ -320,17 +320,16 @@ class Table(DbClass):
         stmts.append("CREATE %sTABLE %s (\n%s)%s%s%s" % (
             unlogged, self.qualname(), ",\n".join(cols), inhclause, opts,
             tblspc))
-        if hasattr(self, 'owner'):
+        if self.owner is not None:
             stmts.append(self.alter_owner())
-        if hasattr(self, 'privileges'):
-            for priv in self.privileges:
-                stmts.append(add_grant(self, priv))
+        for priv in self.privileges:
+            stmts.append(add_grant(self, priv))
         if colprivs:
             stmts.append(colprivs)
-        if hasattr(self, 'description'):
+        if self.description is not None:
             stmts.append(self.comment())
         for col in self.columns:
-            if hasattr(col, 'description'):
+            if col.description is not None:
                 stmts.append(col.comment())
         self.created = True
         return stmts
@@ -432,7 +431,7 @@ class Table(DbClass):
         if diff_opts:
             stmts.append("ALTER %s %s %s" % (self.objtype, self.identifier(),
                                              diff_opts))
-        if hasattr(intable, 'owner'):
+        if intable.owner is not None:
             if intable.owner != self.owner:
                 stmts.append(self.alter_owner(intable.owner))
         stmts.append(self.diff_privileges(intable))
@@ -565,7 +564,7 @@ class View(DbClass):
         stmts = []
         if self.definition != inview.definition:
             stmts.append(self.create(inview.definition))
-        if hasattr(inview, 'owner'):
+        if inview.owner is not None:
             if inview.owner != self.owner:
                 stmts.append(self.alter_owner(inview.owner))
         stmts.append(self.diff_privileges(inview))
@@ -625,7 +624,7 @@ class MaterializedView(View):
         stmts = []
         if self.definition != inview.definition:
             stmts.append(self.create(inview.definition))
-        if hasattr(inview, 'owner'):
+        if inview.owner is not None:
             if inview.owner != self.owner:
                 stmts.append(self.alter_owner(inview.owner))
         stmts.append(self.diff_privileges(inview))
@@ -710,8 +709,6 @@ class ClassDict(DbObjectDict):
         for table in self.fetch():
             oid = table.oid
             sch, tbl = table.key()
-            if hasattr(table, 'privileges'):
-                table.privileges = table.privileges.split(',')
             if hasattr(table, 'persistence'):
                 if table.persistence == 'u':
                     table.unlogged = True
@@ -807,7 +804,7 @@ class ClassDict(DbObjectDict):
                 raise KeyError("Unrecognized object type: %s" % k)
             obj = self[(schema.name, key)]
             if 'privileges' in inobj:
-                    if not hasattr(obj, 'owner'):
+                    if obj.owner is None:
                         raise ValueError("%s '%s' has privileges but no "
                                          "owner information" %
                                          obj.objtype.capital(), table.name)

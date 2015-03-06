@@ -41,7 +41,7 @@ class Language(DbObject):
             stmts.append("CREATE LANGUAGE %s" % quote_id(self.name))
             if hasattr(self, 'owner'):
                 stmts.append(self.alter_owner())
-            if hasattr(self, 'description'):
+            if self.description is not None:
                 stmts.append(self.comment())
         return stmts
 

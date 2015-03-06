@@ -38,7 +38,7 @@ class ConversionDict(DbObjectDict):
 
     cls = Conversion
     query = \
-        """SELECT nspname AS schema, conname AS name, rolname AS owner,
+        """SELECT c.oid, nspname AS schema, conname AS name, rolname AS owner,
                   pg_encoding_to_char(c.conforencoding) AS source_encoding,
                   pg_encoding_to_char(c.contoencoding) AS dest_encoding,
                   conproc AS function, condefault AS default,
