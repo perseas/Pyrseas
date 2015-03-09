@@ -139,9 +139,8 @@ class Function(Proc):
                 t._shell_created = True
                 stmts.append("CREATE TYPE %s" % t.qualname())
 
-        if not hasattr(Function, '_body_check_disabled'):
-            Function._body_check_disabled = True
-            stmts.append('SET check_function_bodies = false')
+        # TODO: Add a single "SET check_function_bodies = false"
+        #       before the first CREATE FUNCTION
 
         args = self.allargs if hasattr(self, 'allargs') else self.arguments
         stmts.append("CREATE%s FUNCTION %s(%s) RETURNS %s\n    LANGUAGE %s"
@@ -251,6 +250,19 @@ class Aggregate(Proc):
                 self.qualname(),
                 self.arguments, self.sfunc, self.stype,
                 opt_clauses and ',\n    ' or '', ',\n    '.join(opt_clauses))]
+
+    def get_implied_deps(self, db):
+        # List the previous dependencies
+        deps = super(Aggregate, self).get_implied_deps(db)
+
+        sch, fnc = split_schema_obj(self.sfunc)
+        args = self.stype + ', ' + self.arguments
+        deps.add(db.functions[sch, fnc, args])
+        if hasattr(self, 'finalfunc'):
+            sch, fnc = split_schema_obj(self.finalfunc)
+            deps.add(db.functions[sch, fnc, self.stype])
+
+        return deps
 
 QUERY_PRE92 = \
     """SELECT p.oid,
