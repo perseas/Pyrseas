@@ -14,7 +14,6 @@ class Extension(DbObject):
     """An extension"""
 
     keylist = ['name']
-    objtype = "EXTENSION"
     single_extern_file = True
     catalog_table = 'pg_extension'
 

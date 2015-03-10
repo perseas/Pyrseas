@@ -171,7 +171,7 @@ class Database(object):
             # first return the dicts for non-schema objects, then the
             # others, each group sorted alphabetically.
             rv.sort(key=lambda pair: (issubclass(pair[1].cls, DbSchemaObject),
-                                      pair[1].cls.objtype))
+                                      pair[1].cls.__name__))
 
             return rv
 

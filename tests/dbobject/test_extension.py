@@ -113,8 +113,8 @@ class ExtensionToSqlTestCase(InputMapToSqlTestCase):
             'source': "return \"dummy\";"}})
         sql = self.to_sql(inmap)
         assert fix_indent(sql[0]) == "CREATE EXTENSION plperl"
-        # skip over COMMENT and SET statements
-        assert fix_indent(sql[3]) == "CREATE FUNCTION f1() RETURNS text " \
+        # skip over COMMENT statement
+        assert fix_indent(sql[2]) == "CREATE FUNCTION f1() RETURNS text " \
             "LANGUAGE plperl AS $_$return \"dummy\";$_$"
 
     def test_comment_extension(self):

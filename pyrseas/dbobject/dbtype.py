@@ -5,7 +5,7 @@
 
     This module defines six classes: DbType derived from
     DbSchemaObject, BaseType, Composite, Domain and Enum derived from
-    DbType, and DbTypeDict derived from DbObjectDict.
+    DbType, and TypeDict derived from DbObjectDict.
 """
 
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
@@ -22,8 +22,11 @@ class DbType(DbSchemaObject):
     """A composite, domain or enum type"""
 
     keylist = ['schema', 'name']
-    objtype = "TYPE"
     catalog_table = 'pg_type'
+
+    @property
+    def objtype(self):
+        return "TYPE"
 
 
 class BaseType(DbType):
@@ -198,7 +201,9 @@ class Enum(DbType):
 class Domain(DbType):
     "A domain definition"
 
-    objtype = "DOMAIN"
+    @property
+    def objtype(self):
+        return "DOMAIN"
 
     def to_map(self, db, no_owner):
         """Convert a domain to a YAML-suitable format

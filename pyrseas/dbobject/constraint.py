@@ -97,7 +97,9 @@ class Constraint(DbSchemaObject):
 class CheckConstraint(Constraint):
     "A check constraint definition"
 
-    objtype = "CHECK"
+    @property
+    def objtype(self):
+        return "CHECK"
 
     def to_map(self, db, dbcols):
         """Convert a check constraint definition to a YAML-suitable format
@@ -156,7 +158,9 @@ class CheckConstraint(Constraint):
 class PrimaryKey(Constraint):
     "A primary key constraint definition"
 
-    objtype = "PRIMARY KEY"
+    @property
+    def objtype(self):
+        return "PRIMARY KEY"
 
     def to_map(self, db, dbcols):
         """Convert a primary key definition to a YAML-suitable format
@@ -197,7 +201,9 @@ class PrimaryKey(Constraint):
 class ForeignKey(Constraint):
     "A foreign key constraint definition"
 
-    objtype = "FOREIGN KEY"
+    @property
+    def objtype(self):
+        return "FOREIGN KEY"
 
     def ref_columns(self):
         """Return comma-separated list of reference column names
@@ -305,7 +311,9 @@ class ForeignKey(Constraint):
 class UniqueConstraint(Constraint):
     "A unique constraint definition"
 
-    objtype = "UNIQUE"
+    @property
+    def objtype(self):
+        return "UNIQUE"
 
     def to_map(self, db, dbcols):
         """Convert a unique constraint definition to a YAML-suitable format

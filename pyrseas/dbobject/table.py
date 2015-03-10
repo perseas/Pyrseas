@@ -46,8 +46,6 @@ class DbClass(DbSchemaObject):
 class Sequence(DbClass):
     "A sequence generator definition"
 
-    objtype = "SEQUENCE"
-
     @property
     def allprivs(self):
         return 'rwU'
@@ -209,8 +207,6 @@ class Table(DbClass):
     foreign_keys, zero or more unique_constraints, and zero or more
     indexes.
     """
-
-    objtype = "TABLE"
 
     @property
     def allprivs(self):
@@ -513,7 +509,6 @@ class View(DbClass):
     A view is identified by its schema name and view name.
     """
 
-    objtype = "VIEW"
     privobjtype = "TABLE"
 
     @property
@@ -578,7 +573,9 @@ class MaterializedView(View):
     A materialized view is identified by its schema name and view name.
     """
 
-    objtype = "MATERIALIZED VIEW"
+    @property
+    def objtype(self):
+        return "MATERIALIZED VIEW"
 
     def to_map(self, db, opts):
         """Convert a materialized view to a YAML-suitable format

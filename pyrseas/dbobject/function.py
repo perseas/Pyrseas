@@ -61,8 +61,6 @@ class Proc(DbSchemaObject):
 class Function(Proc):
     """A procedural language function"""
 
-    objtype = "FUNCTION"
-
     def to_map(self, db, no_owner, no_privs):
         """Convert a function to a YAML-suitable format
 
@@ -216,8 +214,6 @@ class Function(Proc):
 
 class Aggregate(Proc):
     """An aggregate function"""
-
-    objtype = "AGGREGATE"
 
     def to_map(self, db, no_owner, no_privs):
         """Convert an agggregate to a YAML-suitable format

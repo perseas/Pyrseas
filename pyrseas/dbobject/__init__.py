@@ -136,12 +136,16 @@ class DbObject(object):
     See description of :meth:`key` for further details.
     """
 
-    objtype = ''
-    """Type of object as an uppercase string, for SQL syntax generation
+    @property
+    def objtype(self):
+        """Type of object as an uppercase string, for SQL syntax generation
 
-    This is used in most CREATE, ALTER and DROP statements.  It is
-    also used by :meth:`extern_key` in lowercase form.
-    """
+        This is used in most CREATE, ALTER and DROP statements.  It is
+        also used by :meth:`extern_key` in lowercase form.
+        """
+        if self._objtype is None:
+            self._objtype = self.__class__.__name__.upper()
+        return self._objtype
 
     catalog_table = None
     """The name of the catalog table where these objects live
@@ -170,6 +174,7 @@ class DbObject(object):
             privileges = privileges.split(',')
         self.privileges = privileges or []
         self.depends_on = []
+        self._objtype = None
 
         for key, val in list(attrs.items()):
             if val or key in self.keylist:

@@ -46,7 +46,8 @@ class CollationToMapTestCase(DatabaseToMapTestCase):
         dbmap = self.to_map(
             [CREATE_STMT, "CREATE TABLE t1 (c1 integer, c2 text COLLATE c1)"])
         expmap = {'columns': [{'c1': {'type': 'integer'}},
-                              {'c2': {'type': 'text', 'collation': 'c1'}}]}
+                              {'c2': {'type': 'text', 'collation': 'c1'}}],
+                  'depends_on': ['collation c1']}
         assert dbmap['schema public']['table t1'] == expmap
 
     def test_index_collation(self):
@@ -59,7 +60,8 @@ class CollationToMapTestCase(DatabaseToMapTestCase):
         expmap = {'columns': [{'c1': {'type': 'integer'}},
                               {'c2': {'type': 'text'}}],
                   'indexes': {'t1_idx': {
-                  'keys': [{'c2': {'collation': 'c1'}}]}}}
+                      'keys': [{'c2': {'collation': 'c1'}}],
+                      'depends_on': ['collation c1']}}}
         assert dbmap['schema public']['table t1'] == expmap
 
 

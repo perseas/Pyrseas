@@ -22,7 +22,6 @@ class Schema(DbObject):
     views, triggers and other schema objects."""
 
     keylist = ['name']
-    objtype = 'SCHEMA'
     catalog_table = 'pg_namespace'
 
     @property

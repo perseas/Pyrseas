@@ -102,9 +102,9 @@ class CastToSqlTestCase(InputMapToSqlTestCase):
             'returns': 'boolean', 'language': 'sql', 'immutable': True,
             'source': SOURCE}})
         sql = self.to_sql(inmap, [DROP_STMT])
-        # sql[0] -> SET, sql[1] -> CREATE FUNCTION
-        assert fix_indent(sql[2]) == CREATE_STMT1
-        assert sql[3] == COMMENT_STMT
+        # sql[0] -> CREATE FUNCTION
+        assert fix_indent(sql[1]) == CREATE_STMT1
+        assert sql[2] == COMMENT_STMT
 
     def test_comment_on_cast(self):
         "Create a comment for an existing cast"

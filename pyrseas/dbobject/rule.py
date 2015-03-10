@@ -14,7 +14,6 @@ class Rule(DbSchemaObject):
     """A rewrite rule definition"""
 
     keylist = ['schema', 'table', 'name']
-    objtype = "RULE"
     catalog_table = 'pg_rewrite'
 
     def identifier(self):

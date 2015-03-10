@@ -14,7 +14,6 @@ class Language(DbObject):
     """A procedural language definition"""
 
     keylist = ['name']
-    objtype = "LANGUAGE"
     single_extern_file = True
     catalog_table = 'pg_language'
 

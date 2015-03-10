@@ -18,7 +18,6 @@ class Cast(DbObject):
     """A cast"""
 
     keylist = ['source', 'target']
-    objtype = "CAST"
     single_extern_file = True
     catalog_table = 'pg_cast'
 

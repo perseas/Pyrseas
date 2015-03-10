@@ -15,7 +15,6 @@ class Operator(DbSchemaObject):
     """An operator"""
 
     keylist = ['schema', 'name', 'leftarg', 'rightarg']
-    objtype = "OPERATOR"
     single_extern_file = True
     catalog_table = 'pg_operator'
 

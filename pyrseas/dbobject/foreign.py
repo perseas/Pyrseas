@@ -78,9 +78,12 @@ class DbObjectWithOptions(DbObject):
 class ForeignDataWrapper(DbObjectWithOptions):
     """A foreign data wrapper definition"""
 
-    objtype = "FOREIGN DATA WRAPPER"
     single_extern_file = True
     catalog_table = 'pg_foreign_data_wrapper'
+
+    @property
+    def objtype(self):
+        return "FOREIGN DATA WRAPPER"
 
     @property
     def allprivs(self):
@@ -263,10 +266,13 @@ class ForeignDataWrapperDict(DbObjectDict):
 class ForeignServer(DbObjectWithOptions):
     """A foreign server definition"""
 
-    objtype = "SERVER"
     privobjtype = "FOREIGN SERVER"
     keylist = ['wrapper', 'name']
     catalog_table = 'pg_foreign_server'
+
+    @property
+    def objtype(self):
+        return "SERVER"
 
     @property
     def allprivs(self):
@@ -451,10 +457,12 @@ class ForeignServerDict(DbObjectDict):
 class UserMapping(DbObjectWithOptions):
     """A user mapping definition"""
 
-    objtype = "USER MAPPING"
-
     keylist = ['wrapper', 'server', 'username']
     catalog_table = 'pg_user_mappings'
+
+    @property
+    def objtype(self):
+        return "USER MAPPING"
 
     def extern_key(self):
         """Return the key to be used in external maps for this user mapping
@@ -573,9 +581,12 @@ class UserMappingDict(DbObjectDict):
 class ForeignTable(DbObjectWithOptions, Table):
     """A foreign table definition"""
 
-    objtype = "FOREIGN TABLE"
     privobjtype = "TABLE"
     catalog_table = 'pg_foreign_table'
+
+    @property
+    def objtype(self):
+        return "FOREIGN TABLE"
 
     def to_map(self, db, opts):
         """Convert a foreign table to a YAML-suitable format

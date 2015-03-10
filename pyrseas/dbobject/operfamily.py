@@ -14,9 +14,12 @@ class OperatorFamily(DbSchemaObject):
     """An operator family"""
 
     keylist = ['schema', 'name', 'index_method']
-    objtype = "OPERATOR FAMILY"
     single_extern_file = True
     catalog_table = 'pg_opfamily'
+
+    @property
+    def objtype(self):
+        return "OPERATOR FAMILY"
 
     def extern_key(self):
         """Return the key to be used in external maps for the operator family

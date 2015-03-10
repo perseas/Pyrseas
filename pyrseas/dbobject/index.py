@@ -47,7 +47,6 @@ class Index(DbSchemaObject):
     """
 
     keylist = ['schema', 'table', 'name']
-    objtype = "INDEX"
     catalog_table = 'pg_index'
 
     def key_expressions(self):
@@ -163,6 +162,7 @@ class Index(DbSchemaObject):
 
         # add the table we are defined into
         deps.add(db.tables[self.schema, self.table])
+        # TODO: add column collation specs if present
 
         return deps
 

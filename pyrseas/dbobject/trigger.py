@@ -17,7 +17,6 @@ class Trigger(DbSchemaObject):
     """A procedural language trigger"""
 
     keylist = ['schema', 'table', 'name']
-    objtype = "TRIGGER"
     catalog_table = 'pg_trigger'
 
     def identifier(self):
