@@ -82,9 +82,12 @@ class TextSearchConfigToSqlTestCase(InputMapToSqlTestCase):
     def test_create_ts_config(self):
         "Create a text search configuration that didn't exist"
         inmap = self.std_map()
-        inmap['schema public'].update({'text search configuration tsc1': {
-            'parser': 'tsp1'}})
-        sql = self.to_sql(inmap)
+        inmap['schema public'].update({'text search parser tsp1': {
+            'start': 'prsd_start', 'gettoken': 'prsd_nexttoken',
+            'end': 'prsd_end', 'lextypes': 'prsd_lextype',
+            'headline': 'prsd_headline'}, 'text search configuration tsc1': {
+                'parser': 'tsp1'}})
+        sql = self.to_sql(inmap, [CREATE_TSP_STMT])
         assert fix_indent(sql[0]) == CREATE_TSC_STMT
 
     def test_create_ts_config_in_schema(self):
@@ -113,8 +116,8 @@ class TextSearchConfigToSqlTestCase(InputMapToSqlTestCase):
         "Drop an existing text search configuration"
         stmts = [CREATE_TSP_STMT, CREATE_TSC_STMT]
         sql = self.to_sql(self.std_map(), stmts, superuser=True)
-        assert sql[0] == "DROP TEXT SEARCH PARSER tsp1"
-        assert sql[1] == "DROP TEXT SEARCH CONFIGURATION tsc1"
+        assert sql[0] == "DROP TEXT SEARCH CONFIGURATION tsc1"
+        assert sql[1] == "DROP TEXT SEARCH PARSER tsp1"
 
     def test_comment_on_ts_config(self):
         "Create a comment for an existing text search configuration"
