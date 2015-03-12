@@ -7,7 +7,7 @@
     DbObject, and EventTriggerDict derived from DbObjectDict.
 """
 from pyrseas.dbobject import DbObjectDict, DbObject
-from pyrseas.dbobject import quote_id, commentable
+from pyrseas.dbobject import quote_id, commentable, split_schema_obj
 
 EXEC_PROC = 'EXECUTE PROCEDURE '
 
@@ -35,6 +35,12 @@ class EventTrigger(DbObject):
         return ["CREATE %s %s\n    ON %s%s\n    EXECUTE PROCEDURE %s" % (
                 self.objtype, quote_id(self.name), self.event, filter,
                 self.procedure)]
+
+    def get_implied_deps(self, db):
+        deps = super(EventTrigger, self).get_implied_deps(db)
+        sch, fnc = split_schema_obj(self.procedure)
+        deps.add(db.functions[(sch, fnc[:-2] , '')])
+        return deps
 
 
 class EventTriggerDict(DbObjectDict):
@@ -82,38 +88,3 @@ class EventTriggerDict(DbObjectDict):
                 trig.oldname = intrig['oldname']
             if 'description' in intrig:
                 trig.description = intrig['description']
-
-    # TODO: drop and refactor
-    def diff_map(self, intriggers):
-        """Generate SQL to transform existing event triggers
-
-        :param intriggers: a YAML map defining the new event triggers
-        :return: list of SQL statements
-
-        Compares the existing event trigger definitions, as fetched
-        from the catalogs, to the input map and generates SQL
-        statements to transform the event triggers accordingly.
-        """
-        stmts = []
-        # check input triggers
-        for trg in intriggers:
-            intrig = intriggers[trg]
-            # does it exist in the database?
-            if trg not in self:
-                if not hasattr(intrig, 'oldname'):
-                    # create new trigger
-                    stmts.append(intrig.create())
-                else:
-                    stmts.append(self[trg].rename(intrig))
-            else:
-                # check trigger objects
-                stmts.append(self[trg].diff_map(intrig))
-
-        # check existing triggers
-        for trg in self:
-            trig = self[trg]
-            # if missing, drop them
-            if trg not in intriggers:
-                    stmts.append(trig.drop())
-
-        return stmts

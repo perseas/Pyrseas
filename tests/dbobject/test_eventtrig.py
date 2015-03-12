@@ -73,8 +73,8 @@ class EventTriggerToSqlTestCase(InputMapToSqlTestCase):
         inmap.update({'event trigger et1': {
             'enabled': True, 'event': 'ddl_command_end', 'procedure': 'f1()'}})
         sql = self.to_sql(inmap)
-        assert fix_indent(sql[1]) == CREATE_FUNC_STMT
-        assert fix_indent(sql[2]) == CREATE_STMT % ''
+        assert fix_indent(sql[0]) == CREATE_FUNC_STMT
+        assert fix_indent(sql[1]) == CREATE_STMT % ''
 
     def test_create_event_trigger_filter(self):
         "Create an event trigger with tag filter variables"
@@ -88,8 +88,8 @@ class EventTriggerToSqlTestCase(InputMapToSqlTestCase):
             'enabled': True, 'event': 'ddl_command_end', 'procedure': 'f1()',
             'tags': ['CREATE TABLE', 'CREATE VIEW']}})
         sql = self.to_sql(inmap)
-        assert fix_indent(sql[1]) == CREATE_FUNC_STMT
-        assert fix_indent(sql[2]) == CREATE_STMT % (
+        assert fix_indent(sql[0]) == CREATE_FUNC_STMT
+        assert fix_indent(sql[1]) == CREATE_STMT % (
             "WHEN tag IN ('CREATE TABLE', 'CREATE VIEW') ")
 
     def test_create_event_trigger_func_schema(self):
@@ -104,9 +104,9 @@ class EventTriggerToSqlTestCase(InputMapToSqlTestCase):
             'enabled': True, 'event': 'ddl_command_end',
             'procedure': 's1.f1()'}})
         sql = self.to_sql(inmap, ["CREATE SCHEMA s1"])
-        assert fix_indent(sql[1]) == "CREATE FUNCTION s1.f1() " \
+        assert fix_indent(sql[0]) == "CREATE FUNCTION s1.f1() " \
             "RETURNS event_trigger LANGUAGE plpgsql AS $_$%s$_$" % FUNC_SRC
-        assert fix_indent(sql[2]) == "CREATE EVENT TRIGGER et1 " \
+        assert fix_indent(sql[1]) == "CREATE EVENT TRIGGER et1 " \
             "ON ddl_command_end EXECUTE PROCEDURE s1.f1()"
 
     def test_drop_event_trigger(self):
@@ -143,6 +143,6 @@ class EventTriggerToSqlTestCase(InputMapToSqlTestCase):
             'enabled': True, 'event': 'ddl_command_end', 'procedure': 'f1()',
             'description': 'Test event trigger et1'}})
         sql = self.to_sql(inmap)
-        assert fix_indent(sql[1]) == CREATE_FUNC_STMT
-        assert fix_indent(sql[2]) == CREATE_STMT % ''
-        assert sql[3] == COMMENT_STMT
+        assert fix_indent(sql[0]) == CREATE_FUNC_STMT
+        assert fix_indent(sql[1]) == CREATE_STMT % ''
+        assert sql[2] == COMMENT_STMT
