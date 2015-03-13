@@ -42,7 +42,8 @@ class ExternalFilenameMapTestCase(DatabaseToMapTestCase):
         expmap = {'cast (smallint as boolean)': {
             'function': 'int2_bool(smallint)', 'context': 'explicit',
             'method': 'function'}, 'cast (d1 as integer)':
-            {'context': 'implicit', 'method': 'inout'}}
+            {'context': 'implicit', 'method': 'inout',
+             'depends_on': ['domain d1']}}
         assert self.yaml_load('cast.yaml') == expmap
 
     def test_map_extension(self):
