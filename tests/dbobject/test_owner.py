@@ -75,10 +75,10 @@ class OwnerToSqlTestCase(InputMapToSqlTestCase):
             'volatility': 'immutable', 'owner': self.db.user,
             'description': 'Test function'}}})
         sql = self.to_sql(inmap, ["CREATE SCHEMA s1"])
-        # skip first two statements as those are tested elsewhere
-        assert sql[2] == "ALTER FUNCTION s1.f1() OWNER TO %s" % self.db.user
+        # skip first statement as that is tested elsewhere
+        assert sql[1] == "ALTER FUNCTION s1.f1() OWNER TO %s" % self.db.user
         # to verify correct order of invocation of ownable and commentable
-        assert sql[3] == "COMMENT ON FUNCTION s1.f1() IS 'Test function'"
+        assert sql[2] == "COMMENT ON FUNCTION s1.f1() IS 'Test function'"
 
     def test_create_function_default_args(self):
         "Create a function with default arguments"
@@ -89,10 +89,10 @@ class OwnerToSqlTestCase(InputMapToSqlTestCase):
                 'language': 'sql', 'returns': 'integer', 'source': SOURCE2,
                 'owner': self.db.user}})
         sql = self.to_sql(inmap)
-        assert fix_indent(sql[1]) == \
+        assert fix_indent(sql[0]) == \
             "CREATE FUNCTION f1(integer, INOUT integer DEFAULT 1) " \
             "RETURNS integer LANGUAGE sql AS $_$%s$_$" % SOURCE2
-        assert sql[2] == "ALTER FUNCTION f1(integer, INOUT integer) " \
+        assert sql[1] == "ALTER FUNCTION f1(integer, INOUT integer) " \
             "OWNER TO %s" % self.db.user
 
     def test_change_table_owner(self):
