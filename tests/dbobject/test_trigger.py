@@ -150,9 +150,9 @@ class TriggerToSqlTestCase(InputMapToSqlTestCase):
                 'timing': 'before', 'events': ['insert', 'update'],
                 'level': 'row', 'procedure': 'f1()'}}}})
         sql = self.to_sql(inmap)
-        assert fix_indent(sql[1]) == CREATE_FUNC_STMT
-        assert fix_indent(sql[2]) == CREATE_TABLE_STMT
-        assert fix_indent(sql[3]) == CREATE_STMT
+        assert fix_indent(sql[0]) == CREATE_FUNC_STMT
+        assert fix_indent(sql[1]) == CREATE_TABLE_STMT
+        assert fix_indent(sql[2]) == CREATE_STMT
 
     def test_create_trigger2(self):
         "Create another simple trigger with"
@@ -167,8 +167,8 @@ class TriggerToSqlTestCase(InputMapToSqlTestCase):
                                  'procedure': 'f1()'}}}})
         sql = self.to_sql(inmap)
         assert fix_indent(sql[1]) == CREATE_FUNC_STMT
-        assert fix_indent(sql[2]) == CREATE_TABLE_STMT
-        assert fix_indent(sql[3]) == "CREATE TRIGGER tr1 AFTER DELETE OR " \
+        assert fix_indent(sql[0]) == CREATE_TABLE_STMT
+        assert fix_indent(sql[2]) == "CREATE TRIGGER tr1 AFTER DELETE OR " \
             "TRUNCATE ON t1 FOR EACH STATEMENT EXECUTE PROCEDURE f1()"
 
     def test_create_trigger_update_cols(self):
@@ -185,9 +185,9 @@ class TriggerToSqlTestCase(InputMapToSqlTestCase):
                 'insert', 'update'], 'columns': ['c1', 'c2'], 'level': 'row',
                 'procedure': 'f1()'}}}})
         sql = self.to_sql(inmap)
-        assert fix_indent(sql[1]) == CREATE_FUNC_STMT
-        assert fix_indent(sql[2]) == CREATE_TABLE_STMT
-        assert fix_indent(sql[3]) == "CREATE TRIGGER tr1 BEFORE INSERT OR " \
+        assert fix_indent(sql[0]) == CREATE_FUNC_STMT
+        assert fix_indent(sql[1]) == CREATE_TABLE_STMT
+        assert fix_indent(sql[2]) == "CREATE TRIGGER tr1 BEFORE INSERT OR " \
             "UPDATE OF c1, c2 ON t1 FOR EACH ROW EXECUTE PROCEDURE f1()"
 
     def test_create_trigger_conditional(self):
@@ -204,9 +204,9 @@ class TriggerToSqlTestCase(InputMapToSqlTestCase):
                 'update'], 'level': 'row', 'procedure': 'f1()',
                 'condition': '(old.c2 IS DISTINCT FROM new.c2)'}}}})
         sql = self.to_sql(inmap)
-        assert fix_indent(sql[1]) == CREATE_FUNC_STMT
-        assert fix_indent(sql[2]) == CREATE_TABLE_STMT
-        assert fix_indent(sql[3]) == "CREATE TRIGGER tr1 BEFORE UPDATE " \
+        assert fix_indent(sql[0]) == CREATE_FUNC_STMT
+        assert fix_indent(sql[1]) == CREATE_TABLE_STMT
+        assert fix_indent(sql[2]) == "CREATE TRIGGER tr1 BEFORE UPDATE " \
             "ON t1 FOR EACH ROW WHEN ((old.c2 IS DISTINCT FROM new.c2)) " \
             "EXECUTE PROCEDURE f1()"
 
