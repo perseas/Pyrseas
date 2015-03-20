@@ -538,7 +538,7 @@ class Database(object):
             d = self.db.dict_from_table(new.catalog_table)
             old = d.get(new.key())
             if old is not None:
-                stmts.append(old.alter_sql(new))
+                stmts.append(old.alter(new))
             else:
                 stmts.append(new.create_sql())
 
@@ -555,7 +555,7 @@ class Database(object):
         for old in old_objs:
             d = self.ndb.dict_from_table(old.catalog_table)
             if old.key() not in d:
-                stmts.extend(old.drop_sql())
+                stmts.extend(old.drop())
 
         if 'datacopy' in self.config:
             opts.data_dir = self.config['files']['data_path']

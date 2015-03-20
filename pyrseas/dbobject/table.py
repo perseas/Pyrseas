@@ -160,7 +160,7 @@ class Sequence(DbClass):
             quote_id(self.owner_column)))
         return stmts
 
-    def diff_map(self, inseq):
+    def alter(self, inseq, no_owner=False):
         """Generate SQL to transform an existing sequence
 
         :param inseq: a YAML map defining the new sequence
@@ -191,11 +191,7 @@ class Sequence(DbClass):
         if stmt:
             stmts.append("ALTER SEQUENCE %s" % self.qualname() + stmt)
 
-        if inseq.owner is not None:
-            if self.owner is not None and inseq.owner != self.owner:
-                stmts.append(self.alter_owner(inseq.owner))
-        stmts.append(self.diff_privileges(inseq))
-        stmts.append(self.diff_description(inseq))
+        stmts.append(super(Sequence, self).alter(inseq, no_owner=no_owner))
         return stmts
 
 

@@ -412,7 +412,16 @@ class DbObject(object):
         else:
             return self.rename(self.oldname)
 
-    def alter_sql(self, inobj, no_owner=False):
+    def alter(self, inobj, no_owner=False):
+        """Generate SQL to transform an existing database object
+
+        :param inobj: a YAML map defining the new object
+        :return: list of SQL statements
+
+        Compares the current object to an input object and generates SQL
+        statements to transform it into the one represented by the
+        input.
+        """
         stmts = []
         if not no_owner and self.owner is not None and inobj.owner is not None:
             if inobj.owner != self.owner:
@@ -421,7 +430,11 @@ class DbObject(object):
         stmts.append(self.diff_description(inobj))
         return stmts
 
-    def drop_sql(self):
+    def drop(self):
+        """Generate SQL to drop the current object
+
+        :return: list of SQL statements
+        """
         return ["DROP %s %s" % (self.objtype, self.identifier())]
 
     def diff_privileges(self, inobj):

@@ -157,9 +157,9 @@ class Schema(DbObject):
                 stmts.append(self.tables[tbl].data_import(dir))
         return stmts
 
-    def drop_sql(self):
+    def drop(self):
         if self.name not in ('public', 'pg_catalog'):
-            return super(Schema, self).drop_sql()
+            return super(Schema, self).drop()
         else:
             return []
 

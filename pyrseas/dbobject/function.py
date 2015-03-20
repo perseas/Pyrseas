@@ -148,7 +148,7 @@ class Function(Proc):
                      strict, secdef, cost, rows, config, src))
         return stmts
 
-    def alter_sql(self, infunction):
+    def alter(self, infunction, no_owner=False):
         """Generate SQL to transform an existing function
 
         :param infunction: a YAML map defining the new function
@@ -162,9 +162,6 @@ class Function(Proc):
         if hasattr(self, 'source') and hasattr(infunction, 'source'):
             if self.source != infunction.source:
                 stmts.append(self.create(infunction.source))
-        if infunction.owner is not None:
-            if infunction.owner != self.owner:
-                stmts.append(self.alter_owner(infunction.owner))
         if hasattr(self, 'leakproof') and self.leakproof is True:
             if hasattr(infunction, 'leakproof') and \
                     infunction.leakproof is True:
@@ -174,8 +171,8 @@ class Function(Proc):
                              % self.identifier())
         elif hasattr(infunction, 'leakproof') and infunction.leakproof is True:
             stmts.append("ALTER FUNCTION %s LEAKPROOF" % self.qualname())
-        stmts.append(self.diff_privileges(infunction))
-        stmts.append(self.diff_description(infunction))
+        stmts.append(super(Function, self).alter(infunction,
+                                                 no_owner=no_owner))
         return stmts
 
     def get_implied_deps(self, db):

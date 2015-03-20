@@ -54,13 +54,21 @@ class Extension(DbObject):
                 quote_id(self.name), ('\n    ' + '\n    '.join(opt_clauses))
                 if opt_clauses else '')]
 
-    def alter_sql(self, inobj, no_owner=True):
-        return super(Extension, self).alter_sql(inobj, no_owner=no_owner)
+    def alter(self, inobj, no_owner=True):
+        """Generate SQL to transform an existing extension
 
-    def drop_sql(self):
+        :param inobj: a YAML map defining the new extension
+        :return: list of SQL statements
+
+        This exists because ALTER EXTENSION does not permit altering
+        the owner.
+        """
+        return super(Extension, self).alter(inobj, no_owner=no_owner)
+
+    def drop(self):
         # TODO: this should not be special-cased -- see Language
         if self.name != 'plpgsql':
-            return super(Extension, self).drop_sql()
+            return super(Extension, self).drop()
         else:
             return []
 

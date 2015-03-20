@@ -44,12 +44,12 @@ class Language(DbObject):
                 stmts.append(self.comment())
         return stmts
 
-    def drop_sql(self):
+    def drop(self):
         # TODO: this should not be special-cased
         # remove it after merging with the master, where plpgsql should be
         # treated normally
         if self.name != 'plpgsql':
-            return super(Language, self).drop_sql()
+            return super(Language, self).drop()
         else:
             return []
 
