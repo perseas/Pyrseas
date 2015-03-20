@@ -342,7 +342,7 @@ class ForeignServerDict(DbObjectDict):
 
     cls = ForeignServer
     query = \
-        """SELECT fdwname AS wrapper, srvname AS name, srvtype AS type,
+        """SELECT s.oid, fdwname AS wrapper, srvname AS name, srvtype AS type,
                   srvversion AS version, srvoptions AS options,
                   rolname AS owner, array_to_string(srvacl, ',') AS privileges,
                   obj_description(s.oid, 'pg_foreign_server') AS description
@@ -499,7 +499,7 @@ class UserMappingDict(DbObjectDict):
 
     cls = UserMapping
     query = \
-        """SELECT u.umid,
+        """SELECT u.umid AS oid,
                   fdwname AS wrapper, s.srvname AS server,
                   CASE umuser WHEN 0 THEN 'PUBLIC' ELSE
                   usename END AS username, umoptions AS options
@@ -686,8 +686,6 @@ class ForeignTableDict(ClassDict):
         if self.dbconn.version < 90100:
             return
         for tbl in self.fetch():
-            if hasattr(tbl, 'privileges'):
-                tbl.privileges = tbl.privileges.split(',')
             self[tbl.key()] = tbl
 
     def from_map(self, schema, inobjs, newdb):
