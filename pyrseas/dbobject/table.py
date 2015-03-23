@@ -542,7 +542,7 @@ class View(DbClass):
         return ["CREATE%s VIEW %s AS\n   %s" % (
                 newdefn and " OR REPLACE" or '', self.qualname(), defn)]
 
-    def diff_map(self, inview):
+    def alter(self, inview):
         """Generate SQL to transform an existing view
 
         :param inview: a YAML map defining the new view
@@ -555,11 +555,7 @@ class View(DbClass):
         stmts = []
         if self.definition != inview.definition:
             stmts.append(self.create(inview.definition))
-        if inview.owner is not None:
-            if inview.owner != self.owner:
-                stmts.append(self.alter_owner(inview.owner))
-        stmts.append(self.diff_privileges(inview))
-        stmts.append(self.diff_description(inview))
+        stmts.append(super(View, self).alter(inview))
         return stmts
 
 
@@ -587,7 +583,7 @@ class MaterializedView(View):
             if not 'indexes' in mvw:
                 mvw['indexes'] = {}
             for k in list(self.indexes.values()):
-                mvw['indexes'].update(self.indexes[k.name].to_map())
+                mvw['indexes'].update(self.indexes[k.name].to_map(db))
         return mvw
 
     @commentable
@@ -603,26 +599,6 @@ class MaterializedView(View):
             defn = defn[:-1]
         return ["CREATE %s %s AS\n   %s" % (
                 self.objtype, self.qualname(), defn)]
-
-    def diff_map(self, inview):
-        """Generate SQL to transform an existing materialized view
-
-        :param inview: a YAML map defining the new view
-        :return: list of SQL statements
-
-        Compares the view to an input view and generates SQL
-        statements to transform it into the one represented by the
-        input.
-        """
-        stmts = []
-        if self.definition != inview.definition:
-            stmts.append(self.create(inview.definition))
-        if inview.owner is not None:
-            if inview.owner != self.owner:
-                stmts.append(self.alter_owner(inview.owner))
-        stmts.append(self.diff_privileges(inview))
-        stmts.append(self.diff_description(inview))
-        return stmts
 
 
 QUERY_PRE91 = \

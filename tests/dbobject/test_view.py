@@ -20,13 +20,14 @@ class ViewToMapTestCase(DatabaseToMapTestCase):
         expmap = {'definition': VIEW_DEFN}
         assert dbmap['schema public']['view v1'] == expmap
 
-    def test_map_view(self):
+    def test_map_view_table(self):
         "Map a created view with a table dependency"
         stmts = ["CREATE TABLE t1 (c1 INTEGER, c2 TEXT, c3 INTEGER)",
                  "CREATE VIEW v1 AS SELECT c1, c3 * 2 FROM t1"]
         dbmap = self.to_map(stmts)
         fmt = "%s%s" if (self.db.version < 90300) else "%s\n   %s"
-        expmap = {'definition': fmt % (" SELECT t1.c1,",
+        expmap = {'depends_on': ['table t1'],
+                  'definition': fmt % (" SELECT t1.c1,",
                                        " t1.c3 * 2\n   FROM t1;")}
         assert dbmap['schema public']['view v1'] == expmap
 
