@@ -113,7 +113,7 @@ class Index(DbSchemaObject):
                 quote_id(self.table), quote_id(self.name)))
         return stmts
 
-    def diff_map(self, inindex):
+    def alter(self, inindex):
         """Generate SQL to transform an existing index
 
         :param inindex: a YAML map defining the new index
@@ -154,7 +154,7 @@ class Index(DbSchemaObject):
         elif hasattr(self, 'cluster'):
             stmts.append("ALTER TABLE %s\n    SET WITHOUT CLUSTER" %
                          quote_id(self.table))
-        stmts.append(self.diff_description(inindex))
+        stmts.append(super(Index, self).alter(inindex))
         return stmts
 
     def get_implied_deps(self, db):

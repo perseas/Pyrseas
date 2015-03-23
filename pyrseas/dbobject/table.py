@@ -375,7 +375,7 @@ class Table(DbClass):
             clauses += "RESET (%s)" % ', '.join(resetclauses)
         return clauses
 
-    def diff_map(self, intable):
+    def alter(self, intable):
         """Generate SQL to transform an existing table
 
         :param intable: a YAML map defining the new table
@@ -423,10 +423,6 @@ class Table(DbClass):
         if diff_opts:
             stmts.append("ALTER %s %s %s" % (self.objtype, self.identifier(),
                                              diff_opts))
-        if intable.owner is not None:
-            if intable.owner != self.owner:
-                stmts.append(self.alter_owner(intable.owner))
-        stmts.append(self.diff_privileges(intable))
         if colprivs:
             stmts.append(colprivs)
         if hasattr(intable, 'tablespace'):
@@ -437,7 +433,7 @@ class Table(DbClass):
         elif hasattr(self, 'tablespace'):
             stmts.append(base + "SET TABLESPACE pg_default")
 
-        stmts.append(self.diff_description(intable))
+        stmts.append(super(Table, self).alter(intable))
 
         return stmts
 
