@@ -401,7 +401,7 @@ class Table(DbClass):
                 stmts.append(self.columns[num].rename(incol.name))
             # check existing columns
             if num < dbcols and self.columns[num].name == incol.name:
-                (stmt, descr) = self.columns[num].diff_map(incol)
+                (stmt, descr) = self.columns[num].alter(incol)
                 if stmt:
                     stmts.append(base + stmt)
                 colprivs.append(self.columns[num].diff_privileges(incol))
@@ -484,12 +484,12 @@ class Table(DbClass):
             if d:
                 m = re.match(r"nextval\('(.*)'::regclass\)", d)
                 if m:
-                    seq = db.tables.find(m.group(1))
+                    seq = db.tables.find(m.group(1), self.schema)
                     if seq:
                         deps.add(seq)
 
         for pname in getattr(self, 'inherits', ()):
-            parent = db.tables.find(pname)
+            parent = db.tables.find(pname, self.schema)
             assert parent is not None, "couldn't find parent table %s" % pname
             deps.add(parent)
 
@@ -779,16 +779,16 @@ class ClassDict(DbObjectDict):
             if 'depends_on' in inobj:
                 obj.depends_on.extend(inobj['depends_on'])
 
-    def find(self, obj):
+    def find(self, obj, schema=None):
         """Find a table given its name.
 
         The name can contain array type modifiers such as '[]'
 
         Return None if not found.
         """
-        schema, name = split_schema_obj(obj)
+        sch, name = split_schema_obj(obj, schema)
         name = name.rstrip('[]')
-        return self.get((schema, name))
+        return self.get((sch, name))
 
     def link_refs(self, dbcolumns, dbconstrs, dbindexes, dbrules, dbtriggers):
         """Connect columns, constraints, etc. to their respective tables

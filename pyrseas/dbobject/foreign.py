@@ -200,17 +200,6 @@ class ForeignDataWrapperDict(DbObjectDict):
                 wrapper.servers = {}
             wrapper.servers.update({srv: dbserver})
 
-    def _drop(self):
-        """Actually drop the wrappers
-
-        :return: SQL statements
-        """
-        stmts = []
-        for fdw in self:
-            if hasattr(self[fdw], 'dropped'):
-                stmts.append(self[fdw].drop())
-        return stmts
-
 
 class ForeignServer(DbObjectWithOptions):
     """A foreign server definition"""
@@ -344,17 +333,6 @@ class ForeignServerDict(DbObjectDict):
             if not hasattr(server, 'usermaps'):
                 server.usermaps = {}
             server.usermaps.update({usr: dbusermap})
-
-    def _drop(self):
-        """Actually drop the servers
-
-        :return: SQL statements
-        """
-        stmts = []
-        for srv in self:
-            if hasattr(self[srv], 'dropped'):
-                stmts.append(self[srv].drop())
-        return stmts
 
 
 class UserMapping(DbObjectWithOptions):

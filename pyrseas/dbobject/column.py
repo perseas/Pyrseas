@@ -122,7 +122,7 @@ class Column(DbSchemaObject):
             self.qualname(self.table), quote_id(self.name), self.default))
         return stmts
 
-    def diff_map(self, incol):
+    def alter(self, incol):
         """Generate SQL to transform an existing column
 
         :param insequence: a YAML map defining the new column

@@ -135,7 +135,7 @@ class CheckConstraint(Constraint):
         else:
             return super(CheckConstraint, self).drop()
 
-    def diff_map(self, inchk):
+    def alter(self, inchk):
         """Generate SQL to transform an existing CHECK constraint
 
         :param inchk: a YAML map defining the new CHECK constraint
@@ -171,7 +171,7 @@ class PrimaryKey(Constraint):
         del dct['keycols']
         return {self.name: dct}
 
-    def diff_map(self, inpk):
+    def alter(self, inpk):
         """Generate SQL to transform an existing primary key
 
         :param inpk: a YAML map defining the new primary key
@@ -251,7 +251,7 @@ class ForeignKey(Constraint):
             quote_id(self.ref_schema), quote_id(self.ref_table),
             self.ref_columns(), match, actions)
 
-    def diff_map(self, infk):
+    def alter(self, infk):
         """Generate SQL to transform an existing foreign key
 
         :param infk: a YAML map defining the new foreign key
@@ -325,7 +325,7 @@ class UniqueConstraint(Constraint):
         del dct['keycols']
         return {self.name: dct}
 
-    def diff_map(self, inuc):
+    def alter(self, inuc):
         """Generate SQL to transform an existing unique constraint
 
         :param inuc: a YAML map defining the new unique constraint

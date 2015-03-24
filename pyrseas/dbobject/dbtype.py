@@ -129,7 +129,7 @@ class Composite(DbType):
         return ["CREATE TYPE %s AS (\n%s)" % (
                 self.qualname(), ",\n".join(attrs))]
 
-    def diff_map(self, intype):
+    def alter(self, intype):
         """Generate SQL to transform an existing composite type
 
         :param intype: the new composite type
@@ -154,7 +154,7 @@ class Composite(DbType):
                 stmts.append(self.attributes[num].rename(inattr.name))
             # check existing attributes
             if num < dbattrs and self.attributes[num].name == inattr.name:
-                (stmt, descr) = self.attributes[num].diff_map(inattr)
+                (stmt, descr) = self.attributes[num].alter(inattr)
                 if stmt:
                     stmts.append(base + stmt)
                 if descr:
@@ -166,10 +166,7 @@ class Composite(DbType):
                 if descr:
                     stmts.append(descr)
 
-        if intype.owner is not None:
-            if intype.owner != self.owner:
-                stmts.append(self.alter_owner(intype.owner))
-        stmts.append(self.diff_description(intype))
+        stmts.append(super(Composite, self).alter(intype))
 
         return stmts
 
