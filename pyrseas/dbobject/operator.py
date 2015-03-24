@@ -85,11 +85,12 @@ class Operator(DbSchemaObject):
 
         # The function instead we expect it exists
         # TODO: another ugly hack to locate the object
-        fschema, fname = split_schema_obj(self.procedure)
+        fschema, fname = split_schema_obj(self.procedure, self.schema)
         fargs = ', '.join(t for t in [self.leftarg, self.rightarg]
             if t != 'NONE')
-        func = db.functions[fschema, fname, fargs]
-        deps.add(func)
+        if (fschema, fname, fargs) in db.functions:
+            func = db.functions[fschema, fname, fargs]
+            deps.add(func)
 
         # This helper function may be a builtin
         if getattr(self, 'restrict', None):
