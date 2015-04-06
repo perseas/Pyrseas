@@ -302,7 +302,9 @@ class DbObject(object):
         """
         privlist = []
         for prv in self.privileges:
-            privlist.append(privileges_to_map(prv, self.allprivs, self.owner))
+            if prv:
+                privlist.append(privileges_to_map(prv, self.allprivs,
+                                                  self.owner))
         return privlist
 
     def _comment_text(self):
