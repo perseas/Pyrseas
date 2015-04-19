@@ -185,6 +185,12 @@ class Composite(DbType):
                 if descr:
                     stmts.append(descr)
 
+        # Check the columns to drop
+        inattrnames = set(attr.name for attr in intype.attributes)
+        for attr in self.attributes:
+            if attr.name not in inattrnames:
+                stmts.append(attr.drop())
+
         stmts.append(super(Composite, self).alter(intype))
 
         return stmts

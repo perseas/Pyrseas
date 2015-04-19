@@ -246,31 +246,3 @@ class ColumnDict(DbObjectDict):
                     col.privileges = privileges_from_map(
                         col.privileges, col.allprivs, table.owner)
                 cols.append(col)
-
-    def diff_map(self, incols):
-        """Generate SQL to transform existing columns
-
-        :param incols: a YAML map defining the new columns
-        :return: list of SQL statements
-
-        Compares the existing column definitions, as fetched from the
-        catalogs, to the input map and generates SQL statements to
-        transform the columns accordingly.
-
-        This takes care of dropping columns that are not present in
-        the input map.  It's separate so that it can be done last,
-        after other table, constraint and index changes.
-        """
-        stmts = []
-        if not incols or not self:
-            return stmts
-
-        for (sch, tbl) in incols:
-            if (sch, tbl) in self:
-                for col in self[(sch, tbl)]:
-                    if col.name not in [c.name for c in incols[(sch, tbl)]] \
-                            and not hasattr(col, 'dropped') \
-                            and not hasattr(col, 'inherited'):
-                        stmts.append(col.drop())
-
-        return stmts
