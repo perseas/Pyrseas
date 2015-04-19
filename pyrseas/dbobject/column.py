@@ -81,7 +81,7 @@ class Column(DbSchemaObject):
         :return: SQL statement
         """
         if hasattr(self, 'dropped'):
-            return ""
+            return []
         if hasattr(self, '_table'):
             (comptype, objtype) = (self._table.objtype, 'COLUMN')
             compname = self._table.qualname()

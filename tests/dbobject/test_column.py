@@ -184,7 +184,6 @@ class ColumnToSqlTestCase(InputMapToSqlTestCase):
             'columns': [{'c1': {'type': 'integer'}},
                         {'c2': {'type': 'boolean', 'default': 'false'}}]}})
         sql = self.to_sql(inmap, [stmt])
-        print(sql)
         assert fix_indent(sql[0]) == \
             "ALTER TABLE t1 ALTER COLUMN c2 SET DEFAULT false"
 

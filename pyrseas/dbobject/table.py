@@ -416,6 +416,13 @@ class Table(DbClass):
                 if descr:
                     stmts.append(descr)
 
+        # Check the columns to drop
+        incolnames = set(attr.name for attr in intable.columns)
+        for attr in self.columns:
+            if attr.name not in incolnames:
+                if not getattr(attr, 'inherited', False):
+                    stmts.append(attr.drop())
+
         newopts = []
         if hasattr(intable, 'options'):
             newopts = intable.options
