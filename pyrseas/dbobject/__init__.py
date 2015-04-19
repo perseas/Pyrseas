@@ -532,10 +532,10 @@ class DbSchemaObject(DbObject):
         """
         return super(DbSchemaObject, self).extern_filename(ext, True)
 
-    def rename(self, newname):
+    def rename(self, oldname):
         return "ALTER %s %s.%s RENAME TO %s" % (
-            self.objtype, quote_id(self.schema), quote_id(self.name),
-            quote_id(newname))
+            self.objtype, quote_id(self.schema), quote_id(oldname),
+            quote_id(self.name))
 
     def get_implied_deps(self, db):
         deps = super(DbSchemaObject, self).get_implied_deps(db)

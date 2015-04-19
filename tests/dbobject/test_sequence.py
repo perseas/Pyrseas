@@ -72,7 +72,7 @@ class SequenceToSqlTestCase(InputMapToSqlTestCase):
             'oldname': 'seq1', 'start_value': 1, 'increment_by': 1,
             'max_value': None, 'min_value': None, 'cache_value': 1}})
         sql = self.to_sql(inmap, [CREATE_STMT])
-        assert sql == ["ALTER SEQUENCE seq1 RENAME TO seq2"]
+        assert sql == ["ALTER SEQUENCE public.seq1 RENAME TO seq2"]
 
     def test_bad_rename_sequence(self):
         "Error renaming a non-existing sequence"

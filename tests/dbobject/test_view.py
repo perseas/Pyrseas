@@ -105,7 +105,7 @@ class ViewToSqlTestCase(InputMapToSqlTestCase):
         inmap['schema public'].update({'view v2': {
             'oldname': 'v1', 'definition': VIEW_DEFN}})
         sql = self.to_sql(inmap, [CREATE_STMT])
-        assert sql == ["ALTER VIEW v1 RENAME TO v2"]
+        assert sql == ["ALTER VIEW public.v1 RENAME TO v2"]
 
     def test_bad_rename_view(self):
         "Error renaming a non-existing view"

@@ -89,7 +89,7 @@ class DomainToSqlTestCase(InputMapToSqlTestCase):
         inmap['schema public'].update({'domain d2': {
             'oldname': 'd1', 'type': 'integer'}})
         sql = self.to_sql(inmap, [CREATE_STMT])
-        assert sql == ["ALTER DOMAIN d1 RENAME TO d2"]
+        assert sql == ["ALTER DOMAIN public.d1 RENAME TO d2"]
 
     def test_dependency(self):
         "Check that the domain is created after a func it depends on"

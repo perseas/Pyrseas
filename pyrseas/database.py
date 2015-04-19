@@ -542,6 +542,19 @@ class Database(object):
             else:
                 stmts.append(new.create_sql())
 
+                # Check if the object just created was renamed, in which case
+                # don't try to delete the original one
+                if getattr(new, 'oldname', None):
+                    try:
+                        origname, new.name = new.name, new.oldname
+                        oldkey = new.key()
+                    finally:
+                        new.name = origname
+                    # Intentionally raising KeyError as tested e.g. in
+                    # test_bad_rename_view -- ok Joe?
+                    old = d[oldkey]
+                    old._nodrop = True
+
         # Order the old database objects in reverse dependency order
         old_objs = []
         for _, d in self.db.alldicts():
@@ -554,7 +567,7 @@ class Database(object):
         # Drop the objects that don't appear in the new db
         for old in old_objs:
             d = self.ndb.dict_from_table(old.catalog_table)
-            if old.key() not in d:
+            if not getattr(old, '_nodrop', False) and old.key() not in d:
                 stmts.extend(old.drop())
 
         if 'datacopy' in self.config:
