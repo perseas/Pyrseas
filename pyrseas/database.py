@@ -216,7 +216,7 @@ class Database(object):
         db.schemas.link_refs(db, copycfg)
         db.tables.link_refs(db.columns, db.constraints, db.indexes, db.rules,
                             db.triggers)
-        db.functions.link_refs(db.eventtrigs)
+        db.functions.link_refs(db.types, db.eventtrigs)
         db.fdwrappers.link_refs(db.servers)
         db.servers.link_refs(db.usermaps)
         db.ftables.link_refs(db.columns)

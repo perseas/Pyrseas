@@ -393,9 +393,13 @@ class ProcDict(DbObjectDict):
         args = ', '.join(args)
         return self.get((schema, name, args))
 
-    def link_refs(self, dbeventtrigs):
-        """Connect event triggers to the functions executed
+    def link_refs(self, dbtypes, dbeventtrigs):
+        """Connect the functions to other objects
 
+        - Connect event triggers to the functions executed
+        - Connect defining functions to the type they define
+
+        :param dbtypes: dictionary of types
         :param dbeventtrigs: dictionary of event triggers
 
         Fills in the `event_triggers` list for each function by
@@ -408,3 +412,12 @@ class ProcDict(DbObjectDict):
             if not hasattr(func, 'event_triggers'):
                 func.event_triggers = []
             func.event_triggers.append(evttrg.name)
+
+        # TODO: this link is needed from map, not from sql.
+        # is this a pattern? I was assuming link_refs would have disappeared
+        # but I'm actually still maintaining them. Verify if they are always
+        # only used for from_map, not for from_catalog
+        for key in dbtypes:
+            t = dbtypes[key]
+            for f in t.find_defining_funcs(self):
+                f._defining = t

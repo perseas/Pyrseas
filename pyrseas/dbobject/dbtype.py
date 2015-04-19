@@ -28,6 +28,9 @@ class DbType(DbSchemaObject):
     def objtype(self):
         return "TYPE"
 
+    def find_defining_funcs(self, dbfuncs):
+        return []
+
 
 class BaseType(DbType):
     """A composite type"""
@@ -80,6 +83,13 @@ class BaseType(DbType):
 
     def get_implied_deps(self, db):
         deps = super(BaseType, self).get_implied_deps(db)
+        for f in self.find_defining_funcs(db.functions):
+            deps.add(f)
+
+        return deps
+
+    def find_defining_funcs(self, dbfuncs):
+        rv = []
         for attr, arg in [
                 ('input', 'cstring'), ('output', self.qualname()),
                 ('receive', 'internal'), ('send', self.qualname())]:
@@ -87,10 +97,8 @@ class BaseType(DbType):
             if not f:
                 continue
             fschema, fname = split_schema_obj(f)
-            f = db.functions[fschema, fname, arg]
-            deps.add(f)
-
-        return deps
+            rv.append(dbfuncs[fschema, fname, arg])
+        return rv
 
 
 class Composite(DbType):
