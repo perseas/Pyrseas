@@ -208,6 +208,14 @@ class Function(Proc):
 
         return deps
 
+    def drop(self):
+        # If the function defines a type it will be dropped by the CASCADE
+        # on the type.
+        if getattr(self, '_defining', None):
+            return []
+        else:
+            return super(Function, self).drop()
+
 
 class Aggregate(Proc):
     """An aggregate function"""

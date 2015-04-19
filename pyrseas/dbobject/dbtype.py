@@ -100,6 +100,17 @@ class BaseType(DbType):
             rv.append(dbfuncs[fschema, fname, arg])
         return rv
 
+    def drop(self):
+        """Generate SQL to drop the type
+
+        :return: list of SQL statements
+
+        The CASCADE thing is mandatory to drop the functions too. There is
+        a cyclic dependency so the dependency graph cannot be used. The
+        functions will not be explicitly dropped.
+        """
+        return ["DROP %s %s CASCADE" % (self.objtype, self.identifier())]
+
 
 class Composite(DbType):
     """A composite type"""
