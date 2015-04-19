@@ -90,6 +90,11 @@ class OperatorClass(DbSchemaObject):
             if f is not None:
                 deps.add(f)
 
+        if getattr(self, 'family', None):
+            f = db.operfams.find(self.family, self.index_method)
+            if f is not None:
+                deps.add(f)
+
         return deps
 
 

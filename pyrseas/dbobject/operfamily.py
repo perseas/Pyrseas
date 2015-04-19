@@ -7,7 +7,7 @@
     DbSchemaObject and OperatorFamilyDict derived from DbObjectDict.
 """
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
-from pyrseas.dbobject import commentable, ownable
+from pyrseas.dbobject import commentable, ownable, split_schema_obj
 
 
 class OperatorFamily(DbSchemaObject):
@@ -87,3 +87,7 @@ class OperatorFamilyDict(DbObjectDict):
                 opfam.oldname = inopfam['oldname']
             if 'description' in inopfam:
                 opfam.description = inopfam['description']
+
+    def find(self, obj, meth):
+        schema, name = split_schema_obj(obj)
+        return self.get((schema, name, meth))
