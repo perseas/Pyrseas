@@ -61,11 +61,8 @@ class Constraint(DbSchemaObject):
 
         :return: SQL statement
         """
-        if not hasattr(self, 'dropped') or not self.dropped:
-            self.dropped = True
-            return "ALTER TABLE %s DROP CONSTRAINT %s" % (
-                self._table.qualname(), quote_id(self.name))
-        return []
+        return ["ALTER TABLE %s DROP CONSTRAINT %s" % (
+            self._table.qualname(), quote_id(self.name))]
 
     def comment(self):
         """Return SQL statement to create COMMENT on constraint
@@ -285,7 +282,7 @@ class ForeignKey(Constraint):
             return pkey
 
         if hasattr(ref_table, 'unique_constraints'):
-            for uc in ref_table.unique_constraints.itervalues():
+            for uc in list(ref_table.unique_constraints.values()):
                 if uc.keycols == self.ref_cols:
                     return uc
 
@@ -296,7 +293,7 @@ class ForeignKey(Constraint):
             else:
                 col_names = self.ref_cols
 
-            for idx in ref_table.indexes.itervalues():
+            for idx in list(ref_table.indexes.values()):
                 if getattr(idx, 'unique', False) \
                 and not getattr(idx, 'predicate', None) \
                 and idx.keys == col_names:
@@ -549,7 +546,7 @@ class ConstraintDict(DbObjectDict):
                 self[(table.schema, table.name, cns)] = unq
 
     def link_refs(self, db):
-        for c in self.values():
+        for c in list(self.values()):
             if isinstance(c, ForeignKey):
                 # The constraint depends on an index. Which one is accidental:
                 # it depends e.g. on which suitable index was available when
