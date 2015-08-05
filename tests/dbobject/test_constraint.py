@@ -19,7 +19,7 @@ class CheckConstraintToMapTestCase(DatabaseToMapTestCase):
                               {'c2': {'type': 'smallint'}}],
                   'check_constraints': {'t1_c2_check': {
                   'columns': ['c2'], 'expression': '(c2 < 1000)'}}}
-        assert dbmap['schema public']['table t1'] == expmap
+        self.assertEqual(dbmap['schema public']['table t1'], expmap)
 
     def test_check_constraint_2(self):
         "Map a table with a two-column, named CHECK constraint"
@@ -581,8 +581,8 @@ class ForeignKeyToSqlTestCase(InputMapToSqlTestCase):
                     'references': {'columns': ['c11', 'c12'],
                                    'table': 't1'}}}}})
         sql = self.to_sql(inmap, stmts)
-        assert fix_indent(sql[0]) == "ALTER TABLE t2 ADD CONSTRAINT " \
-            "t2_c23_fkey FOREIGN KEY (c23, c24) REFERENCES t1 (c11, c12)"
+        self.assertEqual(fix_indent(sql[0]), "ALTER TABLE t2 ADD CONSTRAINT " \
+            "t2_c23_fkey FOREIGN KEY (c23, c24) REFERENCES t1 (c11, c12)")
 
     def test_drop_foreign_key(self):
         "Drop a foreign key on an existing table"
@@ -672,7 +672,7 @@ class UniqueConstraintToMapTestCase(DatabaseToMapTestCase):
         "Map a table with a single-column unique constraint, table level"
         stmts = ["CREATE TABLE t1 (c1 INTEGER, c2 TEXT, UNIQUE (c1))"]
         dbmap = self.to_map(stmts)
-        assert dbmap['schema public']['table t1'] == self.map_unique1
+        self.assertEqual(dbmap['schema public']['table t1'], self.map_unique1)
 
     def test_unique_3(self):
         "Map a table with a two-column unique constraint"
@@ -798,7 +798,7 @@ class ConstraintCommentTestCase(InputMapToSqlTestCase):
             'primary_key': {'cns1': {'columns': ['c1'],
                                      'description': 'Test constraint cns1'}}}})
         sql = self.to_sql(inmap, stmts)
-        assert sql == [COMMENT_STMT]
+        self.assertEqual(sql, [COMMENT_STMT])
 
     def test_drop_foreign_key_comment(self):
         "Drop the comment on an existing foreign key"
@@ -820,7 +820,7 @@ class ConstraintCommentTestCase(InputMapToSqlTestCase):
                     'columns': ['c13'],
                     'references': {'columns': ['c21'], 'table': 't2'}}}}})
         sql = self.to_sql(inmap, stmts)
-        assert sql == ["COMMENT ON CONSTRAINT cns1 ON t1 IS NULL"]
+        self.assertEqual(sql, ["COMMENT ON CONSTRAINT cns1 ON t1 IS NULL"])
 
     def test_change_unique_constraint_comment(self):
         "Change existing comment on a unique constraint"
@@ -850,3 +850,6 @@ class ConstraintCommentTestCase(InputMapToSqlTestCase):
         sql = self.to_sql(inmap, stmts)
         assert sql[0] == "COMMENT ON CONSTRAINT cns1 ON s1.t1 IS " \
             "'Test constraint cns1'"
+
+if __name__ == "__main__":
+    unittest.main()
