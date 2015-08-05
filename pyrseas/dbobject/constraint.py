@@ -228,7 +228,10 @@ class ForeignKey(Constraint):
         input.
         """
         stmts = []
-        # TODO: to be implemented (via ALTER DROP and ALTER ADD)
+        if self.col_idx != infk.col_idx:
+            stmts.append(self.drop())
+            stmts.append(infk.add())
+        # TODO check references
         stmts.append(self.diff_description(infk))
         return stmts
 
@@ -264,8 +267,10 @@ class UniqueConstraint(Constraint):
         represented by the input.
         """
         stmts = []
-        # TODO: to be implemented (via ALTER DROP and ALTER ADD)
-        if hasattr(inuc, 'cluster'):
+        if self.col_idx != inuc.col_idx:
+            stmts.append(self.drop())
+            stmts.append(inuc.add())
+        elif hasattr(inuc, 'cluster'):
             if not hasattr(self, 'cluster'):
                 stmts.append("CLUSTER %s USING %s" % (
                     quote_id(self.table), quote_id(self.name)))
@@ -350,6 +355,11 @@ class ConstraintDict(DbObjectDict):
             elif constr_type == 'u':
                 self[(sch, tbl, cns)] = UniqueConstraint(**constr.__dict__)
 
+    @classmethod
+    def _get_col_idx(cls, col_map_list, col_names):
+        columns = [col.keys()[0] for col in col_map_list]
+        return [columns.index(c) + 1 for c in col_names]
+
     def from_map(self, table, inconstrs, target=''):
         """Initialize the dictionary of constraints by converting the input map
 
@@ -386,13 +396,11 @@ class ConstraintDict(DbObjectDict):
             val = inconstrs['primary_key'][cns]
             try:
                 pkey.col_names = val['columns']
+                pkey.col_idx = self._get_col_idx(inconstrs['columns'],
+                                                 pkey.col_names)
             except KeyError as exc:
                 exc.args = ("Constraint '%s' is missing columns" % cns, )
                 raise
-            if 'columns' in inconstrs:
-                columns = [col.keys()[0] for col in inconstrs['columns']]
-                pkey.col_idx = [columns.index(c) + 1 for c in pkey.col_names]
-
             for attr, value in list(val.items()):
                 if attr in COMMON_ATTRS:
                     setattr(pkey, attr, value)
@@ -427,6 +435,8 @@ class ConstraintDict(DbObjectDict):
                     fkey.match = mat
                 try:
                     fkey.col_names = val['columns']
+                    fkey.col_idx = self._get_col_idx(inconstrs['columns'],
+                                                     fkey.col_names)
                 except KeyError as exc:
                     exc.args = ("Constraint '%s' is missing columns" % cns, )
                     raise
@@ -462,6 +472,8 @@ class ConstraintDict(DbObjectDict):
                 val = uconstrs[cns]
                 try:
                     unq.col_names = val['columns']
+                    unq.col_idx = self._get_col_idx(inconstrs['columns'],
+                                                     unq.col_names)
                 except KeyError as exc:
                     exc.args = ("Constraint '%s' is missing columns" % cns, )
                     raise
