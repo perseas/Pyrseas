@@ -147,8 +147,11 @@ class PrimaryKey(Constraint):
         input.
         """
         stmts = []
-        # TODO: to be implemented (via ALTER DROP and ALTER ADD)
-        if hasattr(inpk, 'cluster'):
+
+        if len(self.col_idx) != len(inpk.col_names):
+            stmts.append(self.drop())
+            stmts.append(inpk.add())
+        elif hasattr(inpk, 'cluster'):
             if not hasattr(self, 'cluster'):
                 stmts.append("CLUSTER %s USING %s" % (
                     quote_id(self.table), quote_id(self.name)))

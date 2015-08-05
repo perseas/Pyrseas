@@ -6,6 +6,7 @@ from pyrseas.testutils import InputMapToSqlTestCase, fix_indent
 
 COMMENT_STMT = "COMMENT ON CONSTRAINT cns1 ON t1 IS 'Test constraint cns1'"
 
+import unittest
 
 class CheckConstraintToMapTestCase(DatabaseToMapTestCase):
     """Test mapping of created CHECK constraints"""
@@ -192,6 +193,45 @@ class PrimaryKeyToSqlTestCase(InputMapToSqlTestCase):
         sql = self.to_sql(inmap, stmts)
         assert fix_indent(sql[0]) == "ALTER TABLE t1 ADD CONSTRAINT t1_pkey " \
             "PRIMARY KEY (c1, c2)"
+
+    def test_alter_primary_key_add(self):
+        "Add a two-column primary key to an existing table with primary key"
+        stmts = [
+            "CREATE TABLE t1 (c1 INTEGER PRIMARY KEY, c2 INTEGER, c3 TEXT)"
+            ]
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+            'columns': [{'c1': {'type': 'integer', 'not_null': True}},
+                        {'c2': {'type': 'integer'}},
+                        {'c3': {'type': 'text'}}],
+            'primary_key': {'t1_pkey': {'columns': ['c1', 'c2']}}}})
+        sql = self.to_sql(inmap, stmts)
+
+        self.assertEqual(len(sql), 2)
+        self.assertEqual(fix_indent(sql[0]), "ALTER TABLE t1 " \
+            "DROP CONSTRAINT t1_pkey")
+        self.assertEqual(fix_indent(sql[1]), "ALTER TABLE t1 " \
+            "ADD CONSTRAINT t1_pkey PRIMARY KEY (c1, c2)")
+
+    @unittest.expectedFailure
+    def test_alter_primary_key_change(self):
+        "Change primary key"
+        stmts = [
+            "CREATE TABLE t1 (c1 INTEGER PRIMARY KEY, c2 INTEGER, c3 TEXT)"
+            ]
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+            'columns': [{'c1': {'type': 'integer', 'not_null': True}},
+                        {'c2': {'type': 'integer'}},
+                        {'c3': {'type': 'text'}}],
+            'primary_key': {'t1_pkey': {'columns': ['c2']}}}})
+        sql = self.to_sql(inmap, stmts)
+
+        self.assertEqual(len(sql), 2)
+        self.assertEqual(fix_indent(sql[0]), "ALTER TABLE t1 " \
+            "DROP CONSTRAINT t1_pkey")
+        self.assertEqual(fix_indent(sql[1]), "ALTER TABLE t1 " \
+            "ADD CONSTRAINT t1_pkey PRIMARY KEY (c2)")
 
     def test_drop_primary_key(self):
         "Drop a primary key on an existing table"
