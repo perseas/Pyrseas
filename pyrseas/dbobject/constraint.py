@@ -148,7 +148,7 @@ class PrimaryKey(Constraint):
         """
         stmts = []
 
-        if len(self.col_idx) != len(inpk.col_names):
+        if self.col_idx != inpk.col_idx:
             stmts.append(self.drop())
             stmts.append(inpk.add())
         elif hasattr(inpk, 'cluster'):
@@ -389,6 +389,10 @@ class ConstraintDict(DbObjectDict):
             except KeyError as exc:
                 exc.args = ("Constraint '%s' is missing columns" % cns, )
                 raise
+            if 'columns' in inconstrs:
+                columns = [col.keys()[0] for col in inconstrs['columns']]
+                pkey.col_idx = [columns.index(c) + 1 for c in pkey.col_names]
+
             for attr, value in list(val.items()):
                 if attr in COMMON_ATTRS:
                     setattr(pkey, attr, value)

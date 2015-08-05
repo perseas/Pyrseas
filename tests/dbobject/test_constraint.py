@@ -213,7 +213,6 @@ class PrimaryKeyToSqlTestCase(InputMapToSqlTestCase):
         self.assertEqual(fix_indent(sql[1]), "ALTER TABLE t1 " \
             "ADD CONSTRAINT t1_pkey PRIMARY KEY (c1, c2)")
 
-    @unittest.expectedFailure
     def test_alter_primary_key_change(self):
         "Change primary key"
         stmts = [
@@ -796,7 +795,7 @@ class ConstraintCommentTestCase(InputMapToSqlTestCase):
         inmap['schema public'].update({'table t1': {
             'columns': [{'c1': {'type': 'text', 'not_null': True}},
                         {'c2': {'type': 'integer'}}],
-            'primary_key': {'cns1': {'columns': ['c2'],
+            'primary_key': {'cns1': {'columns': ['c1'],
                                      'description': 'Test constraint cns1'}}}})
         sql = self.to_sql(inmap, stmts)
         assert sql == [COMMENT_STMT]
