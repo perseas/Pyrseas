@@ -6,7 +6,7 @@ from pyrseas.testutils import InputMapToSqlTestCase, fix_indent
 
 COMMENT_STMT = "COMMENT ON CONSTRAINT cns1 ON t1 IS 'Test constraint cns1'"
 
-import unittest
+import pytest
 
 class CheckConstraintToMapTestCase(DatabaseToMapTestCase):
     """Test mapping of created CHECK constraints"""
@@ -615,7 +615,7 @@ class ForeignKeyToSqlTestCase(InputMapToSqlTestCase):
                          'ALTER TABLE t2 ADD CONSTRAINT t2_c22_fkey ' \
                          'FOREIGN KEY (c23) REFERENCES t1 (c11)')
 
-    @unittest.expectedFailure
+    @pytest.mark.xfail
     def test_alter_foreign_key2(self):
         "Change foreign key: foreign column"
         stmts = ["CREATE TABLE t1 (c11 INTEGER NOT NULL UNIQUE, "
@@ -935,4 +935,4 @@ class ConstraintCommentTestCase(InputMapToSqlTestCase):
             "'Test constraint cns1'"
 
 if __name__ == "__main__":
-    unittest.main()
+    pytest.cmdline.main()
