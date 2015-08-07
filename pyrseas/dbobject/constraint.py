@@ -357,7 +357,7 @@ class ConstraintDict(DbObjectDict):
 
     @classmethod
     def _get_col_idx(cls, col_map_list, col_names):
-        columns = [col.keys()[0] for col in col_map_list]
+        columns = [list(col.keys())[0] for col in col_map_list]
         return [columns.index(c) + 1 for c in col_names]
 
     def from_map(self, table, inconstrs, target=''):
