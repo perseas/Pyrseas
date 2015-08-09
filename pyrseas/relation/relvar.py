@@ -126,7 +126,7 @@ class RelVar(object):
         :param tup: Tuple object to get key values from
         :return: dictionary
         """
-        return {'_kv_%s' % attr: getattr(tup, attr) for attr in self.key}
+        return dict(('_kv_%s' % attr, getattr(tup, attr)) for attr in self.key)
 
     def key_values_update(self, keytuple, currtuple=None):
         """Return dictionary of key values for use by update and delete
