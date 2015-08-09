@@ -126,8 +126,8 @@ class Schema(DbObject):
             filemap.update(schema=filepath)
             return {extkey: filemap}
 
-        schmap = {obj.extern_key(): objmap for obj, objmap in schobjs
-                  if objmap is not None}
+        schmap = dict((obj.extern_key(), objmap) for obj, objmap in schobjs
+                  if objmap is not None)
         schmap.update(schbase)
         return {self.extern_key(): schmap}
 
