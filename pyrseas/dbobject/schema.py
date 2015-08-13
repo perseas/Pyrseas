@@ -117,7 +117,7 @@ class Schema(DbObject):
                         f.write(yamldump({extkey: objmap}))
                     outobj = {extkey:
                               os.path.relpath(filepath, opts.metadata_dir)}
-                filemap.update(outobj)
+                    filemap.update(outobj)
             # always write the schema YAML file
             filepath = self.extern_filename()
             extkey = self.extern_key()
