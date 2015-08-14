@@ -522,10 +522,10 @@ class ForeignTable(DbObjectWithOptions, Table):
             options and '\n    ' + ',\n    '.join(options) or ''))
         if hasattr(self, 'owner'):
             stmts.append(self.alter_owner())
-        if hasattr(self, 'description'):
+        if self.description is not None:
             stmts.append(self.comment())
         for col in self.columns:
-            if hasattr(col, 'description'):
+            if col.description is not None:
                 stmts.append(col.comment())
         return stmts
 

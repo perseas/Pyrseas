@@ -119,6 +119,8 @@ class Sequence(DbClass):
                 seq[key] = None
             elif key == 'min_value' and val == 1:
                 seq[key] = None
+            elif key == 'privileges':
+                seq[key] = val
             else:
                 if PY2:
                     if isinstance(val, (int, long)) and val <= sys.maxsize:
