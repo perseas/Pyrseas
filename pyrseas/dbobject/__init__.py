@@ -68,10 +68,16 @@ def split_schema_obj(obj, sch=None):
     qualsch = sch
     if sch is None:
         qualsch = 'public'
-    if '.' in obj:
-        (qualsch, obj) = obj.split('.')
-    if obj[0] == '"' and obj[-1:] == '"':
-        obj = obj[1:-1]
+    if obj[0] == '"' and obj[-1] == '"':
+        if '"."' in obj:
+            (qualsch, obj) = obj.split('"."')
+            qualsch = qualsch[1:]
+            obj = obj[:-1]
+        else:
+            obj = obj[1:-1]
+    else:
+        if '.' in obj:
+            (qualsch, obj) = obj.split('.')
     if sch != qualsch:
         sch = qualsch
     return (sch, obj)
