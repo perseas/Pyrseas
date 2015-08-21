@@ -157,6 +157,17 @@ class Index(DbSchemaObject):
         stmts.append(super(Index, self).alter(inindex))
         return stmts
 
+    def drop(self):
+        """Generate SQL to drop the current index
+
+        :return: list of SQL statements
+        """
+        # indexes defined by constraints are not to be dealt with as indexes
+        if getattr (self, '_for_constraint', None):
+            return []
+
+        return ["DROP INDEX %s" % self.identifier()]
+
     def get_implied_deps(self, db):
         deps = super(Index, self).get_implied_deps(db)
 
