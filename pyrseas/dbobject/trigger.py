@@ -74,7 +74,7 @@ class Trigger(DbSchemaObject):
         # has always none (they are accessed through `tg_argv`).
         # TODO: this breaks if a function name contains a '('
         # (another case for a robust lookup function in db)
-        fschema, fname = split_schema_obj(self.procedure)
+        fschema, fname = split_schema_obj(self.procedure, self.schema)
         fname, _ = fname.split('(', 1) # implicitly assert there is a (
         deps.add(db.functions[fschema, fname, ''])
 

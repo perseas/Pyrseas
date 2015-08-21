@@ -150,8 +150,9 @@ class TriggerToSqlTestCase(InputMapToSqlTestCase):
                 'timing': 'before', 'events': ['insert', 'update'],
                 'level': 'row', 'procedure': 'f1()'}}}})
         sql = self.to_sql(inmap)
-        assert fix_indent(sql[0]) == CREATE_FUNC_STMT
-        assert fix_indent(sql[1]) == CREATE_TABLE_STMT
+        crt0, crt1 = (0, 1) if 'TABLE' in sql[0] else (1, 0)
+        assert fix_indent(sql[crt0]) == CREATE_TABLE_STMT
+        assert fix_indent(sql[crt1]) == CREATE_FUNC_STMT
         assert fix_indent(sql[2]) == CREATE_STMT
 
     def test_create_trigger2(self):
@@ -166,8 +167,9 @@ class TriggerToSqlTestCase(InputMapToSqlTestCase):
                                  'events': ['delete', 'truncate'],
                                  'procedure': 'f1()'}}}})
         sql = self.to_sql(inmap)
-        assert fix_indent(sql[1]) == CREATE_FUNC_STMT
-        assert fix_indent(sql[0]) == CREATE_TABLE_STMT
+        crt0, crt1 = (0, 1) if 'TABLE' in sql[0] else (1, 0)
+        assert fix_indent(sql[crt0]) == CREATE_TABLE_STMT
+        assert fix_indent(sql[crt1]) == CREATE_FUNC_STMT
         assert fix_indent(sql[2]) == "CREATE TRIGGER tr1 AFTER DELETE OR " \
             "TRUNCATE ON t1 FOR EACH STATEMENT EXECUTE PROCEDURE f1()"
 
@@ -185,8 +187,9 @@ class TriggerToSqlTestCase(InputMapToSqlTestCase):
                 'insert', 'update'], 'columns': ['c1', 'c2'], 'level': 'row',
                 'procedure': 'f1()'}}}})
         sql = self.to_sql(inmap)
-        assert fix_indent(sql[0]) == CREATE_FUNC_STMT
-        assert fix_indent(sql[1]) == CREATE_TABLE_STMT
+        crt0, crt1 = (0, 1) if 'TABLE' in sql[0] else (1, 0)
+        assert fix_indent(sql[crt0]) == CREATE_TABLE_STMT
+        assert fix_indent(sql[crt1]) == CREATE_FUNC_STMT
         assert fix_indent(sql[2]) == "CREATE TRIGGER tr1 BEFORE INSERT OR " \
             "UPDATE OF c1, c2 ON t1 FOR EACH ROW EXECUTE PROCEDURE f1()"
 
@@ -204,8 +207,9 @@ class TriggerToSqlTestCase(InputMapToSqlTestCase):
                 'update'], 'level': 'row', 'procedure': 'f1()',
                 'condition': '(old.c2 IS DISTINCT FROM new.c2)'}}}})
         sql = self.to_sql(inmap)
-        assert fix_indent(sql[0]) == CREATE_FUNC_STMT
-        assert fix_indent(sql[1]) == CREATE_TABLE_STMT
+        crt0, crt1 = (0, 1) if 'TABLE' in sql[0] else (1, 0)
+        assert fix_indent(sql[crt0]) == CREATE_TABLE_STMT
+        assert fix_indent(sql[crt1]) == CREATE_FUNC_STMT
         assert fix_indent(sql[2]) == "CREATE TRIGGER tr1 BEFORE UPDATE " \
             "ON t1 FOR EACH ROW WHEN ((old.c2 IS DISTINCT FROM new.c2)) " \
             "EXECUTE PROCEDURE f1()"
@@ -225,11 +229,12 @@ class TriggerToSqlTestCase(InputMapToSqlTestCase):
                                              'level': 'row',
                                              'procedure': 'f1()'}}}})
         sql = self.to_sql(inmap)
-        assert fix_indent(sql[1]) == "CREATE FUNCTION f1() RETURNS trigger " \
+        assert fix_indent(sql[0]) == CREATE_TABLE_STMT
+        cr1, cr2 = (1, 2) if 'VIEW' in sql[1] else (2, 1)
+        assert fix_indent(sql[cr1]) == "CREATE VIEW v1 AS SELECT c1, c2 FROM t1"
+        assert fix_indent(sql[cr2]) == "CREATE FUNCTION f1() RETURNS trigger " \
             "LANGUAGE plpgsql AS $_$%s$_$" % FUNC_INSTEAD_SRC
-        assert fix_indent(sql[2]) == CREATE_TABLE_STMT
-        assert fix_indent(sql[3]) == "CREATE VIEW v1 AS SELECT c1, c2 FROM t1"
-        assert fix_indent(sql[4]) == "CREATE TRIGGER tr1 INSTEAD OF INSERT " \
+        assert fix_indent(sql[3]) == "CREATE TRIGGER tr1 INSTEAD OF INSERT " \
             "ON v1 FOR EACH ROW EXECUTE PROCEDURE f1()"
 
     def test_create_trigger_in_schema(self):
@@ -245,7 +250,7 @@ class TriggerToSqlTestCase(InputMapToSqlTestCase):
                     'timing': 'before', 'events': ['insert', 'update'],
                     'level': 'row', 'procedure': 'f1()'}}}}})
         sql = self.to_sql(inmap, ["CREATE SCHEMA s1"])
-        assert fix_indent(sql[3]) == "CREATE TRIGGER tr1 BEFORE INSERT OR " \
+        assert fix_indent(sql[2]) == "CREATE TRIGGER tr1 BEFORE INSERT OR " \
             "UPDATE ON s1.t1 FOR EACH ROW EXECUTE PROCEDURE f1()"
 
     def test_drop_trigger(self):
@@ -283,10 +288,11 @@ class TriggerToSqlTestCase(InputMapToSqlTestCase):
                 'timing': 'before', 'events': ['insert', 'update'],
                 'level': 'row', 'procedure': 'f1()'}}}})
         sql = self.to_sql(inmap)
-        assert fix_indent(sql[1]) == CREATE_FUNC_STMT
-        assert fix_indent(sql[2]) == CREATE_TABLE_STMT
-        assert fix_indent(sql[3]) == CREATE_STMT
-        assert sql[4] == COMMENT_STMT
+        crt0, crt1 = (0, 1) if 'TABLE' in sql[0] else (1, 0)
+        assert fix_indent(sql[crt0]) == CREATE_TABLE_STMT
+        assert fix_indent(sql[crt1]) == CREATE_FUNC_STMT
+        assert fix_indent(sql[2]) == CREATE_STMT
+        assert sql[3] == COMMENT_STMT
 
     def test_comment_on_trigger(self):
         "Create a comment on an existing trigger"
@@ -360,9 +366,10 @@ class ConstraintTriggerToSqlTestCase(InputMapToSqlTestCase):
                 'events': ['insert', 'update'], 'level': 'row',
                 'procedure': 'f1()'}}}})
         sql = self.to_sql(inmap)
-        assert fix_indent(sql[1]) == CREATE_FUNC_STMT
-        assert fix_indent(sql[2]) == CREATE_TABLE_STMT
-        assert fix_indent(sql[3]) == "CREATE CONSTRAINT TRIGGER tr1 AFTER " \
+        crt0, crt1 = (0, 1) if 'TABLE' in sql[0] else (1, 0)
+        assert fix_indent(sql[crt0]) == CREATE_TABLE_STMT
+        assert fix_indent(sql[crt1]) == CREATE_FUNC_STMT
+        assert fix_indent(sql[2]) == "CREATE CONSTRAINT TRIGGER tr1 AFTER " \
             "INSERT OR UPDATE ON t1 FOR EACH ROW EXECUTE PROCEDURE f1()"
 
     def test_create_trigger_deferrable(self):
@@ -379,8 +386,9 @@ class ConstraintTriggerToSqlTestCase(InputMapToSqlTestCase):
                 'events': ['insert', 'update'], 'level': 'row',
                 'procedure': 'f1()'}}}})
         sql = self.to_sql(inmap)
-        assert fix_indent(sql[1]) == CREATE_FUNC_STMT
-        assert fix_indent(sql[2]) == CREATE_TABLE_STMT
-        assert fix_indent(sql[3]) == "CREATE CONSTRAINT TRIGGER tr1 " \
+        crt0, crt1 = (0, 1) if 'TABLE' in sql[0] else (1, 0)
+        assert fix_indent(sql[crt0]) == CREATE_TABLE_STMT
+        assert fix_indent(sql[crt1]) == CREATE_FUNC_STMT
+        assert fix_indent(sql[2]) == "CREATE CONSTRAINT TRIGGER tr1 " \
             "AFTER INSERT OR UPDATE ON t1 DEFERRABLE INITIALLY " \
             "DEFERRED FOR EACH ROW EXECUTE PROCEDURE f1()"
