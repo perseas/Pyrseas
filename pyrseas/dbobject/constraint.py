@@ -243,10 +243,9 @@ class ForeignKey(Constraint):
             actions += " INITIALLY DEFERRED"
 
         return "ALTER TABLE %s ADD CONSTRAINT %s FOREIGN KEY (%s) " \
-            "REFERENCES %s.%s (%s)%s%s" % (
+            "REFERENCES %s (%s)%s%s" % (
             self._table.qualname(), quote_id(self.name), self.key_columns(),
-            quote_id(self.ref_schema), quote_id(self.ref_table),
-            self.ref_columns(), match, actions)
+            self.references.qualname(), self.ref_columns(), match, actions)
 
     def alter(self, infk):
         """Generate SQL to transform an existing foreign key
@@ -267,12 +266,11 @@ class ForeignKey(Constraint):
         deps = super(ForeignKey, self).get_implied_deps(db)
 
         # add the table we reference
-        ref_table = db.tables[self.ref_schema, self.ref_table]
-        deps.add(ref_table)
+        deps.add(self.references)
 
         # A fkey needs a pkey, unique constraint or complete unique index
         # defined on the fields it references to be restored.
-        deps.add(self._find_referenced_index(db, ref_table))
+        deps.add(self._find_referenced_index(db, self.references))
 
         return deps
 

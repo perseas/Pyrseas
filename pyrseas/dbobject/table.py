@@ -851,6 +851,7 @@ class ClassDict(DbObjectDict):
                 if not hasattr(table, 'foreign_keys'):
                     table.foreign_keys = {}
                 # link referenced and referrer
+                constr.references = self[(constr.ref_schema, constr.ref_table)]
                 # TODO: there can be more than one
                 self[(constr.ref_schema, constr.ref_table)]._referred_by = \
                     constr
