@@ -270,7 +270,9 @@ class ForeignKey(Constraint):
 
         # A fkey needs a pkey, unique constraint or complete unique index
         # defined on the fields it references to be restored.
-        deps.add(self._find_referenced_index(db, self.references))
+        idx = self._find_referenced_index(db, self.references)
+        if idx:
+            deps.add(idx)
 
         return deps
 
@@ -297,7 +299,6 @@ class ForeignKey(Constraint):
                 and idx.keys == col_names:
                     return idx
 
-        assert False, "failed to find referenced index"
 
 class UniqueConstraint(Constraint):
     "A unique constraint definition"
