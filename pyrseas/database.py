@@ -519,6 +519,7 @@ class Database(object):
         self.from_map(input_map, langs)
         if opts.revert:
             (self.db, self.ndb) = (self.ndb, self.db)
+            del self.ndb.schemas['pg_catalog']
             self.db.languages.dbconn = self.dbconn
 
         # First sort the objects in the new db in dependency order
