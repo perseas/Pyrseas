@@ -325,6 +325,9 @@ class Table(DbClass):
         for col in self.columns:
             if col.description is not None:
                 stmts.append(col.comment())
+        if hasattr(self, '_owned_seqs'):
+            for dep in self._owned_seqs:
+                stmts.append(dep.add_owner())
         self.created = True
         return stmts
 
@@ -496,6 +499,9 @@ class Table(DbClass):
                     seq = db.tables.find(m.group(1), self.schema)
                     if seq:
                         deps.add(seq)
+                        if not hasattr(self, '_owned_seqs'):
+                            self._owned_seqs = []
+                        self._owned_seqs.append(seq)
 
         for pname in getattr(self, 'inherits', ()):
             parent = db.tables.find(pname, self.schema)
