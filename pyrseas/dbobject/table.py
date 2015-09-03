@@ -196,6 +196,16 @@ class Sequence(DbClass):
         stmts.append(super(Sequence, self).alter(inseq, no_owner=no_owner))
         return stmts
 
+    def drop(self):
+        """Generate SQL to drop the current sequence
+
+        :return: list of SQL statements
+        """
+        stmts = []
+        if not hasattr(self, 'owner_table'):
+            stmts.append(super(Sequence, self).drop())
+        return stmts
+
 
 class Table(DbClass):
     """A database table definition

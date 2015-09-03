@@ -65,6 +65,12 @@ class SequenceToSqlTestCase(InputMapToSqlTestCase):
         sql = self.to_sql(self.std_map(), [CREATE_STMT])
         assert sql == ["DROP SEQUENCE seq1"]
 
+    def test_no_drop_owned_sequence(self):
+        "Don't drop a sequence owned by a table column"
+        sql = self.to_sql(self.std_map(),
+                          ["CREATE TABLE t1 (c1 SERIAL, c2 text)"])
+        assert sql == ["DROP TABLE t1"]
+
     def test_rename_sequence(self):
         "Rename an existing sequence"
         inmap = self.std_map()
