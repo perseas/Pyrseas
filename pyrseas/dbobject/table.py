@@ -509,9 +509,10 @@ class Table(DbClass):
                     seq = db.tables.find(m.group(1), self.schema)
                     if seq:
                         deps.add(seq)
-                        if not hasattr(self, '_owned_seqs'):
-                            self._owned_seqs = []
-                        self._owned_seqs.append(seq)
+                        if hasattr(seq, 'owned_table'):
+                            if not hasattr(self, '_owned_seqs'):
+                                self._owned_seqs = []
+                            self._owned_seqs.append(seq)
 
         for pname in getattr(self, 'inherits', ()):
             parent = db.tables.find(pname, self.schema)

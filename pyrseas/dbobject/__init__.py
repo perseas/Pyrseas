@@ -76,7 +76,8 @@ def split_schema_obj(obj, sch=None):
         else:
             obj = obj[1:-1]
     else:
-        if '.' in obj:
+        # TODO: properly handle functions
+        if '.' in obj and not '(' in obj:
             (qualsch, obj) = obj.split('.')
     if sch != qualsch:
         sch = qualsch
