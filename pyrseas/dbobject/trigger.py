@@ -70,6 +70,10 @@ class Trigger(DbSchemaObject):
 
         deps.add(db.tables[self.schema, self.table])
 
+        # short-circuit augment triggers
+        if self._iscfg:
+            return deps
+
         # the trigger procedure can have arguments, but the trigger definition
         # has always none (they are accessed through `tg_argv`).
         # TODO: this breaks if a function name contains a '('

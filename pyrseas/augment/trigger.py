@@ -23,6 +23,7 @@ class CfgTrigger(DbAugment):
         """
         newtrg = Trigger(schema=table.schema, table=table.name,
                          **self.__dict__)
+        newtrg._iscfg = True
         if newtrg.name.startswith('{{table_name}}'):
             newtrg.name = newtrg.name.replace(newtrg.name[:14], table.name)
         newtrg._table = table
