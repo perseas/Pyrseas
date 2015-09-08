@@ -71,7 +71,7 @@ class Trigger(DbSchemaObject):
         deps.add(db.tables[self.schema, self.table])
 
         # short-circuit augment triggers
-        if self._iscfg:
+        if hasattr(self, '_iscfg'):
             return deps
 
         # the trigger procedure can have arguments, but the trigger definition
