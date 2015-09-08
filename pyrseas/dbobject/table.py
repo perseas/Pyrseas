@@ -509,7 +509,7 @@ class Table(DbClass):
                     seq = db.tables.find(m.group(1), self.schema)
                     if seq:
                         deps.add(seq)
-                        if hasattr(seq, 'owned_table'):
+                        if hasattr(seq, 'owner_table'):
                             if not hasattr(self, '_owned_seqs'):
                                 self._owned_seqs = []
                             self._owned_seqs.append(seq)
