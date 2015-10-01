@@ -370,7 +370,7 @@ class DbObject(object):
         :return: list
         """
         return [privileges_to_map(prv, self.allprivs, self.owner)
-                for prv in self.privileges]
+                for prv in self.privileges if prv]
 
     def _comment_text(self):
         """Return the text for the SQL COMMENT statement
