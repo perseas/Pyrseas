@@ -29,7 +29,7 @@ class Constraint(DbSchemaObject):
 
         :return: string
         """
-        return ", ".join([quote_id(col) for col in self.keycols])
+        return ", ".join([quote_id(col) for col in self.col_names])
 
     def create(self):
         # TODO: is add really needed?
@@ -104,8 +104,8 @@ class CheckConstraint(Constraint):
         if 'target' in dct:
             del dct['target']
         if dbcols:
-            dct['columns'] = [dbcols[k - 1] for k in self.keycols]
-            del dct['keycols']
+            dct['columns'] = [dbcols[k - 1] for k in self.col_idx]
+            del dct['col_idx']
         return {self.name: dct}
 
     @commentable
@@ -164,8 +164,8 @@ class PrimaryKey(Constraint):
         dct = self._base_map(db)
         if dct['access_method'] == 'btree':
             del dct['access_method']
-        dct['columns'] = [dbcols[k - 1] for k in self.keycols]
-        del dct['keycols']
+        dct['columns'] = [dbcols[k - 1] for k in self.col_idx]
+        del dct['col_idx']
         return {self.name: dct}
 
     def alter(self, inpk):
@@ -179,8 +179,10 @@ class PrimaryKey(Constraint):
         input.
         """
         stmts = []
-        # TODO: to be implemented (via ALTER DROP and ALTER ADD)
-        if hasattr(inpk, 'cluster'):
+        if self.col_idx != inpk.col_idx:
+            stmts.append(self.drop())
+            stmts.append(inpk.add())
+        elif hasattr(inpk, 'cluster'):
             if not hasattr(self, 'cluster'):
                 stmts.append("CLUSTER %s USING %s" % (
                     quote_id(self.table), quote_id(self.name)))
@@ -212,8 +214,8 @@ class ForeignKey(Constraint):
         :return: dictionary
         """
         dct = self._base_map(db)
-        dct['columns'] = [dbcols[k - 1] for k in self.keycols]
-        del dct['keycols']
+        dct['columns'] = [dbcols[k - 1] for k in self.col_idx]
+        del dct['col_idx']
         refsch = hasattr(self, 'ref_schema') and self.ref_schema or self.schema
         ref_cols = [refcols[k - 1] for k in self.ref_cols]
         dct['references'] = {'table': dct['ref_table'], 'columns': ref_cols}
@@ -258,7 +260,10 @@ class ForeignKey(Constraint):
         input.
         """
         stmts = []
-        # TODO: to be implemented (via ALTER DROP and ALTER ADD)
+        if self.col_idx != infk.col_idx:
+            stmts.append(self.drop())
+            stmts.append(infk.add())
+        # TODO check references
         stmts.append(self.diff_description(infk))
         return stmts
 
@@ -278,12 +283,15 @@ class ForeignKey(Constraint):
 
     def _find_referenced_index(self, db, ref_table):
         pkey = getattr(ref_table, 'primary_key', None)
-        if pkey and pkey.keycols == self.ref_cols:
-            return pkey
+        if pkey:
+            if (hasattr(pkey, 'col_idx') and pkey.col_idx == self.ref_cols) \
+               or (hasattr(pkey, 'col_names') and
+                   pkey.col_names == self.ref_cols):
+                return pkey
 
         if hasattr(ref_table, 'unique_constraints'):
             for uc in list(ref_table.unique_constraints.values()):
-                if uc.keycols == self.ref_cols:
+                if uc.col_idx == self.ref_cols:
                     return uc
 
         if hasattr(ref_table, 'indexes'):
@@ -317,8 +325,8 @@ class UniqueConstraint(Constraint):
         if dct['access_method'] == 'btree':
             del dct['access_method']
         dct['columns'] = []
-        dct['columns'] = [dbcols[k - 1] for k in self.keycols]
-        del dct['keycols']
+        dct['columns'] = [dbcols[k - 1] for k in self.col_idx]
+        del dct['col_idx']
         return {self.name: dct}
 
     def alter(self, inuc):
@@ -332,8 +340,10 @@ class UniqueConstraint(Constraint):
         represented by the input.
         """
         stmts = []
-        # TODO: to be implemented (via ALTER DROP and ALTER ADD)
-        if hasattr(inuc, 'cluster'):
+        if self.col_idx != inuc.col_idx:
+            stmts.append(self.drop())
+            stmts.append(inuc.add())
+        elif hasattr(inuc, 'cluster'):
             if not hasattr(self, 'cluster'):
                 stmts.append("CLUSTER %s USING %s" % (
                     quote_id(self.table), quote_id(self.name)))
@@ -359,7 +369,7 @@ class ConstraintDict(DbObjectDict):
                        ELSE contypid::regtype::text END AS table,
                   conname AS name,
                   CASE WHEN contypid != 0 THEN 'd' ELSE '' END AS target,
-                  contype AS type, conkey AS keycols,
+                  contype AS type, conkey AS col_idx,
                   condeferrable AS deferrable, condeferred AS deferred,
                   confrelid::regclass AS ref_table, confkey AS ref_cols,
                   consrc AS expression, confupdtype AS on_update,
@@ -426,6 +436,11 @@ class ConstraintDict(DbObjectDict):
                 self.by_oid[oid] = self[(sch, tbl, cns)] \
                     = UniqueConstraint(**constr.__dict__)
 
+    @classmethod
+    def _get_col_idx(cls, col_map_list, col_names):
+        columns = [list(col.keys())[0] for col in col_map_list]
+        return [columns.index(c) + 1 for c in col_names]
+
     def from_map(self, table, inconstrs, target=''):
         """Initialize the dictionary of constraints by converting the input map
 
@@ -448,7 +463,7 @@ class ConstraintDict(DbObjectDict):
                 if check.expression[0] == '(' and check.expression[-1] == ')':
                     check.expression = check.expression[1:-1]
                 if 'columns' in val:
-                    check.keycols = val['columns']
+                    check.col_names = val['columns']
                 if target:
                     check.target = target
                 if 'description' in val:
@@ -462,7 +477,9 @@ class ConstraintDict(DbObjectDict):
                               name=cns)
             val = inconstrs['primary_key'][cns]
             try:
-                pkey.keycols = val['columns']
+                pkey.col_names = val['columns']
+                pkey.col_idx = self._get_col_idx(inconstrs['columns'],
+                                                 pkey.col_names)
             except KeyError as exc:
                 exc.args = ("Constraint '%s' is missing columns" % cns, )
                 raise
@@ -500,7 +517,9 @@ class ConstraintDict(DbObjectDict):
                                          "constraint '%s'" % (mat, cns))
                     fkey.match = mat
                 try:
-                    fkey.keycols = val['columns']
+                    fkey.col_names = val['columns']
+                    fkey.col_idx = self._get_col_idx(inconstrs['columns'],
+                                                     fkey.col_names)
                 except KeyError as exc:
                     exc.args = ("Constraint '%s' is missing columns" % cns, )
                     raise
@@ -535,7 +554,9 @@ class ConstraintDict(DbObjectDict):
                                        name=cns)
                 val = uconstrs[cns]
                 try:
-                    unq.keycols = val['columns']
+                    unq.col_names = val['columns']
+                    unq.col_idx = self._get_col_idx(inconstrs['columns'],
+                                                    unq.col_names)
                 except KeyError as exc:
                     exc.args = ("Constraint '%s' is missing columns" % cns, )
                     raise

@@ -468,7 +468,7 @@ class Table(DbClass):
         filepath = os.path.join(dirpath, self.extern_filename('data'))
         if hasattr(self, 'primary_key'):
             order_by = [self.columns[col - 1].name
-                        for col in self.primary_key.keycols]
+                        for col in self.primary_key.col_idx]
         else:
             order_by = ['%d' % (n + 1) for n in range(len(self.columns))]
         dbconn.sql_copy_to(
