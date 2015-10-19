@@ -148,6 +148,7 @@ class PrimaryKey(Constraint):
         """
         stmts = []
 
+        # TODO chompare column names
         if self.col_idx != inpk.col_idx:
             stmts.append(self.drop())
             stmts.append(inpk.add())
@@ -229,6 +230,7 @@ class ForeignKey(Constraint):
         """
         stmts = []
 
+        # TODO compare column names
         changed = self.col_idx != infk.col_idx or \
                 (self.ref_col_idxs!= infk.ref_col_idxs)
 

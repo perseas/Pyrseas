@@ -232,6 +232,39 @@ class PrimaryKeyToSqlTestCase(InputMapToSqlTestCase):
         self.assertEqual(fix_indent(sql[1]), "ALTER TABLE t1 " \
             "ADD CONSTRAINT t1_pkey PRIMARY KEY (c2)")
 
+    @pytest.mark.xfail
+    def test_alter_primary_key_change_order(self):
+        "Change primary key"
+        stmts = ["CREATE TABLE t1 (c2 INTEGER, c1 INTEGER PRIMARY KEY)"]
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+            'columns': [{'c1': {'type': 'integer', 'not_null': True}},
+                        {'c2': {'type': 'integer'}}],
+            'primary_key': {'t1_pkey': {'columns': ['c2']}}}})
+        sql = self.to_sql(inmap, stmts)
+
+        self.assertEqual(len(sql), 2)
+        self.assertEqual(fix_indent(sql[0]), "ALTER TABLE t1 " \
+            "DROP CONSTRAINT t1_pkey")
+        self.assertEqual(fix_indent(sql[1]), "ALTER TABLE t1 " \
+            "ADD CONSTRAINT t1_pkey PRIMARY KEY (c2)")
+
+    @pytest.mark.xfail
+    def test_alter_primary_key_change_order2(self):
+        "Change primary key"
+        stmts = ["CREATE TABLE t1 (c1 INTEGER, c2 INTEGER PRIMARY KEY)"]
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+            'columns': [{'c1': {'type': 'integer'}},
+                        {'cN': {'type': 'text'}},
+                        {'c2': {'type': 'integer', 'not_null': True}}],
+            'primary_key': {'t1_pkey': {'columns': ['c2']}}}})
+        sql = self.to_sql(inmap, stmts)
+
+        self.assertEqual(len(sql), 1)
+        self.assertEqual(fix_indent(sql[0]), \
+            "ALTER TABLE t1 ADD COLUMN cN text")
+
     def test_drop_primary_key(self):
         "Drop a primary key on an existing table"
         stmts = ["CREATE TABLE t1 (c1 INTEGER NOT NULL PRIMARY KEY, c2 TEXT)"]
@@ -655,6 +688,38 @@ class ForeignKeyToSqlTestCase(InputMapToSqlTestCase):
         self.assertEqual(fix_indent(sql[1]),
                          'ALTER TABLE t2 ADD CONSTRAINT t2_c22_fkey ' \
                          'FOREIGN KEY (c22) REFERENCES t1 (c12)')
+
+    @pytest.mark.xfail
+    def test_alter_foreign_key_column_order(self):
+        "Change foreign key: foreign column"
+        stmts = ["CREATE TABLE t1 (c11 INTEGER, c12 INTEGER PRIMARY KEY)",
+                 "CREATE TABLE t2 (c21 INTEGER PRIMARY KEY, c22 INTEGER)",
+                 "ALTER TABLE t2 ADD CONSTRAINT t2_c22_fkey " \
+                 "FOREIGN KEY (c22) REFERENCES t1 (c12)"]
+        inmap = self.std_map()
+        inmap['schema public'].update({
+            'table t1': {'columns': [
+                        {'c11': {'type': 'integer'}},
+                        {'c1N': {'type': 'integer'}},
+                        {'c12': {'type': 'integer', 'not_null': True}}],
+                'primary_key': {'t1_pkey': {'columns': ['c12']}}},
+            'table t2': {'columns': [
+                        {'c21': {'type': 'integer', 'not_null': True}},
+                        {'c22': {'type': 'integer'}}],
+                'primary_key': {'t2_pkey': {'columns': ['c21']}},
+                'foreign_keys': {'t2_c22_fkey': {
+                    'columns': ['c22'],
+                    'references': {'columns': ['c1N'], 'table': 't1'}}}}})
+        sql = self.to_sql(inmap, stmts)
+        self.assertEqual(2, len(sql))
+        self.assertEqual(fix_indent(sql[0]),
+                         'ALTER TABLE t1 ADD COLUMN c1N integer')
+        self.assertEqual(fix_indent(sql[1]),
+                         'ALTER TABLE t2 DROP CONSTRAINT t2_c22_fkey')
+        self.assertEqual(fix_indent(sql[2]),
+                         'ALTER TABLE t2 ADD CONSTRAINT t2_c22_fkey ' \
+                         'FOREIGN KEY (c22) REFERENCES t1 (c1N)')
+
 
     def test_alter_foreign_key_change_actions(self):
         "Change foreign key: foreign column"
