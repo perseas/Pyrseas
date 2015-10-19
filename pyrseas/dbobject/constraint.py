@@ -228,10 +228,20 @@ class ForeignKey(Constraint):
         input.
         """
         stmts = []
-        if self.col_idx != infk.col_idx:
+
+        changed = self.col_idx != infk.col_idx or \
+                (self.ref_col_idxs!= infk.ref_col_idxs)
+
+        for act in ['on_update', 'on_delete']:
+            s_act = getattr(self, act).upper() if hasattr(self, act) else None
+            in_act = getattr(infk, act).upper() if hasattr(infk, act) else None
+            if s_act != in_act:
+                changed = True
+
+        if changed:
             stmts.append(self.drop())
             stmts.append(infk.add())
-        # TODO check references
+
         stmts.append(self.diff_description(infk))
         return stmts
 
