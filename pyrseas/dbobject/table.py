@@ -746,7 +746,7 @@ class ClassDict(DbObjectDict):
                 except KeyError as exc:
                     exc.args = ("Table '%s' has no columns" % key, )
                     raise
-                newdb.constraints.from_map(table, intable)
+                newdb.constraints.from_map(table, intable, rtables=inobjs)
                 if 'indexes' in intable:
                     newdb.indexes.from_map(table, intable['indexes'])
                 if 'rules' in intable:

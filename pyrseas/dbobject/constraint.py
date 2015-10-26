@@ -172,7 +172,7 @@ class ForeignKey(Constraint):
 
         :return: string
         """
-        return ", ".join(self.ref_cols)
+        return ", ".join(self.ref_col_names)
 
     def to_map(self, dbcols, refcols):
         """Convert a foreign key definition to a YAML-suitable format
@@ -185,12 +185,12 @@ class ForeignKey(Constraint):
         dct['columns'] = [dbcols[k - 1] for k in self.col_idx]
         del dct['col_idx']
         refsch = hasattr(self, 'ref_schema') and self.ref_schema or self.schema
-        ref_cols = [refcols[k - 1] for k in self.ref_cols]
-        dct['references'] = {'table': dct['ref_table'], 'columns': ref_cols}
+        ref_col_names = [refcols[k - 1] for k in self.ref_col_idxs]
+        dct['references'] = {'table': dct['ref_table'], 'columns': ref_col_names}
         if 'ref_schema' in dct:
             dct['references'].update(schema=refsch)
             del dct['ref_schema']
-        del dct['ref_table'], dct['ref_cols']
+        del dct['ref_table'], dct['ref_col_idxs']
         return {self.name: dct}
 
     @commentable
@@ -296,7 +296,7 @@ class ConstraintDict(DbObjectDict):
                   CASE WHEN contypid != 0 THEN 'd' ELSE '' END AS target,
                   contype AS type, conkey AS col_idx,
                   condeferrable AS deferrable, condeferred AS deferred,
-                  confrelid::regclass AS ref_table, confkey AS ref_cols,
+                  confrelid::regclass AS ref_table, confkey AS ref_col_idxs,
                   consrc AS expression, confupdtype AS on_update,
                   confdeltype AS on_delete, confmatchtype AS match,
                   amname AS access_method, spcname AS tablespace,
@@ -360,7 +360,7 @@ class ConstraintDict(DbObjectDict):
         columns = [list(col.keys())[0] for col in col_map_list]
         return [columns.index(c) + 1 for c in col_names]
 
-    def from_map(self, table, inconstrs, target=''):
+    def from_map(self, table, inconstrs, target='', rtables=None):
         """Initialize the dictionary of constraints by converting the input map
 
         :param table: table affected by the constraints
@@ -452,7 +452,13 @@ class ConstraintDict(DbObjectDict):
                                 % cns, )
                     raise
                 try:
-                    fkey.ref_cols = refs['columns']
+                    fkey.ref_col_names = refs['columns']
+                    rtable_key = 'table ' + fkey.ref_table
+                    if rtables and rtable_key in rtables:
+                        ref_table = rtables[rtable_key]
+                        fkey.ref_col_idxs = \
+                            self._get_col_idx(ref_table['columns'],
+                                              fkey.ref_col_names)
                 except KeyError as exc:
                     exc.args = ("Constraint '%s' missing reference columns"
                                 % cns, )
