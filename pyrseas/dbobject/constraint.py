@@ -47,7 +47,7 @@ class Constraint(DbSchemaObject):
                      self.objtype, self.key_columns(), tblspc))
         if hasattr(self, 'cluster') and self.cluster:
             stmts.append("CLUSTER %s USING %s" % (
-                quote_id(self.table), quote_id(self.name)))
+                self._table.qualname(), quote_id(self.name)))
         return stmts
 
     def drop(self):
@@ -154,10 +154,10 @@ class PrimaryKey(Constraint):
         elif hasattr(inpk, 'cluster'):
             if not hasattr(self, 'cluster'):
                 stmts.append("CLUSTER %s USING %s" % (
-                    quote_id(self.table), quote_id(self.name)))
+                    self._table.qualname(), quote_id(self.name)))
         elif hasattr(self, 'cluster'):
             stmts.append("ALTER TABLE %s\n    SET WITHOUT CLUSTER" %
-                         quote_id(self.table))
+                         self._table.qualname())
         stmts.append(self.diff_description(inpk))
         return stmts
 
@@ -273,10 +273,10 @@ class UniqueConstraint(Constraint):
         elif hasattr(inuc, 'cluster'):
             if not hasattr(self, 'cluster'):
                 stmts.append("CLUSTER %s USING %s" % (
-                    quote_id(self.table), quote_id(self.name)))
+                    self._table.qualname(), quote_id(self.name)))
         elif hasattr(self, 'cluster'):
             stmts.append("ALTER TABLE %s\n    SET WITHOUT CLUSTER" %
-                         quote_id(self.table))
+                         self._table.qualname())
         stmts.append(self.diff_description(inuc))
         return stmts
 
