@@ -8,3 +8,4 @@ Pyrseas.egg-info
 .coverage
 htmlcov
 .tox
+.cache

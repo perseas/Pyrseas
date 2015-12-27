@@ -1,4 +1,4 @@
-include AUTHORS.rst Changelog.rst LICENSE Makefile META.json
+include README.rst AUTHORS.rst Changelog.rst LICENSE Makefile META.json
 recursive-include tests *.py
 recursive-include docs *
 prune docs/_build
