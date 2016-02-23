@@ -119,7 +119,9 @@ class Sequence(DbClass):
                     key == 'description' and self.description is None):
                 continue
             if key == 'privileges':
-                seq[key] = self.map_privs()
+                privs = self.map_privs()
+                if privs != []:
+                    seq[key] = privs
             elif key == 'max_value' and val == MAX_BIGINT:
                 seq[key] = None
             elif key == 'min_value' and val == 1:
