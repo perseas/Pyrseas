@@ -102,3 +102,18 @@ class MatViewToSqlTestCase(InputMapToSqlTestCase):
         sql = self.to_sql(inmap)
         assert fix_indent(sql[0]) == CREATE_STMT
         assert sql[1] == COMMENT_STMT
+
+    def test_view_index(self):
+        "Create an index on a materialized view"
+        if self.db.version < 90300:
+            self.skipTest('Only available on PG 9.3')
+        stmts = [CREATE_TABLE, CREATE_STMT]
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+            'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}},
+                        {'c3': {'type': 'integer'}}]}})
+        inmap['schema public'].update({'materialized view mv1': {
+            'definition': VIEW_DEFN, 'indexes': {'idx1': {'keys': ['mc3']}}}})
+        sql = self.to_sql(inmap, stmts)
+        print(sql)
+        assert sql == ["CREATE INDEX idx1 ON mv1 (mc3)"]

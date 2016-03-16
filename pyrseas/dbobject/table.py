@@ -779,6 +779,8 @@ class ClassDict(DbObjectDict):
                 inmview = inobj
                 if not inmview:
                     raise ValueError("View '%s' has no specification" % k)
+                if 'indexes' in inmview:
+                    newdb.indexes.from_map(mview, inmview['indexes'])
                 for attr, val in list(inmview.items()):
                     setattr(mview, attr, val)
             else:
