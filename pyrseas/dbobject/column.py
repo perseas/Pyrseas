@@ -168,6 +168,8 @@ class Column(DbSchemaObject):
             elif self.default != incol.default:
                 stmts.append(base + "SET DEFAULT %s" % incol.default)
         # check STATISTICS
+        if not hasattr(self, 'statistics'):
+            self.statistics = -1
         if self.statistics == -1 and (hasattr(incol, 'statistics') and
                                       incol.statistics != -1):
             stmts.append(base + "SET STATISTICS %d" % incol.statistics)
