@@ -231,8 +231,10 @@ class ForeignKey(Constraint):
         stmts = []
 
         # TODO compare column names
+        if not hasattr(infk, 'ref_col_idxs'):
+            infk.ref_col_idxs = []
         changed = self.col_idx != infk.col_idx or \
-                (self.ref_col_idxs!= infk.ref_col_idxs)
+                (self.ref_col_idxs != infk.ref_col_idxs)
 
         for act in ['on_update', 'on_delete']:
             s_act = getattr(self, act).upper() if hasattr(self, act) else None
