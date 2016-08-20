@@ -294,7 +294,10 @@ class DbObject(object):
         owner = self.owner if hasattr(self, 'owner') else ''
         for prv in self.privileges:
             privlist.append(privileges_to_map(prv, self.allprivs, owner))
-        return privlist
+        sorted_privlist = []
+        for sortedItem in sorted([list(i.keys())[0] for i in privlist]):
+            sorted_privlist.append([item for item in privlist if list(item.keys())[0] == sortedItem][0])
+        return sorted_privlist
 
     def _comment_text(self):
         """Return the text for the SQL COMMENT statement
