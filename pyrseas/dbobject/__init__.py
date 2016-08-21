@@ -482,6 +482,8 @@ class DbObjectDict(dict):
         for obj in self.fetch():
             if hasattr(obj, 'privileges'):
                 obj.privileges = obj.privileges.split(',')
+            if hasattr(obj, 'options'):
+                obj.options = sorted(obj.options)
             self[obj.key()] = obj
 
     def to_map(self,  opts):
