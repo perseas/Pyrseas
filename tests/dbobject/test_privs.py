@@ -152,7 +152,7 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
                   'privileges': [{self.db.user: ['all']},
                                  {'PUBLIC': ['select']},
                                  {'user1': ['insert', 'update']}]}
-        assert dbmap['schema public']['foreign table ft1'] == expmap
+        assert dbmap['schema public']['foreign table ft1'] == self.sort_privileges(expmap)
 
 
 class PrivilegeToSqlTestCase(InputMapToSqlTestCase):
