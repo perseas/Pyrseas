@@ -65,12 +65,12 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
                  "GRANT INSERT (c1, c2) ON t1 TO user1",
                  "GRANT INSERT (c2), UPDATE (c2) ON t1 TO user2"]
         dbmap = self.to_map(stmts, no_privs=False)
-        expmap = {'columns': [
+        expmap = self.sort_privileges({'columns': [
             {'c1': {'type': 'integer', 'privileges': [{'user1': ['insert']}]}},
             {'c2': {'type': 'text', 'privileges': [
             {'user1': ['insert']}, {'user2': ['insert', 'update']}]}}],
-            'privileges': [{self.db.user: ['all']}, {'PUBLIC': ['select']}]}
-        assert dbmap['schema public']['table t1'] == self.sort_privileges(expmap)
+            'privileges': [{self.db.user: ['all']}, {'PUBLIC': ['select']}]})
+        assert dbmap['schema public']['table t1'] == expmap
 
     def test_map_sequence(self):
         "Map a sequence with various GRANTs"
@@ -125,9 +125,9 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
         stmts = [CREATE_FDW,
                  "GRANT USAGE ON FOREIGN DATA WRAPPER fdw1 TO PUBLIC"]
         dbmap = self.to_map(stmts, no_privs=False, superuser=True)
-        expmap = {'privileges': [{self.db.user: ['usage']},
-                                 {'PUBLIC': ['usage']}]}
-        assert dbmap['foreign data wrapper fdw1'] == self.sort_privileges(expmap)
+        expmap = self.sort_privileges({'privileges': [{self.db.user: ['usage']},
+                                 {'PUBLIC': ['usage']}]})
+        assert dbmap['foreign data wrapper fdw1'] == expmap
 
     def test_map_server(self):
         "Map a foreign server with a GRANT"
@@ -147,12 +147,12 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
                  "GRANT SELECT ON ft1 TO PUBLIC",
                  "GRANT INSERT, UPDATE ON ft1 TO user1"]
         dbmap = self.to_map(stmts, no_privs=False, superuser=True)
-        expmap = {'columns': [{'c1': {'type': 'integer'}},
+        expmap = self.sort_privileges({'columns': [{'c1': {'type': 'integer'}},
                               {'c2': {'type': 'text'}}], 'server': 'fs1',
                   'privileges': [{self.db.user: ['all']},
                                  {'PUBLIC': ['select']},
-                                 {'user1': ['insert', 'update']}]}
-        assert dbmap['schema public']['foreign table ft1'] == self.sort_privileges(expmap)
+                                 {'user1': ['insert', 'update']}]})
+        assert dbmap['schema public']['foreign table ft1'] == expmap
 
 
 class PrivilegeToSqlTestCase(InputMapToSqlTestCase):
