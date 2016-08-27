@@ -48,14 +48,14 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
         stmts = [CREATE_TABLE, GRANT_SELECT % 'PUBLIC', GRANT_INSUPD % 'user1',
                  "GRANT REFERENCES, TRIGGER ON t1 TO user2 WITH GRANT OPTION"]
         dbmap = self.to_map(stmts, no_privs=False)
-        expmap = {'columns': [{'c1': {'type': 'integer'}},
+        expmap = self.sort_privileges({'columns': [{'c1': {'type': 'integer'}},
                               {'c2': {'type': 'text'}}],
                   'privileges': [{self.db.user: ['all']},
                                  {'PUBLIC': ['select']},
                                  {'user1': ['insert', 'update']},
                                  {'user2': [{'trigger': {'grantable': True}},
                                             {'references': {
-                                                'grantable': True}}]}]}
+                                                'grantable': True}}]}]})
         assert dbmap['schema public']['table t1'] == expmap
 
     def test_map_column(self):
