@@ -40,8 +40,10 @@ def remove_temp_files(tmpdir, prefix=''):
 
 
 TEST_DBNAME = os.environ.get("PYRSEAS_TEST_DB", 'pyrseas_testdb')
-TEST_USER = os.environ.get("PYRSEAS_TEST_USER", getpass.getuser())
-TEST_HOST = os.environ.get("PYRSEAS_TEST_HOST", None)
+# TEST_USER = os.environ.get("PYRSEAS_TEST_USER", getpass.getuser())
+# TEST_HOST = os.environ.get("PYRSEAS_TEST_HOST", None)
+TEST_USER = os.environ.get("PYRSEAS_TEST_USER", 'postgres')
+TEST_HOST = os.environ.get("PYRSEAS_TEST_HOST", '192.168.100.10')
 TEST_PORT = int(os.environ.get("PYRSEAS_TEST_PORT", 5432))
 PG_OWNER = 'postgres'
 TEST_DIR = os.path.join(tempfile.gettempdir(),
@@ -359,6 +361,16 @@ class DatabaseToMapTestCase(PyrseasTestCase):
 
     def remove_tempfiles(self):
         remove_temp_files(TEST_DIR)
+
+    @staticmethod
+    def sort_privileges(data):
+        try:
+            sorted_privlist = []
+            for sortedItem in sorted([list(i.keys())[0] for i in data['privileges']]):
+                sorted_privlist.append([item for item in data['privileges'] if list(item.keys())[0] == sortedItem][0])
+            data['privileges'] = sorted_privlist
+        finally:
+            return data
 
 
 class InputMapToSqlTestCase(PyrseasTestCase):
