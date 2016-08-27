@@ -78,11 +78,11 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
                  "GRANT SELECT ON SEQUENCE seq1 TO PUBLIC",
                  "GRANT USAGE, UPDATE ON SEQUENCE seq1 TO user1"]
         dbmap = self.to_map(stmts, no_privs=False)
-        expmap = {'start_value': 1, 'increment_by': 1, 'max_value': None,
+        expmap = self.sort_privileges({'start_value': 1, 'increment_by': 1, 'max_value': None,
                   'min_value': None, 'cache_value': 1,
                   'privileges': [{self.db.user: ['all']},
                                  {'PUBLIC': ['select']},
-                                 {'user1': ['usage', 'update']}]}
+                                 {'user1': ['usage', 'update']}]})
         assert dbmap['schema public']['sequence seq1'] == expmap
 
     def test_map_view(self):
