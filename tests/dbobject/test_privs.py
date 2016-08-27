@@ -127,7 +127,7 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
         dbmap = self.to_map(stmts, no_privs=False, superuser=True)
         expmap = {'privileges': [{self.db.user: ['usage']},
                                  {'PUBLIC': ['usage']}]}
-        assert dbmap['foreign data wrapper fdw1'] == expmap
+        assert dbmap['foreign data wrapper fdw1'] == self.sort_privileges(expmap)
 
     def test_map_server(self):
         "Map a foreign server with a GRANT"
