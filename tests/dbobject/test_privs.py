@@ -39,8 +39,8 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
         stmts = ["CREATE SCHEMA s1", "GRANT USAGE ON SCHEMA s1 TO PUBLIC",
                  "GRANT CREATE, USAGE ON SCHEMA s1 TO user1"]
         dbmap = self.to_map(stmts, no_privs=False)
-        expmap = {'privileges': [{self.db.user: ['all']},
-                                 {'PUBLIC': ['usage']}, {'user1': ['all']}]}
+        expmap = self.sort_privileges({'privileges': [{self.db.user: ['all']},
+                                 {'PUBLIC': ['usage']}, {'user1': ['all']}]})
         assert dbmap['schema s1'] == expmap
 
     def test_map_table(self):
