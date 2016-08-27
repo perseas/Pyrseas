@@ -40,10 +40,8 @@ def remove_temp_files(tmpdir, prefix=''):
 
 
 TEST_DBNAME = os.environ.get("PYRSEAS_TEST_DB", 'pyrseas_testdb')
-# TEST_USER = os.environ.get("PYRSEAS_TEST_USER", getpass.getuser())
-# TEST_HOST = os.environ.get("PYRSEAS_TEST_HOST", None)
-TEST_USER = os.environ.get("PYRSEAS_TEST_USER", 'postgres')
-TEST_HOST = os.environ.get("PYRSEAS_TEST_HOST", '192.168.100.10')
+TEST_USER = os.environ.get("PYRSEAS_TEST_USER", getpass.getuser())
+TEST_HOST = os.environ.get("PYRSEAS_TEST_HOST", None)
 TEST_PORT = int(os.environ.get("PYRSEAS_TEST_PORT", 5432))
 PG_OWNER = 'postgres'
 TEST_DIR = os.path.join(tempfile.gettempdir(),
