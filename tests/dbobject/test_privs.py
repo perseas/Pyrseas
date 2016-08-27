@@ -70,7 +70,7 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
             {'c2': {'type': 'text', 'privileges': [
             {'user1': ['insert']}, {'user2': ['insert', 'update']}]}}],
             'privileges': [{self.db.user: ['all']}, {'PUBLIC': ['select']}]}
-        assert dbmap['schema public']['table t1'] == expmap
+        assert dbmap['schema public']['table t1'] == self.sort_privileges(expmap)
 
     def test_map_sequence(self):
         "Map a sequence with various GRANTs"
