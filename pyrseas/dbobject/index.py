@@ -6,6 +6,8 @@
     This defines two classes, Index and IndexDict, derived
     from DbSchemaObject and DbObjectDict, respectively.
 """
+from __builtin__ import hasattr
+
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
 from pyrseas.dbobject import quote_id, split_schema_obj, commentable
 
@@ -122,12 +124,13 @@ class Index(DbSchemaObject):
         if not hasattr(self, 'unique'):
             self.unique = False
         if self.access_method != inindex.access_method \
-                or self.unique != inindex.unique:
+                or self.unique != inindex.unique \
+                or set(self.keys).symmetric_difference(inindex.keys) == set():
             stmts.append("DROP INDEX %s" % self.qualname())
             self.access_method = inindex.access_method
             self.unique = inindex.unique
+            self.keys = inindex.keys
             stmts.append(self.create())
-        # TODO: need to deal with changes in keycols
 
         base = "ALTER INDEX %s\n    " % self.qualname()
         if hasattr(inindex, 'tablespace'):
