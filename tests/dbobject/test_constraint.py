@@ -96,6 +96,20 @@ class CheckConstraintToSqlTestCase(InputMapToSqlTestCase):
         assert fix_indent(sql[0]) == "CREATE TABLE t2 (c2 text) INHERITS (t1)"
         assert len(sql) == 1
 
+    def test_change_expression_check_constraint(self):
+        "Change expression of a check constraint in an existing table"
+        stmts = ["CREATE TABLE t1 (c1 INTEGER, CONSTRAINT t1_c1_check "
+                 "CHECK (c1 > 0))"]
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+            'columns': [{'c1': {'type': 'integer'}}], 'check_constraints': {
+                't1_c1_check': {'columns': ['c1'], 'expression': 'c1 > 10'}}}
+        })
+        sql = self.to_sql(inmap, stmts)
+        assert fix_indent(sql[0]) == "ALTER TABLE t1 DROP CONSTRAINT t1_c1_check"
+        assert fix_indent(sql[1]) == "ALTER TABLE t1 ADD CONSTRAINT " \
+            "t1_c1_check CHECK (c1 > 10)"
+
 
 class PrimaryKeyToMapTestCase(DatabaseToMapTestCase):
     """Test mapping of created PRIMARY KEYs"""
