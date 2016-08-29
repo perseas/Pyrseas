@@ -305,7 +305,11 @@ class DbObject(object):
             if prv:
                 privlist.append(privileges_to_map(prv, self.allprivs,
                                                   self.owner))
-        return privlist
+        sorted_privlist = []
+        for sortedItem in sorted([list(i.keys())[0] for i in privlist]):
+            sorted_privlist.append([item for item in privlist
+                                    if list(item.keys())[0] == sortedItem][0])
+        return sorted_privlist
 
     def _comment_text(self):
         """Return the text for the SQL COMMENT statement
@@ -502,6 +506,9 @@ class DbObjectDict(dict):
         This is may be overriden by derived classes as needed.
         """
         for obj in self.fetch():
+            if hasattr(obj, 'options'):
+                if type(obj.options) is list:
+                    obj.options = sorted(obj.options)
             self[obj.key()] = obj
 
     def to_map(self,  opts):
