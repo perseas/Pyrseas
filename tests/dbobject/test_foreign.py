@@ -249,7 +249,7 @@ class UserMappingToMapTestCase(DatabaseToMapTestCase):
         dbmap = self.to_map(stmts)
         assert dbmap['foreign data wrapper fdw1']['server fs1'] == {
             'user mappings': {'PUBLIC': {'options': [
-                'user=john', 'password=doe']}}}
+                'password=doe', 'user=john']}}}
 
 
 class UserMappingToSqlTestCase(InputMapToSqlTestCase):

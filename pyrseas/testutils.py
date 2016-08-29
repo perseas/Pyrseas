@@ -360,6 +360,16 @@ class DatabaseToMapTestCase(PyrseasTestCase):
     def remove_tempfiles(self):
         remove_temp_files(TEST_DIR)
 
+    @staticmethod
+    def sort_privileges(data):
+        try:
+            sorted_privlist = []
+            for sortedItem in sorted([list(i.keys())[0] for i in data['privileges']]):
+                sorted_privlist.append([item for item in data['privileges'] if list(item.keys())[0] == sortedItem][0])
+            data['privileges'] = sorted_privlist
+        finally:
+            return data
+
 
 class InputMapToSqlTestCase(PyrseasTestCase):
     """Base class for "input map to SQL" test cases"""
