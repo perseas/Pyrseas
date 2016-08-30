@@ -10,7 +10,7 @@
 """
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
 from pyrseas.dbobject import quote_id, split_schema_obj, commentable
-
+import re
 
 ACTIONS = {'r': 'restrict', 'c': 'cascade', 'n': 'set null',
            'd': 'set default'}
@@ -43,8 +43,8 @@ class Constraint(DbSchemaObject):
         if hasattr(self, 'tablespace'):
             tblspc = " USING INDEX TABLESPACE %s" % self.tablespace
         stmts.append("ALTER TABLE %s ADD CONSTRAINT %s %s (%s)%s" % (
-                     self._table.qualname(), quote_id(self.name),
-                     self.objtype, self.key_columns(), tblspc))
+            self._table.qualname(), quote_id(self.name),
+            self.objtype, self.key_columns(), tblspc))
         if hasattr(self, 'cluster') and self.cluster:
             stmts.append("CLUSTER %s USING %s" % (
                 self._table.qualname(), quote_id(self.name)))
@@ -98,8 +98,8 @@ class CheckConstraint(Constraint):
         :return: SQL statement
         """
         return ["ALTER TABLE %s ADD CONSTRAINT %s %s (%s)" % (
-                self._table.qualname(), quote_id(self.name), self.objtype,
-                self.expression)]
+            self._table.qualname(), quote_id(self.name), self.objtype,
+            self.expression)]
 
     def diff_map(self, inchk):
         """Generate SQL to transform an existing CHECK constraint
@@ -112,7 +112,12 @@ class CheckConstraint(Constraint):
         input.
         """
         stmts = []
-        # TODO: to be implemented
+        if hasattr(inchk, 'expression') and hasattr(self, 'expression'):
+            if re.sub('[\s()]', '', inchk.expression.lower()) != re.sub('[\s()]', '', self.expression.lower()):
+                stmts.append("ALTER TABLE {tname} DROP CONSTRAINT {conname}".format(
+                    tname=inchk._table.name, conname=inchk.name))
+                stmts.append("ALTER TABLE {tname} ADD CONSTRAINT {conname} CHECK ({exp})".format(
+                    tname=inchk._table.name, conname=inchk.name, exp=inchk.expression))
         stmts.append(self.diff_description(inchk))
         return stmts
 
@@ -210,9 +215,9 @@ class ForeignKey(Constraint):
             actions += " INITIALLY DEFERRED"
 
         return "ALTER TABLE %s ADD CONSTRAINT %s FOREIGN KEY (%s) " \
-            "REFERENCES %s (%s)%s%s" % (
-            self._table.qualname(), quote_id(self.name), self.key_columns(),
-            self.references.qualname(), self.ref_columns(), match, actions)
+               "REFERENCES %s (%s)%s%s" % (
+                   self._table.qualname(), quote_id(self.name), self.key_columns(),
+                   self.references.qualname(), self.ref_columns(), match, actions)
 
     def diff_map(self, infk):
         """Generate SQL to transform an existing foreign key
@@ -271,6 +276,7 @@ class UniqueConstraint(Constraint):
                          self._table.qualname())
         stmts.append(self.diff_description(inuc))
         return stmts
+
 
 MATCHTYPES_PRE93 = {'f': 'full', 'p': 'partial', 'u': 'simple'}
 COMMON_ATTRS = ['access_method', 'tablespace', 'description', 'cluster']
@@ -363,7 +369,7 @@ class ConstraintDict(DbObjectDict):
                     check.expression = val['expression']
                 except KeyError as exc:
                     exc.args = ("Constraint '%s' is missing expression"
-                                % cns, )
+                                % cns,)
                     raise
                 if check.expression[0] == '(' and check.expression[-1] == ')':
                     check.expression = check.expression[1:-1]
@@ -384,7 +390,7 @@ class ConstraintDict(DbObjectDict):
             try:
                 pkey.keycols = val['columns']
             except KeyError as exc:
-                exc.args = ("Constraint '%s' is missing columns" % cns, )
+                exc.args = ("Constraint '%s' is missing columns" % cns,)
                 raise
             for attr, value in list(val.items()):
                 if attr in COMMON_ATTRS:
@@ -421,24 +427,24 @@ class ConstraintDict(DbObjectDict):
                 try:
                     fkey.keycols = val['columns']
                 except KeyError as exc:
-                    exc.args = ("Constraint '%s' is missing columns" % cns, )
+                    exc.args = ("Constraint '%s' is missing columns" % cns,)
                     raise
                 try:
                     refs = val['references']
                 except KeyError as exc:
-                    exc.args = ("Constraint '%s' missing references" % cns, )
+                    exc.args = ("Constraint '%s' missing references" % cns,)
                     raise
                 try:
                     fkey.ref_table = refs['table']
                 except KeyError as exc:
                     exc.args = ("Constraint '%s' missing table reference"
-                                % cns, )
+                                % cns,)
                     raise
                 try:
                     fkey.ref_cols = refs['columns']
                 except KeyError as exc:
                     exc.args = ("Constraint '%s' missing reference columns"
-                                % cns, )
+                                % cns,)
                     raise
                 sch = table.schema
                 if 'schema' in refs:
@@ -456,7 +462,7 @@ class ConstraintDict(DbObjectDict):
                 try:
                     unq.keycols = val['columns']
                 except KeyError as exc:
-                    exc.args = ("Constraint '%s' is missing columns" % cns, )
+                    exc.args = ("Constraint '%s' is missing columns" % cns,)
                     raise
                 for attr, value in list(val.items()):
                     if attr in COMMON_ATTRS:
