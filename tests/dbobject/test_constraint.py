@@ -242,6 +242,31 @@ class PrimaryKeyToSqlTestCase(InputMapToSqlTestCase):
         sql = self.to_sql(inmap, stmts)
         assert fix_indent(sql[0]) == "ALTER TABLE t1 SET WITHOUT CLUSTER"
 
+    def test_primary_key_change_keycols(self):
+        "Changing primary key index columns"
+        stmts = ["CREATE TABLE t1 (c1 INTEGER NOT NULL, c2 INTEGER NOT NULL,"
+                 "CONSTRAINT t1_pkey PRIMARY KEY (c1, c2)"]
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+            'columns': [{'c1': {'type': 'integer', 'not_null': True}},
+                        {'c2': {'type': 'integer', 'not_null': True}}],
+            'primary_key': {'t1_pkey': {'columns': ['c1']}}}})
+        sql = self.to_sql(inmap, stmts)
+        assert fix_indent(sql[0]) == "ALTER TABLE t1 DROP CONSTRAINT t1_pkey"
+        assert fix_indent(sql[1]) == "ALTER TABLE t1 CREATE CONSTRAINT t1_pkey PRIMARY KEY (c1)"
+        assert len(sql) == 2
+
+    def test_primary_key_change_name(self):
+        "Changing primary key name"
+        stmts = ["CREATE TABLE t1 (c1 INTEGER NOT NULL, CONSTRAINT t1_pkey1 PRIMARY KEY (c1)"]
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+            'columns': [{'c1': {'type': 'integer', 'not_null': True}}],
+            'primary_key': {'t1_pkey2': {'columns': ['c1']}}}})
+        sql = self.to_sql(inmap, stmts)
+        assert fix_indent(sql[0]) == "ALTER TABLE t1 RENAME CONSTRAINT t1_pkey1 TO t1_pkey2"
+        assert len(sql) == 1
+
 
 class ForeignKeyToMapTestCase(DatabaseToMapTestCase):
     """Test mapping of created FOREIGN KEYs"""
