@@ -152,7 +152,15 @@ class PrimaryKey(Constraint):
         input.
         """
         stmts = []
-        # TODO: to be implemented (via ALTER DROP and ALTER ADD)
+        if hasattr(inpk,'keycols') and hasattr(self,'keycols') \
+                and hasattr(self,'_table') and hasattr(self._table,'columns'):
+            selfcols = {i.number:i.name for i in self._table.columns}
+            selfpk = [selfcols[i] for i in selfcols if i in self.keycols]
+            if set(inpk.keycols) != set(selfpk):
+                stmts.append("ALTER TABLE {tname} DROP CONSTRAINT {pkname}".format(
+                    tname=inpk._table.name, pkname=inpk.name))
+                stmts.append("ALTER TABLE {tname} ADD CONSTRAINT {pkname} PRIMARY KEY ({cols})".format(
+                    tname=inpk._table.name, pkname=inpk.name, cols=', '.join(inpk.keycols)))
         if hasattr(inpk, 'cluster'):
             if not hasattr(self, 'cluster'):
                 stmts.append("CLUSTER %s USING %s" % (
