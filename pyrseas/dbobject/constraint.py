@@ -258,16 +258,16 @@ class ForeignKey(Constraint):
                 selfactions += " INITIALLY DEFERRED"
 
             infkmatch = ''
-            if hasattr(self, 'match'):
-                infkmatch = " MATCH %s" % self.match.upper()
+            if hasattr(infk, 'match'):
+                infkmatch = " MATCH %s" % infk.match.upper()
             infkactions = ''
-            if hasattr(self, 'on_update'):
-                infkactions = " ON UPDATE %s" % self.on_update.upper()
-            if hasattr(self, 'on_delete'):
-                infkactions += " ON DELETE %s" % self.on_delete.upper()
-            if getattr(self, 'deferrable', False):
+            if hasattr(infk, 'on_update'):
+                infkactions = " ON UPDATE %s" % infk.on_update.upper()
+            if hasattr(infk, 'on_delete'):
+                infkactions += " ON DELETE %s" % infk.on_delete.upper()
+            if getattr(infk, 'deferrable', False):
                 infkactions += " DEFERRABLE"
-            if getattr(self, 'deferred', False):
+            if getattr(infk, 'deferred', False):
                 infkactions += " INITIALLY DEFERRED"
 
             if set(infk.keycols) != set(selffk) or set(infk.ref_cols) != set(selffkref)\
