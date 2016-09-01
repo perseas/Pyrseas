@@ -238,7 +238,47 @@ class ForeignKey(Constraint):
         input.
         """
         stmts = []
-        # TODO: to be implemented (via ALTER DROP and ALTER ADD)
+        if hasattr(infk,'keycols') and hasattr(self,'keycols') \
+                and hasattr(self,'_table') and hasattr(self._table,'columns'):
+            selfcols = {i.number:i.name for i in self._table.columns}
+            selffk = [selfcols[i] for i in selfcols if i in self.keycols]
+            selffkref = [selfcols[i] for i in selfcols if i in self.ref_cols]
+
+            selfmatch = ''
+            if hasattr(self, 'match'):
+                selfmatch = " MATCH %s" % self.match.upper()
+            selfactions = ''
+            if hasattr(self, 'on_update'):
+                selfactions = " ON UPDATE %s" % self.on_update.upper()
+            if hasattr(self, 'on_delete'):
+                selfactions += " ON DELETE %s" % self.on_delete.upper()
+            if getattr(self, 'deferrable', False):
+                selfactions += " DEFERRABLE"
+            if getattr(self, 'deferred', False):
+                selfactions += " INITIALLY DEFERRED"
+
+            infkmatch = ''
+            if hasattr(self, 'match'):
+                infkmatch = " MATCH %s" % self.match.upper()
+            infkactions = ''
+            if hasattr(self, 'on_update'):
+                infkactions = " ON UPDATE %s" % self.on_update.upper()
+            if hasattr(self, 'on_delete'):
+                infkactions += " ON DELETE %s" % self.on_delete.upper()
+            if getattr(self, 'deferrable', False):
+                infkactions += " DEFERRABLE"
+            if getattr(self, 'deferred', False):
+                infkactions += " INITIALLY DEFERRED"
+
+            if set(infk.keycols) != set(selffk) or set(infk.ref_cols) != set(selffkref)\
+                    or infkmatch != selfmatch or infkactions != selfactions:
+                stmts.append("ALTER TABLE {tname} DROP CONSTRAINT {fkname}".format(
+                    tname=infk._table.name, fkname=infk.name))
+                stmts.append("ALTER TABLE {tname} ADD CONSTRAINT {fkname} FOREIGN KEY ({cols}) "
+                             "REFERENCES {rtname} ({rcols}){match}{actions}".format(
+                    tname=infk._table.name, fkname=infk.name, cols=', '.join(infk.keycols),
+                    rtname=infk.ref_table, rcols=', '.join(infk.ref_cols), match=infkmatch,
+                    actions=infkactions))
         stmts.append(self.diff_description(infk))
         return stmts
 
