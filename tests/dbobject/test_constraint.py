@@ -710,6 +710,28 @@ class ForeignKeyToSqlTestCase(InputMapToSqlTestCase):
                                      "REFERENCES t1 (c1, c2) MATCH SIMPLE"
         assert len(sql) == 2
 
+    def test_change_actions_foreign_key(self):
+        "Changing foreign key actions"
+        stmts = ["CREATE TABLE t1 (c1 INTEGER NOT NULL, CONSTRAINT t1_pkey PRIMARY KEY (c1))",
+                 "CREATE TABLE t2 (c1 INTEGER NOT NULL, "
+                 "CONSTRAINT t2_fk FOREIGN KEY (c1) REFERENCES t1 (c1) ON UPDATE CASCADE)"]
+        inmap = self.std_map()
+        inmap['schema public'].update({
+            'table t1': {
+                'columns': [{'c1': {'type': 'integer', 'not_null': True}}],
+                'primary_key': {'t1_pkey': {'columns': ['c1']}}},
+            'table t2': {
+                'columns': [{'c1': {'type': 'integer', 'not_null': True}}],
+                'foreign_keys': {'t2_fk': {
+                    'columns': ['c1'], 'on_update': 'restrict',
+                    'references': {'schema': 'public', 'table': 't1',
+                                   'columns': ['c1']}}}}})
+        sql = self.to_sql(inmap, stmts)
+        assert fix_indent(sql[0]) == "ALTER TABLE t2 DROP CONSTRAINT t2_fk"
+        assert fix_indent(sql[1]) == "ALTER TABLE t2 ADD CONSTRAINT t2_fk FOREIGN KEY (c1) " \
+                                     "REFERENCES t1 (c1) ON UPDATE RESTRICT"
+        assert len(sql) == 2
+
     #TODO: tests for ref_cols change, actions and match
 
 
