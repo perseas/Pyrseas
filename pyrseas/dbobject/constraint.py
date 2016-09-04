@@ -227,6 +227,21 @@ class ForeignKey(Constraint):
                    self._table.qualname(), quote_id(self.name), self.key_columns(),
                    self.references.qualname(), self.ref_columns(), match, actions)
 
+    def get_match_actions(self):
+        match = ""
+        actions = ""
+        if hasattr(self, 'match'):
+            match = " MATCH %s" % self.match.upper()
+        if hasattr(self, 'on_update'):
+            actions = " ON UPDATE %s" % self.on_update.upper()
+        if hasattr(self, 'on_delete'):
+            actions += " ON DELETE %s" % self.on_delete.upper()
+        if getattr(self, 'deferrable', False):
+            actions += " DEFERRABLE"
+        if getattr(self, 'deferred', False):
+            actions += " INITIALLY DEFERRED"
+        return {'match':match, 'actions':actions}
+
     def diff_map(self, infk):
         """Generate SQL to transform an existing foreign key
 
@@ -245,41 +260,16 @@ class ForeignKey(Constraint):
             selfrefs = {i.number:i.name for i in self.references.columns}
             selffkref = [selfrefs[i] for i in selfrefs if i in self.ref_cols]
 
-            selfmatch = ''
-            if hasattr(self, 'match'):
-                selfmatch = " MATCH %s" % self.match.upper()
-            selfactions = ''
-            if hasattr(self, 'on_update'):
-                selfactions = " ON UPDATE %s" % self.on_update.upper()
-            if hasattr(self, 'on_delete'):
-                selfactions += " ON DELETE %s" % self.on_delete.upper()
-            if getattr(self, 'deferrable', False):
-                selfactions += " DEFERRABLE"
-            if getattr(self, 'deferred', False):
-                selfactions += " INITIALLY DEFERRED"
-
-            infkmatch = ''
-            if hasattr(infk, 'match'):
-                infkmatch = " MATCH %s" % infk.match.upper()
-            infkactions = ''
-            if hasattr(infk, 'on_update'):
-                infkactions = " ON UPDATE %s" % infk.on_update.upper()
-            if hasattr(infk, 'on_delete'):
-                infkactions += " ON DELETE %s" % infk.on_delete.upper()
-            if getattr(infk, 'deferrable', False):
-                infkactions += " DEFERRABLE"
-            if getattr(infk, 'deferred', False):
-                infkactions += " INITIALLY DEFERRED"
-
             if infk.keycols != selffk or infk.ref_cols != selffkref\
-                    or infkmatch != selfmatch or infkactions != selfactions:
+                    or infk.get_match_actions()['match'] != self.get_match_actions()['match'] \
+                    or infk.get_match_actions()['actions'] != self.get_match_actions()['actions']:
                 stmts.append("ALTER TABLE {tname} DROP CONSTRAINT {fkname}".format(
                     tname=infk._table.name, fkname=infk.name))
                 stmts.append("ALTER TABLE {tname} ADD CONSTRAINT {fkname} FOREIGN KEY ({cols}) "
                              "REFERENCES {rtname} ({rcols}){match}{actions}".format(
                     tname=infk._table.name, fkname=infk.name, cols=', '.join(infk.keycols),
-                    rtname=infk.ref_table, rcols=', '.join(infk.ref_cols), match=infkmatch,
-                    actions=infkactions))
+                    rtname=infk.ref_table, rcols=', '.join(infk.ref_cols), match=infk.get_match_actions()['match'],
+                    actions=infk.get_match_actions()['actions']))
         stmts.append(self.diff_description(infk))
         return stmts
 
