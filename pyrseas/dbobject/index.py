@@ -123,7 +123,7 @@ class Index(DbSchemaObject):
             self.unique = False
         if self.access_method != inindex.access_method \
                 or self.unique != inindex.unique \
-                or set(self.keys) != set(inindex.keys):
+                or self.keys != inindex.keys:
             stmts.append("DROP INDEX %s" % self.qualname())
             self.access_method = inindex.access_method
             self.unique = inindex.unique
