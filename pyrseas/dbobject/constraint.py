@@ -271,7 +271,7 @@ class ForeignKey(Constraint):
             if getattr(infk, 'deferred', False):
                 infkactions += " INITIALLY DEFERRED"
 
-            if set(infk.keycols) != set(selffk) or set(infk.ref_cols) != set(selffkref)\
+            if infk.keycols != selffk or infk.ref_cols != selffkref\
                     or infkmatch != selfmatch or infkactions != selfactions:
                 stmts.append("ALTER TABLE {tname} DROP CONSTRAINT {fkname}".format(
                     tname=infk._table.name, fkname=infk.name))
