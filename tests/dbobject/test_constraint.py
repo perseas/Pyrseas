@@ -872,6 +872,31 @@ class UniqueConstraintToSqlTestCase(InputMapToSqlTestCase):
         sql = self.to_sql(inmap, stmts)
         assert sql[0] == "CLUSTER t1 USING t1_c1_key"
 
+    def test_change_unique_constraint(self):
+        "Change columns in unique index"
+        stmts = ["CREATE TABLE t1 (c1 integer UNIQUE, c2 text)"]
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+            'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}],
+            'unique_constraints': {'t1_c1_key': {'columns': ['btrim(c1)']}}}})
+        sql = self.to_sql(inmap, stmts)
+        assert sql[0] == "ALTER TABLE t1 DROP CONSTRAINT t1_c1_key"
+        assert sql[1] == "ALTER TABLE t1 ADD CONSTRAINT t1_c1_key UNIQUE (btrim(c1))"
+        assert len(sql) == 2
+
+
+    def test_change_order_unique_constraint(self):
+        "Change columns order in unique index"
+        stmts = ["CREATE TABLE t1 (c1 integer, c2 text, CONSTRAINT t1_unique UNIQUE (c1, c2))"]
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+            'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}],
+            'unique_constraints': {'t1_unique': {'columns': ['c2', 'c1']}}}})
+        sql = self.to_sql(inmap, stmts)
+        assert sql[0] == "ALTER TABLE t1 DROP CONSTRAINT t1_unique"
+        assert sql[1] == "ALTER TABLE t1 ADD CONSTRAINT t1_unique UNIQUE (c2, c1)"
+        assert len(sql) == 2
+
 
 class ConstraintCommentTestCase(InputMapToSqlTestCase):
     """Test creation of comments on constraints"""

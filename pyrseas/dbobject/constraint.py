@@ -158,7 +158,7 @@ class PrimaryKey(Constraint):
             selfpk = [selfcols[i] for i in selfcols if i in self.keycols]
             if inpk.keycols != selfpk:
                 stmts.append("ALTER TABLE {tname} DROP CONSTRAINT {pkname}".format(
-                    tname=inpk._table.name, pkname=inpk.name))
+                    tname=self._table.name, pkname=self.name))
                 stmts.append("ALTER TABLE {tname} ADD CONSTRAINT {pkname} PRIMARY KEY ({cols})".format(
                     tname=inpk._table.name, pkname=inpk.name, cols=', '.join(inpk.keycols)))
         if hasattr(inpk, 'cluster'):
@@ -254,7 +254,8 @@ class ForeignKey(Constraint):
         """
         stmts = []
         if hasattr(infk,'keycols') and hasattr(self,'keycols') \
-                and hasattr(self,'_table') and hasattr(self._table,'columns'):
+                and hasattr(self,'_table') and hasattr(self._table,'columns') \
+                and hasattr(self, 'references') and hasattr(self.references, 'columns'):
             selfcols = {i.number:i.name for i in self._table.columns}
             selffk = [selfcols[i] for i in selfcols if i in self.keycols]
             selfrefs = {i.number:i.name for i in self.references.columns}
@@ -264,7 +265,7 @@ class ForeignKey(Constraint):
                     or infk.get_match_actions()['match'] != self.get_match_actions()['match'] \
                     or infk.get_match_actions()['actions'] != self.get_match_actions()['actions']:
                 stmts.append("ALTER TABLE {tname} DROP CONSTRAINT {fkname}".format(
-                    tname=infk._table.name, fkname=infk.name))
+                    tname=self._table.name, fkname=self.name))
                 stmts.append("ALTER TABLE {tname} ADD CONSTRAINT {fkname} FOREIGN KEY ({cols}) "
                              "REFERENCES {rtname} ({rcols}){match}{actions}".format(
                     tname=infk._table.name, fkname=infk.name, cols=', '.join(infk.keycols),
@@ -305,7 +306,15 @@ class UniqueConstraint(Constraint):
         represented by the input.
         """
         stmts = []
-        # TODO: to be implemented (via ALTER DROP and ALTER ADD)
+        if hasattr(inuc,'keycols') and hasattr(self,'keycols') \
+                and hasattr(self,'_table') and hasattr(self._table,'columns'):
+            selfcols = {i.number:i.name for i in self._table.columns}
+            selfunique = [selfcols[i] for i in selfcols if i in self.keycols]
+            if inuc.keycols != selfunique:
+                stmts.append("ALTER TABLE {tname} DROP CONSTRAINT {conname}".format(
+                    tname=self._table.name, conname=self.name))
+                stmts.append("ALTER TABLE {tname} ADD CONSTRAINT {conname} UNIQUE ({cols})".format(
+                    tname=inuc._table.name, conname=inuc.name, cols=', '.join(inuc.keycols)))
         if hasattr(inuc, 'cluster'):
             if not hasattr(self, 'cluster'):
                 stmts.append("CLUSTER %s USING %s" % (
