@@ -732,8 +732,6 @@ class ForeignKeyToSqlTestCase(InputMapToSqlTestCase):
                                      "REFERENCES t1 (c1) ON UPDATE RESTRICT"
         assert len(sql) == 2
 
-    #TODO: tests for ref_cols change, actions and match
-
 
 class UniqueConstraintToMapTestCase(DatabaseToMapTestCase):
     """Test mapping of created UNIQUE constraints"""
