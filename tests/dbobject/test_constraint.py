@@ -257,6 +257,21 @@ class PrimaryKeyToSqlTestCase(InputMapToSqlTestCase):
         assert len(sql) == 2
 
 
+    def test_change_order_primary_key(self):
+        "Changing primary key columns order"
+        stmts = ["CREATE TABLE t1 (c1 INTEGER NOT NULL, c2 INTEGER NOT NULL,"
+                 "CONSTRAINT t1_pkey PRIMARY KEY (c1, c2))"]
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+            'columns': [{'c1': {'type': 'integer', 'not_null': True}},
+                        {'c2': {'type': 'integer', 'not_null': True}}],
+            'primary_key': {'t1_pkey': {'columns': ['c2','c1']}}}})
+        sql = self.to_sql(inmap, stmts)
+        assert fix_indent(sql[0]) == "ALTER TABLE t1 DROP CONSTRAINT t1_pkey"
+        assert fix_indent(sql[1]) == "ALTER TABLE t1 ADD CONSTRAINT t1_pkey PRIMARY KEY (c2, c1)"
+        assert len(sql) == 2
+
+
 class ForeignKeyToMapTestCase(DatabaseToMapTestCase):
     """Test mapping of created FOREIGN KEYs"""
 

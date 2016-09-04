@@ -156,7 +156,7 @@ class PrimaryKey(Constraint):
                 and hasattr(self,'_table') and hasattr(self._table,'columns'):
             selfcols = {i.number:i.name for i in self._table.columns}
             selfpk = [selfcols[i] for i in selfcols if i in self.keycols]
-            if set(inpk.keycols) != set(selfpk):
+            if inpk.keycols != selfpk:
                 stmts.append("ALTER TABLE {tname} DROP CONSTRAINT {pkname}".format(
                     tname=inpk._table.name, pkname=inpk.name))
                 stmts.append("ALTER TABLE {tname} ADD CONSTRAINT {pkname} PRIMARY KEY ({cols})".format(
