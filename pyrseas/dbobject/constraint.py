@@ -153,9 +153,10 @@ class PrimaryKey(Constraint):
         """
         stmts = []
         if hasattr(inpk,'keycols') and hasattr(self,'keycols') \
-                and hasattr(self,'_table') and hasattr(self._table,'columns'):
+                and hasattr(self,'_table') and hasattr(self._table,'columns')\
+                and hasattr(self._table,'primary_key') and hasattr(self._table.primary_key,'keycols'):
             selfcols = {i.number:i.name for i in self._table.columns}
-            selfpk = [selfcols[i] for i in selfcols if i in self.keycols]
+            selfpk = [selfcols[i] for i in self._table.primary_key.keycols]
             if inpk.keycols != selfpk:
                 stmts.append("ALTER TABLE {tname} DROP CONSTRAINT {pkname}".format(
                     tname=self._table.name, pkname=self.name))
@@ -257,9 +258,9 @@ class ForeignKey(Constraint):
                 and hasattr(self,'_table') and hasattr(self._table,'columns') \
                 and hasattr(self, 'references') and hasattr(self.references, 'columns'):
             selfcols = {i.number:i.name for i in self._table.columns}
-            selffk = [selfcols[i] for i in selfcols if i in self.keycols]
+            selffk = [selfcols[i] for i in self.keycols]
             selfrefs = {i.number:i.name for i in self.references.columns}
-            selffkref = [selfrefs[i] for i in selfrefs if i in self.ref_cols]
+            selffkref = [selfrefs[i] for i in self.ref_cols]
 
             if infk.keycols != selffk or infk.ref_cols != selffkref\
                     or infk.get_match_actions()['match'] != self.get_match_actions()['match'] \
@@ -309,7 +310,7 @@ class UniqueConstraint(Constraint):
         if hasattr(inuc,'keycols') and hasattr(self,'keycols') \
                 and hasattr(self,'_table') and hasattr(self._table,'columns'):
             selfcols = {i.number:i.name for i in self._table.columns}
-            selfunique = [selfcols[i] for i in selfcols if i in self.keycols]
+            selfunique = [selfcols[i] for i in self.keycols]
             if inuc.keycols != selfunique:
                 stmts.append("ALTER TABLE {tname} DROP CONSTRAINT {conname}".format(
                     tname=self._table.name, conname=self.name))
