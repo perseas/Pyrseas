@@ -310,7 +310,7 @@ class UniqueConstraint(Constraint):
         if hasattr(inuc,'keycols') and hasattr(self,'keycols') \
                 and hasattr(self,'_table') and hasattr(self._table,'columns'):
             selfcols = {i.number:i.name for i in self._table.columns}
-            selfunique = [selfcols[i] for i in selfcols if i in self.keycols]
+            selfunique = [selfcols[i] for i in self.keycols]
             if inuc.keycols != selfunique:
                 stmts.append("ALTER TABLE {tname} DROP CONSTRAINT {conname}".format(
                     tname=self._table.name, conname=self.name))
