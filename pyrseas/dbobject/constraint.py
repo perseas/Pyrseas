@@ -153,9 +153,10 @@ class PrimaryKey(Constraint):
         """
         stmts = []
         if hasattr(inpk,'keycols') and hasattr(self,'keycols') \
-                and hasattr(self,'_table') and hasattr(self._table,'columns'):
+                and hasattr(self,'_table') and hasattr(self._table,'columns')\
+                and hasattr(self._table,'primary_key') and hasattr(self._table.primary_key,'keycols'):
             selfcols = {i.number:i.name for i in self._table.columns}
-            selfpk = [selfcols[i] for i in selfcols if i in self.keycols]
+            selfpk = [selfcols[i] for i in self._table.primary_key.keycols]
             if inpk.keycols != selfpk:
                 stmts.append("ALTER TABLE {tname} DROP CONSTRAINT {pkname}".format(
                     tname=self._table.name, pkname=self.name))
