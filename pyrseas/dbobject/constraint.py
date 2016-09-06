@@ -258,9 +258,9 @@ class ForeignKey(Constraint):
                 and hasattr(self,'_table') and hasattr(self._table,'columns') \
                 and hasattr(self, 'references') and hasattr(self.references, 'columns'):
             selfcols = {i.number:i.name for i in self._table.columns}
-            selffk = [selfcols[i] for i in selfcols if i in self.keycols]
+            selffk = [selfcols[i] for i in self.keycols]
             selfrefs = {i.number:i.name for i in self.references.columns}
-            selffkref = [selfrefs[i] for i in selfrefs if i in self.ref_cols]
+            selffkref = [selfrefs[i] for i in self.ref_cols]
 
             if infk.keycols != selffk or infk.ref_cols != selffkref\
                     or infk.get_match_actions()['match'] != self.get_match_actions()['match'] \
