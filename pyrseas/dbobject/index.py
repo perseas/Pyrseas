@@ -122,12 +122,13 @@ class Index(DbSchemaObject):
         if not hasattr(self, 'unique'):
             self.unique = False
         if self.access_method != inindex.access_method \
-                or self.unique != inindex.unique:
+                or self.unique != inindex.unique \
+                or self.keys != inindex.keys:
             stmts.append("DROP INDEX %s" % self.qualname())
             self.access_method = inindex.access_method
             self.unique = inindex.unique
+            self.keys = inindex.keys
             stmts.append(self.create())
-        # TODO: need to deal with changes in keycols
 
         base = "ALTER INDEX %s\n    " % self.qualname()
         if hasattr(inindex, 'tablespace'):

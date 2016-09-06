@@ -159,11 +159,11 @@ class IndexToMapTestCase(DatabaseToMapTestCase):
         assert dbmap['schema public']['table holiday']['indexes'][
             'unique_date'] == {
                 'keys': [
-                {fmt % ("WHEN recurring THEN (0)::double precision",
-                        "ELSE date_part('year'::text, date)"):
-                {'type': 'expression'}},
-                {"date_part('month'::text, date)": {'type': 'expression'}},
-                {"date_part('day'::text, date)": {'type': 'expression'}}],
+                    {fmt % ("WHEN recurring THEN (0)::double precision",
+                            "ELSE date_part('year'::text, date)"):
+                     {'type': 'expression'}},
+                    {"date_part('month'::text, date)": {'type': 'expression'}},
+                    {"date_part('day'::text, date)": {'type': 'expression'}}],
                 'unique': True}
 
 
@@ -346,3 +346,25 @@ class IndexToSqlTestCase(InputMapToSqlTestCase):
                                    'description': 'Changed index t1_idx'}}}})
         sql = self.to_sql(inmap, stmts)
         assert sql == ["COMMENT ON INDEX t1_idx IS 'Changed index t1_idx'"]
+
+    def test_change_index_keys(self):
+        "Change keys of an existing index"
+        stmts = [CREATE_TABLE_STMT, CREATE_STMT]
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+            'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}],
+            'indexes': {'t1_idx': {'keys': ['btrim(c1)']}}}})
+        sql = self.to_sql(inmap, stmts)
+        assert sql == ["DROP INDEX t1_idx",
+                       "CREATE INDEX t1_idx ON t1 (btrim(c1))"]
+
+    def test_change_order_index_keys(self):
+        "Change keys order of an existing index"
+        stmts = [CREATE_TABLE_STMT, "CREATE INDEX t1_idx ON t1 (c1, c2)"]
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+            'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}],
+            'indexes': {'t1_idx': {'keys': ['c2', 'c1']}}}})
+        sql = self.to_sql(inmap, stmts)
+        assert sql == ["DROP INDEX t1_idx",
+                       "CREATE INDEX t1_idx ON t1 (c2, c1)"]
