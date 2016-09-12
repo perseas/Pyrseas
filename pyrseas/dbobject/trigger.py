@@ -66,6 +66,35 @@ class Trigger(DbSchemaObject):
                 self._table.qualname(), defer,
                 self.level.upper(), cond, self.procedure)]
 
+    def diff_map(self, intrg):
+        """Generate SQL to transform an existing trigger
+
+        :param intrigger: a YAML map defining the new trigger
+        :return: list of SQL statements
+
+        Compares the trigger to an input trigger and generates SQL
+        statements to transform it into the one represented by the
+        input.
+        """
+        stmts = []
+        attrs = ['constraint', 'deferrable', 'initially_deferred',
+                'update', 'condition', 'procedure', 'timing', 'level']
+
+        same = True
+        for attr in attrs:
+            if getattr(self, attr, None) != getattr(intrg, attr, None):
+                same = False
+                setattr(self, attr, getattr(intrg, attr, None))
+
+        if set(self.events) != set(intrg.events):
+            same = False
+            self.events = intrg.events
+
+        if not same:
+            stmts.append("DROP TRIGGER %s" % self.identifier())
+            stmts.append(self.create())
+
+        return stmts
 
 QUERY_PRE90 = \
     """SELECT nspname AS schema, relname AS table,
