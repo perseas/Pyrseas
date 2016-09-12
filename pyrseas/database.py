@@ -14,7 +14,6 @@ import os
 import sys
 from operator import itemgetter
 from collections import defaultdict, deque
-
 import yaml
 
 from pyrseas.yamlutil import yamldump
@@ -113,20 +112,14 @@ class Database(object):
             self.collations = CollationDict(dbconn)
             self.eventtrigs = EventTriggerDict(dbconn)
 
-            # Populate a map from catalog table map to the dict responsible
-            self._table_map = {}
+            # Populate a map from system catalog to the respective dict
+            self._catalog_map = {}
             for _, d in self.alldicts():
-                # It is none for the attribute, but the dependencies are on
-                # the table so it's fine.
-                if d.cls.catalog_table is None:
-                    continue
+                if d.cls.catalog is not None:
+                    self._catalog_map[d.cls.catalog] = d
 
-                self._table_map[d.cls.catalog_table] = d
-
-            self._by_extkey = {}
-            """
-            Map from objects extkey to their (dict name, key)
-            """
+            # Map from objects extkey to their (dict name, key)
+            self._extkey_map = {}
 
         def _get_by_extkey(self, extkey):
             """Return any database item from its extkey
@@ -141,7 +134,7 @@ class Database(object):
 
             """
             try:
-                return self._by_extkey[extkey]
+                return self._extkey_map[extkey]
             except KeyError:
                 # TODO: Likely it's the first time we call this function so
                 # let's warm up the cache. But we should really define the life
@@ -149,24 +142,24 @@ class Database(object):
                 # *very* expensive!
                 for _, d in self.alldicts():
                     for obj in list(d.values()):
-                        self._by_extkey[obj.extern_key()] = obj
+                        self._extkey_map[obj.extern_key()] = obj
 
-                return self._by_extkey[extkey]
+                return self._extkey_map[extkey]
 
         def alldicts(self):
-            """Iterate over all the database objects dict
+            """Iterate over the DbObjectDict-derived dictionaries returning
+            an ordered list of tuples (dict name, DbObjectDict object).
 
-            :return: list of (dict name, dict) for every database dict.
+            :return: list of tuples
             """
             rv = []
             for attr in self.__dict__:
                 d = getattr(self, attr)
                 if isinstance(d, DbObjectDict):
-                    # skip this as not needed for dependency tracking
+                    # skip ColumnDict as not needed for dependency tracking
                     # and internally has lists, not objects
-                    if isinstance(d, ColumnDict):
-                        continue
-                    rv.append((attr, d))
+                    if not isinstance(d, ColumnDict):
+                        rv.append((attr, d))
 
             # first return the dicts for non-schema objects, then the
             # others, each group sorted alphabetically.
@@ -175,8 +168,13 @@ class Database(object):
 
             return rv
 
-        def dict_from_table(self, catalog_table):
-            return self._table_map.get(catalog_table)
+        def dict_from_table(self, catalog):
+            """Given a catalog table name, return corresponding DbObjectDict
+
+            :param catalog: full name of a pg_ catalog
+            :return: DbObjectDict object
+            """
+            return self._catalog_map.get(catalog)
 
         def find_type(self, name):
             """Return a db type given a qualname
@@ -231,69 +229,58 @@ class Database(object):
         # 1) we don't handle indexes together with the other pg_class
         #    but in their own pg_index place (so fetch i1, i2)
         # 2) what point two?
-        for r in dbconn.fetchall("""
-                SELECT
-                    CASE WHEN i1.indexrelid IS NOT NULL
-                        THEN 'pg_index'::regclass
-                        ELSE classid::regclass END,
-                    objid,
-                    CASE
-                        WHEN i2.indexrelid IS NOT NULL
-                            THEN 'pg_index'::regclass
-                        ELSE refclassid::regclass END,
-                    refobjid
-                FROM pg_depend
-                LEFT JOIN pg_index i1
-                    ON classid = 'pg_class'::regclass
-                    AND objid = i1.indexrelid
-                LEFT JOIN pg_index i2
-                    ON refclassid = 'pg_class'::regclass
-                    AND refobjid = i2.indexrelid
-                WHERE deptype = 'n'
-                """):
-            deps[r[0], r[1]].append((r[2], r[3]))
+        # "Normal" dependencies
+        query = """SELECT DISTINCT
+                          CASE WHEN i1.indexrelid IS NOT NULL
+                          THEN 'pg_index'::regclass
+                          ELSE classid::regclass END AS class_name, objid,
+                          CASE WHEN i2.indexrelid IS NOT NULL
+                          THEN 'pg_index'::regclass
+                          ELSE refclassid::regclass END AS refclass, refobjid
+                   FROM pg_depend
+                        LEFT JOIN pg_index i1 ON classid = 'pg_class'::regclass
+                             AND objid = i1.indexrelid
+                        LEFT JOIN pg_index i2
+                             ON refclassid = 'pg_class'::regclass
+                             AND refobjid = i2.indexrelid
+                   WHERE deptype = 'n'"""
+        for r in dbconn.fetchall(query):
+            deps[r['class_name'], r['objid']].append(
+                (r['refclass'], r['refobjid']))
 
         # The dependencies across views is not in pg_depend. We have to parse
         # the rewrite rule (TODO: only tested on PG 9.3):
-        for r in dbconn.fetchall("""
-                select distinct 'pg_class', ev_class,
-                    case when depid[1] = 'relid' then 'pg_class'
-                         when depid[1] = 'funcid' then 'pg_proc'
-                    end, depid[2]::oid
-                from (
-                    select ev_class,
-                        regexp_matches(ev_action,
-                            ':(relid|funcid)\s+(\d+)', 'g')
-                            as depid
-                    from pg_rewrite
-                    where rulename = '_RETURN') x
-
-                left join pg_class c
-                    on (depid[1], depid[2]::oid) = ('relid', c.oid)
-                left join pg_namespace cs on cs.oid = relnamespace
-
-                left join pg_proc p
-                    on (depid[1], depid[2]::oid) = ('funcid', p.oid)
-                left join pg_namespace ps on ps.oid = pronamespace
-
-                where ev_class <> depid[2]::oid
-                and coalesce(cs.nspname, ps.nspname)
-                    not in ('information_schema', 'pg_catalog')
-                """):
-            deps[r[0], r[1]].append((r[2], r[3]))
+        query = """SELECT DISTINCT 'pg_class' AS class_name, ev_class,
+                          CASE WHEN depid[1] = 'relid' THEN 'pg_class'
+                               WHEN depid[1] = 'funcid' THEN 'pg_proc'
+                               END AS refclass, depid[2]::oid AS refobjid
+                   FROM (SELECT ev_class, regexp_matches(ev_action,
+                                ':(relid|funcid)\s+(\d+)', 'g') AS depid
+                         FROM pg_rewrite
+                         WHERE rulename = '_RETURN') x
+                         LEFT JOIN pg_class c
+                              ON (depid[1], depid[2]::oid) = ('relid', c.oid)
+                         LEFT JOIN pg_namespace cs ON cs.oid = relnamespace
+                         LEFT JOIN pg_proc p
+                              ON (depid[1], depid[2]::oid) = ('funcid', p.oid)
+                         LEFT JOIN pg_namespace ps ON ps.oid = pronamespace
+                   WHERE ev_class <> depid[2]::oid
+                   AND coalesce(cs.nspname, ps.nspname)
+                         NOT IN ('information_schema', 'pg_catalog')"""
+        for r in dbconn.fetchall(query):
+            deps[r['class_name'], r['ev_class']].append(
+                (r['refclass'], r['refobjid']))
 
         # Add the dependencies between a table and other objects through the
         # columns defaults
-        for r in dbconn.fetchall("""
-                select 'pg_class', adrelid,
-                    d.refclassid::regclass, d.refobjid
-                from pg_attrdef ad
-                join pg_depend d
-                    on classid = 'pg_attrdef'::regclass
-                    and objid = ad.oid
-                    and deptype = 'n'
-                """):
-            deps[r[0], r[1]].append((r[2], r[3]))
+        query = """SELECT 'pg_class' AS class_name, adrelid,
+                          d.refclassid::regclass, d.refobjid
+                   FROM pg_attrdef ad JOIN pg_depend d
+                        ON classid = 'pg_attrdef'::regclass AND objid = ad.oid
+                        AND deptype = 'n'"""
+        for r in dbconn.fetchall(query):
+            deps[r['class_name'], r['adrelid']].append(
+                (r['refclassid'], r['refobjid']))
 
         for (stbl, soid), deps in list(deps.items()):
             sdict = db.dict_from_table(stbl)
@@ -536,7 +523,7 @@ class Database(object):
 
         stmts = []
         for new in new_objs:
-            d = self.db.dict_from_table(new.catalog_table)
+            d = self.db.dict_from_table(new.catalog)
             old = d.get(new.key())
             if old is not None:
                 stmts.append(old.alter(new))
@@ -567,7 +554,7 @@ class Database(object):
 
         # Drop the objects that don't appear in the new db
         for old in old_objs:
-            d = self.ndb.dict_from_table(old.catalog_table)
+            d = self.ndb.dict_from_table(old.catalog)
             if not getattr(old, '_nodrop', False) and old.key() not in d:
                 stmts.extend(old.drop())
 

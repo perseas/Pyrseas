@@ -79,7 +79,7 @@ class ForeignDataWrapper(DbObjectWithOptions):
     """A foreign data wrapper definition"""
 
     single_extern_file = True
-    catalog_table = 'pg_foreign_data_wrapper'
+    catalog = 'pg_foreign_data_wrapper'
 
     @property
     def objtype(self):
@@ -206,7 +206,7 @@ class ForeignServer(DbObjectWithOptions):
 
     privobjtype = "FOREIGN SERVER"
     keylist = ['wrapper', 'name']
-    catalog_table = 'pg_foreign_server'
+    catalog = 'pg_foreign_server'
 
     @property
     def objtype(self):
@@ -339,7 +339,7 @@ class UserMapping(DbObjectWithOptions):
     """A user mapping definition"""
 
     keylist = ['wrapper', 'server', 'name']
-    catalog_table = 'pg_user_mappings'
+    catalog = 'pg_user_mappings'
 
     @property
     def objtype(self):
@@ -468,7 +468,7 @@ class ForeignTable(DbObjectWithOptions, Table):
     """A foreign table definition"""
 
     privobjtype = "TABLE"
-    catalog_table = 'pg_foreign_table'
+    catalog = 'pg_foreign_table'
 
     @property
     def objtype(self):

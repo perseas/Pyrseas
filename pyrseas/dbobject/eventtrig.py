@@ -16,7 +16,7 @@ class EventTrigger(DbObject):
     """An event trigger"""
 
     keylist = ['name']
-    catalog_table = 'pg_event_trigger'
+    catalog = 'pg_event_trigger'
 
     @property
     def objtype(self):

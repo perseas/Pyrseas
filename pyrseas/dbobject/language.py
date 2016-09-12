@@ -15,7 +15,7 @@ class Language(DbObject):
 
     keylist = ['name']
     single_extern_file = True
-    catalog_table = 'pg_language'
+    catalog = 'pg_language'
 
     def to_map(self, db, no_owner, no_privs):
         """Convert language to a YAML-suitable format

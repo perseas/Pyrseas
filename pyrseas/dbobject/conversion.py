@@ -15,7 +15,7 @@ class Conversion(DbSchemaObject):
 
     keylist = ['schema', 'name']
     single_extern_file = True
-    catalog_table = 'pg_conversion'
+    catalog = 'pg_conversion'
 
     @commentable
     @ownable

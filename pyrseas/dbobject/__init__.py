@@ -154,8 +154,8 @@ class DbObject(object):
             self._objtype = self.__class__.__name__.upper()
         return self._objtype
 
-    catalog_table = None
-    """The name of the catalog table where these objects live
+    catalog = None
+    """The name of the system catalog where these objects live
     """
 
     allprivs = ''
@@ -626,6 +626,6 @@ class DbObjectDict(dict):
         """
         data = self.dbconn.fetchall(self.query)
         self.dbconn.rollback()
-        if data and self.cls.catalog_table:
+        if data and self.cls.catalog:
             assert 'oid' in data[0], self.__class__.__name__
         return [self.cls(**dict(row)) for row in data]

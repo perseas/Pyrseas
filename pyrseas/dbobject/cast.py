@@ -19,7 +19,7 @@ class Cast(DbObject):
 
     keylist = ['source', 'target']
     single_extern_file = True
-    catalog_table = 'pg_cast'
+    catalog = 'pg_cast'
 
     def extern_key(self):
         """Return the key to be used in external maps for this cast

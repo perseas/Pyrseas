@@ -15,7 +15,7 @@ class OperatorClass(DbSchemaObject):
 
     keylist = ['schema', 'name', 'index_method']
     single_extern_file = True
-    catalog_table = 'pg_opclass'
+    catalog = 'pg_opclass'
 
     @property
     def objtype(self):

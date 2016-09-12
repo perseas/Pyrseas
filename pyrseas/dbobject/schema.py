@@ -22,7 +22,7 @@ class Schema(DbObject):
     views, triggers and other schema objects."""
 
     keylist = ['name']
-    catalog_table = 'pg_namespace'
+    catalog = 'pg_namespace'
 
     @property
     def allprivs(self):

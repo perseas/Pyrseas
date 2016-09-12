@@ -22,7 +22,7 @@ class DbType(DbSchemaObject):
     """A composite, domain or enum type"""
 
     keylist = ['schema', 'name']
-    catalog_table = 'pg_type'
+    catalog = 'pg_type'
 
     @property
     def objtype(self):

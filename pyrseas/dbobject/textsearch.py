@@ -17,7 +17,7 @@ class TSConfiguration(DbSchemaObject):
 
     keylist = ['schema', 'name']
     single_extern_file = True
-    catalog_table = 'pg_ts_config'
+    catalog = 'pg_ts_config'
 
     @property
     def objtype(self):
@@ -98,7 +98,7 @@ class TSDictionary(DbSchemaObject):
 
     keylist = ['schema', 'name']
     single_extern_file = True
-    catalog_table = 'pg_ts_dict'
+    catalog = 'pg_ts_dict'
 
     @property
     def objtype(self):
@@ -161,7 +161,7 @@ class TSParser(DbSchemaObject):
 
     keylist = ['schema', 'name']
     single_extern_file = True
-    catalog_table = 'pg_ts_parser'
+    catalog = 'pg_ts_parser'
 
     @property
     def objtype(self):
@@ -226,7 +226,7 @@ class TSTemplate(DbSchemaObject):
 
     keylist = ['schema', 'name']
     single_extern_file = True
-    catalog_table = 'pg_ts_template'
+    catalog = 'pg_ts_template'
 
     @property
     def objtype(self):

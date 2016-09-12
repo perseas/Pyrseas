@@ -15,7 +15,7 @@ class Extension(DbObject):
 
     keylist = ['name']
     single_extern_file = True
-    catalog_table = 'pg_extension'
+    catalog = 'pg_extension'
 
     def __init__(self, name, description, owner, schema, privileges=None,
                  version=None, oid=None):

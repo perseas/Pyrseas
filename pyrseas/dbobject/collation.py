@@ -15,7 +15,7 @@ class Collation(DbSchemaObject):
 
     keylist = ['schema', 'name']
     single_extern_file = True
-    catalog_table = 'pg_collation'
+    catalog = 'pg_collation'
 
     @commentable
     @ownable
