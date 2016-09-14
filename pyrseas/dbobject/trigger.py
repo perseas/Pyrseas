@@ -94,6 +94,9 @@ class Trigger(DbSchemaObject):
             stmts.append("DROP TRIGGER %s" % self.identifier())
             stmts.append(self.create())
 
+        stmts.append(self.diff_privileges(intrg))
+        stmts.append(self.diff_description(intrg))
+
         return stmts
 
 QUERY_PRE90 = \
