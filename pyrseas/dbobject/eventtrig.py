@@ -44,6 +44,7 @@ class EventTriggerDict(DbObjectDict):
                   obj_description(t.oid, 'pg_event_trigger') AS description
            FROM pg_event_trigger t
                 JOIN pg_roles ON (evtowner = pg_roles.oid)
+           WHERE t.oid NOT IN (SELECT objid FROM pg_depend WHERE deptype = 'e')
            ORDER BY 1"""
     enable_modes = {'O': True, 'D': False, 'R': 'replica',
                     'A': 'always'}
