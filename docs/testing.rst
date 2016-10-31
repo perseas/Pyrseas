@@ -58,14 +58,14 @@ On Windows, it is necessary to install Perl in order to run some of
 the tests. A suitable choice is Strawberry Perl which can be
 downloaded from http://strawberryperl.com/releases.html. However, the
 default installation is placed in ``C:\strawberry`` and can hold a
-single Perl version.  Furthermore, PostgreSQL 8.4 and 9.0 are linked
-with Perl 5.10 whereas PostgreSQL 9.1 and 9.2 are linked with 5.14.
-It is recommended that Perl 5.10 be installed as this gives the fewest
+single Perl version.  Furthermore, some PostgreSQL versions may be
+linked with non-current Perl versions.  It is recommended that the
+latest Perl version be installed as this will usually give the fewest
 test failures.  See `this blog post
 <http://pyrseas.wordpress.com/2012/10/17/testing-python-and-postgresql-on-windows-part-5/>`_
 for more details.
 
-The COLLATION tests, run under PostgreSQL 9.1 and 9.2, require the
+The COLLATION tests, run under PostgreSQL 9.2 and later, require the
 ``fr_FR.utf8`` locale (or ``French.France.1252`` language on Windows)
 to be installed.
 
@@ -85,10 +85,10 @@ privileges, at either the operating system or PostgreSQL level.
 
  - ``git clone git://github.com/perseas/Pyrseas.git``
 
- - Install Python 2.7 and 3.2, using package manager or from
+ - Install Python 2.7 and 3.4 or 3.5, using package manager or from
    installers at http://www.python.org/download/.
 
- - Install PostgreSQL 9.2, 9.1, 9.0 and 8.4, using package manager or
+ - Install PostgreSQL 9.5, 9.4, 9.3 and 9.2, using package manager or
    binary installers at http://www.postgresql.org/download/
 
    .. note:: On Linux, make sure you install the contrib and plperl
@@ -119,7 +119,7 @@ privileges, at either the operating system or PostgreSQL level.
  - Install Tox, from PyPI (http://pypi.python.org/pypi/tox)
 
    .. note:: Psycopg2, PyYAML and Tox all have to be installed twice,
-             i.e., once under Python 2.7 and another under 3.2.
+             i.e., once under Python 2.7 and another under 3.4 or 3.5.
 
  - On Windows, install Perl (see discussion above under
    "Restrictions"). On Linux, usually Perl is already available.
@@ -132,8 +132,8 @@ privileges, at either the operating system or PostgreSQL level.
  - Create a PostgreSQL password file, e.g., on Linux: ``~/.pgpass``, on
    Windows: ``%APPDATA%\postgresql\pgpass.conf``.
 
- - Create directories to hold tablespaces, e.g., ``/extra/pg/9.1/ts1``
-   on Linux, ``C:\\extra\\pg\\9.1\\ts1`` on Windows.  The directories
+ - Create directories to hold tablespaces, e.g., ``/extra/pg/9.5/ts1``
+   on Linux, ``C:\\extra\\pg\\9.5\\ts1`` on Windows.  The directories
    need to be owned by the **postgres** user. This may be tricky on
    older Windows versions, but the command ``cacls <dir> /E /G
    postgres:F`` should suffice.  Using psql or pgAdmin, create
@@ -168,12 +168,12 @@ privileges, at either the operating system or PostgreSQL level.
      directory, e.g., on Linux, ``export PYTHONPATH=$PWD``, on
      Windows, ``set PYTHONPATH=%USERPROFILE%\somedir\Pyrseas``.
 
-   - Define the environment variables ``PG84_PORT``, ``PG90_PORT``,
-     ``PG91_PORT`` and ``PG92_PORT`` to point to the corresponding
+   - Define the environment variables ``PG92_PORT``, ``PG93_PORT``,
+     ``PG94_PORT`` and ``PG95_PORT`` to point to the corresponding
      PostgreSQL ports.
 
  - Invoke ``tox``. This will create two virtualenvs in a ``.tox``
-   subdirectory--one for Python 2.7 and another for 3.2, install
-   Pyrseas and its prerequisites (Psycopg2 and PyYAML) into each
-   virtualenv and run the unit tests for each combination of
+   subdirectory--one for Python 2.7 and another for 3.5 or 3.4,
+   install Pyrseas and its prerequisites (Psycopg2 and PyYAML) into
+   each virtualenv and run the unit tests for each combination of
    PostgreSQL and Python.

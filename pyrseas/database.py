@@ -15,8 +15,8 @@ import sys
 
 import yaml
 
+from pgdbconn.dbconn import DbConnection
 from pyrseas.yamlutil import yamldump
-from pyrseas.lib.dbconn import DbConnection
 from pyrseas.dbobject import fetch_reserved_words
 from pyrseas.dbobject.language import LanguageDict
 from pyrseas.dbobject.cast import CastDict
