@@ -5,14 +5,6 @@ Pyrseas
 .. image:: https://api.travis-ci.org/perseas/Pyrseas.png?branch=master
            :target: https://travis-ci.org/perseas/Pyrseas
 
-.. image:: https://pypip.in/v/Pyrseas/badge.png
-           :target: https://crate.io/packages/Pyrseas/
-           :alt: Latest PyPI version
-
-.. image:: https://pypip.in/d/Pyrseas/badge.png
-           :target: https://crate.io/packages/Pyrseas/
-           :alt: Number of PyPI downloads
-
 Pyrseas provides a framework and utilities to upgrade and maintain a
 PostgreSQL database.
 
