@@ -16,8 +16,9 @@ from operator import itemgetter
 from collections import defaultdict, deque
 import yaml
 
+from pgdbconn.dbconn import DbConnection
+
 from pyrseas.yamlutil import yamldump
-from pyrseas.lib.dbconn import DbConnection
 from pyrseas.dbobject import fetch_reserved_words, DbObjectDict, DbSchemaObject
 from pyrseas.dbobject.language import LanguageDict
 from pyrseas.dbobject.cast import CastDict

@@ -24,13 +24,9 @@ Features
 Requirements
 ------------
 
-- PostgreSQL 9.0 or higher
+- PostgreSQL 9.2 or higher
 
-- Python 2.6 or higher
-
-- (planned) Werkzeug
-
-- (planned) Jinja2
+- Python 2.7 or higher
 
 License
 -------

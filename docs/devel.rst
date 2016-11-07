@@ -61,7 +61,7 @@ Programming Language
 To contribute to Pyrseas, you need at least one version of `Python
 <http://www.python.org>`_.  You can develop using Python 3, but since
 we want to continue supporting Python 2, you'll want to install Python
-2.7 or 2.6 in addition to Python 3.3 or 3.2.
+2.7 in addition to Python 3.4 or 3.5.
 
 If Python is not already available on your machine, either `download
 and install one or both <http://www.python.org/download/>`_ of the
@@ -75,7 +75,7 @@ Database Installation
 
 To participate in Pyrseas development, you'll also need one or more
 installations of `PostgreSQL <http://www.postgresql.org>`_, versions
-9.2, 9.1, 9.0 or 8.4.  If you only have limited space, it is
+9.5, 9.4, 9.3 or 9.2.  If you only have limited space, it is
 preferable to install one of the latest two versions.
 
 The versions can be obtained as binary packages or installers from the
@@ -97,11 +97,6 @@ The ``dbtoyaml`` and ``yamltodb`` utilities use the `PyYAML
 <http://pyyaml.org/wiki/PyYAML>`_ library.  You can install it from
 the PyYAML site, or possibly from your package management system.  For
 Windows 64-bit, please read the note under :ref:`installers`.
-
-If using the Pyrseas utilities with Python 2.6, you will need to
-install the ``argparse`` module from the `Python Package Index
-<http://pypi.python.org/pypi/argparse>`_.  For later Python versions,
-this is already included in the Python standard library.
 
 To easily run the Pyrseas tests against various Python/PostgreSQL
 version combinations, install `Tox

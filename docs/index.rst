@@ -23,16 +23,15 @@ Features
 Requirements
 ------------
 
-- `PostgreSQL <http://www.postgresql.org/>`_ 8.4 or higher
+- `PostgreSQL <http://www.postgresql.org/>`_ 9.2 or higher
 
-- `Python <http://www.python.org/>`_ 2.6 or higher
+- `Python <http://www.python.org/>`_ 2.7 or higher
 
-- `argparse <http://pypi.python.org/pypi/argparse>`_, if running under
-  Python 2.6
+- `Psycopg2 <http://initd.org/psycopg>`_ 2.5 or higher
 
-- (planned) Werkzeug
+- `PyYAML <http://pyyaml.org/>`_ 3.10 or higher
 
-- (planned) Jinja2
+- `PgDbConn <https://github.com/perseas/pgdbconn>`_ 0.8 or higher
 
 Contents
 --------
