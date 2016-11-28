@@ -1,8 +1,9 @@
 Pyrseas
 =======
 
-Pyrseas provides a framework and utilities to upgrade and maintain a
-PostgreSQL database.
+Pyrseas provides utilities to compare the schema of a Postgres
+database against another, either a previously stored version or from a
+different database, and to synchronize the schemas.
 
 Features
 --------
@@ -17,22 +18,12 @@ Features
 - Generates an augmented YAML description of a PostgreSQL database
   from its catalogs and an augmentation specification.
 
-- (planned) Generates a flexible web application to update PostgreSQL
-  tables
-
 Requirements
 ------------
 
-- `PostgreSQL <http://www.postgresql.org/>`_ 8.4 or higher
+- `PostgreSQL <http://www.postgresql.org/>`_ 9.2 or higher
 
-- `Python <http://www.python.org/>`_ 2.6 or higher
-
-- `argparse <http://pypi.python.org/pypi/argparse>`_, if running under
-  Python 2.6
-
-- (planned) Werkzeug
-
-- (planned) Jinja2
+- `Python <http://www.python.org/>`_ 2.7 or higher
 
 Contents
 --------
