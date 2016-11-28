@@ -5,16 +5,9 @@ Pyrseas
 .. image:: https://api.travis-ci.org/perseas/Pyrseas.png?branch=master
            :target: https://travis-ci.org/perseas/Pyrseas
 
-.. image:: https://pypip.in/v/Pyrseas/badge.png
-           :target: https://crate.io/packages/Pyrseas/
-           :alt: Latest PyPI version
-
-.. image:: https://pypip.in/d/Pyrseas/badge.png
-           :target: https://crate.io/packages/Pyrseas/
-           :alt: Number of PyPI downloads
-
-Pyrseas provides a framework and utilities to upgrade and maintain a
-PostgreSQL database.
+Pyrseas provides utilities to compare the schema of a Postgres
+database against another, either a previously stored version or from a
+different database, and to synchronize the schemas.
 
 Features
 --------
@@ -26,19 +19,12 @@ Features
 - Generates SQL statements to modify a database so that it will match
   an input YAML/JSON specification
 
-- (planned) Generates a flexible web application to update PostgreSQL
-  tables
-
 Requirements
 ------------
 
-- PostgreSQL 9.0 or higher
+- PostgreSQL 9.2 or higher
 
-- Python 2.6 or higher
-
-- (planned) Werkzeug
-
-- (planned) Jinja2
+- Python 2.7 or higher
 
 License
 -------

@@ -1,3 +1,21 @@
+0.7.3 (28-Nov-2016)
+
+  Fixed various issues, including:
+
+  * Exclude constraints installed by extensions (#152)
+
+  * Generate SQL for changes to indexes and constraints (#144)
+
+  * Correct order of privileges and options in YAML file (#141)
+
+  * Fix ALTER TABLE SET STATISTICS (#140)
+
+  * CLUSTER statement should use fully qualified table name (#133)
+
+  * Quote column names in ALTER TABLE DROP COLUMN (#114)
+
+  * Output ALTER COLUMN if column default value changes (#112)
+
 0.7.2 (23-Jan-2015)
 
   Fixed various issues, including:

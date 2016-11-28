@@ -1,14 +1,14 @@
 {
    "name": "Pyrseas",
-   "abstract": "Framework and utilities to upgrade and maintain databases",
-   "description": "Pyrseas provides a framework and utilities to upgrade and maintain a PostgreSQL database.  Its utilities output a database schema in YAML format suitable for committing to a version control system and read this format to generate SQL to sync to another database.  Supports PostgreSQL 9.0, 9.1, 9.2, 9.3 and 9.4.",
-   "version": "0.7.2",
+   "abstract": "Utilities to compare and synchronize database schemas",
+  "description": "Pyrseas provides utilities to compare the schema of a Postgres database against another, either a previously stored version or from a different database, and to synchronize the schemas.  Its utilities output a database schema in YAML format suitable for committing to a version control system and read this format to generate SQL to sync to another database.  Supports PostgreSQL 9.2, 9.3, 9.4, 9.5 and 9.6.",
+  "version": "0.7.3",
    "maintainer": "Joe Abbate <jma@freedomcircle.com>",
    "license": "bsd",
    "prereqs": {
       "runtime": {
          "requires": {
-            "PostgreSQL": "9.0.0"
+            "PostgreSQL": "9.2.0"
          }
       }
    },
@@ -16,13 +16,13 @@
      "dbtoyaml": {
        "file": "pyrseas/dbtoyaml.py",
        "docfile": "docs/dbtoyaml.rst",
-       "version": "0.7.2",
+       "version": "0.7.3",
        "abstract": "Output PostgreSQL schemas in YAML format"
      },
      "yamltodb": {
        "file": "pyrseas/yamltodb.py",
        "docfile": "docs/yamltodb.rst",
-       "version": "0.7.2",
+       "version": "0.7.3",
        "abstract": "Generate SQL to sync a database with a YAML schema spec"
      }
    },
