@@ -109,8 +109,8 @@ class Sequence(DbClass):
                 (self.name not in opts.tables and
                  not hasattr(self, 'owner_table') or
                  self.owner_table not in opts.tables) or (
-                     hasattr(opts, 'excl_tables') and opts.excl_tables
-                     and self.name in opts.excl_tables):
+                     hasattr(opts, 'excl_tables') and opts.excl_tables and
+                     self.name in opts.excl_tables):
             return None
         seq = self._base_map(db, opts.no_owner, opts.no_privs)
         seq.pop('dependent_table', None)
@@ -249,7 +249,8 @@ class Table(DbClass):
         tbl['columns'] = cols
 
         if hasattr(self, 'check_constraints'):
-            tbl['check_constraints'] = {}
+            if 'check_constraints' not in tbl:
+                tbl.update(check_constraints={})
             for k in list(self.check_constraints.values()):
                 tbl['check_constraints'].update(
                     self.check_constraints[k.name].to_map(
@@ -258,14 +259,16 @@ class Table(DbClass):
             tbl['primary_key'] = self.primary_key.to_map(
                 db, self.column_names())
         if hasattr(self, 'foreign_keys'):
-            tbl['foreign_keys'] = {}
+            if 'foreign_keys' not in tbl:
+                tbl['foreign_keys'] = {}
             for k in list(self.foreign_keys.values()):
                 tbls = dbschemas[k.ref_schema].tables
                 tbl['foreign_keys'].update(self.foreign_keys[k.name].to_map(
                     db, self.column_names(),
                     tbls[self.foreign_keys[k.name].ref_table]. column_names()))
         if hasattr(self, 'unique_constraints'):
-            tbl['unique_constraints'] = {}
+            if 'unique_constraints' not in tbl:
+                tbl.update(unique_constraints={})
             for k in list(self.unique_constraints.values()):
                 tbl['unique_constraints'].update(
                     self.unique_constraints[k.name].to_map(
@@ -280,13 +283,18 @@ class Table(DbClass):
                 tbl['indexes'] = idxs
             else:
                 tbl.pop('indexes', None)
-
+        if hasattr(self, 'inherits'):
+            if 'inherits' not in tbl:
+                tbl['inherits'] = self.inherits
         if hasattr(self, 'rules'):
-            tbl['rules'] = {}
+            if 'rules' not in tbl:
+                tbl['rules'] = {}
+
             for k in list(self.rules.values()):
                 tbl['rules'].update(self.rules[k.name].to_map(db))
         if hasattr(self, 'triggers'):
-            tbl['triggers'] = {}
+            if 'triggers' not in tbl:
+                tbl['triggers'] = {}
             for k in list(self.triggers.values()):
                 tbl['triggers'].update(self.triggers[k.name].to_map(db))
 
@@ -468,12 +476,12 @@ class Table(DbClass):
         filepath = os.path.join(dirpath, self.extern_filename('data'))
         if hasattr(self, 'primary_key'):
             order_by = [self.columns[col - 1].name
-                        for col in self.primary_key.col_idx]
+                        for col in self.primary_key.keycols]
         else:
             order_by = ['%d' % (n + 1) for n in range(len(self.columns))]
         dbconn.sql_copy_to(
             "COPY (SELECT * FROM %s ORDER BY %s) TO STDOUT WITH CSV" % (
-            self.qualname(), ', '.join(order_by)), filepath)
+                self.qualname(), ', '.join(order_by)), filepath)
 
     def data_import(self, dirpath):
         """Generate SQL to import data into a table
@@ -602,7 +610,7 @@ class MaterializedView(View):
             return None
         mvw = self._base_map(db, opts.no_owner, opts.no_privs)
         if hasattr(self, 'indexes'):
-            if not 'indexes' in mvw:
+            if 'indexes' not in mvw:
                 mvw['indexes'] = {}
             for k in list(self.indexes.values()):
                 mvw['indexes'].update(self.indexes[k.name].to_map(db))
@@ -758,7 +766,7 @@ class ClassDict(DbObjectDict):
                 except KeyError as exc:
                     exc.args = ("Table '%s' has no columns" % key, )
                     raise
-                newdb.constraints.from_map(table, intable)
+                newdb.constraints.from_map(table, intable, rtables=inobjs)
                 if 'indexes' in intable:
                     newdb.indexes.from_map(table, intable['indexes'])
                 if 'rules' in intable:

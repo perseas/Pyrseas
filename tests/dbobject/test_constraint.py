@@ -19,8 +19,8 @@ class CheckConstraintToMapTestCase(DatabaseToMapTestCase):
         expmap = {'columns': [{'c1': {'type': 'integer'}},
                               {'c2': {'type': 'smallint'}}],
                   'check_constraints': {'t1_c2_check': {
-                  'columns': ['c2'], 'expression': '(c2 < 1000)'}}}
-        self.assertEqual(dbmap['schema public']['table t1'], expmap)
+                      'columns': ['c2'], 'expression': '(c2 < 1000)'}}}
+        assert dbmap['schema public']['table t1'] == expmap
 
     def test_check_constraint_2(self):
         "Map a table with a two-column, named CHECK constraint"
@@ -30,8 +30,8 @@ class CheckConstraintToMapTestCase(DatabaseToMapTestCase):
         expmap = {'columns': [{'c1': {'type': 'integer'}},
                               {'c2': {'type': 'integer'}}],
                   'check_constraints': {'t1_check_ratio': {
-                  'columns': ['c2', 'c1'],
-                  'expression': '(((c2 * 100) / c1) <= 50)'}}}
+                      'columns': ['c2', 'c1'],
+                      'expression': '(((c2 * 100) / c1) <= 50)'}}}
         assert dbmap['schema public']['table t1'] == expmap
 
     def test_check_constraint_inherited(self):
@@ -43,8 +43,8 @@ class CheckConstraintToMapTestCase(DatabaseToMapTestCase):
                               {'c2': {'type': 'text'}}],
                   'inherits': ['t1'],
                   'check_constraints': {'t1_c1_check': {
-                  'columns': ['c1'], 'inherited': True,
-                  'expression': '(c1 > 0)'}}}
+                      'columns': ['c1'], 'inherited': True,
+                      'expression': '(c1 > 0)'}}}
         assert dbmap['schema public']['table t2'] == expmap
 
 
@@ -92,11 +92,29 @@ class CheckConstraintToSqlTestCase(InputMapToSqlTestCase):
             'table t2': {
                 'columns': [{'c1': {'type': 'integer', 'inherited': True}},
                             {'c2': {'type': 'text'}}], 'check_constraints': {
-                't1_c1_check': {'columns': ['c1'], 'expression': 'c1 > 0',
-                                'inherited': True}}, 'inherits': ['t1']}})
+                                't1_c1_check':
+                                {'columns': ['c1'], 'expression': 'c1 > 0',
+                                 'inherited': True}}, 'inherits': ['t1']}})
         sql = self.to_sql(inmap, stmts)
         assert fix_indent(sql[0]) == "CREATE TABLE t2 (c2 text) INHERITS (t1)"
         assert len(sql) == 1
+
+    def test_change_check_constraint(self):
+        "Change expression of a check constraint in an existing table"
+        stmts = ["CREATE TABLE t1 (c1 INTEGER, CONSTRAINT t1_check1 "
+                 "CHECK (c1 > 0), CONSTRAINT t1_check2 CHECK (c1 < 100))"]
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+            'columns': [{'c1': {'type': 'integer'}}], 'check_constraints': {
+                't1_check1': {'columns': ['c1'], 'expression': 'c1 > 10'},
+                't1_check2': {'columns': ['c1'], 'expression': 'c1 < 100'}
+            }}
+        })
+        sql = self.to_sql(inmap, stmts)
+        assert fix_indent(sql[0]) == "ALTER TABLE t1 DROP CONSTRAINT t1_check1"
+        assert fix_indent(sql[1]) == "ALTER TABLE t1 ADD CONSTRAINT " \
+            "t1_check1 CHECK (c1 > 10)"
+        assert len(sql) == 2
 
 
 class PrimaryKeyToMapTestCase(DatabaseToMapTestCase):
@@ -197,9 +215,8 @@ class PrimaryKeyToSqlTestCase(InputMapToSqlTestCase):
 
     def test_alter_primary_key_add(self):
         "Add a two-column primary key to an existing table with primary key"
-        stmts = [
-            "CREATE TABLE t1 (c1 INTEGER PRIMARY KEY, c2 INTEGER, c3 TEXT)"
-            ]
+        stmts = ["CREATE TABLE t1 (c1 INTEGER PRIMARY KEY, c2 INTEGER, "
+                 "c3 TEXT)"]
         inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
             'columns': [{'c1': {'type': 'integer', 'not_null': True}},
@@ -207,18 +224,15 @@ class PrimaryKeyToSqlTestCase(InputMapToSqlTestCase):
                         {'c3': {'type': 'text'}}],
             'primary_key': {'t1_pkey': {'columns': ['c1', 'c2']}}}})
         sql = self.to_sql(inmap, stmts)
-
-        self.assertEqual(len(sql), 2)
-        self.assertEqual(fix_indent(sql[0]), "ALTER TABLE t1 " \
-            "DROP CONSTRAINT t1_pkey")
-        self.assertEqual(fix_indent(sql[1]), "ALTER TABLE t1 " \
-            "ADD CONSTRAINT t1_pkey PRIMARY KEY (c1, c2)")
+        assert len(sql) == 2
+        assert fix_indent(sql[0]) == "ALTER TABLE t1 DROP CONSTRAINT t1_pkey"
+        assert fix_indent(sql[1]) == "ALTER TABLE t1 ADD CONSTRAINT t1_pkey " \
+            "PRIMARY KEY (c1, c2)"
 
     def test_alter_primary_key_change(self):
         "Change primary key"
-        stmts = [
-            "CREATE TABLE t1 (c1 INTEGER PRIMARY KEY, c2 INTEGER, c3 TEXT)"
-            ]
+        stmts = ["CREATE TABLE t1 (c1 INTEGER PRIMARY KEY, c2 INTEGER, "
+                 "c3 TEXT)"]
         inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
             'columns': [{'c1': {'type': 'integer', 'not_null': True}},
@@ -227,11 +241,41 @@ class PrimaryKeyToSqlTestCase(InputMapToSqlTestCase):
             'primary_key': {'t1_pkey': {'columns': ['c2']}}}})
         sql = self.to_sql(inmap, stmts)
 
-        self.assertEqual(len(sql), 2)
-        self.assertEqual(fix_indent(sql[0]), "ALTER TABLE t1 " \
-            "DROP CONSTRAINT t1_pkey")
-        self.assertEqual(fix_indent(sql[1]), "ALTER TABLE t1 " \
-            "ADD CONSTRAINT t1_pkey PRIMARY KEY (c2)")
+        assert len(sql) == 2
+        assert fix_indent(sql[0]) == "ALTER TABLE t1 DROP CONSTRAINT t1_pkey"
+        assert fix_indent(sql[1]) == "ALTER TABLE t1 ADD CONSTRAINT t1_pkey " \
+            "PRIMARY KEY (c2)"
+
+    @pytest.mark.xfail
+    def test_alter_primary_key_change_order(self):
+        "Change primary key"
+        stmts = ["CREATE TABLE t1 (c2 INTEGER, c1 INTEGER PRIMARY KEY)"]
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+            'columns': [{'c1': {'type': 'integer', 'not_null': True}},
+                        {'c2': {'type': 'integer'}}],
+            'primary_key': {'t1_pkey': {'columns': ['c2']}}}})
+        sql = self.to_sql(inmap, stmts)
+
+        assert len(sql) == 2
+        assert fix_indent(sql[0]) == "ALTER TABLE t1 DROP CONSTRAINT t1_pkey"
+        assert fix_indent(sql[1]) == "ALTER TABLE t1 ADD CONSTRAINT t1_pkey " \
+            "PRIMARY KEY (c2)"
+
+    @pytest.mark.xfail
+    def test_alter_primary_key_change_order2(self):
+        "Change primary key"
+        stmts = ["CREATE TABLE t1 (c1 INTEGER, c2 INTEGER PRIMARY KEY)"]
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+            'columns': [{'c1': {'type': 'integer'}},
+                        {'cN': {'type': 'text'}},
+                        {'c2': {'type': 'integer', 'not_null': True}}],
+            'primary_key': {'t1_pkey': {'columns': ['c2']}}}})
+        sql = self.to_sql(inmap, stmts)
+
+        assert len(sql) == 1
+        assert fix_indent(sql[0]) == "ALTER TABLE t1 ADD COLUMN cN text"
 
     def test_drop_primary_key(self):
         "Drop a primary key on an existing table"
@@ -265,6 +309,36 @@ class PrimaryKeyToSqlTestCase(InputMapToSqlTestCase):
         sql = self.to_sql(inmap, stmts)
         assert fix_indent(sql[0]) == "ALTER TABLE t1 SET WITHOUT CLUSTER"
 
+    def test_change_primary_key(self):
+        "Changing primary key columns"
+        stmts = ["CREATE TABLE t1 (c1 INTEGER NOT NULL, c2 INTEGER NOT NULL,"
+                 "CONSTRAINT t1_pkey PRIMARY KEY (c1, c2))"]
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+            'columns': [{'c1': {'type': 'integer', 'not_null': True}},
+                        {'c2': {'type': 'integer', 'not_null': True}}],
+            'primary_key': {'t1_pkey': {'columns': ['c1']}}}})
+        sql = self.to_sql(inmap, stmts)
+        assert fix_indent(sql[0]) == "ALTER TABLE t1 DROP CONSTRAINT t1_pkey"
+        assert fix_indent(sql[1]) == "ALTER TABLE t1 ADD CONSTRAINT " \
+            "t1_pkey PRIMARY KEY (c1)"
+        assert len(sql) == 2
+
+    def test_change_order_primary_key(self):
+        "Changing primary key columns order"
+        stmts = ["CREATE TABLE t1 (c1 INTEGER NOT NULL, c2 INTEGER NOT NULL,"
+                 "CONSTRAINT t1_pkey PRIMARY KEY (c1, c2))"]
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+            'columns': [{'c1': {'type': 'integer', 'not_null': True}},
+                        {'c2': {'type': 'integer', 'not_null': True}}],
+            'primary_key': {'t1_pkey': {'columns': ['c2', 'c1']}}}})
+        sql = self.to_sql(inmap, stmts)
+        assert fix_indent(sql[0]) == "ALTER TABLE t1 DROP CONSTRAINT t1_pkey"
+        assert fix_indent(sql[1]) == "ALTER TABLE t1 ADD CONSTRAINT t1_pkey " \
+            "PRIMARY KEY (c2, c1)"
+        assert len(sql) == 2
+
 
 class ForeignKeyToMapTestCase(DatabaseToMapTestCase):
     """Test mapping of created FOREIGN KEYs"""
@@ -273,9 +347,14 @@ class ForeignKeyToMapTestCase(DatabaseToMapTestCase):
                              {'c2': {'type': 'integer'}},
                              {'c3': {'type': 'text'}}],
                  'foreign_keys': {'t1_c2_fkey': {
-                     'columns': ['c2'], 'references': {
+                     'columns': ['c2'],
+                     'on_update': 'cascade',
+                     'on_delete': 'restrict',
+                     'references': {
                          'schema': 'public', 'table': 't2',
-                         'columns': ['pc1']}}}}
+                         'columns': ['pc1']
+                     }
+                 }}}
 
     map_fkey2 = {'columns': [{'c1': {'type': 'integer'}},
                              {'c2': {'type': 'character(5)'}},
@@ -310,14 +389,16 @@ class ForeignKeyToMapTestCase(DatabaseToMapTestCase):
                          'references': {'schema': 'public', 'table': 't2',
                                         'columns': ['pc2', 'pc1', 'pc3']}},
                      't1_fgn_key2': {'columns': ['c2'],
-                         'references': {'schema': 'public', 'table': 't3',
-                                        'columns': ['qc1']}}}}
+                                     'references': {'schema': 'public',
+                                                    'table': 't3',
+                                                    'columns': ['qc1']}}}}
 
     def test_foreign_key_1(self):
         "Map a table with a single-column foreign key on another table"
         stmts = ["CREATE TABLE t2 (pc1 INTEGER PRIMARY KEY, pc2 TEXT)",
-                 "CREATE TABLE t1 (c1 INTEGER, "
-                 "c2 INTEGER REFERENCES t2 (pc1), c3 TEXT)"]
+                 "CREATE TABLE t1 (c1 INTEGER, c2 INTEGER REFERENCES t2 (pc1) "
+                 "ON UPDATE CASCADE ON DELETE RESTRICT"
+                 ", c3 TEXT)"]
         dbmap = self.to_map(stmts)
         assert dbmap['schema public']['table t1'] == self.map_fkey1
 
@@ -325,7 +406,8 @@ class ForeignKeyToMapTestCase(DatabaseToMapTestCase):
         "Map a table with a single-column foreign key, table level constraint"
         stmts = ["CREATE TABLE t2 (pc1 INTEGER PRIMARY KEY, pc2 TEXT)",
                  "CREATE TABLE t1 (c1 INTEGER, c2 INTEGER, c3 TEXT, "
-                 "FOREIGN KEY (c2) REFERENCES t2 (pc1))"]
+                 "FOREIGN KEY (c2) REFERENCES t2 (pc1)"
+                 "ON UPDATE CASCADE ON DELETE RESTRICT)"]
         dbmap = self.to_map(stmts)
         assert dbmap['schema public']['table t1'] == self.map_fkey1
 
@@ -582,8 +664,8 @@ class ForeignKeyToSqlTestCase(InputMapToSqlTestCase):
                     'references': {'columns': ['c11', 'c12'],
                                    'table': 't1'}}}}})
         sql = self.to_sql(inmap, stmts)
-        self.assertEqual(fix_indent(sql[0]), "ALTER TABLE t2 ADD CONSTRAINT " \
-            "t2_c23_fkey FOREIGN KEY (c23, c24) REFERENCES t1 (c11, c12)")
+        assert fix_indent(sql[0]) == "ALTER TABLE t2 ADD CONSTRAINT " \
+            "t2_c23_fkey FOREIGN KEY (c23, c24) REFERENCES t1 (c11, c12)"
 
     def test_alter_foreign_key1(self):
         "Change foreign key: referencing column"
@@ -591,7 +673,7 @@ class ForeignKeyToSqlTestCase(InputMapToSqlTestCase):
                  "c12 INTEGER NOT NULL)",
                  "CREATE TABLE t2 (c21 INTEGER PRIMARY KEY NOT NULL, "
                  "c22 INTEGER, c23 INTEGER)",
-                 "ALTER TABLE t2 ADD CONSTRAINT t2_c22_fkey " \
+                 "ALTER TABLE t2 ADD CONSTRAINT t2_c22_fkey "
                  "FOREIGN KEY (c22) REFERENCES t1 (c11)"]
         inmap = self.std_map()
         inmap['schema public'].update({
@@ -609,21 +691,19 @@ class ForeignKeyToSqlTestCase(InputMapToSqlTestCase):
                     'references': {'columns': ['c11'],
                                    'table': 't1'}}}}})
         sql = self.to_sql(inmap, stmts)
-        self.assertEqual(2, len(sql))
-        self.assertEqual(fix_indent(sql[0]),
-                         'ALTER TABLE t2 DROP CONSTRAINT t2_c22_fkey')
-        self.assertEqual(fix_indent(sql[1]),
-                         'ALTER TABLE t2 ADD CONSTRAINT t2_c22_fkey ' \
-                         'FOREIGN KEY (c23) REFERENCES t1 (c11)')
+        assert len(sql) == 2
+        assert fix_indent(sql[0]) == \
+            "ALTER TABLE t2 DROP CONSTRAINT t2_c22_fkey"
+        assert fix_indent(sql[1]) == "ALTER TABLE t2 ADD CONSTRAINT " \
+            "t2_c22_fkey FOREIGN KEY (c23) REFERENCES t1 (c11)"
 
-    @pytest.mark.xfail
-    def test_alter_foreign_key2(self):
+    def test_alter_foreign_key_columns(self):
         "Change foreign key: foreign column"
         stmts = ["CREATE TABLE t1 (c11 INTEGER NOT NULL UNIQUE, "
                  "c12 INTEGER NOT NULL UNIQUE)",
                  "CREATE TABLE t2 (c21 INTEGER PRIMARY KEY NOT NULL, "
                  "c22 INTEGER, c23 INTEGER)",
-                 "ALTER TABLE t2 ADD CONSTRAINT t2_c22_fkey " \
+                 "ALTER TABLE t2 ADD CONSTRAINT t2_c22_fkey "
                  "FOREIGN KEY (c22) REFERENCES t1 (c11)"]
         inmap = self.std_map()
         inmap['schema public'].update({
@@ -643,12 +723,125 @@ class ForeignKeyToSqlTestCase(InputMapToSqlTestCase):
                     'references': {'columns': ['c12'],
                                    'table': 't1'}}}}})
         sql = self.to_sql(inmap, stmts)
-        self.assertEqual(2, len(sql))
-        self.assertEqual(fix_indent(sql[0]),
-                         'ALTER TABLE t2 DROP CONSTRAINT t2_c22_fkey')
-        self.assertEqual(fix_indent(sql[1]),
-                         'ALTER TABLE t2 ADD CONSTRAINT t2_c22_fkey ' \
-                         'FOREIGN KEY (c22) REFERENCES t1 (c12)')
+        assert len(sql) == 2
+        assert fix_indent(sql[0]) == \
+            "ALTER TABLE t2 DROP CONSTRAINT t2_c22_fkey"
+        assert fix_indent(sql[1]) == "ALTER TABLE t2 ADD CONSTRAINT " \
+            "t2_c22_fkey FOREIGN KEY (c22) REFERENCES t1 (c12)"
+
+    @pytest.mark.xfail
+    def test_alter_foreign_key_column_order(self):
+        "Change foreign key: foreign column"
+        stmts = ["CREATE TABLE t1 (c11 INTEGER, c12 INTEGER PRIMARY KEY)",
+                 "CREATE TABLE t2 (c21 INTEGER PRIMARY KEY, c22 INTEGER)",
+                 "ALTER TABLE t2 ADD CONSTRAINT t2_c22_fkey "
+                 "FOREIGN KEY (c22) REFERENCES t1 (c12)"]
+        inmap = self.std_map()
+        inmap['schema public'].update({
+            'table t1': {'columns': [
+                        {'c11': {'type': 'integer'}},
+                        {'c1N': {'type': 'integer'}},
+                        {'c12': {'type': 'integer', 'not_null': True}}],
+                'primary_key': {'t1_pkey': {'columns': ['c12']}}},
+            'table t2': {'columns': [
+                        {'c21': {'type': 'integer', 'not_null': True}},
+                        {'c22': {'type': 'integer'}}],
+                'primary_key': {'t2_pkey': {'columns': ['c21']}},
+                'foreign_keys': {'t2_c22_fkey': {
+                    'columns': ['c22'],
+                    'references': {'columns': ['c1N'], 'table': 't1'}}}}})
+        sql = self.to_sql(inmap, stmts)
+        assert len(sql) == 2
+        assert fix_indent(sql[0]) == "ALTER TABLE t1 ADD COLUMN c1N integer"
+        assert fix_indent(sql[1]) == \
+            "ALTER TABLE t2 DROP CONSTRAINT t2_c22_fkey"
+        assert fix_indent(sql[2]) == "ALTER TABLE t2 ADD CONSTRAINT " \
+            "t2_c22_fkey FOREIGN KEY (c22) REFERENCES t1 (c1N)"
+
+    def test_alter_foreign_key_change_actions(self):
+        "Change foreign key: foreign column"
+        stmts = ["CREATE TABLE t1 (c11 INTEGER PRIMARY KEY)",
+                 "CREATE TABLE t2 (c21 INTEGER PRIMARY KEY, c22 INTEGER)",
+                 "ALTER TABLE t2 ADD CONSTRAINT t2_c22_fkey "
+                 "FOREIGN KEY (c22) REFERENCES t1 (c11) ON UPDATE RESTRICT"]
+        inmap = self.std_map()
+        inmap['schema public'].update({
+            'table t1': {'columns': [
+                        {'c11': {'type': 'integer', 'not_null': True}}],
+                       'primary_key': {
+                           't1_pkey': {'columns': ['c11']}}},
+            'table t2': {'columns': [
+                        {'c21': {'type': 'integer', 'not_null': True}},
+                        {'c22': {'type': 'integer'}}],
+                'primary_key': {'t2_pkey': {'columns': ['c21']}},
+                'foreign_keys': {'t2_c22_fkey': {
+                    'columns': ['c22'],
+                    'on_update': 'cascade',
+                    'references': {'columns': ['c11'], 'table': 't1'},
+                }}}})
+        sql = self.to_sql(inmap, stmts)
+        assert len(sql) == 2
+        assert fix_indent(sql[0]) == \
+            "ALTER TABLE t2 DROP CONSTRAINT t2_c22_fkey"
+        assert fix_indent(sql[1]) == "ALTER TABLE t2 ADD CONSTRAINT " \
+            "t2_c22_fkey FOREIGN KEY (c22) REFERENCES t1 (c11) " \
+            "ON UPDATE CASCADE"
+
+    def test_alter_foreign_key_add_actions(self):
+        "Change foreign key: foreign column"
+        stmts = ["CREATE TABLE t1 (c11 INTEGER PRIMARY KEY)",
+                 "CREATE TABLE t2 (c21 INTEGER PRIMARY KEY, c22 INTEGER)",
+                 "ALTER TABLE t2 ADD CONSTRAINT t2_c22_fkey "
+                 "FOREIGN KEY (c22) REFERENCES t1 (c11)"]
+        inmap = self.std_map()
+        inmap['schema public'].update({
+            'table t1': {'columns': [
+                        {'c11': {'type': 'integer', 'not_null': True}}],
+                       'primary_key': {
+                           't1_pkey': {'columns': ['c11']}}},
+            'table t2': {'columns': [
+                        {'c21': {'type': 'integer', 'not_null': True}},
+                        {'c22': {'type': 'integer'}}],
+                'primary_key': {'t2_pkey': {'columns': ['c21']}},
+                'foreign_keys': {'t2_c22_fkey': {
+                    'columns': ['c22'],
+                    'on_update': 'cascade',
+                    'references': {'columns': ['c11'], 'table': 't1'},
+                }}}})
+        sql = self.to_sql(inmap, stmts)
+        assert len(sql) == 2
+        assert fix_indent(sql[0]) == \
+            "ALTER TABLE t2 DROP CONSTRAINT t2_c22_fkey"
+        assert fix_indent(sql[1]) == "ALTER TABLE t2 ADD CONSTRAINT " \
+            "t2_c22_fkey FOREIGN KEY (c22) REFERENCES t1 (c11) " \
+            "ON UPDATE CASCADE"
+
+    def test_alter_foreign_key_drop_actions(self):
+        "Change foreign key: foreign column"
+        stmts = ["CREATE TABLE t1 (c11 INTEGER PRIMARY KEY)",
+                 "CREATE TABLE t2 (c21 INTEGER PRIMARY KEY, c22 INTEGER)",
+                 "ALTER TABLE t2 ADD CONSTRAINT t2_c22_fkey "
+                 "FOREIGN KEY (c22) REFERENCES t1 (c11) ON UPDATE RESTRICT"]
+        inmap = self.std_map()
+        inmap['schema public'].update({
+            'table t1': {'columns': [
+                        {'c11': {'type': 'integer', 'not_null': True}}],
+                       'primary_key': {
+                           't1_pkey': {'columns': ['c11']}}},
+            'table t2': {'columns': [
+                        {'c21': {'type': 'integer', 'not_null': True}},
+                        {'c22': {'type': 'integer'}}],
+                'primary_key': {'t2_pkey': {'columns': ['c21']}},
+                'foreign_keys': {'t2_c22_fkey': {
+                    'columns': ['c22'],
+                    'references': {'columns': ['c11'], 'table': 't1'},
+                }}}})
+        sql = self.to_sql(inmap, stmts)
+        assert len(sql) == 2
+        assert fix_indent(sql[0]) == \
+            "ALTER TABLE t2 DROP CONSTRAINT t2_c22_fkey"
+        assert fix_indent(sql[1]) == "ALTER TABLE t2 ADD CONSTRAINT " \
+            "t2_c22_fkey FOREIGN KEY (c22) REFERENCES t1 (c11)"
 
     def test_drop_foreign_key(self):
         "Drop a foreign key on an existing table"
@@ -710,6 +903,107 @@ class ForeignKeyToSqlTestCase(InputMapToSqlTestCase):
         assert fix_indent(sql[1]) == "ALTER TABLE t1 ADD CONSTRAINT " \
             "t1_c2_fkey FOREIGN KEY (c2) REFERENCES t2 (pc1) MATCH FULL"
 
+    def test_change_columns_foreign_key(self):
+        "Changing foreign key columns"
+        stmts = ["CREATE TABLE t1 (c1 INTEGER NOT NULL, "
+                 "CONSTRAINT t1_pkey PRIMARY KEY (c1))",
+                 "CREATE TABLE t2 (c1 INTEGER NOT NULL, c2 INTEGER NOT NULL, "
+                 "CONSTRAINT t2_fk FOREIGN KEY (c1) "
+                 "REFERENCES t1 (c1) MATCH FULL)"]
+        inmap = self.std_map()
+        inmap['schema public'].update({
+            'table t1': {
+                'columns': [{'c1': {'type': 'integer', 'not_null': True}}],
+                'primary_key': {'t1_pkey': {'columns': ['c1']}}},
+            'table t2': {
+                'columns': [{'c1': {'type': 'integer', 'not_null': True}},
+                            {'c2': {'type': 'integer', 'not_null': True}}],
+                'foreign_keys': {'t2_fk': {
+                    'columns': ['c2'], 'match': 'full',
+                    'references': {'schema': 'public', 'table': 't1',
+                                   'columns': ['c1']}}}}})
+        sql = self.to_sql(inmap, stmts)
+        assert fix_indent(sql[0]) == "ALTER TABLE t2 DROP CONSTRAINT t2_fk"
+        assert fix_indent(sql[1]) == "ALTER TABLE t2 ADD CONSTRAINT t2_fk " \
+            "FOREIGN KEY (c2) REFERENCES t1 (c1) MATCH FULL"
+        assert len(sql) == 2
+
+    def test_change_ref_columns_foreign_key(self):
+        "Changing foreign key reference columns"
+        stmts = ["CREATE TABLE t1 (c1 INTEGER NOT NULL, c2 INTEGER NOT NULL, "
+                 "CONSTRAINT t1_pkey PRIMARY KEY (c1, c2))",
+                 "CREATE TABLE t2 (c1 INTEGER NOT NULL, c2 INTEGER NOT NULL, "
+                 "CONSTRAINT t2_fk FOREIGN KEY (c1, c2) "
+                 "REFERENCES t1 (c1, c2) MATCH FULL)"]
+        inmap = self.std_map()
+        inmap['schema public'].update({
+            'table t1': {
+                'columns': [{'c1': {'type': 'integer', 'not_null': True}},
+                            {'c2': {'type': 'integer', 'not_null': True}}],
+                'primary_key': {'t1_pkey': {'columns': ['c1', 'c2']}}},
+            'table t2': {
+                'columns': [{'c1': {'type': 'integer', 'not_null': True}},
+                            {'c2': {'type': 'integer', 'not_null': True}}],
+                'foreign_keys': {'t2_fk': {
+                    'columns': ['c1', 'c2'], 'match': 'full',
+                    'references': {'schema': 'public', 'table': 't1',
+                                   'columns': ['c2', 'c1']}}}}})
+        sql = self.to_sql(inmap, stmts)
+        assert fix_indent(sql[0]) == "ALTER TABLE t2 DROP CONSTRAINT t2_fk"
+        assert fix_indent(sql[1]) == "ALTER TABLE t2 ADD CONSTRAINT t2_fk " \
+            "FOREIGN KEY (c1, c2) REFERENCES t1 (c2, c1) MATCH FULL"
+        assert len(sql) == 2
+
+    def test_change_match_foreign_key(self):
+        "Changing foreign key match"
+        stmts = ["CREATE TABLE t1 (c1 INTEGER NOT NULL, c2 INTEGER NOT NULL, "
+                 "CONSTRAINT t1_pkey PRIMARY KEY (c1, c2))",
+                 "CREATE TABLE t2 (c1 INTEGER NOT NULL, c2 INTEGER NOT NULL, "
+                 "CONSTRAINT t2_fk FOREIGN KEY (c1, c2) "
+                 "REFERENCES t1 (c1, c2) MATCH FULL)"]
+        inmap = self.std_map()
+        inmap['schema public'].update({
+            'table t1': {
+                'columns': [{'c1': {'type': 'integer', 'not_null': True}},
+                            {'c2': {'type': 'integer', 'not_null': True}}],
+                'primary_key': {'t1_pkey': {'columns': ['c1', 'c2']}}},
+            'table t2': {
+                'columns': [{'c1': {'type': 'integer', 'not_null': True}},
+                            {'c2': {'type': 'integer', 'not_null': True}}],
+                'foreign_keys': {'t2_fk': {
+                    'columns': ['c1', 'c2'], 'match': 'simple',
+                    'references': {'schema': 'public', 'table': 't1',
+                                   'columns': ['c1', 'c2']}}}}})
+        sql = self.to_sql(inmap, stmts)
+        assert fix_indent(sql[0]) == "ALTER TABLE t2 DROP CONSTRAINT t2_fk"
+        assert fix_indent(sql[1]) == "ALTER TABLE t2 ADD CONSTRAINT t2_fk " \
+            "FOREIGN KEY (c1, c2) REFERENCES t1 (c1, c2) MATCH SIMPLE"
+        assert len(sql) == 2
+
+    def test_change_actions_foreign_key(self):
+        "Changing foreign key actions"
+        stmts = ["CREATE TABLE t1 (c1 INTEGER NOT NULL, "
+                 "CONSTRAINT t1_pkey PRIMARY KEY (c1))",
+                 "CREATE TABLE t2 (c1 INTEGER NOT NULL, "
+                 "CONSTRAINT t2_fk FOREIGN KEY (c1) "
+                 "REFERENCES t1 (c1) ON UPDATE CASCADE)"]
+        inmap = self.std_map()
+        inmap['schema public'].update({
+            'table t1': {
+                'columns': [{'c1': {'type': 'integer', 'not_null': True}}],
+                'primary_key': {'t1_pkey': {'columns': ['c1']}}},
+            'table t2': {
+                'columns': [{'c1': {'type': 'integer', 'not_null': True}}],
+                'foreign_keys': {'t2_fk': {
+                    'columns': ['c1'], 'on_update': 'restrict',
+                    'references': {'schema': 'public', 'table': 't1',
+                                   'columns': ['c1']}}}}})
+        sql = self.to_sql(inmap, stmts)
+        assert fix_indent(sql[0]) == "ALTER TABLE t2 DROP CONSTRAINT t2_fk"
+        assert fix_indent(sql[1]) == "ALTER TABLE t2 ADD CONSTRAINT t2_fk " \
+            "FOREIGN KEY (c1) REFERENCES t1 (c1) ON UPDATE RESTRICT"
+        assert len(sql) == 2
+
 
 class UniqueConstraintToMapTestCase(DatabaseToMapTestCase):
     """Test mapping of created UNIQUE constraints"""
@@ -738,7 +1032,7 @@ class UniqueConstraintToMapTestCase(DatabaseToMapTestCase):
         "Map a table with a single-column unique constraint, table level"
         stmts = ["CREATE TABLE t1 (c1 INTEGER, c2 TEXT, UNIQUE (c1))"]
         dbmap = self.to_map(stmts)
-        self.assertEqual(dbmap['schema public']['table t1'], self.map_unique1)
+        assert dbmap['schema public']['table t1'] == self.map_unique1
 
     def test_unique_3(self):
         "Map a table with a two-column unique constraint"
@@ -814,13 +1108,12 @@ class UniqueConstraintToSqlTestCase(InputMapToSqlTestCase):
             'columns': [{'c1': {'type': 'integer', 'not_null': True}},
                         {'c2': {'type': 'integer', 'not_null': True}}],
             'unique_constraints': {'t1_ukey': {'columns': ['c2'],
-                                                 'unique': True}}}})
+                                               'unique': True}}}})
         sql = self.to_sql(inmap, stmts)
-        self.assertEqual(2, len(sql))
-        self.assertEqual(fix_indent(sql[0]),
-            "ALTER TABLE t1 DROP CONSTRAINT t1_ukey")
-        self.assertEqual(fix_indent(sql[1]),
-            "ALTER TABLE t1 ADD CONSTRAINT t1_ukey UNIQUE (c2)")
+        assert len(sql) == 2
+        assert fix_indent(sql[0]) == "ALTER TABLE t1 DROP CONSTRAINT t1_ukey"
+        assert fix_indent(sql[1]) == \
+            "ALTER TABLE t1 ADD CONSTRAINT t1_ukey UNIQUE (c2)"
 
     def test_drop_unique_constraint(self):
         "Drop a unique constraint on an existing table"
@@ -853,6 +1146,33 @@ class UniqueConstraintToSqlTestCase(InputMapToSqlTestCase):
         sql = self.to_sql(inmap, stmts)
         assert sql[0] == "CLUSTER t1 USING t1_c1_key"
 
+    def test_change_unique_constraint(self):
+        "Change columns in unique index"
+        stmts = ["CREATE TABLE t1 (c1 integer UNIQUE, c2 text)"]
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+            'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}],
+            'unique_constraints': {'t1_c1_key': {'columns': ['btrim(c1)']}}}})
+        sql = self.to_sql(inmap, stmts)
+        assert sql[0] == "ALTER TABLE t1 DROP CONSTRAINT t1_c1_key"
+        assert sql[1] == "ALTER TABLE t1 ADD CONSTRAINT t1_c1_key UNIQUE " \
+            "(btrim(c1))"
+        assert len(sql) == 2
+
+    def test_change_order_unique_constraint(self):
+        "Change columns order in unique index"
+        stmts = ["CREATE TABLE t1 (c1 integer, c2 text, "
+                 "CONSTRAINT t1_unique UNIQUE (c1, c2))"]
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+            'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}],
+            'unique_constraints': {'t1_unique': {'columns': ['c2', 'c1']}}}})
+        sql = self.to_sql(inmap, stmts)
+        assert sql[0] == "ALTER TABLE t1 DROP CONSTRAINT t1_unique"
+        assert sql[1] == "ALTER TABLE t1 ADD CONSTRAINT t1_unique UNIQUE " \
+            "(c2, c1)"
+        assert len(sql) == 2
+
 
 class ConstraintCommentTestCase(InputMapToSqlTestCase):
     """Test creation of comments on constraints"""
@@ -882,7 +1202,7 @@ class ConstraintCommentTestCase(InputMapToSqlTestCase):
             'primary_key': {'cns1': {'columns': ['c1'],
                                      'description': 'Test constraint cns1'}}}})
         sql = self.to_sql(inmap, stmts)
-        self.assertEqual(sql, [COMMENT_STMT])
+        assert sql == [COMMENT_STMT]
 
     def test_drop_foreign_key_comment(self):
         "Drop the comment on an existing foreign key"
@@ -904,7 +1224,7 @@ class ConstraintCommentTestCase(InputMapToSqlTestCase):
                     'columns': ['c13'],
                     'references': {'columns': ['c21'], 'table': 't2'}}}}})
         sql = self.to_sql(inmap, stmts)
-        self.assertEqual(sql, ["COMMENT ON CONSTRAINT cns1 ON t1 IS NULL"])
+        assert sql == ["COMMENT ON CONSTRAINT cns1 ON t1 IS NULL"]
 
     def test_change_unique_constraint_comment(self):
         "Change existing comment on a unique constraint"

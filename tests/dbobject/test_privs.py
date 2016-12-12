@@ -39,8 +39,8 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
         stmts = ["CREATE SCHEMA s1", "GRANT USAGE ON SCHEMA s1 TO PUBLIC",
                  "GRANT CREATE, USAGE ON SCHEMA s1 TO user1"]
         dbmap = self.to_map(stmts, no_privs=False)
-        expmap = {'privileges': [{self.db.user: ['all']},
-                                 {'PUBLIC': ['usage']}, {'user1': ['all']}]}
+        expmap = self.sort_privileges({'privileges': [{self.db.user: ['all']},
+                                 {'PUBLIC': ['usage']}, {'user1': ['all']}]})
         assert dbmap['schema s1'] == expmap
 
     def test_map_table(self):
@@ -48,14 +48,14 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
         stmts = [CREATE_TABLE, GRANT_SELECT % 'PUBLIC', GRANT_INSUPD % 'user1',
                  "GRANT REFERENCES, TRIGGER ON t1 TO user2 WITH GRANT OPTION"]
         dbmap = self.to_map(stmts, no_privs=False)
-        expmap = {'columns': [{'c1': {'type': 'integer'}},
+        expmap = self.sort_privileges({'columns': [{'c1': {'type': 'integer'}},
                               {'c2': {'type': 'text'}}],
                   'privileges': [{self.db.user: ['all']},
                                  {'PUBLIC': ['select']},
                                  {'user1': ['insert', 'update']},
                                  {'user2': [{'trigger': {'grantable': True}},
                                             {'references': {
-                                                'grantable': True}}]}]}
+                                                'grantable': True}}]}]})
         assert dbmap['schema public']['table t1'] == expmap
 
     def test_map_column(self):
@@ -65,11 +65,11 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
                  "GRANT INSERT (c1, c2) ON t1 TO user1",
                  "GRANT INSERT (c2), UPDATE (c2) ON t1 TO user2"]
         dbmap = self.to_map(stmts, no_privs=False)
-        expmap = {'columns': [
+        expmap = self.sort_privileges({'columns': [
             {'c1': {'type': 'integer', 'privileges': [{'user1': ['insert']}]}},
             {'c2': {'type': 'text', 'privileges': [
             {'user1': ['insert']}, {'user2': ['insert', 'update']}]}}],
-            'privileges': [{self.db.user: ['all']}, {'PUBLIC': ['select']}]}
+            'privileges': [{self.db.user: ['all']}, {'PUBLIC': ['select']}]})
         assert dbmap['schema public']['table t1'] == expmap
 
     def test_map_sequence(self):
@@ -78,11 +78,11 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
                  "GRANT SELECT ON SEQUENCE seq1 TO PUBLIC",
                  "GRANT USAGE, UPDATE ON SEQUENCE seq1 TO user1"]
         dbmap = self.to_map(stmts, no_privs=False)
-        expmap = {'start_value': 1, 'increment_by': 1, 'max_value': None,
+        expmap = self.sort_privileges({'start_value': 1, 'increment_by': 1, 'max_value': None,
                   'min_value': None, 'cache_value': 1,
                   'privileges': [{self.db.user: ['all']},
                                  {'PUBLIC': ['select']},
-                                 {'user1': ['usage', 'update']}]}
+                                 {'user1': ['usage', 'update']}]})
         assert dbmap['schema public']['sequence seq1'] == expmap
 
     def test_map_view(self):
@@ -91,10 +91,10 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
                  "GRANT SELECT ON v1 TO PUBLIC",
                  "GRANT REFERENCES ON v1 TO user1"]
         dbmap = self.to_map(stmts, no_privs=False)
-        expmap = {'definition': " SELECT now()::date AS today;",
+        expmap = self.sort_privileges({'definition': " SELECT now()::date AS today;",
                   'privileges': [{self.db.user: ['all']},
                                  {'PUBLIC': ['select']},
-                                 {'user1': ['references']}]}
+                                 {'user1': ['references']}]})
         assert dbmap['schema public']['view v1'] == expmap
 
     def test_map_function(self):
@@ -125,8 +125,8 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
         stmts = [CREATE_FDW,
                  "GRANT USAGE ON FOREIGN DATA WRAPPER fdw1 TO PUBLIC"]
         dbmap = self.to_map(stmts, no_privs=False, superuser=True)
-        expmap = {'privileges': [{self.db.user: ['usage']},
-                                 {'PUBLIC': ['usage']}]}
+        expmap = self.sort_privileges({'privileges': [{self.db.user: ['usage']},
+                                 {'PUBLIC': ['usage']}]})
         assert dbmap['foreign data wrapper fdw1'] == expmap
 
     def test_map_server(self):
@@ -152,7 +152,7 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
                   'privileges': [{self.db.user: ['all']},
                                  {'PUBLIC': ['select']},
                                  {'user1': ['insert', 'update']}]}
-        assert dbmap['schema public']['foreign table ft1'] == expmap
+        assert dbmap['schema public']['foreign table ft1'] == self.sort_privileges(expmap)
 
 
 class PrivilegeToSqlTestCase(InputMapToSqlTestCase):
