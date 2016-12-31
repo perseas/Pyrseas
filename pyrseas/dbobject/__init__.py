@@ -371,7 +371,8 @@ class DbObject(object):
         if not no_owner and self.owner is not None and inobj.owner is not None:
             if inobj.owner != self.owner:
                 stmts.append(self.alter_owner(inobj.owner))
-        stmts.append(self.diff_privileges(inobj))
+        if self.privileges and inobj.privileges:
+            stmts.append(self.diff_privileges(inobj))
         stmts.append(self.diff_description(inobj))
         return stmts
 
