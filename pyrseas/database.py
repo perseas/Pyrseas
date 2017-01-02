@@ -115,7 +115,7 @@ class Database(object):
 
             # Populate a map from system catalog to the respective dict
             self._catalog_map = {}
-            for _, d in self.alldicts():
+            for _, d in self.all_dicts():
                 if d.cls.catalog is not None:
                     self._catalog_map[d.cls.catalog] = d
 
@@ -141,13 +141,13 @@ class Database(object):
                 # let's warm up the cache. But we should really define the life
                 # cycle of this object as trying and catching KeyError on it is
                 # *very* expensive!
-                for _, d in self.alldicts():
+                for _, d in self.all_dicts():
                     for obj in list(d.values()):
                         self._extkey_map[obj.extern_key()] = obj
 
                 return self._extkey_map[extkey]
 
-        def alldicts(self):
+        def all_dicts(self):
             """Iterate over the DbObjectDict-derived dictionaries returning
             an ordered list of tuples (dict name, DbObjectDict object).
 
@@ -169,8 +169,8 @@ class Database(object):
 
             return rv
 
-        def dict_from_table(self, catalog):
-            """Given a catalog table name, return corresponding DbObjectDict
+        def dbobjdict_from_catalog(self, catalog):
+            """Given a catalog name, return corresponding DbObjectDict
 
             :param catalog: full name of a pg_ catalog
             :return: DbObjectDict object
@@ -222,15 +222,19 @@ class Database(object):
         db.types.link_refs(db.columns, db.constraints, db.functions)
         db.constraints.link_refs(db)
 
-    def _build_depends(self, db, dbconn):
+    def _build_dependency_graph(self, db, dbconn):
         """Build the dependency graph of the database objects
+
+        :param db: dictionary of dictionary of all objects
+        :param dbconn: a DbConnection object
         """
-        deps = defaultdict(list)
-        # This query wanted to be simple. it got complicated because:
-        # 1) we don't handle indexes together with the other pg_class
-        #    but in their own pg_index place (so fetch i1, i2)
-        # 2) what point two?
-        # "Normal" dependencies
+        alldeps = defaultdict(list)
+
+        # This query wanted to be simple. it got complicated because
+        # we don't handle indexes together with the other pg_class
+        # but in their own pg_index place (so fetch i1, i2)
+        # "Normal" dependencies, but excluding system objects
+        # (objid < 16384 and refobjid < 16384)
         query = """SELECT DISTINCT
                           CASE WHEN i1.indexrelid IS NOT NULL
                           THEN 'pg_index'::regclass
@@ -244,13 +248,15 @@ class Database(object):
                         LEFT JOIN pg_index i2
                              ON refclassid = 'pg_class'::regclass
                              AND refobjid = i2.indexrelid
-                   WHERE deptype = 'n'"""
+                   WHERE deptype = 'n'
+                   AND NOT (objid < 16384 AND refobjid < 16384)"""
         for r in dbconn.fetchall(query):
-            deps[r['class_name'], r['objid']].append(
+            alldeps[r['class_name'], r['objid']].append(
                 (r['refclass'], r['refobjid']))
 
-        # The dependencies across views is not in pg_depend. We have to parse
-        # the rewrite rule (TODO: only tested on PG 9.3):
+        # The dependencies across views is not in pg_depend. We have to
+        # parse the rewrite rule.  "ev_class >= 16384" is to exclude
+        # system views.
         query = """SELECT DISTINCT 'pg_class' AS class_name, ev_class,
                           CASE WHEN depid[1] = 'relid' THEN 'pg_class'
                                WHEN depid[1] = 'funcid' THEN 'pg_proc'
@@ -258,7 +264,8 @@ class Database(object):
                    FROM (SELECT ev_class, regexp_matches(ev_action,
                                 ':(relid|funcid)\s+(\d+)', 'g') AS depid
                          FROM pg_rewrite
-                         WHERE rulename = '_RETURN') x
+                         WHERE rulename = '_RETURN'
+                         AND ev_class >= 16384) x
                          LEFT JOIN pg_class c
                               ON (depid[1], depid[2]::oid) = ('relid', c.oid)
                          LEFT JOIN pg_namespace cs ON cs.oid = relnamespace
@@ -269,7 +276,7 @@ class Database(object):
                    AND coalesce(cs.nspname, ps.nspname)
                          NOT IN ('information_schema', 'pg_catalog')"""
         for r in dbconn.fetchall(query):
-            deps[r['class_name'], r['ev_class']].append(
+            alldeps[r['class_name'], r['ev_class']].append(
                 (r['refclass'], r['refobjid']))
 
         # Add the dependencies between a table and other objects through the
@@ -280,19 +287,19 @@ class Database(object):
                         ON classid = 'pg_attrdef'::regclass AND objid = ad.oid
                         AND deptype = 'n'"""
         for r in dbconn.fetchall(query):
-            deps[r['class_name'], r['adrelid']].append(
+            alldeps[r['class_name'], r['adrelid']].append(
                 (r['refclassid'], r['refobjid']))
 
-        for (stbl, soid), deps in list(deps.items()):
-            sdict = db.dict_from_table(stbl)
-            if sdict is None:
+        for (stbl, soid), deps in list(alldeps.items()):
+            sdict = db.dbobjdict_from_catalog(stbl)
+            if sdict is None or len(sdict) == 0:
                 continue
             src = sdict.by_oid.get(soid)
             if src is None:
                 continue
             for ttbl, toid in deps:
-                tdict = db.dict_from_table(ttbl)
-                if tdict is None:
+                tdict = db.dbobjdict_from_catalog(ttbl)
+                if tdict is None or len(tdict) == 0:
                     continue
                 tgt = tdict.by_oid.get(toid)
                 if tgt is None:
@@ -325,13 +332,14 @@ class Database(object):
         """Populate the database objects by querying the catalogs
 
         The `db` holder is populated by various DbObjectDict-derived
-        classes by querying the catalogs. The objects in the
-        dictionary are then linked to related objects, e.g., columns
-        are linked to the tables they belong.
+        classes by querying the catalogs.  A dependency graph is
+        constructed by querying the pg_depend catalog.  The objects in
+        the dictionary are then linked to related objects, e.g.,
+        columns are linked to the tables they belong.
         """
         self.db = self.Dicts(self.dbconn)
+        self._build_dependency_graph(self.db, self.dbconn)
         if self.dbconn.conn:
-            self._build_depends(self.db, self.dbconn)
             self.dbconn.conn.close()
         self._link_refs(self.db)
 
@@ -512,7 +520,7 @@ class Database(object):
 
         # First sort the objects in the new db in dependency order
         new_objs = []
-        for _, d in self.ndb.alldicts():
+        for _, d in self.ndb.all_dicts():
             pairs = list(d.items())
             pairs.sort()
             new_objs.extend(list(map(itemgetter(1), pairs)))
@@ -524,7 +532,7 @@ class Database(object):
 
         stmts = []
         for new in new_objs:
-            d = self.db.dict_from_table(new.catalog)
+            d = self.db.dbobjdict_from_catalog(new.catalog)
             old = d.get(new.key())
             if old is not None:
                 stmts.append(old.alter(new))
@@ -546,7 +554,7 @@ class Database(object):
 
         # Order the old database objects in reverse dependency order
         old_objs = []
-        for _, d in self.db.alldicts():
+        for _, d in self.db.all_dicts():
             pairs = list(d.items())
             pairs.sort
             old_objs.extend(list(map(itemgetter(1), pairs)))
@@ -555,7 +563,7 @@ class Database(object):
 
         # Drop the objects that don't appear in the new db
         for old in old_objs:
-            d = self.ndb.dict_from_table(old.catalog)
+            d = self.ndb.dbobjdict_from_catalog(old.catalog)
             if not getattr(old, '_nodrop', False) and old.key() not in d:
                 stmts.extend(old.drop())
 
