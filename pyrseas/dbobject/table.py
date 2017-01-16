@@ -631,6 +631,7 @@ QUERY_PRE93 = \
             JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
             LEFT JOIN pg_tablespace t ON (reltablespace = t.oid)
        WHERE relkind in ('r', 'S', 'v')
+             AND relpersistence != 't'
              AND (nspname != 'pg_catalog'
                   AND nspname != 'information_schema')
        ORDER BY nspname, relname"""
@@ -657,6 +658,7 @@ class ClassDict(DbObjectDict):
                 JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
                 LEFT JOIN pg_tablespace t ON (reltablespace = t.oid)
            WHERE relkind in ('r', 'S', 'v', 'm')
+                 AND relpersistence != 't'
                  AND (nspname != 'pg_catalog'
                       AND nspname != 'information_schema')
            ORDER BY nspname, relname"""

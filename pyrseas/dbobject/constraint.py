@@ -355,7 +355,9 @@ class ConstraintDict(DbObjectDict):
                 LEFT JOIN pg_index i ON (i.indexrelid = cl.oid)
                 LEFT JOIN pg_tablespace t ON (cl.reltablespace = t.oid)
                 LEFT JOIN pg_am on (relam = pg_am.oid)
-           WHERE (nspname != 'pg_catalog' AND nspname != 'information_schema')
+           WHERE nspname != 'pg_catalog' AND nspname != 'information_schema'
+                 AND nspname NOT LIKE 'pg_temp\_%'
+                 AND nspname NOT LIKE 'pg_toast_temp\_%'
              AND contypid NOT IN (SELECT objid FROM pg_depend
                                    WHERE deptype = 'e'
                                      AND classid = 'pg_type'::regclass)

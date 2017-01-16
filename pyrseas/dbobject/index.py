@@ -167,6 +167,7 @@ class IndexDict(DbObjectDict):
                 JOIN pg_am ON (relam = pg_am.oid)
                 LEFT JOIN pg_tablespace t ON (c.reltablespace = t.oid)
            WHERE NOT indisprimary
+                 AND c.relpersistence != 't'
                  AND (nspname != 'pg_catalog'
                       AND nspname != 'information_schema')
                  AND c.relname NOT IN (
