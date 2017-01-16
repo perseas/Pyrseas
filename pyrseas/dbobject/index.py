@@ -202,6 +202,7 @@ class IndexDict(DbObjectDict):
                 JOIN pg_am ON (relam = pg_am.oid)
                 LEFT JOIN pg_tablespace t ON (c.reltablespace = t.oid)
            WHERE nspname not in ('pg_catalog', 'pg_toast', 'information_schema')
+                AND c.relpersistence != 't'
            ORDER BY schema, "table", name"""
 
     def _from_catalog(self):
