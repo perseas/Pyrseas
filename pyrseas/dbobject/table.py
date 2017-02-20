@@ -96,8 +96,8 @@ class Sequence(DbClass):
                 (self.name not in opts.tables and
                  not hasattr(self, 'owner_table') or
                  self.owner_table not in opts.tables) or (
-                     hasattr(opts, 'excl_tables') and opts.excl_tables
-                     and self.name in opts.excl_tables):
+                     hasattr(opts, 'excl_tables') and opts.excl_tables and
+                     self.name in opts.excl_tables):
             return None
         seq = {}
         for key, val in list(self.__dict__.items()):
@@ -192,6 +192,15 @@ class Sequence(DbClass):
         if hasattr(inseq, 'owner'):
             if inseq.owner != self.owner:
                 stmts.append(self.alter_owner(inseq.owner))
+        if hasattr(inseq, 'owner_column') and \
+                not hasattr(inseq, 'owner_table'):
+            raise ValueError("Sequence '%s' incomplete specification: "
+                             "owner_column but no owner_table")
+        if hasattr(inseq, 'owner_table'):
+            if not hasattr(inseq, 'owner_column'):
+                raise ValueError("Sequence '%s' incomplete specification: "
+                                 "owner_table but no owner_column")
+            stmts.append(inseq.add_owner())
         stmts.append(self.diff_privileges(inseq))
         stmts.append(self.diff_description(inseq))
         return stmts
@@ -243,7 +252,7 @@ class Table(DbClass):
             if hasattr(self, attr):
                 tbl.update({attr: getattr(self, attr)})
         if hasattr(self, 'check_constraints'):
-            if not 'check_constraints' in tbl:
+            if 'check_constraints' not in tbl:
                 tbl.update(check_constraints={})
             for k in list(self.check_constraints.values()):
                 tbl['check_constraints'].update(
@@ -252,7 +261,7 @@ class Table(DbClass):
             tbl.update(primary_key=self.primary_key.to_map(
                 self.column_names()))
         if hasattr(self, 'foreign_keys'):
-            if not 'foreign_keys' in tbl:
+            if 'foreign_keys' not in tbl:
                 tbl['foreign_keys'] = {}
             for k in list(self.foreign_keys.values()):
                 tbls = dbschemas[k.ref_schema].tables
@@ -260,27 +269,27 @@ class Table(DbClass):
                     self.column_names(),
                     tbls[self.foreign_keys[k.name].ref_table]. column_names()))
         if hasattr(self, 'unique_constraints'):
-            if not 'unique_constraints' in tbl:
+            if 'unique_constraints' not in tbl:
                 tbl.update(unique_constraints={})
             for k in list(self.unique_constraints.values()):
                 tbl['unique_constraints'].update(
                     self.unique_constraints[k.name].to_map(
                         self.column_names()))
         if hasattr(self, 'indexes'):
-            if not 'indexes' in tbl:
+            if 'indexes' not in tbl:
                 tbl['indexes'] = {}
             for k in list(self.indexes.values()):
                 tbl['indexes'].update(self.indexes[k.name].to_map())
         if hasattr(self, 'inherits'):
-            if not 'inherits' in tbl:
+            if 'inherits' not in tbl:
                 tbl['inherits'] = self.inherits
         if hasattr(self, 'rules'):
-            if not 'rules' in tbl:
+            if 'rules' not in tbl:
                 tbl['rules'] = {}
             for k in list(self.rules.values()):
                 tbl['rules'].update(self.rules[k.name].to_map())
         if hasattr(self, 'triggers'):
-            if not 'triggers' in tbl:
+            if 'triggers' not in tbl:
                 tbl['triggers'] = {}
             for k in list(self.triggers.values()):
                 tbl['triggers'].update(self.triggers[k.name].to_map())
@@ -561,7 +570,7 @@ class MaterializedView(View):
             return None
         mvw = self._base_map(opts.no_owner, opts.no_privs)
         if hasattr(self, 'indexes'):
-            if not 'indexes' in mvw:
+            if 'indexes' not in mvw:
                 mvw['indexes'] = {}
             for k in list(self.indexes.values()):
                 mvw['indexes'].update(self.indexes[k.name].to_map())
@@ -984,10 +993,10 @@ class ClassDict(DbObjectDict):
         inhstack = []
         for (sch, tbl) in self:
             table = self[(sch, tbl)]
-            if (isinstance(table, Sequence)
-                    and (hasattr(table, 'owner_table')
-                         or hasattr(table, 'dependent_table'))) \
-                    or isinstance(table, View):
+            if (isinstance(table, Sequence) and
+                (hasattr(table, 'owner_table') or
+                 hasattr(table, 'dependent_table'))) or \
+                    isinstance(table, View):
                 continue
             if hasattr(table, 'dropped') and not table.dropped:
                 # next, drop other subordinate objects
