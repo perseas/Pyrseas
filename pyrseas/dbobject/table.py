@@ -201,6 +201,15 @@ class Sequence(DbClass):
         if inseq.owner is not None:
             if self.owner is not None and inseq.owner != self.owner:
                 stmts.append(self.alter_owner(inseq.owner))
+        if hasattr(inseq, 'owner_column') and \
+                not hasattr(inseq, 'owner_table'):
+            raise ValueError("Sequence '%s' incomplete specification: "
+                             "owner_column but no owner_table")
+        if hasattr(inseq, 'owner_table'):
+            if not hasattr(inseq, 'owner_column'):
+                raise ValueError("Sequence '%s' incomplete specification: "
+                                 "owner_table but no owner_column")
+            stmts.append(inseq.add_owner())
         stmts.append(self.diff_privileges(inseq))
         stmts.append(self.diff_description(inseq))
         return stmts
