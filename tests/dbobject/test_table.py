@@ -95,10 +95,11 @@ class TableToMapTestCase(DatabaseToMapTestCase):
                  'c2 TEXT)']
         dbmap = self.to_map(stmts)
         assert dbmap['schema a schema']['table The.Table'] == {
-            'columns': [{'column': {'type': 'integer', 'not_null': True,
-            'default':
-            'nextval(\'"a schema"."The.Table_column_seq"\'::regclass)'}},
-            {'c2': {'type': 'text'}}]}
+            'columns': [{'column': {
+                'type': 'integer', 'not_null': True,
+                'default':
+                'nextval(\'"a schema"."The.Table_column_seq"\'::regclass)'}},
+                        {'c2': {'type': 'text'}}]}
 
     def test_map_select_tables(self):
         "Map two tables out of three present"
@@ -123,7 +124,7 @@ class TableToMapTestCase(DatabaseToMapTestCase):
         assert 'table t1' not in dbmap['schema public']
         assert dbmap['schema public']['table t2'] == expmap
         assert 'sequence seq1' in dbmap['schema public']
-        assert not 'sequence seq2' in dbmap['schema public']
+        assert 'sequence seq2' not in dbmap['schema public']
 
 
 class TableToSqlTestCase(InputMapToSqlTestCase):
@@ -221,6 +222,19 @@ class TableToSqlTestCase(InputMapToSqlTestCase):
         sql = self.to_sql(inmap)
         assert fix_indent(sql[0]) == \
             "CREATE UNLOGGED TABLE t1 (c1 integer, c2 text)"
+
+    def test_table_owned_by_sequence(self):
+        "Alter a table to be owned by a table column"
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+            'columns': [{'c1': {'type': 'integer'}},
+                        {'c2': {'type': 'text'}}]},
+            'sequence seq1': {
+                'cache_value': 1, 'increment_by': 1, 'max_value': None,
+                'min_value': None, 'start_value': 1,
+                'owner_table': 't1', 'owner_column': 'c1'}})
+        sql = self.to_sql(inmap, [CREATE_STMT, "CREATE SEQUENCE seq1"])
+        assert sql[0] == "ALTER SEQUENCE seq1 OWNED BY t1.c1"
 
 
 class TableCommentToSqlTestCase(InputMapToSqlTestCase):

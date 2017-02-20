@@ -193,6 +193,16 @@ class Sequence(DbClass):
         if stmt:
             stmts.append("ALTER SEQUENCE %s" % self.qualname() + stmt)
 
+        if hasattr(inseq, 'owner_column') and \
+                not hasattr(inseq, 'owner_table'):
+            raise ValueError("Sequence '%s' incomplete specification: "
+                             "owner_column but no owner_table")
+        if hasattr(inseq, 'owner_table'):
+            if not hasattr(inseq, 'owner_column'):
+                raise ValueError("Sequence '%s' incomplete specification: "
+                                 "owner_table but no owner_column")
+            stmts.append(inseq.add_owner())
+
         stmts.append(super(Sequence, self).alter(inseq, no_owner=no_owner))
         return stmts
 
