@@ -201,7 +201,6 @@ class Sequence(DbClass):
             if not hasattr(inseq, 'owner_column'):
                 raise ValueError("Sequence '%s' incomplete specification: "
                                  "owner_table but no owner_column")
-            stmts.append(inseq.add_owner())
             if not (hasattr(self, 'owner_table') and
                     hasattr(self, 'owner_column')):
                 stmts.append(inseq.add_owner())
