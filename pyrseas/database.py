@@ -115,7 +115,7 @@ class Database(object):
 
             # Populate a map from system catalog to the respective dict
             self._catalog_map = {}
-            for _, d in self.all_dicts():
+            for _, d in self.all_dicts(True):
                 if d.cls.catalog is not None:
                     self._catalog_map[d.cls.catalog] = d
 
@@ -147,15 +147,19 @@ class Database(object):
 
                 return self._extkey_map[extkey]
 
-        def all_dicts(self):
+        def all_dicts(self, non_empty=False):
             """Iterate over the DbObjectDict-derived dictionaries returning
             an ordered list of tuples (dict name, DbObjectDict object).
+
+            :param non_empty: do not include empty dicts
 
             :return: list of tuples
             """
             rv = []
             for attr in self.__dict__:
                 d = getattr(self, attr)
+                if non_empty and len(d) == 0:
+                    continue
                 if isinstance(d, DbObjectDict):
                     # skip ColumnDict as not needed for dependency tracking
                     # and internally has lists, not objects

@@ -342,7 +342,7 @@ class DbObject(object):
         if deps:
             dct['depends_on'] = sorted([dep.extern_key() for dep in deps])
 
-        # Don't drop any private attribute
+        # Drop any private attributes
         for k in list(dct.keys()):
             if k.startswith('_'):
                 del dct[k]
