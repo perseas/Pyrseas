@@ -81,7 +81,7 @@ class Database(object):
     class Dicts(object):
         """A holder for dictionaries (maps) describing a database"""
 
-        def __init__(self, dbconn=None):
+        def __init__(self, dbconn=None, single_db=False):
             """Initialize the various DbObjectDict-derived dictionaries
 
             :param dbconn: a DbConnection object
@@ -115,7 +115,7 @@ class Database(object):
 
             # Populate a map from system catalog to the respective dict
             self._catalog_map = {}
-            for _, d in self.all_dicts(True):
+            for _, d in self.all_dicts(single_db):
                 if d.cls.catalog is not None:
                     self._catalog_map[d.cls.catalog] = d
 
@@ -332,7 +332,7 @@ class Database(object):
         self.db.languages = LanguageDict()
         self.db.casts = CastDict()
 
-    def from_catalog(self):
+    def from_catalog(self, single_db=False):
         """Populate the database objects by querying the catalogs
 
         The `db` holder is populated by various DbObjectDict-derived
@@ -341,7 +341,7 @@ class Database(object):
         the dictionary are then linked to related objects, e.g.,
         columns are linked to the tables they belong.
         """
-        self.db = self.Dicts(self.dbconn)
+        self.db = self.Dicts(self.dbconn, single_db)
         self._build_dependency_graph(self.db, self.dbconn)
         if self.dbconn.conn:
             self.dbconn.conn.close()
@@ -435,7 +435,7 @@ class Database(object):
         :return: a YAML-suitable dictionary (without Python objects)
         """
         if not self.db:
-            self.from_catalog()
+            self.from_catalog(True)
 
         opts = self.config['options']
 
