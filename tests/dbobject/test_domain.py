@@ -62,8 +62,19 @@ class DomainToSqlTestCase(InputMapToSqlTestCase):
             'type': 'integer', 'check_constraints': {'d1_check': {
             'expression': '(VALUE >= 1888)'}}}})
         sql = self.to_sql(inmap)
-        assert fix_indent(sql[0]) == CREATE_STMT + \
-            " CONSTRAINT d1_check CHECK (VALUE >= 1888)"
+        assert fix_indent(sql[0]) == CREATE_STMT
+        assert fix_indent(sql[1]) == "ALTER DOMAIN d1 ADD CONSTRAINT " + \
+            "d1_check CHECK (VALUE >= 1888)"
+
+    def test_add_domain_check(self):
+        "Add a CHECK constraint to a domain"
+        inmap = self.std_map()
+        inmap['schema public'].update({'domain d1': {
+            'type': 'integer', 'check_constraints': {'d1_check': {
+            'expression': '(VALUE >= 1888)'}}}})
+        sql = self.to_sql(inmap, [CREATE_STMT])
+        assert fix_indent(sql[0]) == "ALTER DOMAIN d1 " + \
+            "ADD CONSTRAINT d1_check CHECK (VALUE >= 1888)"
 
     def test_drop_domain(self):
         "Drop an existing domain"

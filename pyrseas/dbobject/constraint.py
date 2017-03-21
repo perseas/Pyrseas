@@ -99,9 +99,9 @@ class CheckConstraint(Constraint):
 
         :return: SQL statement
         """
-        return ["ALTER TABLE %s ADD CONSTRAINT %s %s (%s)" % (
-            self._table.qualname(), quote_id(self.name), self.objtype,
-            self.expression)]
+        return ["ALTER %s %s ADD CONSTRAINT %s %s (%s)" % (
+            self._table.objtype, self._table.qualname(), quote_id(self.name),
+            self.objtype, self.expression)]
 
     def diff_map(self, inchk):
         """Generate SQL to transform an existing CHECK constraint
@@ -579,9 +579,6 @@ class ConstraintDict(DbObjectDict):
                 inconstr = inconstrs[(sch, tbl, cns)]
                 # ignore inherited constraints, take 2
                 if getattr(inconstr, 'inherited', False):
-                    continue
-                # skip DOMAIN constraints
-                if hasattr(inconstr, 'target'):
                     continue
                 if isinstance(inconstr, ForeignKey):
                     if turn == 1:

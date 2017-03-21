@@ -218,12 +218,6 @@ class Domain(DbType):
             create += ' NOT NULL'
         if hasattr(self, 'default'):
             create += ' DEFAULT ' + str(self.default)
-        if hasattr(self, 'check_constraints'):
-            cnslist = []
-            for cns in list(self.check_constraints.values()):
-                cnslist.append(" CONSTRAINT %s CHECK (%s)" % (
-                    cns.name, cns.expression))
-            create += ", ".join(cnslist)
         return [create]
 
 
@@ -391,7 +385,7 @@ class TypeDict(DbObjectDict):
             if not hasattr(constr, 'target') or constr.target != 'd':
                 continue
             assert self[(sch, typ)]
-            dbtype = self[(sch, typ)]
+            constr._table = dbtype = self[(sch, typ)]
             if isinstance(constr, CheckConstraint):
                 if not hasattr(dbtype, 'check_constraints'):
                     dbtype.check_constraints = {}
