@@ -165,7 +165,7 @@ control, e.g., Git, Mercurial, or Subversion, repository.
 - metadata: Path, relative to the root of the repository, where
   :program:`dbtoyaml` and :program:`yamltodb` place or expect the YAML
   specification files for the database objects when the
-  :option:`--multiple-files` option is used.  The default value (defined
+  `--multiple-files` option is used.  The default value (defined
   in the system ``config.yaml``) is **metadata**.
 
 - path: Absolute path to the root of the repository.  This should
