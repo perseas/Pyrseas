@@ -134,7 +134,7 @@ multiple files under a given root directory.  The root is created if
 it does not exist.  The root directory name defaults to ``metadata``
 in the system configuration file.  The location of the root directory
 defaults to the configuration item ``repository.path`` or can be
-specified using the :option:`--repository` option (see :doc:`config`
+specified using the `--repository` option (see :doc:`config`
 and :doc:`cmdargs` for further details).
 
 The first level contains ``schema.<name>`` subdirectories,
@@ -232,6 +232,12 @@ dbname
     *username*" element.  The :option:`-O` switch suppresses all those
     lines.
 
+    NOTE: If you specify `--no-owner`, you will most likely also want
+    to specify :option:`--no-privileges`.  If the former is used
+    without the latter the resulting YAML output will have privilege
+    information without user data, which will cause errors if the YAML
+    is then fed to :doc:`yamltodb`.
+
 .. cmdoption:: -t <table>
                --table <table>
 
@@ -253,6 +259,8 @@ dbname
     various objects (schemas, tables, etc.), the privileges are shown
     under each object.  The :option:`-x` switch suppresses all those
     lines.
+
+    See also the NOTE under :option:`--no-owner`.
 
 Examples
 --------

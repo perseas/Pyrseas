@@ -60,8 +60,7 @@ Contents
 API Reference
 -------------
 
-Currently, the only external APIs are the classes
-:class:`~pyrseas.lib.dbconn.DbConnection` and
+Currently, the only external APIs are the class
 :class:`~pyrseas.database.Database` and the methods
 :meth:`~pyrseas.database.Database.to_map` and
 :meth:`~pyrseas.database.Database.diff_map` of the latter. Other
@@ -71,7 +70,6 @@ classes and methods are documented mainly for developer use.
    :maxdepth: 2
 
    dbobject
-   dbconn
    database
    cast
    language
