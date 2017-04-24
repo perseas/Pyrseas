@@ -255,12 +255,6 @@ class Domain(DbType):
             create += ' NOT NULL'
         if hasattr(self, 'default'):
             create += ' DEFAULT ' + str(self.default)
-        if hasattr(self, 'check_constraints'):
-            cnslist = []
-            for cns in list(self.check_constraints.values()):
-                cnslist.append(" CONSTRAINT %s CHECK (%s)" % (
-                    cns.name, cns.expression))
-            create += ", ".join(cnslist)
         return [create]
 
     def get_implied_deps(self, db):
@@ -279,11 +273,6 @@ class Domain(DbType):
                 fschema, fname = split_schema_obj(type.output)
                 func = db.functions[fschema, fname, type.qualname()]
                 deps.add(func)
-
-        # curiously there is no pg_depend entry from the domain to the
-        # constraint (PG 9.3)
-        for c in getattr(self, 'check_constraints', ()):
-            deps.add(db.constraints[self.schema, self.name, c])
 
         return deps
 
@@ -469,7 +458,7 @@ class TypeDict(DbObjectDict):
             if not hasattr(constr, 'target') or constr.target != 'd':
                 continue
             assert self[(sch, typ)]
-            dbtype = self[(sch, typ)]
+            constr._table = dbtype = self[(sch, typ)]
             if isinstance(constr, CheckConstraint):
                 if not hasattr(dbtype, 'check_constraints'):
                     dbtype.check_constraints = {}
