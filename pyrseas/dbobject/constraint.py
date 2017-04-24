@@ -63,8 +63,8 @@ class Constraint(DbSchemaObject):
 
         :return: SQL statement
         """
-        return ["ALTER TABLE %s DROP CONSTRAINT %s" % (
-            self._table.qualname(), quote_id(self.name))]
+        return ["ALTER %s %s DROP CONSTRAINT %s" % (
+            self._table.objtype, self._table.qualname(), quote_id(self.name))]
 
     def comment(self):
         """Return SQL statement to create COMMENT on constraint
