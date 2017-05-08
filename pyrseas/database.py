@@ -575,7 +575,17 @@ class Database(object):
             opts.data_dir = self.config['files']['data_path']
             stmts.append(self.ndb.schemas.data_import(opts))
 
-        return [s for s in flatten(stmts)]
+        stmts = [s for s in flatten(stmts)]
+        funcs = False
+        for s in stmts:
+            if "LANGUAGE sql" in s and (s.startswith("CREATE FUNCTION ") or
+                    s.startswith("CREATE OR REPLACE FUNCTION ")):
+                funcs = True
+                break
+        if funcs:
+            stmts.insert(0, "SET check_function_bodies = false")
+
+        return stmts
 
     def dep_sorted(self, objs, db):
         """Sort `objs` in order of dependency.

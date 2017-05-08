@@ -340,10 +340,10 @@ class PrivilegeToSqlTestCase(InputMapToSqlTestCase):
             'volatility': 'immutable', 'owner': self.db.user,
             'privileges': [{self.db.user: ['all']}, {'PUBLIC': ['execute']}]}})
         sql = self.to_sql(inmap)
-        # sql[0] = CREATE FUNCTION
-        # sql[1] = ALTER FUNCTION OWNER
-        assert sql[2] == "GRANT EXECUTE ON FUNCTION f1() TO %s" % self.db.user
-        assert sql[3] == "GRANT EXECUTE ON FUNCTION f1() TO PUBLIC"
+        # sql[0:1] = SET, CREATE FUNCTION
+        # sql[2] = ALTER FUNCTION OWNER
+        assert sql[3] == "GRANT EXECUTE ON FUNCTION f1() TO %s" % self.db.user
+        assert sql[4] == "GRANT EXECUTE ON FUNCTION f1() TO PUBLIC"
 
     def test_function_new_grant(self):
         "Grant privileges on an existing function"

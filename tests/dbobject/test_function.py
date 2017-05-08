@@ -135,7 +135,7 @@ class FunctionToSqlTestCase(InputMapToSqlTestCase):
             'language': 'sql', 'returns': 'text', 'source': SOURCE1,
             'volatility': 'immutable'}})
         sql = self.to_sql(inmap)
-        assert fix_indent(sql[0]) == CREATE_STMT1
+        assert fix_indent(sql[1]) == CREATE_STMT1
 
     def test_create_function_with_args(self):
         "Create a function with two arguments"
@@ -144,7 +144,7 @@ class FunctionToSqlTestCase(InputMapToSqlTestCase):
             'function f1(integer, integer)': {
                 'language': 'sql', 'returns': 'integer', 'source': SOURCE2}})
         sql = self.to_sql(inmap)
-        assert fix_indent(sql[0]) == "CREATE FUNCTION f1(integer, integer) " \
+        assert fix_indent(sql[1]) == "CREATE FUNCTION f1(integer, integer) " \
             "RETURNS integer LANGUAGE sql AS $_$%s$_$" % SOURCE2
 
     def test_create_setof_row_function(self):
@@ -157,7 +157,7 @@ class FunctionToSqlTestCase(InputMapToSqlTestCase):
             'function f1()': {'language': 'sql', 'returns': 'SETOF t1',
                               'source': "SELECT * FROM t1"}})
         sql = self.to_sql(inmap)
-        assert fix_indent(sql[1]) == "CREATE FUNCTION f1() RETURNS " \
+        assert fix_indent(sql[2]) == "CREATE FUNCTION f1() RETURNS " \
             "SETOF t1 LANGUAGE sql AS $_$SELECT * FROM t1$_$"
 
     def test_create_setof_row_function_rows(self):
@@ -170,7 +170,7 @@ class FunctionToSqlTestCase(InputMapToSqlTestCase):
             'function f1()': {'language': 'sql', 'returns': 'SETOF t1',
                               'source': "SELECT * FROM t1", 'rows': 50}})
         sql = self.to_sql(inmap)
-        assert fix_indent(sql[1]) == "CREATE FUNCTION f1() RETURNS SETOF t1 " \
+        assert fix_indent(sql[2]) == "CREATE FUNCTION f1() RETURNS SETOF t1 " \
             "LANGUAGE sql ROWS 50 AS $_$SELECT * FROM t1$_$"
 
     def test_create_security_definer_function(self):
@@ -180,7 +180,7 @@ class FunctionToSqlTestCase(InputMapToSqlTestCase):
             'language': 'sql', 'returns': 'text', 'source': SOURCE1,
             'security_definer': True}})
         sql = self.to_sql(inmap)
-        assert fix_indent(sql[0]) == "CREATE FUNCTION f1() RETURNS text " \
+        assert fix_indent(sql[1]) == "CREATE FUNCTION f1() RETURNS text " \
             "LANGUAGE sql SECURITY DEFINER AS $_$%s$_$" % SOURCE1
 
     def test_create_c_lang_function(self):
@@ -203,7 +203,7 @@ class FunctionToSqlTestCase(InputMapToSqlTestCase):
             'configuration': ['DateStyle=postgres, dmy'],
             'source': "SELECT CURRENT_DATE"}})
         sql = self.to_sql(inmap)
-        assert fix_indent(sql[0]) == "CREATE FUNCTION f1() RETURNS date " \
+        assert fix_indent(sql[1]) == "CREATE FUNCTION f1() RETURNS date " \
             "LANGUAGE sql SET DateStyle=postgres, dmy AS " \
             "$_$SELECT CURRENT_DATE$_$"
 
@@ -214,7 +214,7 @@ class FunctionToSqlTestCase(InputMapToSqlTestCase):
             'language': 'sql', 'returns': 'text', 'source': SOURCE1,
             'volatility': 'immutable'}}})
         sql = self.to_sql(inmap, ["CREATE SCHEMA s1"])
-        assert fix_indent(sql[0]) == "CREATE FUNCTION s1.f1() RETURNS text " \
+        assert fix_indent(sql[1]) == "CREATE FUNCTION s1.f1() RETURNS text " \
             "LANGUAGE sql IMMUTABLE AS $_$%s$_$" % SOURCE1
 
     def test_bad_function_map(self):
@@ -242,7 +242,7 @@ class FunctionToSqlTestCase(InputMapToSqlTestCase):
             'language': 'sql', 'returns': 'text',
             'source': "SELECT 'example'::text", 'volatility': 'immutable'}})
         sql = self.to_sql(inmap, [CREATE_STMT1])
-        assert fix_indent(sql[0]) == "CREATE OR REPLACE FUNCTION f1() " \
+        assert fix_indent(sql[1]) == "CREATE OR REPLACE FUNCTION f1() " \
             "RETURNS text LANGUAGE sql IMMUTABLE AS " \
             "$_$SELECT 'example'::text$_$"
 
@@ -254,9 +254,9 @@ class FunctionToSqlTestCase(InputMapToSqlTestCase):
                 'description': 'Test function f1', 'language': 'sql',
                 'returns': 'integer', 'source': SOURCE2}})
         sql = self.to_sql(inmap)
-        assert fix_indent(sql[0]) == "CREATE FUNCTION f1(integer, integer) " \
+        assert fix_indent(sql[1]) == "CREATE FUNCTION f1(integer, integer) " \
             "RETURNS integer LANGUAGE sql AS $_$%s$_$" % SOURCE2
-        assert sql[1] == COMMENT_STMT
+        assert sql[2] == COMMENT_STMT
 
     def test_comment_on_function(self):
         "Create a comment for an existing function"
@@ -300,7 +300,7 @@ class FunctionToSqlTestCase(InputMapToSqlTestCase):
                 'language': 'sql', 'returns': 'integer', 'leakproof': True,
                 'source': SOURCE4, 'volatility': 'immutable'}})
         sql = self.to_sql(inmap, superuser=True)
-        assert fix_indent(sql[0]) == "CREATE FUNCTION f1(integer, integer) " \
+        assert fix_indent(sql[1]) == "CREATE FUNCTION f1(integer, integer) " \
             "RETURNS integer LANGUAGE sql IMMUTABLE LEAKPROOF AS " \
             "$_$%s$_$" % SOURCE4
 
@@ -372,8 +372,8 @@ class AggregateToSqlTestCase(InputMapToSqlTestCase):
         inmap['schema public'].update({'aggregate a1(integer)': {
             'sfunc': 'f1', 'stype': 'integer'}})
         sql = self.to_sql(inmap)
-        assert fix_indent(sql[0]) == CREATE_STMT2
-        assert fix_indent(sql[1]) == "CREATE AGGREGATE a1(integer) " \
+        assert fix_indent(sql[1]) == CREATE_STMT2
+        assert fix_indent(sql[2]) == "CREATE AGGREGATE a1(integer) " \
             "(SFUNC = f1, STYPE = integer)"
 
     def test_create_aggregate_init_final(self):
@@ -389,12 +389,12 @@ class AggregateToSqlTestCase(InputMapToSqlTestCase):
             'sfunc': 'f1', 'stype': 'integer', 'initcond': '-1',
             'finalfunc': 'f2'}})
         sql = self.to_sql(inmap)
-        funcs = sorted(sql[0:2])
+        funcs = sorted(sql[1:3])
         assert fix_indent(funcs[0]) == CREATE_STMT2
         assert fix_indent(funcs[1]) == "CREATE FUNCTION f2(integer) " \
             "RETURNS double precision LANGUAGE sql IMMUTABLE " \
             "AS $_$SELECT $1::float$_$"
-        assert fix_indent(sql[2]) == "CREATE AGGREGATE a1(integer) " \
+        assert fix_indent(sql[3]) == "CREATE AGGREGATE a1(integer) " \
             "(SFUNC = f1, STYPE = integer, FINALFUNC = f2, INITCOND = '-1')"
 
     def test_drop_aggregate(self):

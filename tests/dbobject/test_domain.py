@@ -116,7 +116,7 @@ class DomainToSqlTestCase(InputMapToSqlTestCase):
                 'language': 'sql', 'returns': 'bool',
                 'source': 'select true', 'volatility': 'immutable'}})
         sql = self.to_sql(inmap)
-        assert len(sql) == 3
-        assert sql[0] == CREATE_STMT
-        assert fix_indent(sql[1]) == CREATEFUNC_STMT
-        assert sql[2].startswith("ALTER DOMAIN d1 ADD CONSTRAINT")
+        assert len(sql) == 4
+        assert sql[1] == CREATE_STMT
+        assert fix_indent(sql[2]) == CREATEFUNC_STMT
+        assert sql[3].startswith("ALTER DOMAIN d1 ADD CONSTRAINT")
