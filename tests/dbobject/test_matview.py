@@ -115,5 +115,4 @@ class MatViewToSqlTestCase(InputMapToSqlTestCase):
         inmap['schema public'].update({'materialized view mv1': {
             'definition': VIEW_DEFN, 'indexes': {'idx1': {'keys': ['mc3']}}}})
         sql = self.to_sql(inmap, stmts)
-        print(sql)
         assert sql == ["CREATE INDEX idx1 ON mv1 (mc3)"]
