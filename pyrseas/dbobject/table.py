@@ -451,13 +451,6 @@ class Table(DbClass):
                 if descr:
                     stmts.append(descr)
 
-        # Check the columns to drop
-        incolnames = set(attr.name for attr in intable.columns)
-        for attr in self.columns:
-            if attr.name not in incolnames:
-                if not getattr(attr, 'inherited', False):
-                    stmts.append(attr.drop())
-
         newopts = []
         if hasattr(intable, 'options'):
             newopts = intable.options
@@ -476,6 +469,27 @@ class Table(DbClass):
             stmts.append(base + "SET TABLESPACE pg_default")
 
         stmts.append(super(Table, self).alter(intable))
+
+        return stmts
+
+    def alter_drop_columns(self, intable):
+        """Generate SQL to drop columns from an existing table
+
+        :param intable: a YAML map defining the new table
+        :return: list of SQL statements
+
+        Compares the table to an input table and generates SQL
+        statements to drop any columns missing from the one
+        represented by the input.
+        """
+        if not hasattr(intable, 'columns'):
+            raise KeyError("Table '%s' has no columns" % intable.name)
+        stmts = []
+        incolnames = set(attr.name for attr in intable.columns)
+        for attr in self.columns:
+            if attr.name not in incolnames:
+                if not getattr(attr, 'inherited', False):
+                    stmts.append(attr.drop())
 
         return stmts
 
@@ -540,6 +554,7 @@ class Table(DbClass):
             deps.add(parent)
 
         return deps
+
 
 class View(DbClass):
     """A database view definition

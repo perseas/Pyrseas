@@ -863,6 +863,26 @@ class ForeignKeyToSqlTestCase(InputMapToSqlTestCase):
         sql = self.to_sql(inmap, stmts)
         assert sql == ["ALTER TABLE t2 DROP CONSTRAINT t2_c22_fkey"]
 
+    def test_drop_foreign_key_and_column(self):
+        "Drop a foreign key on an existing table and its referred column"
+        stmts = ["CREATE TABLE t1 (c11 INTEGER NOT NULL, c12 TEXT, "
+                 "PRIMARY KEY (c11))",
+                 "CREATE TABLE t2 (c21 INTEGER NOT NULL PRIMARY KEY, "
+                 "c22 INTEGER NOT NULL REFERENCES t1 (c11), c23 TEXT)"]
+        inmap = self.std_map()
+        inmap['schema public'].update({
+            'table t1': {
+                'columns': [{'c11': {'type': 'integer', 'not_null': True}},
+                            {'c12': {'type': 'text'}}],
+                'primary_key': {'t1_pkey': {'columns': ['c11']}}},
+            'table t2': {
+                'columns': [{'c21': {'type': 'integer', 'not_null': True}},
+                            {'c23': {'type': 'text'}}],
+                'primary_key': {'t2_pkey': {'columns': ['c21']}}}})
+        sql = self.to_sql(inmap, stmts)
+        assert sql[0] == "ALTER TABLE t2 DROP CONSTRAINT t2_c22_fkey"
+        assert sql[1] == "ALTER TABLE t2 DROP COLUMN c22"
+
     def test_create_foreign_key_actions(self):
         "Create a table with foreign key ON UPDATE/ON DELETE actions"
         inmap = self.std_map()

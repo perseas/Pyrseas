@@ -499,6 +499,8 @@ class Database(object):
         to transform the database into the one represented by the
         input.
         """
+        from .dbobject.table import Table
+
         if not self.db:
             self.from_catalog()
         opts = self.config['options']
@@ -568,6 +570,10 @@ class Database(object):
         # Drop the objects that don't appear in the new db
         for old in old_objs:
             d = self.ndb.dbobjdict_from_catalog(old.catalog)
+            if isinstance(old, Table):
+                new = d.get(old.key())
+                if new is not None:
+                    stmts.extend(old.alter_drop_columns(new))
             if not getattr(old, '_nodrop', False) and old.key() not in d:
                 stmts.extend(old.drop())
 
