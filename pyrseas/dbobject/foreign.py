@@ -58,13 +58,13 @@ class DbObjectWithOptions(DbObject):
                 clauses.append("DROP %s" % key)
         return clauses and "OPTIONS (%s)" % ', '.join(clauses) or ''
 
-    def diff_map(self, inobj):
+    def alter(self, inobj):
         """Generate SQL to transform an existing object
 
         :param inobj: a YAML map defining the new object
         :return: list of SQL statements
         """
-        stmts = super(DbObjectWithOptions, self).diff_map(inobj)
+        stmts = super(DbObjectWithOptions, self).alter(inobj)
         newopts = []
         if hasattr(inobj, 'options'):
             newopts = inobj.options
@@ -78,25 +78,29 @@ class DbObjectWithOptions(DbObject):
 class ForeignDataWrapper(DbObjectWithOptions):
     """A foreign data wrapper definition"""
 
-    objtype = "FOREIGN DATA WRAPPER"
     single_extern_file = True
+    catalog = 'pg_foreign_data_wrapper'
+
+    @property
+    def objtype(self):
+        return "FOREIGN DATA WRAPPER"
 
     @property
     def allprivs(self):
         return 'U'
 
-    def to_map(self, no_owner, no_privs):
+    def to_map(self, db, no_owner, no_privs):
         """Convert wrappers and subsidiary objects to a YAML-suitable format
 
         :param no_owner: exclude object owner information
         :param no_privs: exclude privilege information
         :return: dictionary
         """
-        wrapper = self._base_map(no_owner, no_privs)
+        wrapper = self._base_map(db, no_owner, no_privs)
         if hasattr(self, 'servers'):
             srvs = {}
             for srv in self.servers:
-                srvs.update(self.servers[srv].to_map(no_owner, no_privs))
+                srvs.update(self.servers[srv].to_map(db, no_owner, no_privs))
             wrapper.update(srvs)
             del wrapper['servers']
         return wrapper
@@ -119,22 +123,10 @@ class ForeignDataWrapper(DbObjectWithOptions):
                 quote_id(self.name),
                 clauses and '\n    ' + ',\n    '.join(clauses) or '')]
 
-    def diff_map(self, inwrapper):
-        """Generate SQL to transform an existing wrapper
-
-        :param inwrapper: a YAML map defining the new wrapper
-        :return: list of SQL statements
-        """
-        stmts = super(ForeignDataWrapper, self).diff_map(inwrapper)
-        if inwrapper.owner is not None:
-            if inwrapper.owner != self.owner:
-                stmts.append(self.alter_owner(inwrapper.owner))
-        stmts.append(self.diff_description(inwrapper))
-        return stmts
-
 
 QUERY_PRE91 = \
-    """SELECT fdwname AS name, CASE WHEN fdwvalidator = 0 THEN NULL
+    """SELECT w.oid,
+              fdwname AS name, CASE WHEN fdwvalidator = 0 THEN NULL
                 ELSE fdwvalidator::regproc END AS validator,
                 fdwoptions AS options, rolname AS owner,
               array_to_string(fdwacl, ',') AS privileges,
@@ -150,7 +142,8 @@ class ForeignDataWrapperDict(DbObjectDict):
 
     cls = ForeignDataWrapper
     query = \
-        """SELECT fdwname AS name, CASE WHEN fdwhandler = 0 THEN NULL
+        """SELECT w.oid,
+                  fdwname AS name, CASE WHEN fdwhandler = 0 THEN NULL
                       ELSE fdwhandler::regproc END AS handler,
                   CASE WHEN fdwvalidator = 0 THEN NULL
                       ELSE fdwvalidator::regproc END AS validator,
@@ -207,62 +200,17 @@ class ForeignDataWrapperDict(DbObjectDict):
                 wrapper.servers = {}
             wrapper.servers.update({srv: dbserver})
 
-    def diff_map(self, inwrappers):
-        """Generate SQL to transform existing data wrappers
-
-        :param input_map: a YAML map defining the new data wrappers
-        :return: list of SQL statements
-
-        Compares the existing data wrapper definitions, as fetched from the
-        catalogs, to the input map and generates SQL statements to
-        transform the data wrappers accordingly.
-        """
-        stmts = []
-        # check input data wrappers
-        for fdw in inwrappers:
-            infdw = inwrappers[fdw]
-            # does it exist in the database?
-            if fdw in self:
-                stmts.append(self[fdw].diff_map(infdw))
-            else:
-                # check for possible RENAME
-                if hasattr(infdw, 'oldname'):
-                    oldname = infdw.oldname
-                    try:
-                        stmts.append(self[oldname].rename(infdw.name))
-                        del self[oldname]
-                    except KeyError as exc:
-                        exc.args = ("Previous name '%s' for data wrapper "
-                                    "'%s' not found" % (oldname, infdw.name), )
-                        raise
-                else:
-                    # create new data wrapper
-                    stmts.append(infdw.create())
-        # check database data wrappers
-        for fdw in self:
-            # if missing, drop it
-            if fdw not in inwrappers:
-                self[fdw].dropped = True
-        return stmts
-
-    def _drop(self):
-        """Actually drop the wrappers
-
-        :return: SQL statements
-        """
-        stmts = []
-        for fdw in self:
-            if hasattr(self[fdw], 'dropped'):
-                stmts.append(self[fdw].drop())
-        return stmts
-
 
 class ForeignServer(DbObjectWithOptions):
     """A foreign server definition"""
 
-    objtype = "SERVER"
     privobjtype = "FOREIGN SERVER"
     keylist = ['wrapper', 'name']
+    catalog = 'pg_foreign_server'
+
+    @property
+    def objtype(self):
+        return "SERVER"
 
     @property
     def allprivs(self):
@@ -275,7 +223,7 @@ class ForeignServer(DbObjectWithOptions):
         """
         return quote_id(self.name)
 
-    def to_map(self, no_owner, no_privs):
+    def to_map(self, db, no_owner, no_privs):
         """Convert servers and subsidiary objects to a YAML-suitable format
 
         :param no_owner: exclude server owner information
@@ -283,11 +231,11 @@ class ForeignServer(DbObjectWithOptions):
         :return: dictionary
         """
         key = self.extern_key()
-        server = {key: self._base_map(no_owner, no_privs)}
+        server = {key: self._base_map(db, no_owner, no_privs)}
         if hasattr(self, 'usermaps'):
             umaps = {}
             for umap in self.usermaps:
-                umaps.update({umap: self.usermaps[umap].to_map()})
+                umaps.update({umap: self.usermaps[umap].to_map(db)})
             server[key]['user mappings'] = umaps
             del server[key]['usermaps']
         return server
@@ -313,18 +261,10 @@ class ForeignServer(DbObjectWithOptions):
                 quote_id(self.wrapper),
                 options and '\n    ' + ',\n    '.join(options) or '')]
 
-    def diff_map(self, inserver):
-        """Generate SQL to transform an existing server
-
-        :param inserver: a YAML map defining the new server
-        :return: list of SQL statements
-        """
-        stmts = super(ForeignServer, self).diff_map(inserver)
-        if inserver.owner is not None:
-            if inserver.owner != self.owner:
-                stmts.append(self.alter_owner(inserver.owner))
-        stmts.append(self.diff_description(inserver))
-        return stmts
+    def get_implied_deps(self, db):
+        deps = super(ForeignServer, self).get_implied_deps(db)
+        deps.add(db.fdwrappers[self.wrapper])
+        return deps
 
 
 class ForeignServerDict(DbObjectDict):
@@ -332,7 +272,7 @@ class ForeignServerDict(DbObjectDict):
 
     cls = ForeignServer
     query = \
-        """SELECT fdwname AS wrapper, srvname AS name, srvtype AS type,
+        """SELECT s.oid, fdwname AS wrapper, srvname AS name, srvtype AS type,
                   srvversion AS version, srvoptions AS options,
                   rolname AS owner, array_to_string(srvacl, ',') AS privileges,
                   obj_description(s.oid, 'pg_foreign_server') AS description
@@ -366,7 +306,7 @@ class ForeignServerDict(DbObjectDict):
                     serv.privileges = privileges_from_map(
                         inserv['privileges'], serv.allprivs, serv.owner)
 
-    def to_map(self, no_owner, no_privs):
+    def to_map(self, db, no_owner, no_privs):
         """Convert the server dictionary to a regular dictionary
 
         :param no_owner: exclude server owner information
@@ -378,7 +318,7 @@ class ForeignServerDict(DbObjectDict):
         """
         servers = {}
         for srv in self:
-            servers.update(self[srv].to_map(no_owner, no_privs))
+            servers.update(self[srv].to_map(db, no_owner, no_privs))
         return servers
 
     def link_refs(self, dbusermaps):
@@ -394,62 +334,16 @@ class ForeignServerDict(DbObjectDict):
                 server.usermaps = {}
             server.usermaps.update({usr: dbusermap})
 
-    def diff_map(self, inservers):
-        """Generate SQL to transform existing foreign servers
-
-        :param inservers: a YAML map defining the new foreign servers
-        :return: list of SQL statements
-
-        Compares the existing server definitions, as fetched from the
-        catalogs, to the input map and generates SQL statements to
-        transform the foreign servers accordingly.
-        """
-        stmts = []
-        # check input foreign servers
-        for (fdw, srv) in inservers:
-            insrv = inservers[(fdw, srv)]
-            # does it exist in the database?
-            if (fdw, srv) in self:
-                stmts.append(self[(fdw, srv)].diff_map(insrv))
-            else:
-                # check for possible RENAME
-                if hasattr(insrv, 'oldname'):
-                    oldname = insrv.oldname
-                    try:
-                        stmts.append(self[(fdw, oldname)].rename(insrv.name))
-                        del self[oldname]
-                    except KeyError as exc:
-                        exc.args = ("Previous name '%s' for dictionary '%s' "
-                                    "not found" % (oldname, insrv.name), )
-                        raise
-                else:
-                    # create new dictionary
-                    stmts.append(insrv.create())
-        # check database foreign servers
-        for srv in self:
-            # if missing, drop it
-            if srv not in inservers:
-                self[srv].dropped = True
-        return stmts
-
-    def _drop(self):
-        """Actually drop the servers
-
-        :return: SQL statements
-        """
-        stmts = []
-        for srv in self:
-            if hasattr(self[srv], 'dropped'):
-                stmts.append(self[srv].drop())
-        return stmts
-
 
 class UserMapping(DbObjectWithOptions):
     """A user mapping definition"""
 
-    objtype = "USER MAPPING"
-
     keylist = ['wrapper', 'server', 'name']
+    catalog = 'pg_user_mappings'
+
+    @property
+    def objtype(self):
+        return "USER MAPPING"
 
     def extern_key(self):
         """Return the key to be used in external maps for this user mapping
@@ -480,13 +374,19 @@ class UserMapping(DbObjectWithOptions):
                 quote_id(self.name), quote_id(self.server),
                 options and '\n    ' + ',\n    '.join(options) or '')]
 
+    def get_implied_deps(self, db):
+        deps = super(UserMapping, self).get_implied_deps(db)
+        deps.add(db.fdwrappers[self.wrapper])
+        return deps
+
 
 class UserMappingDict(DbObjectDict):
     "The collection of user mappings in a database"
 
     cls = UserMapping
     query = \
-        """SELECT fdwname AS wrapper, s.srvname AS server,
+        """SELECT u.umid AS oid,
+                  fdwname AS wrapper, s.srvname AS server,
                   CASE umuser WHEN 0 THEN 'PUBLIC' ELSE
                   usename END AS name, umoptions AS options
            FROM pg_user_mappings u
@@ -511,7 +411,7 @@ class UserMappingDict(DbObjectDict):
                     del inusermap['oldname']
             self[(server.wrapper, server.name, key)] = usermap
 
-    def to_map(self):
+    def to_map(self, db):
         """Convert the user mapping dictionary to a regular dictionary
 
         :return: dictionary
@@ -521,10 +421,10 @@ class UserMappingDict(DbObjectDict):
         """
         usermaps = {}
         for um in self:
-            usermaps.update(self[um].to_map())
+            usermaps.update(self[um].to_map(db))
         return usermaps
 
-    def diff_map(self, inusermaps):
+    def alter(self, inusermaps):
         """Generate SQL to transform existing user mappings
 
         :param input_map: a YAML map defining the new user mappings
@@ -540,7 +440,7 @@ class UserMappingDict(DbObjectDict):
             inump = inusermaps[(fdw, srv, usr)]
             # does it exist in the database?
             if (fdw, srv, usr) in self:
-                stmts.append(self[(fdw, srv, usr)].diff_map(inump))
+                stmts.append(self[(fdw, srv, usr)].alter(inump))
             else:
                 # check for possible RENAME
                 if hasattr(inump, 'oldname'):
@@ -567,10 +467,14 @@ class UserMappingDict(DbObjectDict):
 class ForeignTable(DbObjectWithOptions, Table):
     """A foreign table definition"""
 
-    objtype = "FOREIGN TABLE"
     privobjtype = "TABLE"
+    catalog = 'pg_foreign_table'
 
-    def to_map(self, opts):
+    @property
+    def objtype(self):
+        return "FOREIGN TABLE"
+
+    def to_map(self, db, opts):
         """Convert a foreign table to a YAML-suitable format
 
         :param opts: options to include/exclude tables, etc.
@@ -583,7 +487,7 @@ class ForeignTable(DbObjectWithOptions, Table):
             return {}
         cols = []
         for i in range(len(self.columns)):
-            col = self.columns[i].to_map(opts.no_privs)
+            col = self.columns[i].to_map(db, opts.no_privs)
             if col:
                 cols.append(col)
         tbl = {'columns': cols, 'server': self.server}
@@ -595,7 +499,7 @@ class ForeignTable(DbObjectWithOptions, Table):
         for attr in attrlist:
             if hasattr(self, attr):
                 tbl.update({attr: getattr(self, attr)})
-        if not opts.no_privs and self.privileges:
+        if not opts.no_privs and hasattr(self, 'privileges'):
             tbl.update({'privileges': self.map_privs()})
 
         return tbl
@@ -616,7 +520,7 @@ class ForeignTable(DbObjectWithOptions, Table):
         stmts.append("CREATE FOREIGN TABLE %s (\n%s)\n    SERVER %s%s" % (
             self.qualname(), ",\n".join(cols), self.server,
             options and '\n    ' + ',\n    '.join(options) or ''))
-        if self.owner is not None:
+        if hasattr(self, 'owner'):
             stmts.append(self.alter_owner())
         if self.description is not None:
             stmts.append(self.comment())
@@ -630,16 +534,16 @@ class ForeignTable(DbObjectWithOptions, Table):
 
         :return: SQL statement
         """
-        return "DROP %s %s" % (self.objtype, self.identifier())
+        return ["DROP %s %s" % (self.objtype, self.identifier())]
 
-    def diff_map(self, intable):
+    def alter(self, intable):
         """Generate SQL to transform an existing table
 
         :param intable: a YAML map defining the new table
         :return: list of SQL statements
         """
-        stmts = super(ForeignTable, self).diff_map(intable)
-        if intable.owner is not None:
+        stmts = super(ForeignTable, self).alter(intable)
+        if hasattr(intable, 'owner'):
             if intable.owner != self.owner:
                 stmts.append(self.alter_owner(intable.owner))
         stmts.append(self.diff_description(intable))
@@ -651,7 +555,8 @@ class ForeignTableDict(ClassDict):
 
     cls = ForeignTable
     query = \
-        """SELECT nspname AS schema, relname AS name, srvname AS server,
+        """SELECT c.oid,
+                  nspname AS schema, relname AS name, srvname AS server,
                   ftoptions AS options, rolname AS owner,
                   array_to_string(relacl, ',') AS privileges,
                   obj_description(c.oid, 'pg_class') AS description
@@ -711,45 +616,3 @@ class ForeignTableDict(ClassDict):
                 self[(sch, tbl)].columns = dbcolumns[(sch, tbl)]
                 for col in dbcolumns[(sch, tbl)]:
                     col._table = self[(sch, tbl)]
-
-    def diff_map(self, intables):
-        """Generate SQL to transform existing foreign tables
-
-        :param intables: a YAML map defining the new foreign tables
-        :return: list of SQL statements
-
-        Compares the existing foreign table definitions, as fetched
-        from the catalogs, to the input map and generates SQL
-        statements to transform the foreign tables accordingly.
-        """
-        stmts = []
-        # check input tables
-        for (sch, tbl) in intables:
-            intbl = intables[(sch, tbl)]
-            # does it exist in the database?
-            if (sch, tbl) not in self:
-                # check for possible RENAME
-                if hasattr(intbl, 'oldname'):
-                    oldname = intbl.oldname
-                    try:
-                        stmts.append(self[(sch, oldname)].rename(intbl.name))
-                        del self[(sch, oldname)]
-                    except KeyError as exc:
-                        exc.args = ("Previous name '%s' for foreign table "
-                                    "'%s' not found" % (oldname, intbl.name), )
-                        raise
-                else:
-                    # create new table
-                    stmts.append(intbl.create())
-
-        # check database tables
-        for (sch, tbl) in self:
-            table = self[(sch, tbl)]
-            # if missing, drop it
-            if (sch, tbl) not in intables:
-                stmts.append(table.drop())
-            else:
-                # compare table objects
-                stmts.append(table.diff_map(intables[(sch, tbl)]))
-
-        return stmts

@@ -8,14 +8,15 @@
 """
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
 from pyrseas.dbobject import quote_id, commentable, ownable
+from pyrseas.dbobject import split_schema_obj, split_func_args
 
 
 class Operator(DbSchemaObject):
     """An operator"""
 
     keylist = ['schema', 'name', 'leftarg', 'rightarg']
-    objtype = "OPERATOR"
     single_extern_file = True
+    catalog = 'pg_operator'
 
     def extern_key(self):
         """Return the key to be used in external maps for this operator
@@ -70,13 +71,45 @@ class Operator(DbSchemaObject):
                 self.qualname(), self.procedure,
                 ',\n    ' if opt_clauses else '', ',\n    '.join(opt_clauses))]
 
+    def get_implied_deps(self, db):
+        deps = super(Operator, self).get_implied_deps(db)
+
+        # Types may be not found because builtin, or the operator unary
+        leftarg = db.types.find(self.leftarg)
+        if leftarg:
+            deps.add(leftarg)
+
+        rightarg = db.types.find(self.rightarg)
+        if rightarg:
+            deps.add(rightarg)
+
+        # The function instead we expect it exists
+        # TODO: another ugly hack to locate the object
+        fschema, fname = split_schema_obj(self.procedure, self.schema)
+        fargs = ', '.join(t for t in [self.leftarg, self.rightarg]
+                          if t != 'NONE')
+        if (fschema, fname, fargs) in db.functions:
+            func = db.functions[fschema, fname, fargs]
+            deps.add(func)
+
+        # This helper function may be a builtin
+        if getattr(self, 'restrict', None):
+            fschema, fname = split_schema_obj(self.restrict)
+            func = db.functions.get((fschema, fname,
+                                    "internal, oid, internal, integer"))
+            if func:
+                deps.add(func)
+
+        return deps
+
 
 class OperatorDict(DbObjectDict):
     "The collection of operators in a database"
 
     cls = Operator
     query = \
-        """SELECT nspname AS schema, oprname AS name, rolname AS owner,
+        """SELECT o.oid,
+                  nspname AS schema, oprname AS name, rolname AS owner,
                   oprleft::regtype AS leftarg, oprright::regtype AS rightarg,
                   oprcode AS procedure, oprcom::regoper AS commutator,
                   oprnegate::regoper AS negator, oprrest AS restrict,
@@ -95,6 +128,7 @@ class OperatorDict(DbObjectDict):
     def _from_catalog(self):
         """Initialize the dictionary of operators by querying the catalogs"""
         for oper in self.fetch():
+            oid = oper.oid
             sch, opr, lft, rgt = oper.key()
             if lft == '-':
                 lft = oper.leftarg = 'NONE'
@@ -108,7 +142,19 @@ class OperatorDict(DbObjectDict):
                 del oper.restrict
             if oper.join == '-':
                 del oper.join
-            self[(sch, opr, lft, rgt)] = Operator(**oper.__dict__)
+            self.by_oid[oid] = self[(sch, opr, lft, rgt)] \
+                = Operator(**oper.__dict__)
+
+    def find(self, oper):
+        """Return an operator given its signature
+
+        :param oper: a signature such as '#>=#(hstore,hstore)'
+
+        Return the operator found, else None.
+        """
+        schema, name = split_schema_obj(oper)
+        name, args = split_func_args(name)
+        return self.get((schema, name) + tuple(args))
 
     def from_map(self, schema, inopers):
         """Initalize the dictionary of operators by converting the input map
@@ -138,49 +184,3 @@ class OperatorDict(DbObjectDict):
                 oper.oldname = inoper['oldname']
             if 'description' in inoper:
                 oper.description = inoper['description']
-
-    def diff_map(self, inopers):
-        """Generate SQL to transform existing operators
-
-        :param inopers: a YAML map defining the new operators
-        :return: list of SQL statements
-
-        Compares the existing operator definitions, as fetched from
-        the catalogs, to the input map and generates SQL statements to
-        transform the operators accordingly.
-        """
-        stmts = []
-        # check input operators
-        for (sch, opr, lft, rgt) in inopers:
-            inoper = inopers[(sch, opr, lft, rgt)]
-            # does it exist in the database?
-            if (sch, opr, lft, rgt) not in self:
-                if not hasattr(inoper, 'oldname'):
-                    # create new operator
-                    stmts.append(inoper.create())
-                else:
-                    stmts.append(self[(sch, opr, lft, rgt)].rename(inoper))
-            else:
-                # check operator objects
-                stmts.append(self[(sch, opr, lft, rgt)].diff_map(inoper))
-
-        # check existing operators
-        for (sch, opr, lft, rgt) in self:
-            oper = self[(sch, opr, lft, rgt)]
-            # if missing, mark it for dropping
-            if (sch, opr, lft, rgt) not in inopers:
-                oper.dropped = False
-
-        return stmts
-
-    def _drop(self):
-        """Actually drop the operators
-
-        :return: SQL statements
-        """
-        stmts = []
-        for (sch, opr, lft, rgt) in self:
-            oper = self[(sch, opr, lft, rgt)]
-            if hasattr(oper, 'dropped'):
-                stmts.append(oper.drop())
-        return stmts

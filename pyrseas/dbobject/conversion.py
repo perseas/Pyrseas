@@ -14,8 +14,8 @@ class Conversion(DbSchemaObject):
     """A conversion definition"""
 
     keylist = ['schema', 'name']
-    objtype = "CONVERSION"
     single_extern_file = True
+    catalog = 'pg_conversion'
 
     @commentable
     @ownable
@@ -37,7 +37,7 @@ class ConversionDict(DbObjectDict):
 
     cls = Conversion
     query = \
-        """SELECT nspname AS schema, conname AS name, rolname AS owner,
+        """SELECT c.oid, nspname AS schema, conname AS name, rolname AS owner,
                   pg_encoding_to_char(c.conforencoding) AS source_encoding,
                   pg_encoding_to_char(c.contoencoding) AS dest_encoding,
                   conproc AS function, condefault AS default,
@@ -67,42 +67,3 @@ class ConversionDict(DbObjectDict):
                 if 'description' in inconv:
                     conv.description = inconv['description']
             self[(schema.name, cnv)] = conv
-
-    def diff_map(self, inconvs):
-        """Generate SQL to transform existing conversions
-
-        :param inconvs: a YAML map defining the new conversions
-        :return: list of SQL statements
-
-        Compares the existing conversion definitions, as fetched from
-        the catalogs, to the input map and generates SQL statements to
-        create, drop or change the conversions accordingly.
-        """
-        stmts = []
-        # check input conversions
-        for cnv in inconvs:
-            inconv = inconvs[cnv]
-            # does it exist in the database?
-            if cnv in self:
-                stmts.append(self[cnv].diff_map(inconv))
-            else:
-                # check for possible RENAME
-                if hasattr(inconv, 'oldname'):
-                    oldname = inconv.oldname
-                    try:
-                        stmts.append(self[oldname].rename(inconv.name))
-                        del self[oldname]
-                    except KeyError as exc:
-                        exc.args = ("Previous name '%s' for conversion '%s' "
-                                    "not found" % (oldname, inconv.name), )
-                        raise
-                else:
-                    # create new conversion
-                    stmts.append(inconv.create())
-        # check database conversions
-        for (sch, cnv) in self:
-            # if missing, drop it
-            if (sch, cnv) not in inconvs:
-                stmts.append(self[(sch, cnv)].drop())
-
-        return stmts

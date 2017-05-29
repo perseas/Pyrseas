@@ -9,3 +9,4 @@ Pyrseas.egg-info
 htmlcov
 .tox
 .cache
+/*.egg

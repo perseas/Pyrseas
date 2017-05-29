@@ -96,7 +96,7 @@ class AuditColumnsTestCase(AugmentToMapTestCase):
         "Add predefined audit column but with changed datatype"
         augmap = {'augmenter': {'columns': {'created_date': {'type': 'text'}}},
                   'schema public': {'table t1': {
-                  'audit_columns': 'created_date_only'}}}
+                      'audit_columns': 'created_date_only'}}}
         dbmap = self.to_map([CREATE_STMT], augmap)
         expmap = {'columns': [
             {'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}},

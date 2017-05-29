@@ -30,7 +30,8 @@ class CastToMapTestCase(DatabaseToMapTestCase):
     def test_map_cast_inout(self):
         "Map a cast with INOUT"
         dbmap = self.to_map([CREATE_DOMAIN, CREATE_STMT3])
-        expmap = {'context': 'implicit', 'method': 'inout'}
+        expmap = {'context': 'implicit', 'method': 'inout',
+                  'depends_on': ['domain d1']}
         assert dbmap['cast (d1 as integer)'] == expmap
 
     def test_map_cast_comment(self):
@@ -101,7 +102,7 @@ class CastToSqlTestCase(InputMapToSqlTestCase):
             'returns': 'boolean', 'language': 'sql', 'immutable': True,
             'source': SOURCE}})
         sql = self.to_sql(inmap, [DROP_STMT])
-        # sql[0] -> SET, sql[1] -> CREATE FUNCTION
+        # sql[0:1] -> SET, CREATE FUNCTION
         assert fix_indent(sql[2]) == CREATE_STMT1
         assert sql[3] == COMMENT_STMT
 

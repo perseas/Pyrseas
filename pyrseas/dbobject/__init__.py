@@ -68,13 +68,36 @@ def split_schema_obj(obj, sch=None):
     qualsch = sch
     if sch is None:
         qualsch = 'public'
-    if '.' in obj:
-        (qualsch, obj) = obj.split('.')
-    if obj[0] == '"' and obj[-1:] == '"':
-        obj = obj[1:-1]
+    if obj[0] == '"' and obj[-1] == '"':
+        if '"."' in obj:
+            (qualsch, obj) = obj.split('"."')
+            qualsch = qualsch[1:]
+            obj = obj[:-1]
+        else:
+            obj = obj[1:-1]
+    else:
+        # TODO: properly handle functions
+        if '.' in obj and '(' not in obj:
+            (qualsch, obj) = obj.split('.')
     if sch != qualsch:
         sch = qualsch
     return (sch, obj)
+
+
+def split_func_args(obj):
+    """Split function name and argument from a signature, e.g. fun(int, text)
+
+    :param obj: The string to parse
+    :return: 2-item tuple (name, args), args is a list of strings.
+
+    TODO: make it safer against pathologic input (names containing' '( and ',')
+    """
+    tokens = obj.split('(')
+    if len(tokens) != 2 or not tokens[1].endswith(')'):
+        raise ValueError("not a valid function signature: '%s'" % obj)
+    name = tokens[0]
+    args = [arg.strip() for arg in tokens[1][:-1].split(',')]
+    return name, args
 
 
 def commentable(func):
@@ -93,8 +116,9 @@ def grantable(func):
     @wraps(func)
     def grant(obj, *args, **kwargs):
         stmts = func(obj, *args, **kwargs)
-        for priv in obj.privileges:
-            stmts.append(add_grant(obj, priv))
+        if hasattr(obj, 'privileges'):
+            for priv in obj.privileges:
+                stmts.append(add_grant(obj, priv))
         return stmts
     return grant
 
@@ -104,7 +128,8 @@ def ownable(func):
     @wraps(func)
     def add_alter(obj, *args, **kwargs):
         stmts = func(obj, *args, **kwargs)
-        stmts.append(obj.alter_owner())
+        if hasattr(obj, 'owner'):
+            stmts.append(obj.alter_owner())
         return stmts
     return add_alter
 
@@ -118,11 +143,19 @@ class DbObject(object):
     See description of :meth:`key` for further details.
     """
 
-    objtype = ''
-    """Type of object as an uppercase string, for SQL syntax generation
+    @property
+    def objtype(self):
+        """Type of object as an uppercase string, for SQL syntax generation
 
-    This is used in most CREATE, ALTER and DROP statements.  It is
-    also used by :meth:`extern_key` in lowercase form.
+        This is used in most CREATE, ALTER and DROP statements.  It is
+        also used by :meth:`extern_key` in lowercase form.
+        """
+        if self._objtype is None:
+            self._objtype = self.__class__.__name__.upper()
+        return self._objtype
+
+    catalog = None
+    """The name of the system catalog where these objects live
     """
 
     allprivs = ''
@@ -135,7 +168,7 @@ class DbObject(object):
         :param description: comment text describing object
         :param owner: name of user that owns the object
         :param privileges: privileges on object
-        :param attrs: dictionary of other attributes
+        :param attrs: the dictionary of attributes
 
         Non-key attributes without a value are discarded. Values that
         are multi-line strings are treated specially so that YAML will
@@ -147,6 +180,9 @@ class DbObject(object):
         if isinstance(privileges, strtypes):
             privileges = privileges.split(',')
         self.privileges = privileges or []
+        self.depends_on = []
+        self._objtype = None
+
         for key, val in list(attrs.items()):
             if val or key in self.keylist:
                 if key in ['definition', 'description', 'source'] and \
@@ -162,6 +198,22 @@ class DbObject(object):
                     else:
                         val = MultiLineStr(strval)
                 setattr(self, key, val)
+
+    def __repr__(self):
+        return "<%s at 0x%x>" % (self.extern_key(), id(self))
+
+    # hash and eq allow to use the objects as dict keys
+    def __hash__(self):
+        return hash((self.__class__, self.key()))
+
+    def __eq__(self, other):
+        if self.__class__ is other.__class__:
+            return self.key() == other.key()
+        else:
+            return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
     def extern_key(self):
         """Return the key to be used in external maps for this object
@@ -261,9 +313,10 @@ class DbObject(object):
         """
         return quote_id(self.__dict__[self.keylist[0]])
 
-    def _base_map(self, no_owner=False, no_privs=False):
+    def _base_map(self, db, no_owner=False, no_privs=False):
         """Return a base map, i.e., copy of attributes excluding keys
 
+        :param db: db used to tie the objects together
         :param no_owner: exclude object owner information
         :param no_privs: exclude privilege information
         :return: dictionary
@@ -279,11 +332,27 @@ class DbObject(object):
             del dct['privileges']
         else:
             dct['privileges'] = self.map_privs()
+
+        # Never dump the oid
+        dct.pop('oid', None)
+
+        # Only dump dependencies that can't be inferred from the context
+        deps = set(dct.pop('depends_on', ()))
+        deps -= self.get_implied_deps(db)
+        if deps:
+            dct['depends_on'] = sorted([dep.extern_key() for dep in deps])
+
+        # Drop any private attributes
+        for k in list(dct.keys()):
+            if k.startswith('_'):
+                del dct[k]
+
         return dct
 
-    def to_map(self, no_owner=False, no_privs=False):
+    def to_map(self, db, no_owner=False, no_privs=False):
         """Convert an object to a YAML-suitable format
 
+        :param db: db used to tie the objects together
         :param no_owner: exclude object owner information
         :param no_privs: exclude privilege information
         :return: dictionary
@@ -293,7 +362,7 @@ class DbObject(object):
         returns a new dictionary using the :meth:`extern_key` result
         as the key.
         """
-        return self._base_map(no_owner, no_privs)
+        return self._base_map(db, no_owner, no_privs)
 
     def map_privs(self):
         """Return a list of access privileges on the current object
@@ -340,32 +409,33 @@ class DbObject(object):
         else:
             return []
 
-    def drop(self):
-        """Return SQL statement to DROP the object
-
-        :return: SQL statement
-        """
-        return "DROP %s %s" % (self.objtype, self.identifier())
-
-    def rename(self, newname):
+    def rename(self, oldname):
         """Return SQL statement to RENAME the object
 
-        :param newname: the new name for the object
+        :param oldname: the old name for the object
         :return: SQL statement
         """
-        return "ALTER %s %s RENAME TO %s" % (self.objtype, self.name, newname)
+        return "ALTER %s %s RENAME TO %s" % (
+            self.objtype, quote_id(oldname), quote_id(self.name))
 
-    def diff_map(self, inobj, no_owner=False):
-        """Generate SQL to transform an existing object
+    def create(self):
+        raise NotImplementedError
+
+    def create_sql(self):
+        if not hasattr(self, 'oldname'):
+            return self.create()
+        else:
+            return self.rename(self.oldname)
+
+    def alter(self, inobj, no_owner=False):
+        """Generate SQL to transform an existing database object
 
         :param inobj: a YAML map defining the new object
-        :param no_owner: exclude object owner information
         :return: list of SQL statements
 
-        Compares the object to an input object and generates SQL
+        Compares the current object to an input object and generates SQL
         statements to transform it into the one represented by the
-        input.  This base implementation simply deals with owners and
-        comments.
+        input.
         """
         stmts = []
         if not no_owner and self.owner is not None and inobj.owner is not None:
@@ -374,6 +444,13 @@ class DbObject(object):
         stmts.append(self.diff_privileges(inobj))
         stmts.append(self.diff_description(inobj))
         return stmts
+
+    def drop(self):
+        """Generate SQL to drop the current object
+
+        :return: list of SQL statements
+        """
+        return ["DROP %s %s" % (self.objtype, self.identifier())]
 
     def diff_privileges(self, inobj):
         """Generate SQL statements to grant or revoke privileges
@@ -404,24 +481,39 @@ class DbObject(object):
                 stmts.append(self.comment())
         return stmts
 
+    def get_deps(self, db):
+        """Return all the objects the object depends on
+
+        The base implementation returns the explicit dependencies. Subclasses
+        may extend this to include implicit ones, which are implied e.g. by
+        containment in the yaml (such as an object on the schema they are on, a
+        constraint on the domain it is defined for.
+
+        :return: set of `DbObject`
+        """
+        deps = set()
+
+        # The explicit dependencies
+        for dep in self.depends_on:
+            if isinstance(dep, strtypes):
+                dep = db._get_by_extkey(dep)
+            deps.add(dep)
+
+        for dep in self.get_implied_deps(db):
+            deps.add(dep)
+
+        return deps
+
+    def get_implied_deps(self, db):
+        """Return the dependencies the object can handle without being explicit
+
+        :return: set of `DbObject`
+        """
+        return set()
+
 
 class DbSchemaObject(DbObject):
     "A database object that is owned by a certain schema"
-
-    def __init__(self, schema, name, description=None, owner=None,
-                 privileges=None, **attrs):
-        """Initialize the catalog object from a dictionary of attributes
-
-        :param schema: name of the schema owning the object
-        :param name: name of object
-        :param description: comment text describing object
-        :param owner: name of user that owns the object
-        :param privileges: privileges on object
-        :param attrs: dictionary of other attributes
-        """
-        self.schema = schema
-        super(DbSchemaObject, self).__init__(name, description, owner,
-                                             privileges, **attrs)
 
     def identifier(self):
         """Return a full identifier for a schema object
@@ -455,24 +547,21 @@ class DbSchemaObject(DbObject):
         """
         return super(DbSchemaObject, self).extern_filename(ext, True)
 
-    def drop(self):
-        """Return a SQL DROP statement for the schema object
+    def rename(self, oldname):
+        return "ALTER %s %s.%s RENAME TO %s" % (
+            self.objtype, quote_id(self.schema), quote_id(oldname),
+            quote_id(self.name))
 
-        :return: SQL statement
-        """
-        if not hasattr(self, 'dropped') or not self.dropped:
-            self.dropped = True
-            return "DROP %s %s" % (self.objtype, self.identifier())
-        return []
+    def get_implied_deps(self, db):
+        deps = super(DbSchemaObject, self).get_implied_deps(db)
 
-    def rename(self, newname):
-        """Return a SQL ALTER statement to RENAME the schema object
+        # The schema of the object (if any) is always a dependency
+        if hasattr(self, 'schema'):
+            s = db.schemas.get(self.schema)
+            if s:
+                deps.add(s)
 
-        :param newname: the new name of the object
-        :return: SQL statement
-        """
-        return "ALTER %s %s RENAME TO %s" % (self.objtype, self.qualname(),
-                                             newname)
+        return deps
 
 
 class DbObjectDict(dict):
@@ -496,6 +585,7 @@ class DbObjectDict(dict):
         initialize the dictionary from the catalogs.
         """
         dict.__init__(self)
+        self.by_oid = {}
         self.dbconn = dbconn
         if dbconn:
             self._from_catalog()
@@ -510,10 +600,13 @@ class DbObjectDict(dict):
                 if type(obj.options) is list:
                     obj.options = sorted(obj.options)
             self[obj.key()] = obj
+            if hasattr(obj, 'oid'):
+                self.by_oid[obj.oid] = obj
 
-    def to_map(self,  opts):
+    def to_map(self, db, opts):
         """Convert the object dictionary to a regular dictionary
 
+        :param db: db used to tie the objects together
         :param opts: options to include/exclude information, etc.
         :return: dictionary
 
@@ -524,7 +617,7 @@ class DbObjectDict(dict):
         objdict = {}
         for objkey in sorted(self.keys()):
             obj = self[objkey]
-            objmap = obj.to_map(opts.no_owner, opts.no_privs)
+            objmap = obj.to_map(db, opts.no_owner, opts.no_privs)
             if objmap is not None:
                 extkey = obj.extern_key()
                 outobj = {extkey: objmap}
@@ -544,4 +637,6 @@ class DbObjectDict(dict):
         """
         data = self.dbconn.fetchall(self.query)
         self.dbconn.rollback()
+        if data and self.cls.catalog:
+            assert 'oid' in data[0], self.__class__.__name__
         return [self.cls(**dict(row)) for row in data]

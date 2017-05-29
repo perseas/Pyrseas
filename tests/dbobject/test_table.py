@@ -178,7 +178,7 @@ class TableToSqlTestCase(InputMapToSqlTestCase):
             'columns': [{'c1': {'type': 'integer'}},
                         {'c2': {'type': 'text'}}]}})
         sql = self.to_sql(inmap, [CREATE_STMT])
-        assert sql == ["ALTER TABLE t1 RENAME TO t2"]
+        assert sql == ["ALTER TABLE public.t1 RENAME TO t2"]
 
     def test_create_table_options(self):
         "Create a table with options"

@@ -65,7 +65,7 @@ class CompositeToSqlTestCase(InputMapToSqlTestCase):
                            {'y': {'type': 'integer'}},
                            {'z': {'type': 'integer'}}]}})
         sql = self.to_sql(inmap, [CREATE_COMPOSITE_STMT])
-        assert sql == ["ALTER TYPE t1 RENAME TO t2"]
+        assert sql == ["ALTER TYPE public.t1 RENAME TO t2"]
 
     def test_add_attribute(self):
         "Add an attribute to a composite type"
@@ -148,7 +148,7 @@ class EnumToSqlTestCase(InputMapToSqlTestCase):
         inmap['schema public'].update({'type t2': {
             'oldname': 't1', 'labels': ['red', 'green', 'blue']}})
         sql = self.to_sql(inmap, [CREATE_ENUM_STMT])
-        assert sql == ["ALTER TYPE t1 RENAME TO t2"]
+        assert sql == ["ALTER TYPE public.t1 RENAME TO t2"]
 
 
 class BaseTypeToMapTestCase(DatabaseToMapTestCase):

@@ -9,22 +9,26 @@
     TSTemplateDict derived from DbObjectDict.
 """
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
-from pyrseas.dbobject import commentable, ownable
+from pyrseas.dbobject import commentable, ownable, split_schema_obj
 
 
 class TSConfiguration(DbSchemaObject):
     """A text search configuration definition"""
 
     keylist = ['schema', 'name']
-    objtype = "TEXT SEARCH CONFIGURATION"
     single_extern_file = True
+    catalog = 'pg_ts_config'
 
-    def to_map(self, no_owner):
+    @property
+    def objtype(self):
+        return "TEXT SEARCH CONFIGURATION"
+
+    def to_map(self, db, no_owner):
         """Convert a text search configuration to a YAML-suitable format
 
         :return: dictionary
         """
-        dct = self._base_map(no_owner)
+        dct = self._base_map(db, no_owner)
         if '.' in self.parser:
             (sch, pars) = self.parser.split('.')
             if sch == self.schema:
@@ -43,14 +47,19 @@ class TSConfiguration(DbSchemaObject):
         return ["CREATE TEXT SEARCH CONFIGURATION %s (\n    %s)" % (
                 self.qualname(), ',\n    '.join(clauses))]
 
+    def get_implied_deps(self, db):
+        deps = super(TSConfiguration, self).get_implied_deps(db)
+        deps.add(db.tsparsers[split_schema_obj(self.parser, self.schema)])
+        return deps
+
 
 class TSConfigurationDict(DbObjectDict):
     "The collection of text search configurations in a database"
 
     cls = TSConfiguration
     query = \
-        """SELECT nc.nspname AS schema, cfgname AS name, rolname AS owner,
-                  np.nspname || '.' || prsname AS parser,
+        """SELECT c.oid, nc.nspname AS schema, cfgname AS name,
+                  rolname AS owner, np.nspname || '.' || prsname AS parser,
                   obj_description(c.oid, 'pg_ts_config') AS description
            FROM pg_ts_config c
                 JOIN pg_roles r ON (r.oid = cfgowner)
@@ -83,51 +92,17 @@ class TSConfigurationDict(DbObjectDict):
                 if 'description' in inconfig:
                     config.description = inconfig['description']
 
-    def diff_map(self, inconfigs):
-        """Generate SQL to transform existing configurations
-
-        :param input_map: a YAML map defining the new configurations
-        :return: list of SQL statements
-
-        Compares the existing configuration definitions, as fetched from the
-        catalogs, to the input map and generates SQL statements to
-        transform the configurations accordingly.
-        """
-        stmts = []
-        # check input configurations
-        for (sch, tsc) in inconfigs:
-            intsc = inconfigs[(sch, tsc)]
-            # does it exist in the database?
-            if (sch, tsc) in self:
-                stmts.append(self[(sch, tsc)].diff_map(intsc))
-            else:
-                # check for possible RENAME
-                if hasattr(intsc, 'oldname'):
-                    oldname = intsc.oldname
-                    try:
-                        stmts.append(self[oldname].rename(intsc.name))
-                        del self[oldname]
-                    except KeyError as exc:
-                        exc.args = ("Previous name '%s' for configuration "
-                                    "'%s' not found" % (oldname, intsc.name), )
-                        raise
-                else:
-                    # create new configuration
-                    stmts.append(intsc.create())
-        # check database configurations
-        for (sch, tsc) in self:
-            # if missing, drop it
-            if (sch, tsc) not in inconfigs:
-                stmts.append(self[(sch, tsc)].drop())
-        return stmts
-
 
 class TSDictionary(DbSchemaObject):
     """A text search dictionary definition"""
 
     keylist = ['schema', 'name']
-    objtype = "TEXT SEARCH DICTIONARY"
     single_extern_file = True
+    catalog = 'pg_ts_dict'
+
+    @property
+    def objtype(self):
+        return "TEXT SEARCH DICTIONARY"
 
     @commentable
     @ownable
@@ -149,7 +124,7 @@ class TSDictionaryDict(DbObjectDict):
 
     cls = TSDictionary
     query = \
-        """SELECT nspname AS schema, dictname AS name, rolname AS owner,
+        """SELECT d.oid, nspname AS schema, dictname AS name, rolname AS owner,
                   tmplname AS template, dictinitoption AS options,
                   obj_description(d.oid, 'pg_ts_dict') AS description
            FROM pg_ts_dict d JOIN pg_ts_template t ON (dicttemplate = t.oid)
@@ -180,51 +155,17 @@ class TSDictionaryDict(DbObjectDict):
                 if 'description' in indict:
                     tsdict.description = indict['description']
 
-    def diff_map(self, indicts):
-        """Generate SQL to transform existing dictionaries
-
-        :param input_map: a YAML map defining the new dictionaries
-        :return: list of SQL statements
-
-        Compares the existing dictionary definitions, as fetched from the
-        catalogs, to the input map and generates SQL statements to
-        transform the dictionaries accordingly.
-        """
-        stmts = []
-        # check input dictionaries
-        for (sch, tsd) in indicts:
-            intsd = indicts[(sch, tsd)]
-            # does it exist in the database?
-            if (sch, tsd) in self:
-                stmts.append(self[(sch, tsd)].diff_map(intsd))
-            else:
-                # check for possible RENAME
-                if hasattr(intsd, 'oldname'):
-                    oldname = intsd.oldname
-                    try:
-                        stmts.append(self[oldname].rename(intsd.name))
-                        del self[oldname]
-                    except KeyError as exc:
-                        exc.args = ("Previous name '%s' for dictionary '%s' "
-                                    "not found" % (oldname, intsd.name), )
-                        raise
-                else:
-                    # create new dictionary
-                    stmts.append(intsd.create())
-        # check database dictionaries
-        for (sch, tsd) in self:
-            # if missing, drop it
-            if (sch, tsd) not in indicts:
-                stmts.append(self[(sch, tsd)].drop())
-        return stmts
-
 
 class TSParser(DbSchemaObject):
     """A text search parser definition"""
 
     keylist = ['schema', 'name']
-    objtype = "TEXT SEARCH PARSER"
     single_extern_file = True
+    catalog = 'pg_ts_parser'
+
+    @property
+    def objtype(self):
+        return "TEXT SEARCH PARSER"
 
     @commentable
     @ownable
@@ -247,7 +188,7 @@ class TSParserDict(DbObjectDict):
 
     cls = TSParser
     query = \
-        """SELECT nspname AS schema, prsname AS name,
+        """SELECT p.oid, nspname AS schema, prsname AS name,
                   prsstart::regproc AS start, prstoken::regproc AS gettoken,
                   prsend::regproc AS end, prslextype::regproc AS lextypes,
                   prsheadline::regproc AS headline,
@@ -279,51 +220,17 @@ class TSParserDict(DbObjectDict):
                 if 'description' in inparser:
                     parser.description = inparser['description']
 
-    def diff_map(self, inparsers):
-        """Generate SQL to transform existing parsers
-
-        :param input_map: a YAML map defining the new parsers
-        :return: list of SQL statements
-
-        Compares the existing parser definitions, as fetched from the
-        catalogs, to the input map and generates SQL statements to
-        transform the parsers accordingly.
-        """
-        stmts = []
-        # check input parsers
-        for (sch, tsp) in inparsers:
-            intsp = inparsers[(sch, tsp)]
-            # does it exist in the database?
-            if (sch, tsp) in self:
-                stmts.append(self[(sch, tsp)].diff_map(intsp))
-            else:
-                # check for possible RENAME
-                if hasattr(intsp, 'oldname'):
-                    oldname = intsp.oldname
-                    try:
-                        stmts.append(self[oldname].rename(intsp.name))
-                        del self[oldname]
-                    except KeyError as exc:
-                        exc.args = ("Previous name '%s' for parser '%s' "
-                                    "not found" % (oldname, intsp.name), )
-                        raise
-                else:
-                    # create new parser
-                    stmts.append(intsp.create())
-        # check database parsers
-        for (sch, tsp) in self:
-            # if missing, drop it
-            if (sch, tsp) not in inparsers:
-                stmts.append(self[(sch, tsp)].drop())
-        return stmts
-
 
 class TSTemplate(DbSchemaObject):
     """A text search template definition"""
 
     keylist = ['schema', 'name']
-    objtype = "TEXT SEARCH TEMPLATE"
     single_extern_file = True
+    catalog = 'pg_ts_template'
+
+    @property
+    def objtype(self):
+        return "TEXT SEARCH TEMPLATE"
 
     @commentable
     def create(self):
@@ -344,7 +251,7 @@ class TSTemplateDict(DbObjectDict):
 
     cls = TSTemplate
     query = \
-        """SELECT nspname AS schema, tmplname AS name,
+        """SELECT p.oid, nspname AS schema, tmplname AS name,
                   tmplinit::regproc AS init, tmpllexize::regproc AS lexize,
                   obj_description(p.oid, 'pg_ts_template') AS description
            FROM pg_ts_template p
@@ -373,41 +280,3 @@ class TSTemplateDict(DbObjectDict):
                     del intemplate['oldname']
                 if 'description' in intemplate:
                     template.description = intemplate['description']
-
-    def diff_map(self, intemplates):
-        """Generate SQL to transform existing templates
-
-        :param input_map: a YAML map defining the new templates
-        :return: list of SQL statements
-
-        Compares the existing template definitions, as fetched from the
-        catalogs, to the input map and generates SQL statements to
-        transform the templates accordingly.
-        """
-        stmts = []
-        # check input templates
-        for (sch, tst) in intemplates:
-            intst = intemplates[(sch, tst)]
-            # does it exist in the database?
-            if (sch, tst) in self:
-                stmts.append(self[(sch, tst)].diff_map(intst))
-            else:
-                # check for possible RENAME
-                if hasattr(intst, 'oldname'):
-                    oldname = intst.oldname
-                    try:
-                        stmts.append(self[oldname].rename(intst.name))
-                        del self[oldname]
-                    except KeyError as exc:
-                        exc.args = ("Previous name '%s' for template '%s' "
-                                    "not found" % (oldname, intst.name), )
-                        raise
-                else:
-                    # create new template
-                    stmts.append(intst.create())
-        # check database templates
-        for (sch, tst) in self:
-            # if missing, drop it
-            if (sch, tst) not in intemplates:
-                stmts.append(self[(sch, tst)].drop())
-        return stmts

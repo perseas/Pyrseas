@@ -7,7 +7,6 @@
     DbSchemaObject, Function and Aggregate derived from Proc, and
     FunctionDict derived from DbObjectDict.
 """
-from pyrseas.lib.pycompat import strtypes
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
 from pyrseas.dbobject import commentable, ownable, grantable, split_schema_obj
 from pyrseas.dbobject.privileges import privileges_from_map
@@ -19,6 +18,7 @@ class Proc(DbSchemaObject):
     """A procedure such as a FUNCTION or an AGGREGATE"""
 
     keylist = ['schema', 'name', 'arguments']
+    catalog = 'pg_proc'
 
     @property
     def allprivs(self):
@@ -38,31 +38,44 @@ class Proc(DbSchemaObject):
         """
         return "%s(%s)" % (self.qualname(), self.arguments)
 
+    def get_implied_deps(self, db):
+        # List the previous dependencies
+        deps = super(Proc, self).get_implied_deps(db)
+
+        # Add back the language
+        if getattr(self, 'language', None):
+            lang = db.languages.get(self.language)
+            if lang:
+                deps.add(lang)
+
+        # Add back the types
+        if self.arguments:
+            for arg in self.arguments.split(', '):
+                arg = db.find_type(arg.split()[-1])
+                if arg is not None:
+                    deps.add(arg)
+
+        return deps
+
 
 class Function(Proc):
     """A procedural language function"""
 
-    objtype = "FUNCTION"
-
-    def to_map(self, no_owner, no_privs):
+    def to_map(self, db, no_owner, no_privs):
         """Convert a function to a YAML-suitable format
 
         :param no_owner: exclude function owner information
         :param no_privs: exclude privilege information
         :return: dictionary
         """
-        dct = self._base_map(no_owner, no_privs)
+        dct = self._base_map(db, no_owner, no_privs)
         if self.volatility == 'v':
             del dct['volatility']
         else:
             dct['volatility'] = VOLATILITY_TYPES[self.volatility]
-        if hasattr(self, 'dependent_table'):
-            del dct['dependent_table']
         if hasattr(self, 'obj_file'):
             dct['link_symbol'] = self.source
             del dct['source']
-        if hasattr(self, '_dep_type'):
-            del dct['_dep_type']
         if hasattr(self, 'cost') and self.cost != 0:
             if self.language in ['c', 'internal']:
                 if self.cost == 1:
@@ -86,14 +99,10 @@ class Function(Proc):
         :return: SQL statements
         """
         stmts = []
-        if hasattr(self, '_dep_type') and not basetype:
-            return stmts
-        if hasattr(self, 'dependent_table'):
-            stmts.append(self.dependent_table.create())
         if hasattr(self, 'obj_file'):
             src = "'%s', '%s'" % (self.obj_file,
-                                  hasattr(self, 'link_symbol')
-                                  and self.link_symbol or self.name)
+                                  hasattr(self, 'link_symbol') and
+                                  self.link_symbol or self.name)
         elif self.language == 'internal':
             src = "$$%s$$" % (newsrc or self.source)
         else:
@@ -120,15 +129,26 @@ class Function(Proc):
             if self.rows != 1000:
                 rows = " ROWS %s" % self.rows
 
+        # We may have to create a shell type if we are its input or output
+        # functions
+        t = getattr(self, '_defining', None)
+        if t is not None:
+            if not hasattr(t, '_shell_created'):
+                t._shell_created = True
+                stmts.append("CREATE TYPE %s" % t.qualname())
+
+        # TODO: Add a single "SET check_function_bodies = false"
+        #       before the first CREATE FUNCTION
+
         args = self.allargs if hasattr(self, 'allargs') else self.arguments
         stmts.append("CREATE%s FUNCTION %s(%s) RETURNS %s\n    LANGUAGE %s"
                      "%s%s%s%s%s%s%s\n    AS %s" % (
-                     newsrc and " OR REPLACE" or '', self.qualname(),
-                     args, self.returns, self.language, volat, leakproof,
-                     strict, secdef, cost, rows, config, src))
+                         newsrc and " OR REPLACE" or '', self.qualname(),
+                         args, self.returns, self.language, volat, leakproof,
+                         strict, secdef, cost, rows, config, src))
         return stmts
 
-    def diff_map(self, infunction):
+    def alter(self, infunction, no_owner=False):
         """Generate SQL to transform an existing function
 
         :param infunction: a YAML map defining the new function
@@ -142,9 +162,6 @@ class Function(Proc):
         if hasattr(self, 'source') and hasattr(infunction, 'source'):
             if self.source != infunction.source:
                 stmts.append(self.create(infunction.source))
-        if infunction.owner is not None:
-            if infunction.owner != self.owner:
-                stmts.append(self.alter_owner(infunction.owner))
         if hasattr(self, 'leakproof') and self.leakproof is True:
             if hasattr(infunction, 'leakproof') and \
                     infunction.leakproof is True:
@@ -154,24 +171,63 @@ class Function(Proc):
                              % self.identifier())
         elif hasattr(infunction, 'leakproof') and infunction.leakproof is True:
             stmts.append("ALTER FUNCTION %s LEAKPROOF" % self.qualname())
-        stmts.append(self.diff_privileges(infunction))
-        stmts.append(self.diff_description(infunction))
+        stmts.append(super(Function, self).alter(infunction,
+                                                 no_owner=no_owner))
         return stmts
+
+    def get_implied_deps(self, db):
+        # List the previous dependencies
+        deps = super(Function, self).get_implied_deps(db)
+
+        # Add back the return type
+        rettype = self.returns
+        if rettype.upper().startswith("SETOF "):
+            rettype = rettype.split(None, 1)[-1]
+        rettype = db.find_type(rettype)
+        if rettype is not None:
+            deps.add(rettype)
+
+        return deps
+
+    def get_deps(self, db):
+        deps = super(Function, self).get_deps(db)
+
+        # avoid circular import dependencies
+        from pyrseas.dbobject.dbtype import DbType
+
+        # drop the dependency on the type if this function is an in/out
+        # because there is a loop here.
+        for dep in list(deps):
+            if isinstance(dep, DbType):
+                for attr in ('input', 'output', 'send', 'receive'):
+                    fname = getattr(dep, attr, None)
+                    if fname and fname == self.qualname():
+                        deps.remove(dep)
+                        self._defining = dep    # we may need a shell for this
+                        break
+
+        return deps
+
+    def drop(self):
+        # If the function defines a type it will be dropped by the CASCADE
+        # on the type.
+        if getattr(self, '_defining', None):
+            return []
+        else:
+            return super(Function, self).drop()
 
 
 class Aggregate(Proc):
     """An aggregate function"""
 
-    objtype = "AGGREGATE"
-
-    def to_map(self, no_owner, no_privs):
+    def to_map(self, db, no_owner, no_privs):
         """Convert an agggregate to a YAML-suitable format
 
         :param no_owner: exclude aggregate owner information
         :param no_privs: exclude privilege information
         :return: dictionary
         """
-        dct = self._base_map(no_owner, no_privs)
+        dct = self._base_map(db, no_owner, no_privs)
         del dct['language']
         return dct
 
@@ -192,12 +248,26 @@ class Aggregate(Proc):
             opt_clauses.append("SORTOP = %s" % self.sortop)
         return ["CREATE AGGREGATE %s(%s) (\n    SFUNC = %s,"
                 "\n    STYPE = %s%s%s)" % (
-                self.qualname(),
-                self.arguments, self.sfunc, self.stype,
-                opt_clauses and ',\n    ' or '', ',\n    '.join(opt_clauses))]
+                    self.qualname(), self.arguments, self.sfunc, self.stype,
+                    opt_clauses and ',\n    ' or '',
+                    ',\n    '.join(opt_clauses))]
+
+    def get_implied_deps(self, db):
+        # List the previous dependencies
+        deps = super(Aggregate, self).get_implied_deps(db)
+
+        sch, fnc = split_schema_obj(self.sfunc)
+        args = self.stype + ', ' + self.arguments
+        deps.add(db.functions[sch, fnc, args])
+        if hasattr(self, 'finalfunc'):
+            sch, fnc = split_schema_obj(self.finalfunc)
+            deps.add(db.functions[sch, fnc, self.stype])
+
+        return deps
 
 QUERY_PRE92 = \
-    """SELECT nspname AS schema, proname AS name,
+    """SELECT p.oid,
+              nspname AS schema, proname AS name,
               pg_get_function_identity_arguments(p.oid) AS arguments,
               pg_get_function_arguments(p.oid) AS allargs,
               pg_get_function_result(p.oid) AS returns,
@@ -228,7 +298,8 @@ class ProcDict(DbObjectDict):
 
     cls = Proc
     query = \
-        """SELECT nspname AS schema, proname AS name,
+        """SELECT p.oid,
+                  nspname AS schema, proname AS name,
                   pg_get_function_identity_arguments(p.oid) AS arguments,
                   pg_get_function_arguments(p.oid) AS allargs,
                   pg_get_function_result(p.oid) AS returns,
@@ -260,6 +331,7 @@ class ProcDict(DbObjectDict):
             self.query = QUERY_PRE92
         for proc in self.fetch():
             sch, prc, arg = proc.key()
+            oid = proc.oid
             if hasattr(proc, 'allargs') and proc.allargs == proc.arguments:
                 del proc.allargs
             if hasattr(proc, 'proisagg'):
@@ -272,9 +344,11 @@ class ProcDict(DbObjectDict):
                     del proc.finalfunc
                 if proc.sortop == '0':
                     del proc.sortop
-                self[(sch, prc, arg)] = Aggregate(**proc.__dict__)
+                self.by_oid[oid] = self[sch, prc, arg] \
+                    = Aggregate(**proc.__dict__)
             else:
-                self[(sch, prc, arg)] = Function(**proc.__dict__)
+                self.by_oid[oid] = self[sch, prc, arg] \
+                    = Function(**proc.__dict__)
 
     def from_map(self, schema, infuncs):
         """Initalize the dictionary of functions by converting the input map
@@ -315,9 +389,25 @@ class ProcDict(DbObjectDict):
                 func.privileges = privileges_from_map(
                     infunc['privileges'], func.allprivs, func.owner)
 
-    def link_refs(self, dbeventtrigs):
-        """Connect event triggers to the functions executed
+    def find(self, func, args):
+        """Return a function given its name and arguments
 
+        :param func: name of the function, eventually with schema
+        :param args: list of type names
+
+        Return the function found, else None.
+        """
+        schema, name = split_schema_obj(func)
+        args = ', '.join(args)
+        return self.get((schema, name, args))
+
+    def link_refs(self, dbtypes, dbeventtrigs):
+        """Connect the functions to other objects
+
+        - Connect event triggers to the functions executed
+        - Connect defining functions to the type they define
+
+        :param dbtypes: dictionary of types
         :param dbeventtrigs: dictionary of event triggers
 
         Fills in the `event_triggers` list for each function by
@@ -331,84 +421,11 @@ class ProcDict(DbObjectDict):
                 func.event_triggers = []
             func.event_triggers.append(evttrg.name)
 
-    def diff_map(self, infuncs):
-        """Generate SQL to transform existing functions
-
-        :param infuncs: a YAML map defining the new functions
-        :return: list of SQL statements
-
-        Compares the existing function definitions, as fetched from
-        the catalogs, to the input map and generates SQL statements to
-        transform the functions accordingly.
-        """
-        stmts = []
-        created = False
-        # check input functions
-        for (sch, fnc, arg) in infuncs:
-            infunc = infuncs[(sch, fnc, arg)]
-            if isinstance(infunc, Aggregate):
-                continue
-            # does it exist in the database?
-            if (sch, fnc, arg) not in self:
-                if not hasattr(infunc, 'oldname'):
-                    # create new function
-                    stmts.append(infunc.create())
-                    created = True
-                else:
-                    stmts.append(self[(sch, fnc, arg)].rename(infunc))
-            else:
-                # check function objects
-                diff_stmts = self[(sch, fnc, arg)].diff_map(infunc)
-                for stmt in diff_stmts:
-                    if isinstance(stmt, list) and stmt:
-                        stmt = stmt[0]
-                    if isinstance(stmt, strtypes) and \
-                            stmt.startswith("CREATE "):
-                        created = True
-                        break
-                stmts.append(diff_stmts)
-
-        # check input aggregates
-        for (sch, fnc, arg) in infuncs:
-            infunc = infuncs[(sch, fnc, arg)]
-            if not isinstance(infunc, Aggregate):
-                continue
-            # does it exist in the database?
-            if (sch, fnc, arg) not in self:
-                if not hasattr(infunc, 'oldname'):
-                    # create new function
-                    stmts.append(infunc.create())
-                else:
-                    stmts.append(self[(sch, fnc, arg)].rename(infunc))
-            else:
-                # check function objects
-                stmts.append(self[(sch, fnc, arg)].diff_map(infunc))
-
-        # check existing functions
-        for (sch, fnc, arg) in self:
-            func = self[(sch, fnc, arg)]
-            # if missing, mark it for dropping
-            if (sch, fnc, arg) not in infuncs:
-                func.dropped = False
-
-        if created:
-            stmts.insert(0, "SET check_function_bodies = false")
-        return stmts
-
-    def _drop(self):
-        """Actually drop the functions
-
-        :return: SQL statements
-        """
-        stmts = []
-        for (sch, fnc, arg) in self:
-            func = self[(sch, fnc, arg)]
-            if isinstance(func, Aggregate) and hasattr(func, 'dropped'):
-                stmts.append(func.drop())
-
-        for (sch, fnc, arg) in self:
-            func = self[(sch, fnc, arg)]
-            if hasattr(func, 'dropped') and not hasattr(func, '_dep_type'):
-                stmts.append(func.drop())
-
-        return stmts
+        # TODO: this link is needed from map, not from sql.
+        # is this a pattern? I was assuming link_refs would have disappeared
+        # but I'm actually still maintaining them. Verify if they are always
+        # only used for from_map, not for from_catalog
+        for key in dbtypes:
+            t = dbtypes[key]
+            for f in t.find_defining_funcs(self):
+                f._defining = t

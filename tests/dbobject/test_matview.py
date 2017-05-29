@@ -22,7 +22,8 @@ class MatViewToMapTestCase(DatabaseToMapTestCase):
             self.skipTest('Only available on PG 9.3')
         stmts = [CREATE_TABLE, CREATE_STMT]
         dbmap = self.to_map(stmts)
-        expmap = {'definition': VIEW_DEFN, 'with_data': True}
+        expmap = {'definition': VIEW_DEFN, 'with_data': True,
+                  'depends_on': ['table t1']}
         assert dbmap['schema public']['materialized view mv1'] == expmap
 
     def test_map_view_comment(self):
@@ -41,7 +42,8 @@ class MatViewToMapTestCase(DatabaseToMapTestCase):
                  "CREATE INDEX idx1 ON mv1 (mc3)"]
         dbmap = self.to_map(stmts)
         expmap = {'definition': VIEW_DEFN, 'with_data': True,
-                  'indexes': {'idx1': {'keys': ['mc3']}}}
+                  'indexes': {'idx1': {'keys': ['mc3']}},
+                  'depends_on': ['table t1']}
         assert dbmap['schema public']['materialized view mv1'] == expmap
 
 
@@ -57,7 +59,8 @@ class MatViewToSqlTestCase(InputMapToSqlTestCase):
             'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}},
                         {'c3': {'type': 'integer'}}]}})
         inmap['schema public'].update({'materialized view mv1': {
-            'definition': "SELECT c1, c3 * 2 AS mc3 FROM t1"}})
+            'definition': "SELECT c1, c3 * 2 AS mc3 FROM t1",
+            'depends_on': ['table t1']}})
         sql = self.to_sql(inmap)
         assert fix_indent(sql[0]) == "CREATE TABLE t1 (c1 integer, " \
             "c2 text, c3 integer)"

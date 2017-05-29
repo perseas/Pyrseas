@@ -12,6 +12,7 @@ import re
 
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
 from pyrseas.dbobject import quote_id, split_schema_obj, commentable
+from pyrseas.dbobject.index import Index
 
 
 ACTIONS = {'r': 'restrict', 'c': 'cascade', 'n': 'set null',
@@ -23,6 +24,7 @@ class Constraint(DbSchemaObject):
        unique constraint"""
 
     keylist = ['schema', 'table', 'name']
+    catalog = 'pg_constraint'
 
     def key_columns(self):
         """Return comma-separated list of key column names
@@ -30,6 +32,10 @@ class Constraint(DbSchemaObject):
         :return: string
         """
         return ", ".join([quote_id(col) for col in self.keycols])
+
+    def create(self):
+        # TODO: is add really needed?
+        return self.add()
 
     @commentable
     def add(self):
@@ -57,11 +63,8 @@ class Constraint(DbSchemaObject):
 
         :return: SQL statement
         """
-        if not hasattr(self, 'dropped') or not self.dropped:
-            self.dropped = True
-            return "ALTER TABLE %s DROP CONSTRAINT %s" % (
-                self._table.qualname(), quote_id(self.name))
-        return []
+        return ["ALTER %s %s DROP CONSTRAINT %s" % (
+            self._table.objtype, self._table.qualname(), quote_id(self.name))]
 
     def comment(self):
         """Return SQL statement to create COMMENT on constraint
@@ -71,21 +74,36 @@ class Constraint(DbSchemaObject):
         return "COMMENT ON CONSTRAINT %s ON %s IS %s" % (
             quote_id(self.name), self._table.qualname(), self._comment_text())
 
+    def get_implied_deps(self, db):
+        from .table import Table
+        from .dbtype import Domain
+        deps = super(Constraint, self).get_implied_deps(db)
+
+        if isinstance(self._table, Table):
+            deps.add(db.tables[self.schema, self.table])
+        elif isinstance(self._table, Domain):
+            deps.add(db.types[self.schema, self.table])
+        else:
+            raise KeyError("Constraint '%s.%s' on unknown type/class" % (
+                self.schema, self.name))
+
+        return deps
+
 
 class CheckConstraint(Constraint):
     "A check constraint definition"
 
-    objtype = "CHECK"
+    @property
+    def objtype(self):
+        return "CHECK"
 
-    def to_map(self, dbcols):
+    def to_map(self, db, dbcols):
         """Convert a check constraint definition to a YAML-suitable format
 
         :param dbcols: dictionary of dbobject columns
         :return: dictionary
         """
-        dct = self._base_map()
-        if '_table' in dct:
-            del dct['_table']
+        dct = self._base_map(db)
         if 'target' in dct:
             del dct['target']
         if dbcols:
@@ -99,11 +117,21 @@ class CheckConstraint(Constraint):
 
         :return: SQL statement
         """
+        # Don't generate inherited constraints
+        if getattr(self, 'inherited', None):
+            return []
+
         return ["ALTER %s %s ADD CONSTRAINT %s %s (%s)" % (
             self._table.objtype, self._table.qualname(), quote_id(self.name),
             self.objtype, self.expression)]
 
-    def diff_map(self, inchk):
+    def drop(self):
+        if getattr(self, 'inherited', None):
+            return []
+        else:
+            return super(CheckConstraint, self).drop()
+
+    def alter(self, inchk):
         """Generate SQL to transform an existing CHECK constraint
 
         :param inchk: a YAML map defining the new CHECK constraint
@@ -131,23 +159,26 @@ class CheckConstraint(Constraint):
 class PrimaryKey(Constraint):
     "A primary key constraint definition"
 
-    objtype = "PRIMARY KEY"
+    @property
+    def objtype(self):
+        return "PRIMARY KEY"
 
-    def to_map(self, dbcols):
+    def to_map(self, db, dbcols):
         """Convert a primary key definition to a YAML-suitable format
 
         :param dbcols: dictionary of dbobject columns
         :return: dictionary
         """
-        dct = self._base_map()
+        dct = self._base_map(db)
         if dct['access_method'] == 'btree':
             del dct['access_method']
-        del dct['_table']
+        if '_table' in dct:
+            del dct['_table']
         dct['columns'] = [dbcols[k - 1] for k in self.keycols]
         del dct['keycols']
         return {self.name: dct}
 
-    def diff_map(self, inpk):
+    def alter(self, inpk):
         """Generate SQL to transform an existing primary key
 
         :param inpk: a YAML map defining the new primary key
@@ -160,8 +191,8 @@ class PrimaryKey(Constraint):
         stmts = []
         if hasattr(inpk, 'keycols') and hasattr(self, 'keycols') \
            and hasattr(self, '_table') and hasattr(self._table, 'columns') \
-           and hasattr(self._table,'primary_key') and \
-           hasattr(self._table.primary_key,'keycols'):
+           and hasattr(self._table, 'primary_key') and \
+           hasattr(self._table.primary_key, 'keycols'):
             selfcols = {i.number: i.name for i in self._table.columns}
             selfpk = [selfcols[i] for i in self._table.primary_key.keycols]
             if inpk.keycols != selfpk:
@@ -186,7 +217,9 @@ class PrimaryKey(Constraint):
 class ForeignKey(Constraint):
     "A foreign key constraint definition"
 
-    objtype = "FOREIGN KEY"
+    @property
+    def objtype(self):
+        return "FOREIGN KEY"
 
     def ref_columns(self):
         """Return comma-separated list of reference column names
@@ -195,14 +228,15 @@ class ForeignKey(Constraint):
         """
         return ", ".join(self.ref_cols)
 
-    def to_map(self, dbcols, refcols):
+    def to_map(self, db, dbcols, refcols):
         """Convert a foreign key definition to a YAML-suitable format
 
         :param dbcols: dictionary of dbobject columns
         :return: dictionary
         """
-        dct = self._base_map()
-        del dct['_table']
+        dct = self._base_map(db)
+        if '_table' in dct:
+            del dct['_table']
         dct['columns'] = [dbcols[k - 1] for k in self.keycols]
         del dct['keycols']
         refsch = hasattr(self, 'ref_schema') and self.ref_schema or self.schema
@@ -254,7 +288,7 @@ class ForeignKey(Constraint):
             actions += " INITIALLY DEFERRED"
         return {'match': match, 'actions': actions}
 
-    def diff_map(self, infk):
+    def alter(self, infk):
         """Generate SQL to transform an existing foreign key
 
         :param infk: a YAML map defining the new foreign key
@@ -265,7 +299,6 @@ class ForeignKey(Constraint):
         input.
         """
         stmts = []
-
         if hasattr(infk, 'keycols') and hasattr(self, 'keycols') \
            and hasattr(self, '_table') and hasattr(self._table, 'columns') \
            and hasattr(self, 'references') \
@@ -295,28 +328,69 @@ class ForeignKey(Constraint):
         stmts.append(self.diff_description(infk))
         return stmts
 
+    def get_implied_deps(self, db):
+        deps = super(ForeignKey, self).get_implied_deps(db)
+
+        # add the table we reference
+        deps.add(self.references)
+
+        # A fkey needs a pkey, unique constraint or complete unique index
+        # defined on the fields it references to be restored.
+        idx = self._find_referenced_index(db, self.references)
+        if idx:
+            deps.add(idx)
+
+        return deps
+
+    def _find_referenced_index(self, db, ref_table):
+        pkey = getattr(ref_table, 'primary_key', None)
+        if pkey:
+            if (hasattr(pkey, 'keycols') and pkey.keycols == self.ref_cols) \
+               or (hasattr(pkey, 'col_names') and
+                   pkey.col_names == self.ref_cols):
+                return pkey
+
+        if hasattr(ref_table, 'unique_constraints'):
+            for uc in list(ref_table.unique_constraints.values()):
+                if uc.keycols == self.ref_cols:
+                    return uc
+
+        if hasattr(ref_table, 'indexes'):
+            if isinstance(self.ref_cols[0], int):
+                col_names = [ref_table.columns[i-1].name
+                             for i in self.ref_cols]
+            else:
+                col_names = self.ref_cols
+
+            for idx in list(ref_table.indexes.values()):
+                if getattr(idx, 'unique', False) \
+                   and not getattr(idx, 'predicate', None) \
+                   and idx.keys == col_names:
+                    return idx
+
 
 class UniqueConstraint(Constraint):
     "A unique constraint definition"
 
-    objtype = "UNIQUE"
+    @property
+    def objtype(self):
+        return "UNIQUE"
 
-    def to_map(self, dbcols):
+    def to_map(self, db, dbcols):
         """Convert a unique constraint definition to a YAML-suitable format
 
         :param dbcols: dictionary of dbobject columns
         :return: dictionary
         """
-        dct = self._base_map()
+        dct = self._base_map(db)
         if dct['access_method'] == 'btree':
             del dct['access_method']
-        del dct['_table']
         dct['columns'] = []
         dct['columns'] = [dbcols[k - 1] for k in self.keycols]
         del dct['keycols']
         return {self.name: dct}
 
-    def diff_map(self, inuc):
+    def alter(self, inuc):
         """Generate SQL to transform an existing unique constraint
 
         :param inuc: a YAML map defining the new unique constraint
@@ -350,7 +424,8 @@ class UniqueConstraint(Constraint):
         return stmts
 
 MATCHTYPES_PRE93 = {'f': 'full', 'p': 'partial', 'u': 'simple'}
-COMMON_ATTRS = ['access_method', 'tablespace', 'description', 'cluster']
+COMMON_ATTRS = ['access_method', 'tablespace', 'description', 'cluster',
+                'depends_on']
 
 
 class ConstraintDict(DbObjectDict):
@@ -358,7 +433,8 @@ class ConstraintDict(DbObjectDict):
 
     cls = Constraint
     query = \
-        """SELECT nspname AS schema,
+        """SELECT c.oid,
+                  nspname AS schema,
                   CASE WHEN contypid = 0 THEN conrelid::regclass::text
                        ELSE contypid::regtype::text END AS table,
                   conname AS name,
@@ -369,7 +445,8 @@ class ConstraintDict(DbObjectDict):
                   consrc AS expression, confupdtype AS on_update,
                   confdeltype AS on_delete, confmatchtype AS match,
                   amname AS access_method, spcname AS tablespace,
-                  indisclustered AS cluster, coninhcount > 0 AS inherited,
+                  indisclustered AS cluster,
+                  coninhcount > 0 AS inherited,
                   obj_description(c.oid, 'pg_constraint') AS description
            FROM pg_constraint c
                 JOIN pg_namespace ON (connamespace = pg_namespace.oid)
@@ -383,7 +460,7 @@ class ConstraintDict(DbObjectDict):
              AND contypid NOT IN (SELECT objid FROM pg_depend
                                    WHERE deptype = 'e'
                                      AND classid = 'pg_type'::regclass)
-           ORDER BY schema, 2, name"""
+           ORDER BY schema, "table", name"""
     match_types = {'f': 'full', 'p': 'partial', 's': 'simple'}
 
     def _from_catalog(self):
@@ -392,6 +469,7 @@ class ConstraintDict(DbObjectDict):
             self.match_types = MATCHTYPES_PRE93
         for constr in self.fetch():
             constr.unqualify()
+            oid = constr.oid
             sch, tbl, cns = constr.key()
             sch, tbl = split_schema_obj('%s.%s' % (sch, tbl))
             constr_type = constr.type
@@ -402,9 +480,11 @@ class ConstraintDict(DbObjectDict):
                 del constr.on_delete
                 del constr.match
             if constr_type == 'c':
-                self[(sch, tbl, cns)] = CheckConstraint(**constr.__dict__)
+                self.by_oid[oid] = self[(sch, tbl, cns)] \
+                    = CheckConstraint(**constr.__dict__)
             elif constr_type == 'p':
-                self[(sch, tbl, cns)] = PrimaryKey(**constr.__dict__)
+                self.by_oid[oid] = self[(sch, tbl, cns)] \
+                    = PrimaryKey(**constr.__dict__)
             elif constr_type == 'f':
                 # normalize reference schema/table:
                 # if reftbl is qualified, split the schema out,
@@ -425,9 +505,11 @@ class ConstraintDict(DbObjectDict):
                 reftbl = constr.ref_table
                 (constr.ref_schema, constr.ref_table) = split_schema_obj(
                     reftbl)
-                self[(sch, tbl, cns)] = ForeignKey(**constr.__dict__)
+                self.by_oid[oid] = self[(sch, tbl, cns)] \
+                    = ForeignKey(**constr.__dict__)
             elif constr_type == 'u':
-                self[(sch, tbl, cns)] = UniqueConstraint(**constr.__dict__)
+                self.by_oid[oid] = self[(sch, tbl, cns)] \
+                    = UniqueConstraint(**constr.__dict__)
 
     def from_map(self, table, inconstrs, target='', rtables=None):
         """Initialize the dictionary of constraints by converting the input map
@@ -447,10 +529,11 @@ class ConstraintDict(DbObjectDict):
                     exc.args = ("Constraint '%s' is missing expression"
                                 % cns, )
                     raise
+                check.depends_on.extend(val.get('depends_on', ()))
                 if check.expression[0] == '(' and check.expression[-1] == ')':
                     check.expression = check.expression[1:-1]
                 if 'columns' in val:
-                    check.keycols = val['columns']
+                    check.col_names = val['columns']
                 if target:
                     check.target = target
                 if 'description' in val:
@@ -478,6 +561,7 @@ class ConstraintDict(DbObjectDict):
                 fkey = ForeignKey(table=table.name, schema=table.schema,
                                   name=cns)
                 val = fkeys[cns]
+                fkey.depends_on.extend(val.get('depends_on', ()))
                 if 'on_update' in val:
                     act = val['on_update']
                     if act.lower() not in list(ACTIONS.values()):
@@ -545,52 +629,22 @@ class ConstraintDict(DbObjectDict):
                         setattr(unq, attr, value)
                 self[(table.schema, table.name, cns)] = unq
 
-    def diff_map(self, inconstrs):
-        """Generate SQL to transform existing constraints
+    def link_refs(self, db):
+        for c in list(self.values()):
+            if isinstance(c, ForeignKey):
+                # The constraint depends on an index. Which one is accidental:
+                # it depends e.g. on which suitable index was available when
+                # the constraint was defined. So here we drop the dependency
+                # on the introspected one, while in get_implied_deps we give
+                # our best shot to suggest one to depend on. This way we don't
+                # need expliciting the dependency in yaml.
+                c.depends_on = [obj for obj in c.depends_on
+                                if not isinstance(obj, Index)]
 
-        :param inconstrs: a YAML map defining the new constraints
-        :return: list of SQL statements
-
-        Compares the existing constraint definitions, as fetched from
-        the catalogs, to the input map and generates SQL statements to
-        transform the constraints accordingly.
-        """
-        stmts = []
-        # foreign keys are processed in a second pass
-        # constraints cannot be renamed
-        for turn in (1, 2):
-            # check database constraints
-            for (sch, tbl, cns) in self:
-                constr = self[(sch, tbl, cns)]
-                # ignore inherited constraints
-                if getattr(constr, 'inherited', False):
-                    continue
-                if isinstance(constr, ForeignKey):
-                    if turn == 1:
-                        continue
-                elif turn == 2:
-                    continue
-                # if missing, drop it
-                if (sch, tbl, cns) not in inconstrs \
-                        and not hasattr(constr, 'target'):
-                    stmts.append(constr.drop())
-            # check input constraints
-            for (sch, tbl, cns) in inconstrs:
-                inconstr = inconstrs[(sch, tbl, cns)]
-                # ignore inherited constraints, take 2
-                if getattr(inconstr, 'inherited', False):
-                    continue
-                if isinstance(inconstr, ForeignKey):
-                    if turn == 1:
-                        continue
-                elif turn == 2:
-                    continue
-                # does it exist in the database?
-                if (sch, tbl, cns) not in self:
-                    # add the new constraint
-                    stmts.append(inconstr.add())
-                else:
-                    # check constraint objects
-                    stmts.append(self[(sch, tbl, cns)].diff_map(inconstr))
-
-        return stmts
+            if isinstance(c, (PrimaryKey, UniqueConstraint)):
+                # The constraint creates implicitly an index, so it depends on
+                # any extra dependencies the index has. These may include e.g.
+                # an operator class for a non-builtin type.
+                idx = db.indexes.get((c.schema, c.table, c.name))
+                if idx:
+                    c.depends_on.extend(idx.depends_on)

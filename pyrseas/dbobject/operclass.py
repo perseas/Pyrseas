@@ -7,15 +7,19 @@
     DbSchemaObject and OperatorClassDict derived from DbObjectDict.
 """
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
-from pyrseas.dbobject import commentable, ownable
+from pyrseas.dbobject import commentable, ownable, split_func_args
 
 
 class OperatorClass(DbSchemaObject):
     """An operator class"""
 
     keylist = ['schema', 'name', 'index_method']
-    objtype = "OPERATOR CLASS"
     single_extern_file = True
+    catalog = 'pg_opclass'
+
+    @property
+    def objtype(self):
+        return "OPERATOR CLASS"
 
     def extern_key(self):
         """Return the key to be used in external maps for this operator
@@ -32,12 +36,12 @@ class OperatorClass(DbSchemaObject):
         """
         return "%s USING %s" % (self.qualname(), self.index_method)
 
-    def to_map(self, no_owner):
+    def to_map(self, db, no_owner):
         """Convert operator class to a YAML-suitable format
 
         :return: dictionary
         """
-        dct = self._base_map(no_owner)
+        dct = self._base_map(db, no_owner)
         if self.name == self.family:
             del dct['family']
         return dct
@@ -61,8 +65,37 @@ class OperatorClass(DbSchemaObject):
             clauses.append("STORAGE %s" % self.storage)
         return ["CREATE OPERATOR CLASS %s\n    %sFOR TYPE %s USING %s "
                 "AS\n    %s" % (
-                self.qualname(), dflt, self.type, self.index_method,
-                ',\n    ' .join(clauses))]
+                    self.qualname(), dflt, self.type, self.index_method,
+                    ',\n    ' .join(clauses))]
+
+    def get_implied_deps(self, db):
+        deps = super(OperatorClass, self).get_implied_deps(db)
+
+        type = db.types.find(self.type)
+        if type:
+            deps.add(type)
+
+        if getattr(self, 'storage', None):
+            type = db.types.find(self.storage)
+            if type:
+                deps.add(type)
+
+        for f in self.functions.values():
+            f = db.functions.find(*split_func_args(f))
+            if f is not None:
+                deps.add(f)
+
+        for f in self.operators.values():
+            f = db.operators.find(f)
+            if f is not None:
+                deps.add(f)
+
+        if getattr(self, 'family', None):
+            f = db.operfams.find(self.family, self.index_method)
+            if f is not None:
+                deps.add(f)
+
+        return deps
 
 
 class OperatorClassDict(DbObjectDict):
@@ -70,7 +103,8 @@ class OperatorClassDict(DbObjectDict):
 
     cls = OperatorClass
     query = \
-        """SELECT nspname AS schema, opcname AS name, rolname AS owner,
+        """SELECT o.oid,
+                  nspname AS schema, opcname AS name, rolname AS owner,
                   amname AS index_method, opfname AS family,
                   opcintype::regtype AS type, opcdefault AS default,
                   opckeytype::regtype AS storage,
@@ -120,7 +154,8 @@ class OperatorClassDict(DbObjectDict):
         for opclass in self.fetch():
             if opclass.storage == '-':
                 del opclass.storage
-            self[opclass.key()] = OperatorClass(**opclass.__dict__)
+            self.by_oid[opclass.oid] = self[opclass.key()] \
+                = OperatorClass(**opclass.__dict__)
         opers = self.dbconn.fetchall(self.opquery)
         self.dbconn.rollback()
         for (sch, opc, idx, strat, oper) in opers:
@@ -143,7 +178,7 @@ class OperatorClassDict(DbObjectDict):
         :param inopcls: YAML map defining the operator classes
         """
         for key in inopcls:
-            if not key.startswith('operator class ') or not ' using ' in key:
+            if not key.startswith('operator class ') or ' using ' not in key:
                 raise KeyError("Unrecognized object type: %s" % key)
             pos = key.rfind(' using ')
             opc = key[15:pos]  # 15 = len('operator class ')
@@ -159,49 +194,3 @@ class OperatorClassDict(DbObjectDict):
                 opclass.oldname = inopcl['oldname']
             if 'description' in inopcl:
                 opclass.description = inopcl['description']
-
-    def diff_map(self, inopcls):
-        """Generate SQL to transform existing operator classes
-
-        :param inopcls: a YAML map defining the new operator classes
-        :return: list of SQL statements
-
-        Compares the existing operator class definitions, as fetched
-        from the catalogs, to the input map and generates SQL
-        statements to transform the operator classes accordingly.
-        """
-        stmts = []
-        # check input operator classes
-        for (sch, opc, idx) in inopcls:
-            inoper = inopcls[(sch, opc, idx)]
-            # does it exist in the database?
-            if (sch, opc, idx) not in self:
-                if not hasattr(inoper, 'oldname'):
-                    # create new operator
-                    stmts.append(inoper.create())
-                else:
-                    stmts.append(self[(sch, opc, idx)].rename(inoper))
-            else:
-                # check operator objects
-                stmts.append(self[(sch, opc, idx)].diff_map(inoper))
-
-        # check existing operators
-        for (sch, opc, idx) in self:
-            oper = self[(sch, opc, idx)]
-            # if missing, mark it for dropping
-            if (sch, opc, idx) not in inopcls:
-                oper.dropped = False
-
-        return stmts
-
-    def _drop(self):
-        """Actually drop the operator classes
-
-        :return: SQL statements
-        """
-        stmts = []
-        for (sch, opc, idx) in self:
-            oper = self[(sch, opc, idx)]
-            if hasattr(oper, 'dropped'):
-                stmts.append(oper.drop())
-        return stmts

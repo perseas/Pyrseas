@@ -42,7 +42,8 @@ class ExternalFilenameMapTestCase(DatabaseToMapTestCase):
         expmap = {'cast (smallint as boolean)': {
             'function': 'int2_bool(smallint)', 'context': 'explicit',
             'method': 'function'}, 'cast (d1 as integer)':
-            {'context': 'implicit', 'method': 'inout'}}
+            {'context': 'implicit', 'method': 'inout',
+             'depends_on': ['domain d1']}}
         assert self.yaml_load('cast.yaml') == expmap
 
     def test_map_extension(self):
@@ -56,8 +57,8 @@ class ExternalFilenameMapTestCase(DatabaseToMapTestCase):
             'schema': 'pg_catalog', 'version': '1.0',
             'description': 'PL/pgSQL procedural language'},
             'extension pg_trgm': {'schema': 'public', 'version': TRGM_VERS,
-            'description': "text similarity measurement and index searching "
-            "based on trigrams"}}
+                                  'description': "text similarity measurement "
+                                  "and index searching based on trigrams"}}
         assert self.yaml_load('extension.yaml') == expmap
 
     def test_map_fd_wrappers(self):
@@ -101,8 +102,9 @@ class ExternalFilenameMapTestCase(DatabaseToMapTestCase):
                     multiple_files=True)
         assert self.yaml_load('conversion.yaml', 'schema.public') == {
             'conversion conv1': {'source_encoding': 'LATIN1',
-            'dest_encoding': 'UTF8', 'function': 'iso8859_1_to_utf8',
-            'description': 'A test conversion'}}
+                                 'dest_encoding': 'UTF8',
+                                 'function': 'iso8859_1_to_utf8',
+                                 'description': 'A test conversion'}}
 
     def test_map_functions(self):
         "Map functions"
@@ -143,8 +145,9 @@ class ExternalFilenameMapTestCase(DatabaseToMapTestCase):
                   'operator =(integer, integer)': {'procedure': 'int4eq'},
                   'operator >(integer, integer)': {'procedure': 'int4gt'}}
         opcmap = {'operator class oc1 using btree': {
-            'type': 'integer', 'operators': {1: '<(integer,integer)',
-            3: '=(integer,integer)', 5: '>(integer,integer)'},
+            'type': 'integer', 'operators': {
+                1: '<(integer,integer)', 3: '=(integer,integer)',
+                5: '>(integer,integer)'},
             'functions': {1: 'btint4cmp(integer,integer)'}}}
         assert self.yaml_load('operator.yaml', 'schema.public') == oprmap
         assert self.yaml_load('operator_class.yaml', 'schema.public') == opcmap
@@ -173,7 +176,7 @@ class ExternalFilenameMapTestCase(DatabaseToMapTestCase):
             {'c1': {'type': 'integer'}}, {'c2': {'type': 'integer'}},
             {'c3': {'type': 'text'}}],
             'foreign_keys': {'t2_c2_fkey': {'columns': ['c2'], 'references': {
-            'schema': 'public', 'table': 't1', 'columns': ['c1']}}}}}
+                'schema': 'public', 'table': 't1', 'columns': ['c1']}}}}}
         assert self.yaml_load('table.t1.yaml', 'schema.public') == expmap1
         assert self.yaml_load('table.t2.yaml', 'schema.public') == expmap2
 
@@ -187,7 +190,7 @@ class ExternalFilenameMapTestCase(DatabaseToMapTestCase):
         expmap = {'table account_transfers_with_extra_padding_1': {'columns': [
             {'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}]},
             'table account_transfers_with_extra_padding_2': {'columns': [
-            {'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}]}}
+                {'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}]}}
         assert self.yaml_load('table.account_transfers_with_extra_pad.yaml',
                               'schema.public') == expmap
 
@@ -205,9 +208,10 @@ class ExternalFilenameMapTestCase(DatabaseToMapTestCase):
             {'text search configuration tsc1': {'parser': 'tsp1'},
              'text search configuration tsc2': {'parser': 'tsp1'}}
         assert self.yaml_load('text_search_parser.yaml', 'schema.public') == {
-            'text search parser tsp1': {'start': 'prsd_start',
-            'gettoken': 'prsd_nexttoken', 'end': 'prsd_end',
-            'lextypes': 'prsd_lextype', 'headline': 'prsd_headline'}}
+            'text search parser tsp1': {
+                'start': 'prsd_start', 'gettoken': 'prsd_nexttoken',
+                'end': 'prsd_end', 'lextypes': 'prsd_lextype',
+                'headline': 'prsd_headline'}}
         self.db.execute(DROP_TSC)
         self.db.execute_commit(DROP_TSP)
 
@@ -235,7 +239,7 @@ class ExternalFilenameTestCase(PyrseasTestCase):
 
     def test_function(self):
         "Map a function"
-        obj = Function(schema='public', name="Weird/Or-what?")
+        obj = Function(name="Weird/Or-what?")
         assert obj.extern_filename() == 'function.weird_or_what_.yaml'
 
     def test_schema(self):
@@ -251,20 +255,20 @@ class ExternalFilenameTestCase(PyrseasTestCase):
 
     def test_table(self):
         "Map a table"
-        obj = Table(schema='public', name="Weird/Or-what?HOW.WeiRD")
+        obj = Table(name="Weird/Or-what?HOW.WeiRD")
         assert obj.extern_filename() == 'table.weird_or_what_how_weird.yaml'
 
     def test_table_unicode(self):
         "Map a table with Unicode characters"
-        obj = Table(schema='public', name="Fundação\\Größe таблица")
+        obj = Table(name="Fundação\\Größe таблица")
         assert obj.extern_filename() == 'table.fundação_größe_таблица.yaml'
 
     def test_sequence(self):
         "Map a sequence"
-        obj = Sequence(schema='public', name="Weird/Or-what?_seq")
+        obj = Sequence(name="Weird/Or-what?_seq")
         assert obj.extern_filename() == 'sequence.weird_or_what__seq.yaml'
 
     def test_view(self):
         "Map a view"
-        obj = View(schema='public', name="Weirder/Don't You Think?")
+        obj = View(name="Weirder/Don't You Think?")
         assert obj.extern_filename() == 'view.weirder_don_t_you_think_.yaml'

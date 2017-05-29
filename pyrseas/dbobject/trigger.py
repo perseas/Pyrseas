@@ -7,7 +7,7 @@
     DbSchemaObject, and TriggerDict derived from DbObjectDict.
 """
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
-from pyrseas.dbobject import quote_id, commentable
+from pyrseas.dbobject import quote_id, commentable, split_schema_obj
 
 EXEC_PROC = 'EXECUTE PROCEDURE '
 EVENT_TYPES = ['INSERT', 'UPDATE', 'DELETE', 'TRUNCATE']
@@ -17,7 +17,7 @@ class Trigger(DbSchemaObject):
     """A procedural language trigger"""
 
     keylist = ['schema', 'table', 'name']
-    objtype = "TRIGGER"
+    catalog = 'pg_trigger'
 
     def identifier(self):
         """Returns a full identifier for the trigger
@@ -26,13 +26,12 @@ class Trigger(DbSchemaObject):
         """
         return "%s ON %s" % (quote_id(self.name), self._table.qualname())
 
-    def to_map(self):
+    def to_map(self, db):
         """Convert a trigger to a YAML-suitable format
 
         :return: dictionary
         """
-        dct = self._base_map()
-        del dct['_table']
+        dct = self._base_map(db)
         if hasattr(self, 'columns'):
             dct['columns'] = [self._table.column_names()[int(k) - 1]
                               for k in self.columns.split()]
@@ -62,9 +61,9 @@ class Trigger(DbSchemaObject):
             cond = "\n    WHEN (%s)" % self.condition
         return ["CREATE %sTRIGGER %s\n    %s %s ON %s%s\n    FOR EACH %s"
                 "%s\n    EXECUTE PROCEDURE %s" % (
-                constr, quote_id(self.name), self.timing.upper(), evts,
-                self._table.qualname(), defer,
-                self.level.upper(), cond, self.procedure)]
+                    constr, quote_id(self.name), self.timing.upper(), evts,
+                    self._table.qualname(), defer,
+                    self.level.upper(), cond, self.procedure)]
 
     def diff_map(self, intrg):
         """Generate SQL to transform an existing trigger
@@ -78,7 +77,7 @@ class Trigger(DbSchemaObject):
         """
         stmts = []
         attrs = ['constraint', 'deferrable', 'initially_deferred',
-                'update', 'condition', 'procedure', 'timing', 'level']
+                 'update', 'condition', 'procedure', 'timing', 'level']
 
         same = True
         for attr in attrs:
@@ -99,8 +98,29 @@ class Trigger(DbSchemaObject):
 
         return stmts
 
+    def get_implied_deps(self, db):
+        deps = super(Trigger, self).get_implied_deps(db)
+
+        deps.add(db.tables[self.schema, self.table])
+
+        # short-circuit augment triggers
+        if hasattr(self, '_iscfg'):
+            return deps
+
+        # the trigger procedure can have arguments, but the trigger definition
+        # has always none (they are accessed through `tg_argv`).
+        # TODO: this breaks if a function name contains a '('
+        # (another case for a robust lookup function in db)
+        fschema, fname = split_schema_obj(self.procedure, self.schema)
+        fname, _ = fname.split('(', 1)  # implicitly assert there is a (
+        if not fname.startswith('tsvector_update_trigger'):
+            deps.add(db.functions[fschema, fname, ''])
+
+        return deps
+
 QUERY_PRE90 = \
-    """SELECT nspname AS schema, relname AS table,
+    """SELECT t.oid,
+              nspname AS schema, relname AS table,
               tgname AS name, tgisconstraint AS constraint,
               tgdeferrable AS deferrable,
               tginitdeferred AS initially_deferred,
@@ -114,7 +134,7 @@ QUERY_PRE90 = \
             LEFT JOIN pg_constraint cn ON (tgconstraint = cn.oid)
        WHERE contype != 'f' OR contype IS NULL
          AND (nspname != 'pg_catalog' AND nspname != 'information_schema')
-       ORDER BY 1, 2, 3"""
+       ORDER BY schema, "table", name"""
 
 
 class TriggerDict(DbObjectDict):
@@ -122,7 +142,8 @@ class TriggerDict(DbObjectDict):
 
     cls = Trigger
     query = \
-        """SELECT nspname AS schema, relname AS table,
+        """SELECT t.oid,
+                  nspname AS schema, relname AS table,
                   tgname AS name, pg_get_triggerdef(t.oid) AS definition,
                   CASE WHEN contype = 't' THEN true ELSE false END AS
                        constraint,
@@ -137,7 +158,7 @@ class TriggerDict(DbObjectDict):
                 LEFT JOIN pg_constraint cn ON (tgconstraint = cn.oid)
            WHERE NOT tgisinternal
              AND (nspname != 'pg_catalog' AND nspname != 'information_schema')
-           ORDER BY 1, 2, 3"""
+           ORDER BY schema, "table", name"""
 
     def _from_catalog(self):
         """Initialize the dictionary of triggers by querying the catalogs"""
@@ -161,10 +182,10 @@ class TriggerDict(DbObjectDict):
                 trig.condition = trig.definition[
                     trig.definition.index('WHEN (') + 6:
                     trig.definition.index(') EXECUTE PROCEDURE')]
-            trig.procedure = trig.definition[trig.definition.index(EXEC_PROC)
-                                             + len(EXEC_PROC):]
+            trig.procedure = trig.definition[trig.definition.index(EXEC_PROC) +
+                                             len(EXEC_PROC):]
             del trig.definition
-            self[trig.key()] = trig
+            self.by_oid[trig.oid] = self[trig.key()] = trig
 
     def from_map(self, table, intriggers):
         """Initalize the dictionary of triggers by converting the input map
@@ -186,37 +207,3 @@ class TriggerDict(DbObjectDict):
                 trig.oldname = intrig['oldname']
             if 'description' in intrig:
                 trig.description = intrig['description']
-
-    def diff_map(self, intriggers):
-        """Generate SQL to transform existing triggers
-
-        :param intriggers: a YAML map defining the new triggers
-        :return: list of SQL statements
-
-        Compares the existing trigger definitions, as fetched from
-        the catalogs, to the input map and generates SQL statements to
-        transform the triggers accordingly.
-        """
-        stmts = []
-        # check input triggers
-        for (sch, tbl, trg) in intriggers:
-            intrig = intriggers[(sch, tbl, trg)]
-            # does it exist in the database?
-            if (sch, tbl, trg) not in self:
-                if not hasattr(intrig, 'oldname'):
-                    # create new trigger
-                    stmts.append(intrig.create())
-                else:
-                    stmts.append(self[(sch, tbl, trg)].rename(intrig))
-            else:
-                # check trigger objects
-                stmts.append(self[(sch, tbl, trg)].diff_map(intrig))
-
-        # check existing triggers
-        for (sch, tbl, trg) in self:
-            trig = self[(sch, tbl, trg)]
-            # if missing, drop them
-            if (sch, tbl, trg) not in intriggers:
-                    stmts.append(trig.drop())
-
-        return stmts

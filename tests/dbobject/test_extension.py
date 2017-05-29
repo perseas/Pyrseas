@@ -31,8 +31,8 @@ class ExtensionToMapTestCase(DatabaseToMapTestCase):
             self.skipTest('Only available on PG 9.1')
         dbmap = self.to_map([CREATE_STMT])
         assert 'type gtrgm' not in dbmap['schema public']
-        assert not 'operator %(text, text)' in dbmap['schema public']
-        assert not 'function show_trgm(text)' in dbmap['schema public']
+        assert 'operator %(text, text)' not in dbmap['schema public']
+        assert 'function show_trgm(text)' not in dbmap['schema public']
 
     def test_map_lang_extension(self):
         "Map a procedural language as an extension"
@@ -42,7 +42,7 @@ class ExtensionToMapTestCase(DatabaseToMapTestCase):
         assert dbmap['extension plperl'] == {
             'schema': 'pg_catalog', 'version': '1.0',
             'description': "PL/Perl procedural language"}
-        assert not 'language plperl' in dbmap
+        assert 'language plperl' not in dbmap
 
     def test_map_extension_schema(self):
         "Map an existing extension"
@@ -107,14 +107,15 @@ class ExtensionToSqlTestCase(InputMapToSqlTestCase):
             self.skipTest('Only available on PG 9.1')
         inmap = self.std_map()
         inmap.update({'extension plperl': {'schema': 'pg_catalog',
-                      'description': "PL/Perl procedural language"}})
+                                           'description':
+                                           "PL/Perl procedural language"}})
         inmap['schema public'].update({'function f1()': {
             'language': 'plperl', 'returns': 'text',
             'source': "return \"dummy\";"}})
         sql = self.to_sql(inmap)
         assert fix_indent(sql[0]) == "CREATE EXTENSION plperl"
-        # skip over COMMENT and SET statements
-        assert fix_indent(sql[3]) == "CREATE FUNCTION f1() RETURNS text " \
+        # skip over COMMENT statement
+        assert fix_indent(sql[2]) == "CREATE FUNCTION f1() RETURNS text " \
             "LANGUAGE plperl AS $_$return \"dummy\";$_$"
 
     def test_comment_extension(self):

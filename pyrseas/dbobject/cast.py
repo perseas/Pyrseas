@@ -7,6 +7,7 @@
     CastDict derived from DbObjectDict.
 """
 from pyrseas.dbobject import DbObject, DbObjectDict, commentable
+from pyrseas.dbobject import split_func_args
 
 
 CONTEXTS = {'a': 'assignment', 'e': 'explicit', 'i': 'implicit'}
@@ -17,8 +18,8 @@ class Cast(DbObject):
     """A cast"""
 
     keylist = ['source', 'target']
-    objtype = "CAST"
     single_extern_file = True
+    catalog = 'pg_cast'
 
     def extern_key(self):
         """Return the key to be used in external maps for this cast
@@ -35,12 +36,12 @@ class Cast(DbObject):
         """
         return "(%s AS %s)" % (self.source, self.target)
 
-    def to_map(self, no_owner=False, no_privs=False):
+    def to_map(self, db, no_owner=False, no_privs=False):
         """Convert a cast to a YAML-suitable format
 
         :return: dictionary
         """
-        dct = self._base_map()
+        dct = self._base_map(db)
         del dct['name']
         dct['context'] = CONTEXTS[self.context]
         dct['method'] = METHODS[self.method]
@@ -67,13 +68,34 @@ class Cast(DbObject):
         return ["CREATE CAST (%s AS %s)%s%s" % (
                 self.source, self.target, with_clause, as_clause)]
 
+    def get_implied_deps(self, db):
+        deps = super(Cast, self).get_implied_deps(db)
+
+        # Types may be not found because they can be builtins
+        source = db.find_type(self.source)
+        if source:
+            deps.add(source)
+
+        target = db.find_type(self.target)
+        if target:
+            deps.add(target)
+
+        # The function instead we expect it exists
+        if self.method == 'f':
+            f = db.functions.find(*split_func_args(self.function))
+            if f is not None:
+                deps.add(f)
+
+        return deps
+
 
 class CastDict(DbObjectDict):
     "The collection of casts in a database"
 
     cls = Cast
     query = \
-        """SELECT castsource::regtype AS source,
+        """SELECT c.oid,
+                  castsource::regtype AS source,
                   casttarget::regtype AS target,
                   CASE WHEN castmethod = 'f' THEN castfunc::regprocedure
                        ELSE NULL::regprocedure END AS function,
@@ -118,34 +140,3 @@ class CastDict(DbObjectDict):
             cast.method = cast.method[:1].lower()
             if 'description' in incast:
                 cast.description = incast['description']
-
-    def diff_map(self, incasts):
-        """Generate SQL to transform existing casts
-
-        :param incasts: a YAML map defining the new casts
-        :return: list of SQL statements
-
-        Compares the existing cast definitions, as fetched from the
-        catalogs, to the input map and generates SQL statements to
-        transform the casts accordingly.
-        """
-        stmts = []
-        # check input casts
-        for (src, trg) in incasts:
-            incast = incasts[(src, trg)]
-            # does it exist in the database?
-            if (src, trg) not in self:
-                # create new cast
-                stmts.append(incast.create())
-            else:
-                # check cast objects
-                stmts.append(self[(src, trg)].diff_map(incast))
-
-        # check existing casts
-        for (src, trg) in self:
-            cast = self[(src, trg)]
-            # if missing, mark it for dropping
-            if (src, trg) not in incasts:
-                stmts.append(cast.drop())
-
-        return stmts

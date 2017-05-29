@@ -20,13 +20,14 @@ class ViewToMapTestCase(DatabaseToMapTestCase):
         expmap = {'definition': VIEW_DEFN}
         assert dbmap['schema public']['view v1'] == expmap
 
-    def test_map_view(self):
+    def test_map_view_table(self):
         "Map a created view with a table dependency"
         stmts = ["CREATE TABLE t1 (c1 INTEGER, c2 TEXT, c3 INTEGER)",
                  "CREATE VIEW v1 AS SELECT c1, c3 * 2 FROM t1"]
         dbmap = self.to_map(stmts)
         fmt = "%s%s" if (self.db.version < 90300) else "%s\n   %s"
-        expmap = {'definition': fmt % (" SELECT t1.c1,",
+        expmap = {'depends_on': ['table t1'],
+                  'definition': fmt % (" SELECT t1.c1,",
                                        " t1.c3 * 2\n   FROM t1;")}
         assert dbmap['schema public']['view v1'] == expmap
 
@@ -104,7 +105,7 @@ class ViewToSqlTestCase(InputMapToSqlTestCase):
         inmap['schema public'].update({'view v2': {
             'oldname': 'v1', 'definition': VIEW_DEFN}})
         sql = self.to_sql(inmap, [CREATE_STMT])
-        assert sql == ["ALTER VIEW v1 RENAME TO v2"]
+        assert sql == ["ALTER VIEW public.v1 RENAME TO v2"]
 
     def test_bad_rename_view(self):
         "Error renaming a non-existing view"

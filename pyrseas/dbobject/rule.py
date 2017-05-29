@@ -7,14 +7,14 @@
     DbSchemaObject and DbObjectDict, respectively.
 """
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
-from pyrseas.dbobject import quote_id, commentable
+from pyrseas.dbobject import quote_id, commentable, split_schema_obj
 
 
 class Rule(DbSchemaObject):
     """A rewrite rule definition"""
 
     keylist = ['schema', 'table', 'name']
-    objtype = "RULE"
+    catalog = 'pg_rewrite'
 
     def identifier(self):
         """Return a full identifier for a rule object
@@ -23,13 +23,12 @@ class Rule(DbSchemaObject):
         """
         return "%s ON %s" % (quote_id(self.name), self._table.qualname())
 
-    def to_map(self):
+    def to_map(self, db):
         """Convert rule to a YAML-suitable format
 
         :return: dictionary
         """
-        dct = self._base_map()
-        del dct['_table']
+        dct = self._base_map(db)
         return {self.name: dct}
 
     @commentable
@@ -47,13 +46,19 @@ class Rule(DbSchemaObject):
                 quote_id(self.name), self.event.upper(),
                 self._table.qualname(), where, instead, self.actions)]
 
+    def get_implied_deps(self, db):
+        deps = super(Rule, self).get_implied_deps(db)
+        deps.add(db.tables[split_schema_obj(self.table, self.schema)])
+        return deps
+
 
 class RuleDict(DbObjectDict):
     "The collection of rewrite rules in a database."
 
     cls = Rule
     query = \
-        """SELECT nspname AS schema, relname AS table, rulename AS name,
+        """SELECT r.oid,
+                  nspname AS schema, relname AS table, rulename AS name,
                   split_part('select,update,insert,delete', ',',
                       ev_type::int - 48) AS event, is_instead AS instead,
                   pg_get_ruledef(r.oid) AS definition,
@@ -75,7 +80,7 @@ class RuleDict(DbObjectDict):
                 do_loc += 8
             rule.actions = rule.definition[do_loc + 4:-1]
             del rule.definition
-            self[rule.key()] = rule
+            self.by_oid[rule.oid] = self[rule.key()] = rule
 
     def from_map(self, table, inmap):
         """Initialize the dictionary of rules by examining the input map
@@ -93,42 +98,3 @@ class RuleDict(DbObjectDict):
                 if 'description' in inrule:
                     rule.description = inrule['description']
             self[(table.schema, table.name, rul)] = rule
-
-    def diff_map(self, inrules):
-        """Generate SQL to transform existing rules
-
-        :param input_map: a YAML map defining the new rules
-        :return: list of SQL statements
-
-        Compares the existing rule definitions, as fetched from the
-        catalogs, to the input map and generates SQL statements to
-        transform the rules accordingly.
-        """
-        stmts = []
-        # check input rules
-        for rul in inrules:
-            inrul = inrules[rul]
-            # does it exist in the database?
-            if rul in self:
-                stmts.append(self[rul].diff_map(inrul))
-            else:
-                # check for possible RENAME
-                if hasattr(inrul, 'oldname'):
-                    oldname = inrul.oldname
-                    try:
-                        stmts.append(self[oldname].rename(inrul.name))
-                        del self[oldname]
-                    except KeyError as exc:
-                        exc.args = ("Previous name '%s' for rule '%s' "
-                                    "not found" % (oldname, inrul.name), )
-                        raise
-                else:
-                    # create new rule
-                    stmts.append(inrul.create())
-        # check database rules
-        for (sch, tbl, rul) in self:
-            # if missing, drop it
-            if (sch, tbl, rul) not in inrules:
-                stmts.append(self[(sch, tbl, rul)].drop())
-
-        return stmts

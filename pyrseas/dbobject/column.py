@@ -17,7 +17,7 @@ class Column(DbSchemaObject):
     keylist = ['schema', 'table']
     allprivs = 'arwx'
 
-    def to_map(self, no_privs):
+    def to_map(self, db, no_privs):
         """Convert a column to a YAML-suitable format
 
         :param no_privs: exclude privilege information
@@ -25,12 +25,8 @@ class Column(DbSchemaObject):
         """
         if hasattr(self, 'dropped'):
             return None
-        dct = self._base_map(False, no_privs)
+        dct = self._base_map(db, False, no_privs)
         del dct['number'], dct['name']
-        if '_table' in dct:
-            del dct['_table']
-        if '_type' in dct:
-            del dct['_type']
         if 'collation' in dct and dct['collation'] == 'default':
             del dct['collation']
         if hasattr(self, 'inherited'):
@@ -48,8 +44,7 @@ class Column(DbSchemaObject):
         if hasattr(self, 'not_null'):
             stmt += ' NOT NULL'
         if hasattr(self, 'default'):
-            if not self.default.startswith('nextval'):
-                stmt += ' DEFAULT ' + self.default
+            stmt += ' DEFAULT ' + self.default
         if hasattr(self, 'collation') and self.collation != 'default':
             stmt += ' COLLATE "%s"' % self.collation
         return (stmt, '' if self.description is None else self.comment())
@@ -85,7 +80,7 @@ class Column(DbSchemaObject):
         :return: SQL statement
         """
         if hasattr(self, 'dropped'):
-            return ""
+            return []
         if hasattr(self, '_table'):
             (comptype, objtype) = (self._table.objtype, 'COLUMN')
             compname = self._table.qualname()
@@ -126,7 +121,7 @@ class Column(DbSchemaObject):
             self.qualname(self.table), quote_id(self.name), self.default))
         return stmts
 
-    def diff_map(self, incol):
+    def alter(self, incol):
         """Generate SQL to transform an existing column
 
         :param insequence: a YAML map defining the new column
@@ -162,10 +157,10 @@ class Column(DbSchemaObject):
         # check STATISTICS
         if hasattr(self, 'statistics'):
             if self.statistics == -1 and (
-                hasattr(incol, 'statistics') and incol.statistics != -1):
+                    hasattr(incol, 'statistics') and incol.statistics != -1):
                 stmts.append(base + "SET STATISTICS %d" % incol.statistics)
-            if self.statistics != -1 and (
-                not hasattr(incol, 'statistics') or incol.statistics == -1):
+            if self.statistics != -1 and (not hasattr(incol, 'statistics') or
+                                          incol.statistics == -1):
                 stmts.append(base + "SET STATISTICS -1")
 
         return (", ".join(stmts), self.diff_description(incol))
@@ -246,35 +241,7 @@ class ColumnDict(DbObjectDict):
                     if table.owner is None:
                         raise ValueError("Column '%s.%s' has privileges but "
                                          "no owner information" % (
-                                         table.name, key))
+                                             table.name, key))
                     col.privileges = privileges_from_map(
                         col.privileges, col.allprivs, table.owner)
                 cols.append(col)
-
-    def diff_map(self, incols):
-        """Generate SQL to transform existing columns
-
-        :param incols: a YAML map defining the new columns
-        :return: list of SQL statements
-
-        Compares the existing column definitions, as fetched from the
-        catalogs, to the input map and generates SQL statements to
-        transform the columns accordingly.
-
-        This takes care of dropping columns that are not present in
-        the input map.  It's separate so that it can be done last,
-        after other table, constraint and index changes.
-        """
-        stmts = []
-        if not incols or not self:
-            return stmts
-
-        for (sch, tbl) in incols:
-            if (sch, tbl) in self:
-                for col in self[(sch, tbl)]:
-                    if col.name not in [c.name for c in incols[(sch, tbl)]] \
-                            and not hasattr(col, 'dropped') \
-                            and not hasattr(col, 'inherited'):
-                        stmts.append(col.drop())
-
-        return stmts

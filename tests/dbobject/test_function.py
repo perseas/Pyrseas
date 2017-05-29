@@ -192,7 +192,7 @@ class FunctionToSqlTestCase(InputMapToSqlTestCase):
             'language': 'c', 'returns': 'trigger',
             'obj_file': '$libdir/autoinc'}})
         sql = self.to_sql(inmap)
-        assert fix_indent(sql[1]) == "CREATE FUNCTION autoinc() " \
+        assert fix_indent(sql[0]) == "CREATE FUNCTION autoinc() " \
             "RETURNS trigger LANGUAGE c AS '$libdir/autoinc', 'autoinc'"
 
     def test_create_function_config(self):
@@ -233,7 +233,7 @@ class FunctionToSqlTestCase(InputMapToSqlTestCase):
     def test_drop_function_with_args(self):
         "Drop an existing function which has arguments"
         sql = self.to_sql(self.std_map(), [CREATE_STMT2])
-        assert sql[0] == "DROP FUNCTION f1(integer, integer)"
+        assert sql == ["DROP FUNCTION f1(integer, integer)"]
 
     def test_change_function_defn(self):
         "Change function definition"
@@ -321,7 +321,7 @@ class FunctionToSqlTestCase(InputMapToSqlTestCase):
 class AggregateToMapTestCase(DatabaseToMapTestCase):
     """Test mapping of existing aggregates"""
 
-    def test_map_aggregate(self):
+    def test_map_aggregate1(self):
         "Map a simple aggregate"
         stmts = [CREATE_STMT2, "CREATE AGGREGATE a1 (integer) ("
                  "SFUNC = f1, STYPE = integer)"]
@@ -403,4 +403,4 @@ class AggregateToSqlTestCase(InputMapToSqlTestCase):
                  "(SFUNC = f1, STYPE = integer)"]
         sql = self.to_sql(self.std_map(), stmts)
         assert sql[0] == "DROP AGGREGATE agg1(integer)"
-        assert sql[1], "DROP FUNCTION f1(integer == integer)"
+        assert sql[1] == "DROP FUNCTION f1(integer, integer)"

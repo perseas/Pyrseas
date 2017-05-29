@@ -10,7 +10,7 @@ import os
 
 from pyrseas.yamlutil import yamldump
 from pyrseas.dbobject import DbObjectDict, DbObject
-from pyrseas.dbobject import quote_id, split_schema_obj
+from pyrseas.dbobject import quote_id
 from pyrseas.dbobject import commentable, ownable, grantable
 from pyrseas.dbobject.dbtype import BaseType, Composite, Domain, Enum
 from pyrseas.dbobject.table import Table, Sequence, View, MaterializedView
@@ -22,7 +22,7 @@ class Schema(DbObject):
     views, triggers and other schema objects."""
 
     keylist = ['name']
-    objtype = 'SCHEMA'
+    catalog = 'pg_namespace'
 
     @property
     def allprivs(self):
@@ -37,7 +37,7 @@ class Schema(DbObject):
                                                    self.extern_filename()))
         return dir
 
-    def to_map(self, dbschemas, opts):
+    def to_map(self, db, dbschemas, opts):
         """Convert tables, etc., dictionaries to a YAML-suitable format
 
         :param dbschemas: dictionary of schemas
@@ -49,7 +49,7 @@ class Schema(DbObject):
         no_owner = opts.no_owner
         no_privs = opts.no_privs
         schbase = {} if no_owner else {'owner': self.owner}
-        if not no_privs and self.privileges:
+        if not no_privs and hasattr(self, 'privileges'):
             schbase.update({'privileges': self.map_privs()})
         if self.description is not None:
             schbase.update(description=self.description)
@@ -60,7 +60,7 @@ class Schema(DbObject):
             for objkey in self.tables:
                 if not seltbls or objkey in seltbls:
                     obj = self.tables[objkey]
-                    schobjs.append((obj, obj.to_map(dbschemas, opts)))
+                    schobjs.append((obj, obj.to_map(db, dbschemas, opts)))
 
         def mapper(objtypes):
             if hasattr(self, objtypes):
@@ -69,7 +69,7 @@ class Schema(DbObject):
                     if objtypes == 'sequences' or (
                             not seltbls or objkey in seltbls):
                         obj = schemadict[objkey]
-                        schobjs.append((obj, obj.to_map(opts)))
+                        schobjs.append((obj, obj.to_map(db, opts)))
 
         for objtypes in ['ftables', 'sequences', 'views', 'matviews']:
             mapper(objtypes)
@@ -79,7 +79,7 @@ class Schema(DbObject):
                 schemadict = getattr(self, objtypes)
                 for objkey in schemadict:
                     obj = schemadict[objkey]
-                    schobjs.append((obj, obj.to_map(no_owner)))
+                    schobjs.append((obj, obj.to_map(db, no_owner)))
 
         if hasattr(opts, 'tables') and not opts.tables or \
                 not hasattr(opts, 'tables'):
@@ -91,7 +91,7 @@ class Schema(DbObject):
             if hasattr(self, 'functions'):
                 for objkey in self.functions:
                     obj = self.functions[objkey]
-                    schobjs.append((obj, obj.to_map(no_owner, no_privs)))
+                    schobjs.append((obj, obj.to_map(db, no_owner, no_privs)))
 
         # special case for pg_catalog schema
         if self.name == 'pg_catalog' and not schobjs:
@@ -127,7 +127,7 @@ class Schema(DbObject):
             return {extkey: filemap}
 
         schmap = dict((obj.extern_key(), objmap) for obj, objmap in schobjs
-                  if objmap is not None)
+                      if objmap is not None)
         schmap.update(schbase)
         return {self.extern_key(): schmap}
 
@@ -139,6 +139,9 @@ class Schema(DbObject):
 
         :return: SQL statements
         """
+        # special case for --revert
+        if self.name == 'pg_catalog':
+            return []
         return ["CREATE SCHEMA %s" % quote_id(self.name)]
 
     def data_import(self, opts):
@@ -153,6 +156,12 @@ class Schema(DbObject):
             for tbl in self.datacopy:
                 stmts.append(self.tables[tbl].data_import(dir))
         return stmts
+
+    def drop(self):
+        if self.name not in ('public', 'pg_catalog'):
+            return super(Schema, self).drop()
+        else:
+            return []
 
 
 PREFIXES = {'domain ': 'types', 'type': 'types', 'table ': 'tables',
@@ -176,7 +185,8 @@ class SchemaDict(DbObjectDict):
 
     cls = Schema
     query = \
-        """SELECT nspname AS name, rolname AS owner,
+        """SELECT n.oid,
+                  nspname AS name, rolname AS owner,
                   array_to_string(nspacl, ',') AS privileges,
                   obj_description(n.oid, 'pg_namespace') AS description
            FROM pg_namespace n
@@ -278,20 +288,7 @@ class SchemaDict(DbObjectDict):
                 link_one(targ, type_, keys, 'views')
         targ = db.functions
         for keys in targ:
-            func = targ[keys]
             link_one(targ, 'functions', keys)
-            if hasattr(func, 'returns'):
-                rettype = func.returns
-                if rettype.upper().startswith("SETOF "):
-                    rettype = rettype[6:]
-                (retsch, rettyp) = split_schema_obj(rettype, keys[0])
-                if (retsch, rettyp) in db.tables:
-                    deptbl = db.tables[(retsch, rettyp)]
-                    if not hasattr(func, 'dependent_table'):
-                        func.dependent_table = deptbl
-                    if not hasattr(deptbl, 'dependent_funcs'):
-                        deptbl.dependent_funcs = []
-                    deptbl.dependent_funcs.append(func)
         for objtype in ['operators', 'operclasses', 'operfams', 'conversions',
                         'tsconfigs', 'tsdicts', 'tsparsers', 'tstempls',
                         'ftables', 'collations']:
@@ -308,7 +305,7 @@ class SchemaDict(DbObjectDict):
                 if hasattr(schema, 'tables') and tbl in schema.tables:
                     schema.datacopy.append(tbl)
 
-    def to_map(self, opts):
+    def to_map(self, db, opts):
         """Convert the schema dictionary to a regular dictionary
 
         :param opts: options to include/exclude schemas/tables, etc.
@@ -324,59 +321,9 @@ class SchemaDict(DbObjectDict):
                 if hasattr(opts, 'excl_schemas') and opts.excl_schemas \
                         and sch in opts.excl_schemas:
                     continue
-                schemas.update(self[sch].to_map(self, opts))
+                schemas.update(self[sch].to_map(db, self, opts))
 
         return schemas
-
-    def diff_map(self, inschemas):
-        """Generate SQL to transform existing schemas
-
-        :param input_map: a YAML map defining the new schemas
-        :return: list of SQL statements
-
-        Compares the existing schema definitions, as fetched from the
-        catalogs, to the input map and generates SQL statements to
-        transform the schemas accordingly.
-        """
-        stmts = []
-        # check input schemas
-        for sch in inschemas:
-            insch = inschemas[sch]
-            # does it exist in the database?
-            if sch in self:
-                stmts.append(self[sch].diff_map(insch))
-            else:
-                # check for possible RENAME
-                if hasattr(insch, 'oldname'):
-                    oldname = insch.oldname
-                    try:
-                        stmts.append(self[oldname].rename(insch.name))
-                        del self[oldname]
-                    except KeyError as exc:
-                        exc.args = ("Previous name '%s' for schema '%s' "
-                                    "not found" % (oldname, insch.name), )
-                        raise
-                else:
-                    # create new schema
-                    if insch.name not in ['pg_catalog']:
-                        stmts.append(insch.create())
-        # check database schemas
-        for sch in self:
-            # if missing and not 'public', drop it
-            if sch not in ['public', 'pg_catalog'] and sch not in inschemas:
-                self[sch].dropped = True
-        return stmts
-
-    def _drop(self):
-        """Actually drop the schemas
-
-        :return: SQL statements
-        """
-        stmts = []
-        for sch in self:
-            if sch != 'public' and hasattr(self[sch], 'dropped'):
-                stmts.append(self[sch].drop())
-        return stmts
 
     def data_import(self, opts):
         """Iterate over schemas with tables to be imported

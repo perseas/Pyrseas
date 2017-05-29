@@ -8,6 +8,8 @@
     MaterializedView derived from View, and ClassDict derived from
     DbObjectDict.
 """
+
+import re
 import os
 import sys
 
@@ -38,12 +40,11 @@ class DbClass(DbSchemaObject):
     """A table, sequence or view"""
 
     keylist = ['schema', 'name']
+    catalog = 'pg_class'
 
 
 class Sequence(DbClass):
     "A sequence generator definition"
-
-    objtype = "SEQUENCE"
 
     @property
     def allprivs(self):
@@ -98,7 +99,7 @@ class Sequence(DbClass):
         if data:
             self.dependent_table = split_table(data[0], self.schema)
 
-    def to_map(self, opts):
+    def to_map(self, db, opts):
         """Convert a sequence definition to a YAML-suitable format
 
         :param opts: options to include/exclude tables, etc.
@@ -111,21 +112,15 @@ class Sequence(DbClass):
                      hasattr(opts, 'excl_tables') and opts.excl_tables and
                      self.name in opts.excl_tables):
             return None
-        seq = {}
-        for key, val in list(self.__dict__.items()):
-            if key in self.keylist or key == 'dependent_table' or (
-                    key == 'owner' and opts.no_owner) or (
-                    key == 'privileges' and opts.no_privs) or (
-                    key == 'description' and self.description is None):
-                continue
-            if key == 'privileges':
-                privs = self.map_privs()
-                if privs != []:
-                    seq[key] = privs
-            elif key == 'max_value' and val == MAX_BIGINT:
+        seq = self._base_map(db, opts.no_owner, opts.no_privs)
+        seq.pop('dependent_table', None)
+        for key, val in list(seq.items()):
+            if key == 'max_value' and val == MAX_BIGINT:
                 seq[key] = None
             elif key == 'min_value' and val == 1:
                 seq[key] = None
+            elif key == 'privileges':
+                seq[key] = val
             else:
                 if PY2:
                     if isinstance(val, (int, long)) and val <= sys.maxsize:
@@ -167,7 +162,7 @@ class Sequence(DbClass):
             quote_id(self.owner_column)))
         return stmts
 
-    def diff_map(self, inseq):
+    def alter(self, inseq, no_owner=False):
         """Generate SQL to transform an existing sequence
 
         :param inseq: a YAML map defining the new sequence
@@ -198,9 +193,6 @@ class Sequence(DbClass):
         if stmt:
             stmts.append("ALTER SEQUENCE %s" % self.qualname() + stmt)
 
-        if inseq.owner is not None:
-            if self.owner is not None and inseq.owner != self.owner:
-                stmts.append(self.alter_owner(inseq.owner))
         if hasattr(inseq, 'owner_column') and \
                 not hasattr(inseq, 'owner_table'):
             raise ValueError("Sequence '%s' incomplete specification: "
@@ -212,8 +204,18 @@ class Sequence(DbClass):
             if not (hasattr(self, 'owner_table') and
                     hasattr(self, 'owner_column')):
                 stmts.append(inseq.add_owner())
-        stmts.append(self.diff_privileges(inseq))
-        stmts.append(self.diff_description(inseq))
+
+        stmts.append(super(Sequence, self).alter(inseq, no_owner=no_owner))
+        return stmts
+
+    def drop(self):
+        """Generate SQL to drop the current sequence
+
+        :return: list of SQL statements
+        """
+        stmts = []
+        if not hasattr(self, 'owner_table'):
+            stmts.append(super(Sequence, self).drop())
         return stmts
 
 
@@ -226,8 +228,6 @@ class Table(DbClass):
     indexes.
     """
 
-    objtype = "TABLE"
-
     @property
     def allprivs(self):
         return 'arwdDxt'
@@ -239,7 +239,7 @@ class Table(DbClass):
         """
         return [c.name for c in self.columns]
 
-    def to_map(self, dbschemas, opts):
+    def to_map(self, db, dbschemas, opts):
         """Convert a table to a YAML-suitable format
 
         :param dbschemas: database dictionary of schemas
@@ -250,36 +250,33 @@ class Table(DbClass):
                 and self.name in opts.excl_tables or \
                 not hasattr(self, 'columns'):
             return None
+
+        tbl = self._base_map(db, opts.no_owner, opts.no_privs)
+
         cols = []
         for column in self.columns:
-            col = column.to_map(opts.no_privs)
+            col = column.to_map(db, opts.no_privs)
             if col:
                 cols.append(col)
-        tbl = {'columns': cols}
-        attrlist = ['options', 'tablespace', 'unlogged']
-        if self.description is not None:
-            attrlist.append('description')
-        if not opts.no_owner:
-            attrlist.append('owner')
-        for attr in attrlist:
-            if hasattr(self, attr):
-                tbl.update({attr: getattr(self, attr)})
+        tbl['columns'] = cols
+
         if hasattr(self, 'check_constraints'):
             if 'check_constraints' not in tbl:
                 tbl.update(check_constraints={})
             for k in list(self.check_constraints.values()):
                 tbl['check_constraints'].update(
-                    self.check_constraints[k.name].to_map(self.column_names()))
+                    self.check_constraints[k.name].to_map(
+                        db, self.column_names()))
         if hasattr(self, 'primary_key'):
-            tbl.update(primary_key=self.primary_key.to_map(
-                self.column_names()))
+            tbl['primary_key'] = self.primary_key.to_map(
+                db, self.column_names())
         if hasattr(self, 'foreign_keys'):
             if 'foreign_keys' not in tbl:
                 tbl['foreign_keys'] = {}
             for k in list(self.foreign_keys.values()):
                 tbls = dbschemas[k.ref_schema].tables
                 tbl['foreign_keys'].update(self.foreign_keys[k.name].to_map(
-                    self.column_names(),
+                    db, self.column_names(),
                     tbls[self.foreign_keys[k.name].ref_table]. column_names()))
         if hasattr(self, 'unique_constraints'):
             if 'unique_constraints' not in tbl:
@@ -287,28 +284,31 @@ class Table(DbClass):
             for k in list(self.unique_constraints.values()):
                 tbl['unique_constraints'].update(
                     self.unique_constraints[k.name].to_map(
-                        self.column_names()))
+                        db, self.column_names()))
         if hasattr(self, 'indexes'):
-            if 'indexes' not in tbl:
-                tbl['indexes'] = {}
-            for k in list(self.indexes.values()):
-                tbl['indexes'].update(self.indexes[k.name].to_map())
+            idxs = {}
+            for idx in self.indexes.values():
+                if not getattr(idx, '_for_constraint', None):
+                    idxs.update(idx.to_map(db))
+            if idxs:
+                # we may have only indexes not to dump, e.g. the pkey one
+                tbl['indexes'] = idxs
+            else:
+                tbl.pop('indexes', None)
         if hasattr(self, 'inherits'):
             if 'inherits' not in tbl:
                 tbl['inherits'] = self.inherits
         if hasattr(self, 'rules'):
             if 'rules' not in tbl:
                 tbl['rules'] = {}
+
             for k in list(self.rules.values()):
-                tbl['rules'].update(self.rules[k.name].to_map())
+                tbl['rules'].update(self.rules[k.name].to_map(db))
         if hasattr(self, 'triggers'):
             if 'triggers' not in tbl:
                 tbl['triggers'] = {}
             for k in list(self.triggers.values()):
-                tbl['triggers'].update(self.triggers[k.name].to_map())
-
-        if not opts.no_privs and self.privileges:
-            tbl.update({'privileges': self.map_privs()})
+                tbl['triggers'].update(self.triggers[k.name].to_map(db))
 
         return tbl
 
@@ -317,9 +317,12 @@ class Table(DbClass):
 
         :return: SQL statements
         """
+        # TODO This was *maybe* in place to guard double creations caused by
+        # the functions. Leaving it here, to be dropped once I'm reasonably
+        # certain we get called only once, when expected.
+        assert not hasattr(self, 'created')
+
         stmts = []
-        if hasattr(self, 'created'):
-            return stmts
         cols = []
         colprivs = []
         for col in self.columns:
@@ -352,6 +355,9 @@ class Table(DbClass):
         for col in self.columns:
             if col.description is not None:
                 stmts.append(col.comment())
+        if hasattr(self, '_owned_seqs'):
+            for dep in self._owned_seqs:
+                stmts.append(dep.add_owner())
         self.created = True
         return stmts
 
@@ -362,8 +368,8 @@ class Table(DbClass):
         """
         stmts = []
         if not hasattr(self, 'dropped') or not self.dropped:
-            if hasattr(self, 'dependent_funcs'):
-                for fnc in self.dependent_funcs:
+            if hasattr(self, '_dependent_funcs'):
+                for fnc in self._dependent_funcs:
                     stmts.append(fnc.drop())
             self.dropped = True
             stmts.append("DROP TABLE %s" % self.identifier())
@@ -404,7 +410,7 @@ class Table(DbClass):
             clauses += "RESET (%s)" % ', '.join(resetclauses)
         return clauses
 
-    def diff_map(self, intable):
+    def alter(self, intable):
         """Generate SQL to transform an existing table
 
         :param intable: a YAML map defining the new table
@@ -430,7 +436,7 @@ class Table(DbClass):
                 stmts.append(self.columns[num].rename(incol.name))
             # check existing columns
             if num < dbcols and self.columns[num].name == incol.name:
-                (stmt, descr) = self.columns[num].diff_map(incol)
+                (stmt, descr) = self.columns[num].alter(incol)
                 if stmt:
                     stmts.append(base + stmt)
                 colprivs.append(self.columns[num].diff_privileges(incol))
@@ -452,10 +458,6 @@ class Table(DbClass):
         if diff_opts:
             stmts.append("ALTER %s %s %s" % (self.objtype, self.identifier(),
                                              diff_opts))
-        if intable.owner is not None:
-            if intable.owner != self.owner:
-                stmts.append(self.alter_owner(intable.owner))
-        stmts.append(self.diff_privileges(intable))
         if colprivs:
             stmts.append(colprivs)
         if hasattr(intable, 'tablespace'):
@@ -466,7 +468,28 @@ class Table(DbClass):
         elif hasattr(self, 'tablespace'):
             stmts.append(base + "SET TABLESPACE pg_default")
 
-        stmts.append(self.diff_description(intable))
+        stmts.append(super(Table, self).alter(intable))
+
+        return stmts
+
+    def alter_drop_columns(self, intable):
+        """Generate SQL to drop columns from an existing table
+
+        :param intable: a YAML map defining the new table
+        :return: list of SQL statements
+
+        Compares the table to an input table and generates SQL
+        statements to drop any columns missing from the one
+        represented by the input.
+        """
+        if not hasattr(intable, 'columns'):
+            raise KeyError("Table '%s' has no columns" % intable.name)
+        stmts = []
+        incolnames = set(attr.name for attr in intable.columns)
+        for attr in self.columns:
+            if attr.name not in incolnames:
+                if not getattr(attr, 'inherited', False):
+                    stmts.append(attr.drop())
 
         return stmts
 
@@ -494,15 +517,43 @@ class Table(DbClass):
         """
         filepath = os.path.join(dirpath, self.extern_filename('data'))
         stmts = []
-        if hasattr(self, 'referred_by'):
+        if hasattr(self, '_referred_by'):
             stmts.append("ALTER TABLE %s DROP CONSTRAINT %s" % (
-                self.referred_by._table.qualname(), self.referred_by.name))
+                self._referred_by._table.qualname(), self._referred_by.name))
         stmts.append("TRUNCATE ONLY %s" % self.qualname())
         stmts.append(("\\copy ", self.qualname(), " from '", filepath,
                       "' csv"))
-        if hasattr(self, 'referred_by'):
-            stmts.append(self.referred_by.add())
+        if hasattr(self, '_referred_by'):
+            stmts.append(self._referred_by.add())
         return stmts
+
+    def get_implied_deps(self, db):
+        deps = super(Table, self).get_implied_deps(db)
+        for col in self.columns:
+            type = db.find_type(col.type)
+            if type is not None:
+                deps.add(type)
+
+            # Check if the column depends on a sequence to avoid stating the
+            # dependency explicitly.
+            d = getattr(col, 'default', None)
+            if d:
+                m = re.match(r"nextval\('(.*)'::regclass\)", d)
+                if m:
+                    seq = db.tables.find(m.group(1), self.schema)
+                    if seq:
+                        deps.add(seq)
+                        if hasattr(seq, 'owner_table'):
+                            if not hasattr(self, '_owned_seqs'):
+                                self._owned_seqs = []
+                            self._owned_seqs.append(seq)
+
+        for pname in getattr(self, 'inherits', ()):
+            parent = db.tables.find(pname, self.schema)
+            assert parent is not None, "couldn't find parent table %s" % pname
+            deps.add(parent)
+
+        return deps
 
 
 class View(DbClass):
@@ -511,14 +562,13 @@ class View(DbClass):
     A view is identified by its schema name and view name.
     """
 
-    objtype = "VIEW"
     privobjtype = "TABLE"
 
     @property
     def allprivs(self):
         return 'arwdDxt'
 
-    def to_map(self, opts):
+    def to_map(self, db, opts):
         """Convert a view to a YAML-suitable format
 
         :param opts: options to include/exclude tables, etc.
@@ -527,19 +577,19 @@ class View(DbClass):
         if hasattr(opts, 'excl_tables') and opts.excl_tables \
                 and self.name in opts.excl_tables:
             return None
-        view = self._base_map(opts.no_owner, opts.no_privs)
+        view = self._base_map(db, opts.no_owner, opts.no_privs)
         if 'dependent_funcs' in view:
             del view['dependent_funcs']
         if hasattr(self, 'triggers'):
             for key in list(self.triggers.values()):
-                view['triggers'].update(self.triggers[key.name].to_map())
+                view['triggers'].update(self.triggers[key.name].to_map(db))
         return view
 
     @commentable
     @grantable
     @ownable
     def create(self, newdefn=None):
-        """Return SQL statements to CREATE the table
+        """Return SQL statements to CREATE the view
 
         :return: SQL statements
         """
@@ -549,7 +599,7 @@ class View(DbClass):
         return ["CREATE%s VIEW %s AS\n   %s" % (
                 newdefn and " OR REPLACE" or '', self.qualname(), defn)]
 
-    def diff_map(self, inview):
+    def alter(self, inview):
         """Generate SQL to transform an existing view
 
         :param inview: a YAML map defining the new view
@@ -562,11 +612,7 @@ class View(DbClass):
         stmts = []
         if self.definition != inview.definition:
             stmts.append(self.create(inview.definition))
-        if inview.owner is not None:
-            if inview.owner != self.owner:
-                stmts.append(self.alter_owner(inview.owner))
-        stmts.append(self.diff_privileges(inview))
-        stmts.append(self.diff_description(inview))
+        stmts.append(super(View, self).alter(inview))
         return stmts
 
 
@@ -576,9 +622,11 @@ class MaterializedView(View):
     A materialized view is identified by its schema name and view name.
     """
 
-    objtype = "MATERIALIZED VIEW"
+    @property
+    def objtype(self):
+        return "MATERIALIZED VIEW"
 
-    def to_map(self, opts):
+    def to_map(self, db, opts):
         """Convert a materialized view to a YAML-suitable format
 
         :param opts: options to include/exclude tables, etc.
@@ -587,12 +635,12 @@ class MaterializedView(View):
         if hasattr(opts, 'excl_tables') and opts.excl_tables \
                 and self.name in opts.excl_tables:
             return None
-        mvw = self._base_map(opts.no_owner, opts.no_privs)
+        mvw = self._base_map(db, opts.no_owner, opts.no_privs)
         if hasattr(self, 'indexes'):
             if 'indexes' not in mvw:
                 mvw['indexes'] = {}
             for k in list(self.indexes.values()):
-                mvw['indexes'].update(self.indexes[k.name].to_map())
+                mvw['indexes'].update(self.indexes[k.name].to_map(db))
         return mvw
 
     @commentable
@@ -609,29 +657,10 @@ class MaterializedView(View):
         return ["CREATE %s %s AS\n   %s" % (
                 self.objtype, self.qualname(), defn)]
 
-    def diff_map(self, inview):
-        """Generate SQL to transform an existing materialized view
-
-        :param inview: a YAML map defining the new view
-        :return: list of SQL statements
-
-        Compares the view to an input view and generates SQL
-        statements to transform it into the one represented by the
-        input.
-        """
-        stmts = []
-        if self.definition != inview.definition:
-            stmts.append(self.create(inview.definition))
-        if inview.owner is not None:
-            if inview.owner != self.owner:
-                stmts.append(self.alter_owner(inview.owner))
-        stmts.append(self.diff_privileges(inview))
-        stmts.append(self.diff_description(inview))
-        return stmts
-
 
 QUERY_PRE91 = \
-    """SELECT nspname AS schema, relname AS name, relkind AS kind,
+    """SELECT c.oid,
+              nspname AS schema, relname AS name, relkind AS kind,
               reloptions AS options, spcname AS tablespace,
               rolname AS owner, array_to_string(relacl, ',') AS privileges,
               CASE WHEN relkind = 'v' THEN pg_get_viewdef(c.oid, TRUE)
@@ -647,7 +676,8 @@ QUERY_PRE91 = \
        ORDER BY nspname, relname"""
 
 QUERY_PRE93 = \
-    """SELECT nspname AS schema, relname AS name, relkind AS kind,
+    """SELECT c.oid,
+              nspname AS schema, relname AS name, relkind AS kind,
               reloptions AS options, relpersistence AS persistence,
               spcname AS tablespace, rolname AS owner,
               array_to_string(relacl, ',') AS privileges,
@@ -672,7 +702,8 @@ class ClassDict(DbObjectDict):
 
     cls = DbClass
     query = \
-        """SELECT nspname AS schema, relname AS name, relkind AS kind,
+        """SELECT c.oid,
+                  nspname AS schema, relname AS name, relkind AS kind,
                   reloptions AS options, relpersistence AS persistence,
                   spcname AS tablespace, rolname AS owner,
                   array_to_string(relacl, ',') AS privileges,
@@ -704,6 +735,7 @@ class ClassDict(DbObjectDict):
         elif self.dbconn.version < 90300:
             self.query = QUERY_PRE93
         for table in self.fetch():
+            oid = table.oid
             sch, tbl = table.key()
             if hasattr(table, 'persistence'):
                 if table.persistence == 'u':
@@ -712,15 +744,17 @@ class ClassDict(DbObjectDict):
             kind = table.kind
             del table.kind
             if kind == 'r':
-                self[(sch, tbl)] = Table(**table.__dict__)
+                self.by_oid[oid] = self[sch, tbl] = Table(**table.__dict__)
             elif kind == 'S':
-                self[(sch, tbl)] = inst = Sequence(**table.__dict__)
+                self.by_oid[oid] = self[sch, tbl] = inst \
+                    = Sequence(**table.__dict__)
                 inst.get_attrs(self.dbconn)
                 inst.get_dependent_table(self.dbconn)
             elif kind == 'v':
-                self[(sch, tbl)] = View(**table.__dict__)
+                self.by_oid[oid] = self[sch, tbl] = View(**table.__dict__)
             elif kind == 'm':
-                self[(sch, tbl)] = MaterializedView(**table.__dict__)
+                self.by_oid[oid] = self[sch, tbl] \
+                    = MaterializedView(**table.__dict__)
         inhtbls = self.dbconn.fetchall(self.inhquery)
         self.dbconn.rollback()
         for (tbl, partbl, num) in inhtbls:
@@ -807,6 +841,20 @@ class ClassDict(DbObjectDict):
                     obj.privileges = privileges_from_map(
                         inobj['privileges'], obj.allprivs, obj.owner)
 
+            if 'depends_on' in inobj:
+                obj.depends_on.extend(inobj['depends_on'])
+
+    def find(self, obj, schema=None):
+        """Find a table given its name.
+
+        The name can contain array type modifiers such as '[]'
+
+        Return None if not found.
+        """
+        sch, name = split_schema_obj(obj, schema)
+        name = name.rstrip('[]')
+        return self.get((sch, name))
+
     def link_refs(self, dbcolumns, dbconstrs, dbindexes, dbrules, dbtriggers):
         """Connect columns, constraints, etc. to their respective tables
 
@@ -840,9 +888,9 @@ class ClassDict(DbObjectDict):
                     (parsch, partbl) = split_schema_obj(partbl)
                     assert self[(parsch, partbl)]
                     parent = self[(parsch, partbl)]
-                    if not hasattr(parent, 'descendants'):
-                        parent.descendants = []
-                    parent.descendants.append(table)
+                    if not hasattr(parent, '_descendants'):
+                        parent._descendants = []
+                    parent._descendants.append(table)
         for (sch, tbl, cns) in dbconstrs:
             constr = dbconstrs[(sch, tbl, cns)]
             if hasattr(constr, 'target'):
@@ -861,7 +909,7 @@ class ClassDict(DbObjectDict):
                 # link referenced and referrer
                 constr.references = self[(constr.ref_schema, constr.ref_table)]
                 # TODO: there can be more than one
-                self[(constr.ref_schema, constr.ref_table)].referred_by = \
+                self[(constr.ref_schema, constr.ref_table)]._referred_by = \
                     constr
                 table.foreign_keys.update({cns: constr})
             elif isinstance(constr, UniqueConstraint):
@@ -884,189 +932,3 @@ class ClassDict(DbObjectDict):
         for (sch, tbl, trg) in dbtriggers:
             link_one(dbtriggers, sch, tbl, trg, 'triggers')
             dbtriggers[(sch, tbl, trg)]._table = self[(sch, tbl)]
-
-    def _rename(self, obj, objtype):
-        """Process a RENAME"""
-        stmt = ''
-        oldname = obj.oldname
-        try:
-            stmt = self[(obj.schema, oldname)].rename(obj.name)
-            self[(obj.schema, obj.name)] = self[(obj.schema, oldname)]
-            del self[(obj.schema, oldname)]
-        except KeyError as exc:
-            exc.args = ("Previous name '%s' for %s '%s' not found" % (
-                oldname, objtype, obj.name), )
-            raise
-        return stmt
-
-    def diff_map(self, intables):
-        """Generate SQL to transform existing tables and sequences
-
-        :param intables: a YAML map defining the new tables/sequences
-        :return: list of SQL statements
-
-        Compares the existing table/sequence definitions, as fetched
-        from the catalogs, to the input map and generates SQL
-        statements to transform the tables/sequences accordingly.
-        """
-        stmts = []
-        # first pass: sequences owned by a table
-        for (sch, seq) in intables:
-            inseq = intables[(sch, seq)]
-            if not isinstance(inseq, Sequence) or \
-                    not hasattr(inseq, 'owner_table'):
-                continue
-            if (sch, seq) not in self:
-                if hasattr(inseq, 'oldname'):
-                    stmts.append(self._rename(inseq, "sequence"))
-                else:
-                    # create new sequence
-                    stmts.append(inseq.create())
-
-        # check input tables
-        inhstack = []
-        for (sch, tbl) in intables:
-            intable = intables[(sch, tbl)]
-            if not isinstance(intable, Table):
-                continue
-            # does it exist in the database?
-            if (sch, tbl) not in self:
-                if not hasattr(intable, 'oldname'):
-                    # create new table
-                    if hasattr(intable, 'inherits'):
-                        inhstack.append(intable)
-                    else:
-                        stmts.append(intable.create())
-                else:
-                    stmts.append(self._rename(intable, "table"))
-        while len(inhstack):
-            intable = inhstack.pop()
-            createit = True
-            for partbl in intable.inherits:
-                if intables[split_schema_obj(partbl)] in inhstack:
-                    createit = False
-            if createit:
-                stmts.append(intable.create())
-            else:
-                inhstack.insert(0, intable)
-
-        # check input views
-        for (sch, tbl) in intables:
-            intable = intables[(sch, tbl)]
-            if not isinstance(intable, View):
-                continue
-            # does it exist in the database?
-            if (sch, tbl) not in self:
-                if hasattr(intable, 'oldname'):
-                    stmts.append(self._rename(intable, "view"))
-                else:
-                    # create new view
-                    stmts.append(intable.create())
-
-        # second pass: input sequences not owned by tables
-        for (sch, seq) in intables:
-            inseq = intables[(sch, seq)]
-            if not isinstance(inseq, Sequence):
-                continue
-            # does it exist in the database?
-            if (sch, seq) not in self:
-                if hasattr(inseq, 'oldname'):
-                    stmts.append(self._rename(inseq, "sequence"))
-                elif hasattr(inseq, 'owner_table'):
-                    stmts.append(inseq.add_owner())
-                else:
-                    # create new sequence
-                    stmts.append(inseq.create())
-
-        # check database tables, sequences and views
-        for (sch, tbl) in self:
-            table = self[(sch, tbl)]
-            # if missing, mark it for dropping
-            if (sch, tbl) not in intables:
-                table.dropped = False
-            else:
-                # check table/sequence/view objects
-                stmts.append(table.diff_map(intables[(sch, tbl)]))
-
-        # now drop the marked tables
-        for (sch, tbl) in self:
-            table = self[(sch, tbl)]
-            if isinstance(table, Sequence) and hasattr(table, 'owner_table'):
-                continue
-            if hasattr(table, 'dropped') and not table.dropped:
-                # first, drop all foreign keys
-                if hasattr(table, 'foreign_keys'):
-                    for fgn in table.foreign_keys:
-                        stmts.append(table.foreign_keys[fgn].drop())
-                # and drop the triggers
-                if hasattr(table, 'triggers'):
-                    for trg in table.triggers:
-                        stmts.append(table.triggers[trg].drop())
-                if hasattr(table, 'rules'):
-                    for rul in table.rules:
-                        stmts.append(table.rules[rul].drop())
-                # drop views
-                if isinstance(table, View):
-                    stmts.append(table.drop())
-
-        inhstack = []
-        for (sch, tbl) in self:
-            table = self[(sch, tbl)]
-            if (isinstance(table, Sequence) and
-                (hasattr(table, 'owner_table') or
-                 hasattr(table, 'dependent_table'))) or \
-                    isinstance(table, View):
-                continue
-            if hasattr(table, 'dropped') and not table.dropped:
-                # next, drop other subordinate objects
-                if hasattr(table, 'check_constraints'):
-                    for chk in table.check_constraints:
-                        stmts.append(table.check_constraints[chk].drop())
-                if hasattr(table, 'unique_constraints'):
-                    for unq in table.unique_constraints:
-                        stmts.append(table.unique_constraints[unq].drop())
-                if hasattr(table, 'indexes'):
-                    for idx in table.indexes:
-                        stmts.append(table.indexes[idx].drop())
-                if hasattr(table, 'rules'):
-                    for rul in table.rules:
-                        stmts.append(table.rules[rul].drop())
-                if hasattr(table, 'primary_key'):
-                    # TODO there can be more than one referred_by
-                    if hasattr(table, 'referred_by'):
-                        stmts.append(table.referred_by.drop())
-                    stmts.append(table.primary_key.drop())
-                # finally, drop the table itself
-                if hasattr(table, 'descendants'):
-                    inhstack.append(table)
-                else:
-                    stmts.append(table.drop())
-        while len(inhstack):
-            table = inhstack.pop()
-            dropit = True
-            for childtbl in table.descendants:
-                if self[(childtbl.schema, childtbl.name)] in inhstack:
-                    dropit = False
-            if dropit:
-                stmts.append(table.drop())
-            else:
-                inhstack.insert(0, table)
-        for (sch, tbl) in self:
-            table = self[(sch, tbl)]
-            if isinstance(table, Sequence) \
-                    and hasattr(table, 'dependent_table') \
-                    and hasattr(table, 'dropped') and not table.dropped:
-                stmts.append(table.drop())
-
-        # last pass to deal with nextval DEFAULTs
-        for (sch, tbl) in intables:
-            intable = intables[(sch, tbl)]
-            if not isinstance(intable, Table):
-                continue
-            if (sch, tbl) not in self:
-                for col in intable.columns:
-                    if hasattr(col, 'default') \
-                            and col.default.startswith('nextval'):
-                        stmts.append(col.set_sequence_default())
-
-        return stmts

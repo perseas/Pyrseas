@@ -14,14 +14,29 @@ class Extension(DbObject):
     """An extension"""
 
     keylist = ['name']
-    objtype = "EXTENSION"
     single_extern_file = True
+    catalog = 'pg_extension'
 
     def __init__(self, name, description, owner, schema, privileges=None,
-                 version=None):
+                 version=None, oid=None):
         super(Extension, self).__init__(name, description, owner, privileges)
         self.schema = schema
         self.version = version
+        self.oid = oid
+
+    def get_implied_deps(self, db):
+        """Return the implied dependencies of the object
+
+        :param db: the database where this object exists
+        :return: set of `DbObject`
+        """
+        deps = super(Extension, self).get_implied_deps(db)
+        if self.schema is not None:
+            s = db.schemas.get(self.schema)
+            if s:
+                deps.add(s)
+
+        return deps
 
     @commentable
     def create(self):
@@ -39,13 +54,32 @@ class Extension(DbObject):
                 quote_id(self.name), ('\n    ' + '\n    '.join(opt_clauses))
                 if opt_clauses else '')]
 
+    def alter(self, inobj, no_owner=True):
+        """Generate SQL to transform an existing extension
+
+        :param inobj: a YAML map defining the new extension
+        :return: list of SQL statements
+
+        This exists because ALTER EXTENSION does not permit altering
+        the owner.
+        """
+        return super(Extension, self).alter(inobj, no_owner=no_owner)
+
+    def drop(self):
+        # TODO: this should not be special-cased -- see Language
+        if self.name != 'plpgsql':
+            return super(Extension, self).drop()
+        else:
+            return []
+
 
 class ExtensionDict(DbObjectDict):
     "The collection of extensions in a database"
 
     cls = Extension
     query = \
-        """SELECT extname AS name, nspname AS schema, extversion AS version,
+        """SELECT oid,
+                  extname AS name, nspname AS schema, extversion AS version,
                   rolname AS owner,
                   obj_description(e.oid, 'pg_extension') AS description
            FROM pg_extension e
@@ -59,7 +93,7 @@ class ExtensionDict(DbObjectDict):
         if self.dbconn.version < 90100:
             return
         for ext in self.fetch():
-            self[ext.key()] = ext
+            self.by_oid[ext.oid] = self[ext.key()] = ext
 
     def from_map(self, inexts, langtempls, newdb):
         """Initalize the dictionary of extensions by converting the input map
@@ -81,49 +115,3 @@ class ExtensionDict(DbObjectDict):
             if self[ext].name in langtempls:
                 lang = {'language %s' % self[ext].name: {'_ext': 'e'}}
                 newdb.languages.from_map(lang)
-
-    def diff_map(self, inexts):
-        """Generate SQL to transform existing extensions
-
-        :param inexts: a YAML map defining the new extensions
-        :return: list of SQL statements
-
-        Compares the existing extension definitions, as fetched from
-        the catalogs, to the input map and generates SQL statements to
-        transform the extensions accordingly.
-        """
-        stmts = []
-        # check input extensions
-        for ext in inexts:
-            inexten = inexts[ext]
-            # does it exist in the database?
-            if ext not in self:
-                if not hasattr(inexten, 'oldname'):
-                    # create new extension
-                    stmts.append(inexten.create())
-                else:
-                    stmts.append(self[ext].rename(inexten))
-            # check extension objects
-            else:
-                # extension owner cannot be altered, set no_owner to True
-                stmts.append(self[ext].diff_map(inexten, no_owner=True))
-
-        # check existing extensions
-        for ext in self:
-            exten = self[ext]
-            # if missing, mark it for dropping
-            if ext not in inexts:
-                exten.dropped = False
-
-        return stmts
-
-    def _drop(self):
-        """Actually drop the extension
-
-        :return: SQL statements
-        """
-        stmts = []
-        for ext in self:
-            if hasattr(self[ext], 'dropped'):
-                stmts.append(self[ext].drop())
-        return stmts

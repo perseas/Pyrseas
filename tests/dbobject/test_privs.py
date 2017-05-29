@@ -39,8 +39,9 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
         stmts = ["CREATE SCHEMA s1", "GRANT USAGE ON SCHEMA s1 TO PUBLIC",
                  "GRANT CREATE, USAGE ON SCHEMA s1 TO user1"]
         dbmap = self.to_map(stmts, no_privs=False)
-        expmap = self.sort_privileges({'privileges': [{self.db.user: ['all']},
-                                 {'PUBLIC': ['usage']}, {'user1': ['all']}]})
+        expmap = self.sort_privileges({'privileges': [
+            {self.db.user: ['all']}, {'PUBLIC': ['usage']},
+            {'user1': ['all']}]})
         assert dbmap['schema s1'] == expmap
 
     def test_map_table(self):
@@ -48,8 +49,8 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
         stmts = [CREATE_TABLE, GRANT_SELECT % 'PUBLIC', GRANT_INSUPD % 'user1',
                  "GRANT REFERENCES, TRIGGER ON t1 TO user2 WITH GRANT OPTION"]
         dbmap = self.to_map(stmts, no_privs=False)
-        expmap = self.sort_privileges({'columns': [{'c1': {'type': 'integer'}},
-                              {'c2': {'type': 'text'}}],
+        expmap = self.sort_privileges({'columns': [
+            {'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}],
                   'privileges': [{self.db.user: ['all']},
                                  {'PUBLIC': ['select']},
                                  {'user1': ['insert', 'update']},
@@ -68,8 +69,9 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
         expmap = self.sort_privileges({'columns': [
             {'c1': {'type': 'integer', 'privileges': [{'user1': ['insert']}]}},
             {'c2': {'type': 'text', 'privileges': [
-            {'user1': ['insert']}, {'user2': ['insert', 'update']}]}}],
-            'privileges': [{self.db.user: ['all']}, {'PUBLIC': ['select']}]})
+                {'user1': ['insert']}, {'user2': [
+                    'insert', 'update']}]}}], 'privileges': [
+                        {self.db.user: ['all']}, {'PUBLIC': ['select']}]})
         assert dbmap['schema public']['table t1'] == expmap
 
     def test_map_sequence(self):
@@ -78,11 +80,12 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
                  "GRANT SELECT ON SEQUENCE seq1 TO PUBLIC",
                  "GRANT USAGE, UPDATE ON SEQUENCE seq1 TO user1"]
         dbmap = self.to_map(stmts, no_privs=False)
-        expmap = self.sort_privileges({'start_value': 1, 'increment_by': 1, 'max_value': None,
-                  'min_value': None, 'cache_value': 1,
-                  'privileges': [{self.db.user: ['all']},
-                                 {'PUBLIC': ['select']},
-                                 {'user1': ['usage', 'update']}]})
+        expmap = self.sort_privileges({'start_value': 1, 'increment_by': 1,
+                                       'max_value': None, 'min_value': None,
+                                       'cache_value': 1, 'privileges': [
+                                           {self.db.user: ['all']},
+                                           {'PUBLIC': ['select']},
+                                           {'user1': ['usage', 'update']}]})
         assert dbmap['schema public']['sequence seq1'] == expmap
 
     def test_map_view(self):
@@ -91,10 +94,12 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
                  "GRANT SELECT ON v1 TO PUBLIC",
                  "GRANT REFERENCES ON v1 TO user1"]
         dbmap = self.to_map(stmts, no_privs=False)
-        expmap = self.sort_privileges({'definition': " SELECT now()::date AS today;",
-                  'privileges': [{self.db.user: ['all']},
-                                 {'PUBLIC': ['select']},
-                                 {'user1': ['references']}]})
+        expmap = self.sort_privileges({'definition':
+                                       " SELECT now()::date AS today;",
+                                       'privileges': [
+                                           {self.db.user: ['all']},
+                                           {'PUBLIC': ['select']},
+                                           {'user1': ['references']}]})
         assert dbmap['schema public']['view v1'] == expmap
 
     def test_map_function(self):
@@ -125,8 +130,9 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
         stmts = [CREATE_FDW,
                  "GRANT USAGE ON FOREIGN DATA WRAPPER fdw1 TO PUBLIC"]
         dbmap = self.to_map(stmts, no_privs=False, superuser=True)
-        expmap = self.sort_privileges({'privileges': [{self.db.user: ['usage']},
-                                 {'PUBLIC': ['usage']}]})
+        expmap = self.sort_privileges({'privileges':
+                                       [{self.db.user: ['usage']},
+                                        {'PUBLIC': ['usage']}]})
         assert dbmap['foreign data wrapper fdw1'] == expmap
 
     def test_map_server(self):
@@ -152,7 +158,8 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
                   'privileges': [{self.db.user: ['all']},
                                  {'PUBLIC': ['select']},
                                  {'user1': ['insert', 'update']}]}
-        assert dbmap['schema public']['foreign table ft1'] == self.sort_privileges(expmap)
+        assert dbmap['schema public']['foreign table ft1'] == \
+            self.sort_privileges(expmap)
 
 
 class PrivilegeToSqlTestCase(InputMapToSqlTestCase):
@@ -167,7 +174,7 @@ class PrivilegeToSqlTestCase(InputMapToSqlTestCase):
         inmap = self.std_map()
         inmap.update({'schema s1': {
             'owner': self.db.user, 'privileges': [{
-            self.db.user: ['all']}, {'PUBLIC': ['usage', 'create']}]}})
+                self.db.user: ['all']}, {'PUBLIC': ['usage', 'create']}]}})
         sql = self.to_sql(inmap)
         # sql[0] = CREATE SCHEMA
         # sql[1] = ALTER SCHEMA OWNER
@@ -209,8 +216,8 @@ class PrivilegeToSqlTestCase(InputMapToSqlTestCase):
         inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
             'columns': [{'c1': {'type': 'integer', 'privileges': [{'user1': [
-            'insert']}]}}, {'c2': {'type': 'text', 'privileges': [{'user1': [
-                'insert']}, {'user2': ['insert', 'update']}]}}],
+                'insert']}]}}, {'c2': {'type': 'text', 'privileges': [
+                    {'user1': ['insert']}, {'user2': ['insert', 'update']}]}}],
             'owner': self.db.user, 'privileges': [{self.db.user: ['all']},
                                                   {'PUBLIC': ['select']}]}})
         sql = self.to_sql(inmap)
@@ -254,11 +261,12 @@ class PrivilegeToSqlTestCase(InputMapToSqlTestCase):
         inmap = self.std_map()
         inmap['schema public'].update(
             {'table t1': {'columns': [{'c1': {
-                'type': 'integer', 'privileges': [{
-                'user1': ['insert']}, {'user2': ['insert', 'update']}]}},
-            {'c2': {'type': 'text', 'privileges': [{'user1': ['insert']}]}}],
-                'owner': self.db.user, 'privileges': [{self.db.user: ['all']},
-                {'PUBLIC': ['select']}]}})
+                'type': 'integer', 'privileges': [
+                    {'user1': ['insert']}, {'user2': ['insert', 'update']}]}},
+                                      {'c2': {'type': 'text', 'privileges': [
+                                          {'user1': ['insert']}]}}],
+                'owner': self.db.user, 'privileges': [
+                    {self.db.user: ['all']}, {'PUBLIC': ['select']}]}})
         stmts = [CREATE_TABLE, GRANT_SELECT % 'PUBLIC',
                  "GRANT INSERT (c1, c2) ON t1 TO user1",
                  "GRANT INSERT (c2), UPDATE (c2) ON t1 TO user2"]
@@ -340,8 +348,7 @@ class PrivilegeToSqlTestCase(InputMapToSqlTestCase):
             'volatility': 'immutable', 'owner': self.db.user,
             'privileges': [{self.db.user: ['all']}, {'PUBLIC': ['execute']}]}})
         sql = self.to_sql(inmap)
-        # sql[0] = SET check_function_bodies
-        # sql[1] = CREATE FUNCTION
+        # sql[0:1] = SET, CREATE FUNCTION
         # sql[2] = ALTER FUNCTION OWNER
         assert sql[3] == "GRANT EXECUTE ON FUNCTION f1() TO %s" % self.db.user
         assert sql[4] == "GRANT EXECUTE ON FUNCTION f1() TO PUBLIC"

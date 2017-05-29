@@ -12,12 +12,14 @@
 """
 import os
 import sys
-
+from operator import itemgetter
+from collections import defaultdict, deque
 import yaml
 
 from pgdbconn.dbconn import DbConnection
+
 from pyrseas.yamlutil import yamldump
-from pyrseas.dbobject import fetch_reserved_words
+from pyrseas.dbobject import fetch_reserved_words, DbObjectDict, DbSchemaObject
 from pyrseas.dbobject.language import LanguageDict
 from pyrseas.dbobject.cast import CastDict
 from pyrseas.dbobject.schema import SchemaDict
@@ -79,7 +81,7 @@ class Database(object):
     class Dicts(object):
         """A holder for dictionaries (maps) describing a database"""
 
-        def __init__(self, dbconn=None):
+        def __init__(self, dbconn=None, single_db=False):
             """Initialize the various DbObjectDict-derived dictionaries
 
             :param dbconn: a DbConnection object
@@ -111,6 +113,86 @@ class Database(object):
             self.collations = CollationDict(dbconn)
             self.eventtrigs = EventTriggerDict(dbconn)
 
+            # Populate a map from system catalog to the respective dict
+            self._catalog_map = {}
+            for _, d in self.all_dicts(single_db):
+                if d.cls.catalog is not None:
+                    self._catalog_map[d.cls.catalog] = d
+
+            # Map from objects extkey to their (dict name, key)
+            self._extkey_map = {}
+
+        def _get_by_extkey(self, extkey):
+            """Return any database item from its extkey
+
+            Note: probably doesn't work for all the objects, e.g. constraints
+            may clash because two in different tables have different extkeys.
+            However this shouldn't matter as such objects are generated as part
+            of the containing one and they should be returned by the
+            `get_implied_deps()` implementation of specific classes (which
+            would look for the object in by key in the right dict instead,
+            (e.g.  check `Domain.get_implied_deps()` implementation.
+
+            """
+            try:
+                return self._extkey_map[extkey]
+            except KeyError:
+                # TODO: Likely it's the first time we call this function so
+                # let's warm up the cache. But we should really define the life
+                # cycle of this object as trying and catching KeyError on it is
+                # *very* expensive!
+                for _, d in self.all_dicts():
+                    for obj in list(d.values()):
+                        self._extkey_map[obj.extern_key()] = obj
+
+                return self._extkey_map[extkey]
+
+        def all_dicts(self, non_empty=False):
+            """Iterate over the DbObjectDict-derived dictionaries returning
+            an ordered list of tuples (dict name, DbObjectDict object).
+
+            :param non_empty: do not include empty dicts
+
+            :return: list of tuples
+            """
+            rv = []
+            for attr in self.__dict__:
+                d = getattr(self, attr)
+                if non_empty and len(d) == 0:
+                    continue
+                if isinstance(d, DbObjectDict):
+                    # skip ColumnDict as not needed for dependency tracking
+                    # and internally has lists, not objects
+                    if not isinstance(d, ColumnDict):
+                        rv.append((attr, d))
+
+            # first return the dicts for non-schema objects, then the
+            # others, each group sorted alphabetically.
+            rv.sort(key=lambda pair: (issubclass(pair[1].cls, DbSchemaObject),
+                                      pair[1].cls.__name__))
+
+            return rv
+
+        def dbobjdict_from_catalog(self, catalog):
+            """Given a catalog name, return corresponding DbObjectDict
+
+            :param catalog: full name of a pg_ catalog
+            :return: DbObjectDict object
+            """
+            return self._catalog_map.get(catalog)
+
+        def find_type(self, name):
+            """Return a db type given a qualname
+
+            Note that tables and views are types too.
+            """
+            rv = self.types.find(name)
+            if rv is not None:
+                return rv
+
+            rv = self.tables.find(name)
+            return rv
+
     def __init__(self, config):
         """Initialize the database
 
@@ -137,11 +219,96 @@ class Database(object):
         db.schemas.link_refs(db, copycfg)
         db.tables.link_refs(db.columns, db.constraints, db.indexes, db.rules,
                             db.triggers)
-        db.functions.link_refs(db.eventtrigs)
+        db.functions.link_refs(db.types, db.eventtrigs)
         db.fdwrappers.link_refs(db.servers)
         db.servers.link_refs(db.usermaps)
         db.ftables.link_refs(db.columns)
         db.types.link_refs(db.columns, db.constraints, db.functions)
+        db.constraints.link_refs(db)
+
+    def _build_dependency_graph(self, db, dbconn):
+        """Build the dependency graph of the database objects
+
+        :param db: dictionary of dictionary of all objects
+        :param dbconn: a DbConnection object
+        """
+        alldeps = defaultdict(list)
+
+        # This query wanted to be simple. it got complicated because
+        # we don't handle indexes together with the other pg_class
+        # but in their own pg_index place (so fetch i1, i2)
+        # "Normal" dependencies, but excluding system objects
+        # (objid < 16384 and refobjid < 16384)
+        query = """SELECT DISTINCT
+                          CASE WHEN i1.indexrelid IS NOT NULL
+                          THEN 'pg_index'::regclass
+                          ELSE classid::regclass END AS class_name, objid,
+                          CASE WHEN i2.indexrelid IS NOT NULL
+                          THEN 'pg_index'::regclass
+                          ELSE refclassid::regclass END AS refclass, refobjid
+                   FROM pg_depend
+                        LEFT JOIN pg_index i1 ON classid = 'pg_class'::regclass
+                             AND objid = i1.indexrelid
+                        LEFT JOIN pg_index i2
+                             ON refclassid = 'pg_class'::regclass
+                             AND refobjid = i2.indexrelid
+                   WHERE deptype = 'n'
+                   AND NOT (objid < 16384 AND refobjid < 16384)"""
+        for r in dbconn.fetchall(query):
+            alldeps[r['class_name'], r['objid']].append(
+                (r['refclass'], r['refobjid']))
+
+        # The dependencies across views is not in pg_depend. We have to
+        # parse the rewrite rule.  "ev_class >= 16384" is to exclude
+        # system views.
+        query = """SELECT DISTINCT 'pg_class' AS class_name, ev_class,
+                          CASE WHEN depid[1] = 'relid' THEN 'pg_class'
+                               WHEN depid[1] = 'funcid' THEN 'pg_proc'
+                               END AS refclass, depid[2]::oid AS refobjid
+                   FROM (SELECT ev_class, regexp_matches(ev_action,
+                                ':(relid|funcid)\s+(\d+)', 'g') AS depid
+                         FROM pg_rewrite
+                         WHERE rulename = '_RETURN'
+                         AND ev_class >= 16384) x
+                         LEFT JOIN pg_class c
+                              ON (depid[1], depid[2]::oid) = ('relid', c.oid)
+                         LEFT JOIN pg_namespace cs ON cs.oid = relnamespace
+                         LEFT JOIN pg_proc p
+                              ON (depid[1], depid[2]::oid) = ('funcid', p.oid)
+                         LEFT JOIN pg_namespace ps ON ps.oid = pronamespace
+                   WHERE ev_class <> depid[2]::oid
+                   AND coalesce(cs.nspname, ps.nspname)
+                         NOT IN ('information_schema', 'pg_catalog')"""
+        for r in dbconn.fetchall(query):
+            alldeps[r['class_name'], r['ev_class']].append(
+                (r['refclass'], r['refobjid']))
+
+        # Add the dependencies between a table and other objects through the
+        # columns defaults
+        query = """SELECT 'pg_class' AS class_name, adrelid,
+                          d.refclassid::regclass, d.refobjid
+                   FROM pg_attrdef ad JOIN pg_depend d
+                        ON classid = 'pg_attrdef'::regclass AND objid = ad.oid
+                        AND deptype = 'n'"""
+        for r in dbconn.fetchall(query):
+            alldeps[r['class_name'], r['adrelid']].append(
+                (r['refclassid'], r['refobjid']))
+
+        for (stbl, soid), deps in list(alldeps.items()):
+            sdict = db.dbobjdict_from_catalog(stbl)
+            if sdict is None or len(sdict) == 0:
+                continue
+            src = sdict.by_oid.get(soid)
+            if src is None:
+                continue
+            for ttbl, toid in deps:
+                tdict = db.dbobjdict_from_catalog(ttbl)
+                if tdict is None or len(tdict) == 0:
+                    continue
+                tgt = tdict.by_oid.get(toid)
+                if tgt is None:
+                    continue
+                src.depends_on.append(tgt)
 
     def _trim_objects(self, schemas):
         """Remove unwanted schema objects
@@ -165,15 +332,17 @@ class Database(object):
         self.db.languages = LanguageDict()
         self.db.casts = CastDict()
 
-    def from_catalog(self):
+    def from_catalog(self, single_db=False):
         """Populate the database objects by querying the catalogs
 
         The `db` holder is populated by various DbObjectDict-derived
-        classes by querying the catalogs. The objects in the
-        dictionary are then linked to related objects, e.g., columns
-        are linked to the tables they belong.
+        classes by querying the catalogs.  A dependency graph is
+        constructed by querying the pg_depend catalog.  The objects in
+        the dictionary are then linked to related objects, e.g.,
+        columns are linked to the tables they belong.
         """
-        self.db = self.Dicts(self.dbconn)
+        self.db = self.Dicts(self.dbconn, single_db)
+        self._build_dependency_graph(self.db, self.dbconn)
         if self.dbconn.conn:
             self.dbconn.conn.close()
         self._link_refs(self.db)
@@ -266,7 +435,7 @@ class Database(object):
         :return: a YAML-suitable dictionary (without Python objects)
         """
         if not self.db:
-            self.from_catalog()
+            self.from_catalog(True)
 
         opts = self.config['options']
 
@@ -286,10 +455,10 @@ class Database(object):
             if os.path.exists(dbfilepath):
                 with open(dbfilepath, 'r') as f:
                     objmap = yaml.safe_load(f)
-                for obj, val in objmap.items():
+                for obj, val in list(objmap.items()):
                     if isinstance(val, dict):
                         dirpath = ''
-                        for schobj, fpath in val.items():
+                        for schobj, fpath in list(val.items()):
                             filepath = os.path.join(opts.metadata_dir, fpath)
                             if os.path.exists(filepath):
                                 os.remove(filepath)
@@ -302,16 +471,16 @@ class Database(object):
                         if (os.path.exists(filepath)):
                             os.remove(filepath)
 
-        dbmap = self.db.extensions.to_map(opts)
-        dbmap.update(self.db.languages.to_map(opts))
-        dbmap.update(self.db.casts.to_map(opts))
-        dbmap.update(self.db.fdwrappers.to_map(opts))
-        dbmap.update(self.db.eventtrigs.to_map(opts))
+        dbmap = self.db.extensions.to_map(self.db, opts)
+        dbmap.update(self.db.languages.to_map(self.db, opts))
+        dbmap.update(self.db.casts.to_map(self.db, opts))
+        dbmap.update(self.db.fdwrappers.to_map(self.db, opts))
+        dbmap.update(self.db.eventtrigs.to_map(self.db, opts))
         if 'datacopy' in self.config:
             opts.data_dir = self.config['files']['data_path']
             if not os.path.exists(opts.data_dir):
                 mkdir_parents(opts.data_dir)
-        dbmap.update(self.db.schemas.to_map(opts))
+        dbmap.update(self.db.schemas.to_map(self.db, opts))
 
         if opts.multiple_files:
             with open(dbfilepath, 'w') as f:
@@ -330,12 +499,14 @@ class Database(object):
         to transform the database into the one represented by the
         input.
         """
+        from .dbobject.table import Table
+
         if not self.db:
             self.from_catalog()
         opts = self.config['options']
         if opts.schemas:
             schlist = ['schema ' + sch for sch in opts.schemas]
-            for sch in input_map.keys():
+            for sch in list(input_map.keys()):
                 if sch not in schlist and sch.startswith('schema '):
                     del input_map[sch]
             self._trim_objects(opts.schemas)
@@ -350,44 +521,124 @@ class Database(object):
         self.from_map(input_map, langs)
         if opts.revert:
             (self.db, self.ndb) = (self.ndb, self.db)
+            del self.ndb.schemas['pg_catalog']
             self.db.languages.dbconn = self.dbconn
-        stmts = self.db.schemas.diff_map(self.ndb.schemas)
-        stmts.append(self.db.extensions.diff_map(self.ndb.extensions))
-        stmts.append(self.db.languages.diff_map(self.ndb.languages))
-        stmts.append(self.db.types.diff_map(self.ndb.types))
-        stmts.append(self.db.functions.diff_map(self.ndb.functions))
-        stmts.append(self.db.operators.diff_map(self.ndb.operators))
-        stmts.append(self.db.operfams.diff_map(self.ndb.operfams))
-        stmts.append(self.db.operclasses.diff_map(self.ndb.operclasses))
-        stmts.append(self.db.eventtrigs.diff_map(self.ndb.eventtrigs))
-        stmts.append(self.db.tables.diff_map(self.ndb.tables))
-        stmts.append(self.db.constraints.diff_map(self.ndb.constraints))
-        stmts.append(self.db.indexes.diff_map(self.ndb.indexes))
-        stmts.append(self.db.columns.diff_map(self.ndb.columns))
-        stmts.append(self.db.triggers.diff_map(self.ndb.triggers))
-        stmts.append(self.db.rules.diff_map(self.ndb.rules))
-        stmts.append(self.db.conversions.diff_map(self.ndb.conversions))
-        stmts.append(self.db.tsdicts.diff_map(self.ndb.tsdicts))
-        stmts.append(self.db.tstempls.diff_map(self.ndb.tstempls))
-        stmts.append(self.db.tsparsers.diff_map(self.ndb.tsparsers))
-        stmts.append(self.db.tsconfigs.diff_map(self.ndb.tsconfigs))
-        stmts.append(self.db.casts.diff_map(self.ndb.casts))
-        stmts.append(self.db.collations.diff_map(self.ndb.collations))
-        stmts.append(self.db.fdwrappers.diff_map(self.ndb.fdwrappers))
-        stmts.append(self.db.servers.diff_map(self.ndb.servers))
-        stmts.append(self.db.usermaps.diff_map(self.ndb.usermaps))
-        stmts.append(self.db.ftables.diff_map(self.ndb.ftables))
-        stmts.append(self.db.operators._drop())
-        stmts.append(self.db.operclasses._drop())
-        stmts.append(self.db.operfams._drop())
-        stmts.append(self.db.functions._drop())
-        stmts.append(self.db.types._drop())
-        stmts.append(self.db.schemas._drop())
-        stmts.append(self.db.servers._drop())
-        stmts.append(self.db.fdwrappers._drop())
-        stmts.append(self.db.languages._drop())
-        stmts.append(self.db.extensions._drop())
+
+        # First sort the objects in the new db in dependency order
+        new_objs = []
+        for _, d in self.ndb.all_dicts():
+            pairs = list(d.items())
+            pairs.sort()
+            new_objs.extend(list(map(itemgetter(1), pairs)))
+
+        new_objs = self.dep_sorted(new_objs, self.ndb)
+
+        # Then generate the sql for all the objects, walking in dependency
+        # order over all the db objects
+
+        stmts = []
+        for new in new_objs:
+            d = self.db.dbobjdict_from_catalog(new.catalog)
+            old = d.get(new.key())
+            if old is not None:
+                stmts.append(old.alter(new))
+            else:
+                stmts.append(new.create_sql())
+
+                # Check if the object just created was renamed, in which case
+                # don't try to delete the original one
+                if getattr(new, 'oldname', None):
+                    try:
+                        origname, new.name = new.name, new.oldname
+                        oldkey = new.key()
+                    finally:
+                        new.name = origname
+                    # Intentionally raising KeyError as tested e.g. in
+                    # test_bad_rename_view -- ok Joe?
+                    old = d[oldkey]
+                    old._nodrop = True
+
+        # Order the old database objects in reverse dependency order
+        old_objs = []
+        for _, d in self.db.all_dicts():
+            pairs = list(d.items())
+            pairs.sort
+            old_objs.extend(list(map(itemgetter(1), pairs)))
+        old_objs = self.dep_sorted(old_objs, self.db)
+        old_objs.reverse()
+
+        # Drop the objects that don't appear in the new db
+        for old in old_objs:
+            d = self.ndb.dbobjdict_from_catalog(old.catalog)
+            if isinstance(old, Table):
+                new = d.get(old.key())
+                if new is not None:
+                    stmts.extend(old.alter_drop_columns(new))
+            if not getattr(old, '_nodrop', False) and old.key() not in d:
+                stmts.extend(old.drop())
+
         if 'datacopy' in self.config:
             opts.data_dir = self.config['files']['data_path']
             stmts.append(self.ndb.schemas.data_import(opts))
-        return [s for s in flatten(stmts)]
+
+        stmts = [s for s in flatten(stmts)]
+        funcs = False
+        for s in stmts:
+            if "LANGUAGE sql" in s and (
+                    s.startswith("CREATE FUNCTION ") or
+                    s.startswith("CREATE OR REPLACE FUNCTION ")):
+                funcs = True
+                break
+        if funcs:
+            stmts.insert(0, "SET check_function_bodies = false")
+
+        return stmts
+
+    def dep_sorted(self, objs, db):
+        """Sort `objs` in order of dependency.
+
+        The function implements the classic Kahn 62 algorighm, see
+        <http://en.wikipedia.org/wiki/Topological_sorting>.
+        """
+        # List of objects to return
+        L = []
+
+        # Collect the graph edges.
+        # Note that our "dependencies" are sort of backwards compared to the
+        # terms used in the algorithm (an edge in the algo would be from the
+        # schema to the table, we have the table depending on the schema)
+        ein = defaultdict(set)
+        eout = defaultdict(deque)
+        for obj in objs:
+            for dep in obj.get_deps(db):
+                eout[dep].append(obj)
+                ein[obj].add(dep)
+
+        # The objects with no dependency to start with
+        S = deque()
+        for obj in objs:
+            if obj not in ein:
+                S.append(obj)
+
+        while S:
+            # Objects with no dependencies can be emitted
+            obj = S.popleft()
+            L.append(obj)
+
+            # Delete the edges and check if depending objects have no
+            # dependency now
+            while eout[obj]:
+                ch = eout[obj].popleft()
+                ein[ch].remove(obj)
+                if not ein[ch]:
+                    del ein[ch]
+                    S.append(ch)
+
+            del eout[obj]   # remove the empty set
+
+        assert bool(ein) == bool(eout)
+        if not ein:
+            return L
+        else:
+            # is it possible? How do we deal with that?
+            raise Exception("the objects dependencies graph has loops")

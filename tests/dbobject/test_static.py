@@ -87,9 +87,10 @@ class StaticTableToSqlTestCase(InputMapToSqlTestCase):
                 'columns': [{'c1': {'type': 'integer'}},
                             {'c2': {'type': 'integer'}},
                             {'c3': {'type': 'text'}}],
-                'foreign_keys': {'t2_c2_fkey': {'columns': ['c2'],
-                'references': {'schema': 'public', 'table': 't1',
-                               'columns': ['pc1']}}}}})
+                'foreign_keys': {'t2_c2_fkey': {
+                    'columns': ['c2'],
+                    'references': {'schema': 'public', 'table': 't1',
+                                   'columns': ['pc1']}}}}})
         cfg = {'datacopy': {'schema public': ['t1']}}
         sql = self.to_sql(inmap, stmts, config=cfg)
         copy_stmt = ("\\copy ", 't1', " from '",

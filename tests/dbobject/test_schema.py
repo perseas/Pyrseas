@@ -98,6 +98,7 @@ class SchemaToSqlTestCase(InputMapToSqlTestCase):
         sql = self.to_sql(inmap, stmts)
         assert sql == ["COMMENT ON SCHEMA s1 IS 'Changed schema s1'"]
 
+
 class SchemaUndoSqlTestCase(InputMapToSqlTestCase):
     """Test SQL generation to revert schemas"""
 

@@ -7,15 +7,19 @@
     DbSchemaObject and OperatorFamilyDict derived from DbObjectDict.
 """
 from pyrseas.dbobject import DbObjectDict, DbSchemaObject
-from pyrseas.dbobject import commentable, ownable
+from pyrseas.dbobject import commentable, ownable, split_schema_obj
 
 
 class OperatorFamily(DbSchemaObject):
     """An operator family"""
 
     keylist = ['schema', 'name', 'index_method']
-    objtype = "OPERATOR FAMILY"
     single_extern_file = True
+    catalog = 'pg_opfamily'
+
+    @property
+    def objtype(self):
+        return "OPERATOR FAMILY"
 
     def extern_key(self):
         """Return the key to be used in external maps for the operator family
@@ -48,7 +52,8 @@ class OperatorFamilyDict(DbObjectDict):
 
     cls = OperatorFamily
     query = \
-        """SELECT nspname AS schema, opfname AS name, rolname AS owner,
+        """SELECT o.oid,
+                  nspname AS schema, opfname AS name, rolname AS owner,
                   amname AS index_method,
                   obj_description(o.oid, 'pg_opfamily') AS description
            FROM pg_opfamily o
@@ -68,7 +73,7 @@ class OperatorFamilyDict(DbObjectDict):
         :param inopfams: YAML map defining the operator families
         """
         for key in inopfams:
-            if not key.startswith('operator family ') or not ' using ' in key:
+            if not key.startswith('operator family ') or ' using ' not in key:
                 raise KeyError("Unrecognized object type: %s" % key)
             pos = key.rfind(' using ')
             opf = key[16:pos]  # 16 = len('operator family ')
@@ -83,48 +88,6 @@ class OperatorFamilyDict(DbObjectDict):
             if 'description' in inopfam:
                 opfam.description = inopfam['description']
 
-    def diff_map(self, inopfams):
-        """Generate SQL to transform existing operator families
-
-        :param inopfams: a YAML map defining the new operator families
-        :return: list of SQL statements
-
-        Compares the existing operator family definitions, as fetched
-        from the catalogs, to the input map and generates SQL
-        statements to transform the operator families accordingly.
-        """
-        stmts = []
-        # check input operator families
-        for (sch, opf, idx) in inopfams:
-            inopfam = inopfams[(sch, opf, idx)]
-            # does it exist in the database?
-            if (sch, opf, idx) not in self:
-                if not hasattr(inopfam, 'oldname'):
-                    # create new operator family
-                    stmts.append(inopfam.create())
-                else:
-                    stmts.append(self[(sch, opf, idx)].rename(inopfam))
-            else:
-                # check operator family objects
-                stmts.append(self[(sch, opf, idx)].diff_map(inopfam))
-
-        # check existing operator families
-        for (sch, opf, idx) in self:
-            oper = self[(sch, opf, idx)]
-            # if missing, mark it for dropping
-            if (sch, opf, idx) not in inopfams:
-                oper.dropped = False
-
-        return stmts
-
-    def _drop(self):
-        """Actually drop the operator families
-
-        :return: SQL statements
-        """
-        stmts = []
-        for (sch, opf, idx) in self:
-            oper = self[(sch, opf, idx)]
-            if hasattr(oper, 'dropped'):
-                stmts.append(oper.drop())
-        return stmts
+    def find(self, obj, meth):
+        schema, name = split_schema_obj(obj)
+        return self.get((schema, name, meth))

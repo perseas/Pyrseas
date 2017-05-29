@@ -47,7 +47,7 @@ class Index(DbSchemaObject):
     """
 
     keylist = ['schema', 'table', 'name']
-    objtype = "INDEX"
+    catalog = 'pg_index'
 
     def key_expressions(self):
         """Return comma-separated list of key column names and qualifiers
@@ -72,12 +72,12 @@ class Index(DbSchemaObject):
                 colspec.append(clause)
         return ", ".join(colspec)
 
-    def to_map(self):
+    def to_map(self, db):
         """Convert an index definition to a YAML-suitable format
 
         :return: dictionary
         """
-        dct = self._base_map()
+        dct = self._base_map(db)
         if dct['access_method'] == 'btree':
             del dct['access_method']
         return {self.name: dct}
@@ -89,6 +89,11 @@ class Index(DbSchemaObject):
         :return: SQL statements
         """
         stmts = []
+
+        # indexes defined by constraints are not to be dealt with as indexes
+        if getattr(self, '_for_constraint', None):
+            return stmts
+
         unq = hasattr(self, 'unique') and self.unique
         acc = ''
         if hasattr(self, 'access_method') and self.access_method != 'btree':
@@ -108,7 +113,7 @@ class Index(DbSchemaObject):
                 self.qualname(self.table), quote_id(self.name)))
         return stmts
 
-    def diff_map(self, inindex):
+    def alter(self, inindex):
         """Generate SQL to transform an existing index
 
         :param inindex: a YAML map defining the new index
@@ -119,6 +124,11 @@ class Index(DbSchemaObject):
         input.
         """
         stmts = []
+
+        # indexes defined by constraints are not to be dealt with as indexes
+        if getattr(self, '_for_constraint', None):
+            return stmts
+
         if not hasattr(self, 'unique'):
             self.unique = False
         if self.access_method != inindex.access_method \
@@ -145,8 +155,28 @@ class Index(DbSchemaObject):
         elif hasattr(self, 'cluster'):
             stmts.append("ALTER TABLE %s\n    SET WITHOUT CLUSTER" %
                          self.qualname(self.table))
-        stmts.append(self.diff_description(inindex))
+        stmts.append(super(Index, self).alter(inindex))
         return stmts
+
+    def drop(self):
+        """Generate SQL to drop the current index
+
+        :return: list of SQL statements
+        """
+        # indexes defined by constraints are not to be dealt with as indexes
+        if getattr(self, '_for_constraint', None):
+            return []
+
+        return ["DROP INDEX %s" % self.identifier()]
+
+    def get_implied_deps(self, db):
+        deps = super(Index, self).get_implied_deps(db)
+
+        # add the table we are defined into
+        deps.add(db.tables[self.schema, self.table])
+        # TODO: add column collation specs if present
+
+        return deps
 
 
 class IndexDict(DbObjectDict):
@@ -154,13 +184,18 @@ class IndexDict(DbObjectDict):
 
     cls = Index
     query = \
-        """SELECT nspname AS schema, indrelid::regclass AS table,
+        """SELECT c.oid,
+                  nspname AS schema, indrelid::regclass AS table,
                   c.relname AS name, amname AS access_method,
                   indisunique AS unique, indkey AS keycols,
                   pg_get_expr(indexprs, indrelid) AS keyexprs,
                   pg_get_expr(indpred, indrelid) AS predicate,
                   pg_get_indexdef(indexrelid) AS defn,
                   spcname AS tablespace, indisclustered AS cluster,
+                  EXISTS (
+                    SELECT 1 FROM pg_constraint
+                    WHERE contype in ('p', 'u')
+                    AND conindid = c.oid) AS _for_constraint,
                   obj_description (c.oid, 'pg_class') AS description
            FROM pg_index JOIN pg_class c ON (indexrelid = c.oid)
                 JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
@@ -173,12 +208,13 @@ class IndexDict(DbObjectDict):
                  AND c.relname NOT IN (
                      SELECT conname FROM pg_constraint
                      WHERE contype = 'u')
-           ORDER BY schema, 2, name"""
+           ORDER BY schema, "table", name"""
 
     def _from_catalog(self):
         """Initialize the dictionary of indexes by querying the catalogs"""
         for index in self.fetch():
             index.unqualify()
+            oid = index.oid
             sch, tbl, idx = index.key()
             sch, tbl = split_schema_obj('%s.%s' % (sch, tbl))
             keydefs, _, _ = index.defn.partition(' WHERE ')
@@ -242,7 +278,7 @@ class IndexDict(DbObjectDict):
                     key = {key: extra}
                 index.keys.append(key)
             del index.defn, index.keycols
-            self[(sch, tbl, idx)] = index
+            self.by_oid[oid] = self[(sch, tbl, idx)] = index
 
     def from_map(self, table, inindexes):
         """Initialize the dictionary of indexes by converting the input map
@@ -271,47 +307,6 @@ class IndexDict(DbObjectDict):
                 idx.description = val['description']
             if 'oldname' in val:
                 idx.oldname = val['oldname']
+            if 'depends_on' in val:
+                idx.depends_on.extend(val['depends_on'])
             self[(table.schema, table.name, i)] = idx
-
-    def diff_map(self, inindexes):
-        """Generate SQL to transform existing indexes
-
-        :param inindexes: a YAML map defining the new indexes
-        :return: list of SQL statements
-
-        Compares the existing index definitions, as fetched from the
-        catalogs, to the input map and generates SQL statements to
-        transform the indexes accordingly.
-        """
-        stmts = []
-        # check input indexes
-        for (sch, tbl, idx) in inindexes:
-            inidx = inindexes[(sch, tbl, idx)]
-            # does it exist in the database?
-            if (sch, tbl, idx) not in self:
-                # check for possible RENAME
-                if hasattr(inidx, 'oldname'):
-                    oldname = inidx.oldname
-                    try:
-                        stmts.append(self[(sch, tbl, oldname)].rename(
-                            inidx.name))
-                        del self[(sch, tbl, oldname)]
-                    except KeyError as exc:
-                        exc.args = ("Previous name '%s' for index '%s' "
-                                    "not found" % (oldname, inidx.name), )
-                        raise
-                else:
-                    # create new index
-                    stmts.append(inidx.create())
-
-        # check database indexes
-        for (sch, tbl, idx) in self:
-            index = self[(sch, tbl, idx)]
-            # if missing, drop it
-            if (sch, tbl, idx) not in inindexes:
-                stmts.append(index.drop())
-            else:
-                # compare index objects
-                stmts.append(index.diff_map(inindexes[(sch, tbl, idx)]))
-
-        return stmts
