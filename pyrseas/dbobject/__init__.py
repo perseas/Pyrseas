@@ -160,14 +160,11 @@ class DbObject(object):
 
     allprivs = ''
 
-    def __init__(self, name=None, description=None, owner=None,
-                 privileges=None, **attrs):
+    def __init__(self, name, description=None, **attrs):
         """Initialize the catalog object from a dictionary of attributes
 
         :param name: name of object
         :param description: comment text describing object
-        :param owner: name of user that owns the object
-        :param privileges: privileges on object
         :param attrs: the dictionary of attributes
 
         Non-key attributes without a value are discarded. Values that
@@ -176,16 +173,14 @@ class DbObject(object):
         """
         self.name = name
         self.description = description
-        self.owner = owner
-        if isinstance(privileges, strtypes):
-            privileges = privileges.split(',')
-        self.privileges = privileges or []
+        self._init_own_privs(attrs.pop('owner', None),
+                             attrs.pop('privileges', []))
         self.depends_on = []
         self._objtype = None
 
         for key, val in list(attrs.items()):
             if val or key in self.keylist:
-                if key in ['definition', 'description', 'source'] and \
+                if key in ['definition', 'source'] and \
                         isinstance(val, strtypes) and '\n' in val:
                     newval = []
                     for line in val.split('\n'):
@@ -198,6 +193,21 @@ class DbObject(object):
                     else:
                         val = MultiLineStr(strval)
                 setattr(self, key, val)
+
+    def _init_own_privs(self, owner=None, privileges=[]):
+        """Initialize owner and privileges attributes
+
+        :param owner: name of user that owns the object
+-       :param privileges: privileges on object
+
+        The vast majority of Postgres database objects have owner and
+        privileges attributes.  Hence all base DbObject instances have
+        those attributes.  This method allows separate initialization.
+        """
+        self.owner = owner
+        if isinstance(privileges, strtypes):
+            privileges = privileges.split(',')
+        self.privileges = privileges or []
 
     def __repr__(self):
         return "<%s at 0x%x>" % (self.extern_key(), id(self))
@@ -515,6 +525,10 @@ class DbObject(object):
 class DbSchemaObject(DbObject):
     "A database object that is owned by a certain schema"
 
+    def __init__(self, name, schema='public', description=None, **attrs):
+        super(DbSchemaObject, self).__init__(name, description, **attrs)
+        self.schema = schema
+
     def identifier(self):
         """Return a full identifier for a schema object
 
@@ -637,6 +651,4 @@ class DbObjectDict(dict):
         """
         data = self.dbconn.fetchall(self.query)
         self.dbconn.rollback()
-        if data and self.cls.catalog:
-            assert 'oid' in data[0], self.__class__.__name__
         return [self.cls(**dict(row)) for row in data]

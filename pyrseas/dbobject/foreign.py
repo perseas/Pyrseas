@@ -499,7 +499,7 @@ class ForeignTable(DbObjectWithOptions, Table):
         for attr in attrlist:
             if hasattr(self, attr):
                 tbl.update({attr: getattr(self, attr)})
-        if not opts.no_privs and hasattr(self, 'privileges'):
+        if not opts.no_privs:
             tbl.update({'privileges': self.map_privs()})
 
         return tbl

@@ -21,6 +21,26 @@ class Cast(DbObject):
     single_extern_file = True
     catalog = 'pg_cast'
 
+    def __init__(self, source, target, description, function, context, method,
+                 oid=None):
+        """Initialize the cast
+
+        :param source: source data type (from castsource)
+        :param target: target data type (from casttarget)
+        :param description: comment text (from obj_description())
+        :param function: function to perform the cast (from castfunc)
+        :param context: context indicator (from castcontext)
+        :param method: method indicator (from castmethod)
+        """
+        super(Cast, self).__init__('%s AS %s' % (source, target), description)
+        self._init_own_privs(None, [])
+        self.source = source
+        self.target = target
+        self.function = function
+        self.context = context
+        self.method = method
+        self.oid = oid
+
     def extern_key(self):
         """Return the key to be used in external maps for this cast
 
@@ -43,6 +63,8 @@ class Cast(DbObject):
         """
         dct = self._base_map(db)
         del dct['name']
+        if self.function is None:
+            del dct['function']
         dct['context'] = CONTEXTS[self.context]
         dct['method'] = METHODS[self.method]
         return dct
@@ -54,7 +76,7 @@ class Cast(DbObject):
         :return: SQL statements
         """
         with_clause = "\n    WITH"
-        if hasattr(self, 'function'):
+        if self.function is not None:
             with_clause += " FUNCTION %s" % self.function
         elif self.method == 'i':
             with_clause += " INOUT"
@@ -127,16 +149,16 @@ class CastDict(DbObjectDict):
             src = key[6:asloc]
             trg = key[asloc + 4:-1]
             incast = incasts[key]
-            self[(src, trg)] = cast = Cast(source=src, target=trg)
             if not incast:
                 raise ValueError("Cast '%s' has no specification" % key[5:])
-            for attr, val in list(incast.items()):
-                setattr(cast, attr, val)
-            if not hasattr(cast, 'context'):
+            descr = incast.pop('description', None)
+            func = incast.pop('function', None)
+            ctxt = incast.pop('context', None)
+            meth = incast.pop('method', None)
+            if ctxt is None:
                 raise ValueError("Cast '%s' missing context" % key[5:])
-            if not hasattr(cast, 'context'):
+            ctxt = ctxt[:1].lower()
+            if meth is None:
                 raise ValueError("Cast '%s' missing method" % key[5:])
-            cast.context = cast.context[:1].lower()
-            cast.method = cast.method[:1].lower()
-            if 'description' in incast:
-                cast.description = incast['description']
+            meth = meth[:1].lower()
+            self[(src, trg)] = Cast(src, trg, descr, func, ctxt, meth)

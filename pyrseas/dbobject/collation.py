@@ -17,6 +17,23 @@ class Collation(DbSchemaObject):
     single_extern_file = True
     catalog = 'pg_collation'
 
+    def __init__(self, name, schema, description, owner, lc_collate, lc_ctype,
+                 oid=None):
+        """Initialize the collation
+
+        :param name: collation name (from collname)
+        :param description: comment text (from obj_description())
+        :param schema: schema name (from colnamespace)
+        :param owner: owner name (from rolname via collowner)
+        :param lc_collate: LC_COLLATE (from collcollate)
+        :param lc_ctype: LC_CTYPE (from collctype)
+        """
+        super(Collation, self).__init__(name, schema, description)
+        self._init_own_privs(owner, [])
+        self.lc_collate = lc_collate
+        self.lc_ctype = lc_ctype
+        self.oid = oid
+
     @commentable
     @ownable
     def create(self):
@@ -55,13 +72,10 @@ class CollationDict(DbObjectDict):
                 raise KeyError("Unrecognized object type: %s" % key)
             cll = key[10:]
             incoll = inmap[key]
-            coll = Collation(schema=schema.name, name=cll, **incoll)
-            if incoll:
-                if 'oldname' in incoll:
-                    coll.oldname = incoll['oldname']
-                    del incoll['oldname']
-                if 'description' in incoll:
-                    coll.description = incoll['description']
+            coll = Collation(cll, schema.name, incoll.pop('description', None),
+                             incoll.pop('owner', None), **incoll)
+            if incoll and 'oldname' in incoll:
+                coll.oldname = incoll.pop('oldname')
             self[(schema.name, cll)] = coll
 
     def _from_catalog(self):

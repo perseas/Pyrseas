@@ -17,9 +17,18 @@ class Extension(DbObject):
     single_extern_file = True
     catalog = 'pg_extension'
 
-    def __init__(self, name, description, owner, schema, privileges=None,
-                 version=None, oid=None):
-        super(Extension, self).__init__(name, description, owner, privileges)
+    def __init__(self, name, description, owner, schema, version=None,
+                 oid=None):
+        """Initialize the extension
+
+        :param name: extension name (from extlname)
+        :param description: comment text (from obj_description())
+        :param schema: schema name (from extnamespace)
+        :param owner: owner name (from rolname via extowner)
+        :param version: version name (from extversion)
+        """
+        super(Extension, self).__init__(name, description)
+        self._init_own_privs(owner, [])
         self.schema = schema
         self.version = version
         self.oid = oid

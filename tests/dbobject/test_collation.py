@@ -23,7 +23,7 @@ COMMENT_STMT = "COMMENT ON COLLATION c1 IS 'Test collation c1'"
 class CollationToMapTestCase(DatabaseToMapTestCase):
     """Test mapping of existing collations"""
 
-    def test_map_collation(self):
+    def test_map_collation1(self):
         "Map a collation"
         if self.db.version < 90100:
             self.skipTest('Only available on PG 9.1')
@@ -50,7 +50,7 @@ class CollationToMapTestCase(DatabaseToMapTestCase):
                   'depends_on': ['collation c1']}
         assert dbmap['schema public']['table t1'] == expmap
 
-    def test_index_collation(self):
+    def test_map_index_collation(self):
         "Map an index with column collation"
         if self.db.version < 90100:
             self.skipTest('Only available on PG 9.1')
@@ -68,7 +68,7 @@ class CollationToMapTestCase(DatabaseToMapTestCase):
 class CollationToSqlTestCase(InputMapToSqlTestCase):
     """Test SQL generation from input collations"""
 
-    def test_create_collation(self):
+    def test_create_collation1(self):
         "Create a collation"
         if self.db.version < 90100:
             self.skipTest('Only available on PG 9.1')
