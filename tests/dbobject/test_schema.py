@@ -35,10 +35,11 @@ class SchemaToMapTestCase(DatabaseToMapTestCase):
 class SchemaToSqlTestCase(InputMapToSqlTestCase):
     """Test SQL generation from input schemas"""
 
-    _schmap = {'schema s1': {'description': 'Test schema s1'}}
+    def base_schmap(self):
+        return {'schema s1': {'description': 'Test schema s1'}}
 
     def test_create_schema(self):
-        "Create a schema that didn't exist"
+        "Create a new schema"
         inmap = self.std_map()
         inmap.update({'schema s1': {}})
         sql = self.to_sql(inmap)
@@ -71,14 +72,14 @@ class SchemaToSqlTestCase(InputMapToSqlTestCase):
     def test_schema_with_comment(self):
         "Create a schema with a comment"
         inmap = self.std_map()
-        inmap.update(self._schmap)
+        inmap.update(self.base_schmap())
         sql = self.to_sql(inmap)
         assert sql == [CREATE_STMT, COMMENT_STMT]
 
     def test_comment_on_schema(self):
         "Create a comment for an existing schema"
         inmap = self.std_map()
-        inmap.update(self._schmap)
+        inmap.update(self.base_schmap())
         sql = self.to_sql(inmap, [CREATE_STMT])
         assert sql == [COMMENT_STMT]
 
@@ -102,7 +103,8 @@ class SchemaToSqlTestCase(InputMapToSqlTestCase):
 class SchemaUndoSqlTestCase(InputMapToSqlTestCase):
     """Test SQL generation to revert schemas"""
 
-    _schmap = {'schema s1': {'description': 'Test schema s1'}}
+    def base_schmap(self):
+        return {'schema s1': {'description': 'Test schema s1'}}
 
     def test_undo_create_schema(self):
         "Revert a schema creation"
@@ -119,7 +121,7 @@ class SchemaUndoSqlTestCase(InputMapToSqlTestCase):
     def test_undo_comment_on_schema(self):
         "Revert creating comment on a schema"
         inmap = self.std_map()
-        inmap.update(self._schmap)
+        inmap.update(self.base_schmap())
         sql = self.to_sql(inmap, [CREATE_STMT], revert=True)
         assert sql == ["COMMENT ON SCHEMA s1 IS NULL"]
 

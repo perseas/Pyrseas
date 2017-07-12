@@ -432,10 +432,10 @@ class DbObject(object):
         raise NotImplementedError
 
     def create_sql(self):
-        if not hasattr(self, 'oldname'):
-            return self.create()
-        else:
+        if hasattr(self, 'oldname') and self.oldname is not None:
             return self.rename(self.oldname)
+        else:
+            return self.create()
 
     def alter(self, inobj, no_owner=False):
         """Generate SQL to transform an existing database object

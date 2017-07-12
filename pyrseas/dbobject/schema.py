@@ -28,6 +28,20 @@ class Schema(DbObject):
     def allprivs(self):
         return 'UC'
 
+    def __init__(self, name, description=None, owner=None, privileges=[],
+                 oldname=None, oid=None):
+        """Initialize the schema
+
+        :param name: schema name (from nspname)
+        :param description: comment text (from obj_description())
+        :param owner: owner name (from rolname via nspowner)
+        :param privileges: access privileges (from nspacl)
+        :param oldname: previous name of schema
+        """
+        super(Schema, self).__init__(name, description)
+        self._init_own_privs(owner, privileges)
+        self.oldname = None
+
     def extern_dir(self, root='.'):
         """Return the path to a directory to hold the schema objects.
 
@@ -210,8 +224,14 @@ class SchemaDict(DbObjectDict):
             (objtype, spc, sch) = key.partition(' ')
             if spc != ' ' or objtype != 'schema':
                 raise KeyError("Unrecognized object type: %s" % key)
-            schema = self[sch] = Schema(name=sch)
             inschema = inmap[key]
+            schema = self[sch] = Schema(sch, inschema.pop('description', None),
+                                        inschema.pop('owner', None),
+                                        inschema.pop('privileges', []))
+            schema.privileges = privileges_from_map(schema.privileges,
+                                                    schema.allprivs,
+                                                    schema.owner)
+
             objdict = {}
             for key in sorted(inschema.keys()):
                 mapped = False
@@ -231,12 +251,8 @@ class SchemaDict(DbObjectDict):
                         objdict[otype] = {}
                     objdict[otype].update({key: inschema[key]})
                     mapped = True
-                elif key in ['oldname', 'owner', 'description']:
+                elif key == 'oldname':
                     setattr(schema, key, inschema[key])
-                    mapped = True
-                elif key == 'privileges':
-                    schema.privileges = privileges_from_map(
-                        inschema[key], schema.allprivs, schema.owner)
                     mapped = True
                 if not mapped and key != 'schema':
                     raise KeyError("Expected typed object, found '%s'" % key)
