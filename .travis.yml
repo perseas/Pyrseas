@@ -3,14 +3,14 @@ python:
   - "3.5"
   - "2.7"
 addons:
-  postgresql: "9.6"
+  postgresql: "9.5"
 before_install:
-  - export PATH=/usr/lib/postgresql/9.6/bin:$PATH
+  - export PATH=/usr/lib/postgresql/9.5/bin:$PATH
   - sudo locale-gen --no-archive fr_FR.UTF-8
   - sudo mkdir -p /extra/pg/ts1 /extra/pg/ts2
   - sudo chown postgres:postgres /extra/pg/ts1 /extra/pg/ts2
   - sudo apt-get update -qq
-  - sudo apt-get install -qq postgresql-plperl-9.6 postgresql-plpython-9.6
+  - sudo apt-get install -qq postgresql-plperl-9.5 postgresql-plpython-9.5
 before_script:
   - psql -Upostgres -c "CREATE TABLESPACE ts1 LOCATION '/extra/pg/ts1'"
   - psql -Upostgres -c "CREATE TABLESPACE ts2 LOCATION '/extra/pg/ts2'"
