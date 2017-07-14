@@ -17,6 +17,38 @@ class Conversion(DbSchemaObject):
     single_extern_file = True
     catalog = 'pg_conversion'
 
+    def __init__(self, name, schema, description, owner, source_encoding,
+                 dest_encoding, function, default=False,
+                 oid=None):
+        """Initialize the conversion
+
+        :param name: conversion name (from conname)
+        :param schema: schema name (from connamespace)
+        :param description: comment text (from obj_description())
+        :param owner: owner name (from rolname via conowner)
+        :param source_encoding: source encoding (from conforencoding)
+        :param source_encoding: destination encoding (from contoencoding)
+        :param function: conversion function (from conproc)
+        :param default: indicates this is default conversion (from condefault)
+        """
+        super(Conversion, self).__init__(name, schema, description)
+        self._init_own_privs(owner, [])
+        self.source_encoding = source_encoding
+        self.dest_encoding = dest_encoding
+        self.function = function
+        self.default = default
+        self.oid = oid
+
+    def to_map(self, db, no_owner=False, no_privs=False):
+        """Convert a conversion to a YAML-suitable format
+
+        :return: dictionary
+        """
+        dct = self._base_map(db, no_owner)
+        if not self.default:
+            del dct['default']
+        return dct
+
     @commentable
     @ownable
     def create(self):
@@ -25,7 +57,7 @@ class Conversion(DbSchemaObject):
         :return: SQL statements
         """
         dflt = ''
-        if hasattr(self, 'default') and self.default:
+        if self.default:
             dflt = 'DEFAULT '
         return ["CREATE %sCONVERSION %s\n    FOR '%s' TO '%s' FROM %s" % (
                 dflt, self.qualname(), self.source_encoding,
@@ -59,11 +91,13 @@ class ConversionDict(DbObjectDict):
                 raise KeyError("Unrecognized object type: %s" % key)
             cnv = key[11:]
             inconv = inmap[key]
-            conv = Conversion(schema=schema.name, name=cnv, **inconv)
-            if inconv:
-                if 'oldname' in inconv:
-                    conv.oldname = inconv['oldname']
-                    del inconv['oldname']
-                if 'description' in inconv:
-                    conv.description = inconv['description']
+            conv = Conversion(cnv, schema.name,
+                              inconv.pop('description', None),
+                              inconv.pop('owner', None),
+                              inconv.pop('source_encoding'),
+                              inconv.pop('dest_encoding'),
+                              inconv.pop('function'),
+                              inconv.pop('default', False), **inconv)
+            if inconv and 'oldname' in inconv:
+                conv.oldname = inconv.pop('oldname')
             self[(schema.name, cnv)] = conv

@@ -15,7 +15,7 @@ COMMENT_STMT = "COMMENT ON CONVERSION c1 IS 'Test conversion c1'"
 class ConversionToMapTestCase(DatabaseToMapTestCase):
     """Test mapping of existing conversions"""
 
-    def test_map_conversion(self):
+    def test_map_conversion1(self):
         "Map a conversion"
         dbmap = self.to_map([CREATE_STMT])
         expmap = {'source_encoding': 'LATIN1', 'dest_encoding': 'UTF8',
