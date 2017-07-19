@@ -13,7 +13,7 @@ COMMENT_STMT = "COMMENT ON OPERATOR +(text, text) IS 'Test operator +'"
 class OperatorToMapTestCase(DatabaseToMapTestCase):
     """Test mapping of existing operators"""
 
-    def test_map_operator(self):
+    def test_map_operator1(self):
         "Map a simple operator"
         dbmap = self.to_map([CREATE_STMT])
         expmap = {'procedure': 'textcat'}
@@ -55,7 +55,7 @@ class OperatorToMapTestCase(DatabaseToMapTestCase):
 class OperatorToSqlTestCase(InputMapToSqlTestCase):
     """Test SQL generation from input operators"""
 
-    def test_create_operator(self):
+    def test_create_operator1(self):
         "Create a simple operator"
         inmap = self.std_map()
         inmap['schema public'].update({'operator +(text, text)': {

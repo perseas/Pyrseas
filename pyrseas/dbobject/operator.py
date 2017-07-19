@@ -18,13 +18,48 @@ class Operator(DbSchemaObject):
     single_extern_file = True
     catalog = 'pg_operator'
 
+    def __init__(self, name, schema, description, owner, procedure,
+                 leftarg=None, rightarg=None, commutator=None, negator=None,
+                 restrict=None, join=None, hashes=False, merges=False,
+                 oid=None):
+        """Initialize the operator
+
+        :param name: operator name (from oprname)
+        :param description: comment text (from obj_description())
+        :param schema: schema name (from oprnamespace)
+        :param owner: owner name (from rolname via oprowner)
+        :param procedure: implementor function (from oprcode)
+        :param leftarg: left operand type (from oprleft)
+        :param rightarg: right operand type (from oprright)
+        :param commutator: commutator, if any (from oprcom)
+        :param negator: negator, if any (from oprnegate)
+        :param restrict: restriction selectivity function (from oprrest)
+        :param join: join selectivity function (from oprjoin)
+        :param hashes: supports hash joins? (from oprcanhash)
+        :param merges: support merge joins? (from oprcanmerge)
+        """
+        super(Operator, self).__init__(name, schema, description)
+        self._init_own_privs(owner, [])
+        self.procedure = procedure
+        self.leftarg = leftarg if leftarg != '-' else None
+        self.rightarg = rightarg if rightarg != '-' else None
+        self.commutator = commutator if commutator != '0' else None
+        self.negator = negator if negator != '0' else None
+        self.restrict = restrict if restrict != '-' else None
+        self.join = join if join != '-' else None
+        self.hashes = hashes
+        self.merges = merges
+        self.oid = oid
+
     def extern_key(self):
         """Return the key to be used in external maps for this operator
 
         :return: string
         """
-        return '%s %s(%s, %s)' % (self.objtype.lower(), self.name,
-                                  self.leftarg, self.rightarg)
+        return '%s %s(%s, %s)' % (
+            self.objtype.lower(), self.name,
+            'NONE' if self.leftarg is None else self.leftarg,
+            'NONE' if self.rightarg is None else self.rightarg)
 
     def qualname(self):
         """Return the schema-qualified name of the operator
@@ -43,6 +78,22 @@ class Operator(DbSchemaObject):
         """
         return "%s(%s, %s)" % (self.qualname(), self.leftarg, self.rightarg)
 
+    def to_map(self, db, no_owner=False):
+        """Convert an operator to a YAML-suitable format
+
+        :param db: db used to tie the objects together
+        :param no_owner: exclude object owner information
+        :return: dictionary
+        """
+        dct = self._base_map(db, no_owner)
+        for attr in ['commutator', 'join', 'negator', 'restrict']:
+            if dct[attr] is None:
+                dct.pop(attr)
+        for attr in ['hashes', 'merges']:
+            if dct[attr] is False:
+                dct.pop(attr)
+        return dct
+
     @commentable
     @ownable
     def create(self):
@@ -51,21 +102,21 @@ class Operator(DbSchemaObject):
         :return: SQL statements
         """
         opt_clauses = []
-        if self.leftarg != 'NONE':
+        if self.leftarg is not None:
             opt_clauses.append("LEFTARG = %s" % self.leftarg)
-        if self.rightarg != 'NONE':
+        if self.rightarg is not None:
             opt_clauses.append("RIGHTARG = %s" % self.rightarg)
-        if hasattr(self, 'commutator'):
+        if self.commutator is not None:
             opt_clauses.append("COMMUTATOR = OPERATOR(%s)" % self.commutator)
-        if hasattr(self, 'negator'):
+        if self.negator is not None:
             opt_clauses.append("NEGATOR = OPERATOR(%s)" % self.negator)
-        if hasattr(self, 'restrict'):
+        if self.restrict is not None:
             opt_clauses.append("RESTRICT = %s" % self.restrict)
-        if hasattr(self, 'join'):
+        if self.join is not None:
             opt_clauses.append("JOIN = %s" % self.join)
-        if hasattr(self, 'hashes') and self.hashes:
+        if self.hashes:
             opt_clauses.append("HASHES")
-        if hasattr(self, 'merges') and self.merges:
+        if self.merges:
             opt_clauses.append("MERGES")
         return ["CREATE OPERATOR %s (\n    PROCEDURE = %s%s%s)" % (
                 self.qualname(), self.procedure,
@@ -75,25 +126,27 @@ class Operator(DbSchemaObject):
         deps = super(Operator, self).get_implied_deps(db)
 
         # Types may be not found because builtin, or the operator unary
-        leftarg = db.types.find(self.leftarg)
-        if leftarg:
-            deps.add(leftarg)
+        if self.leftarg is not None:
+            leftarg = db.types.find(self.leftarg)
+            if leftarg:
+                deps.add(leftarg)
 
-        rightarg = db.types.find(self.rightarg)
-        if rightarg:
-            deps.add(rightarg)
+        if self.rightarg is not None:
+            rightarg = db.types.find(self.rightarg)
+            if rightarg:
+                deps.add(rightarg)
 
         # The function instead we expect it exists
         # TODO: another ugly hack to locate the object
         fschema, fname = split_schema_obj(self.procedure, self.schema)
         fargs = ', '.join(t for t in [self.leftarg, self.rightarg]
-                          if t != 'NONE')
+                          if t is not None)
         if (fschema, fname, fargs) in db.functions:
             func = db.functions[fschema, fname, fargs]
             deps.add(func)
 
         # This helper function may be a builtin
-        if getattr(self, 'restrict', None):
+        if self.restrict is not None:
             fschema, fname = split_schema_obj(self.restrict)
             func = db.functions.get((fschema, fname,
                                     "internal, oid, internal, integer"))
@@ -125,26 +178,6 @@ class OperatorDict(DbObjectDict):
                               AND classid = 'pg_operator'::regclass)
            ORDER BY nspname, oprname"""
 
-    def _from_catalog(self):
-        """Initialize the dictionary of operators by querying the catalogs"""
-        for oper in self.fetch():
-            oid = oper.oid
-            sch, opr, lft, rgt = oper.key()
-            if lft == '-':
-                lft = oper.leftarg = 'NONE'
-            if rgt == '-':
-                rgt = oper.rightarg = 'NONE'
-            if oper.commutator == '0':
-                del oper.commutator
-            if oper.negator == '0':
-                del oper.negator
-            if oper.restrict == '-':
-                del oper.restrict
-            if oper.join == '-':
-                del oper.join
-            self.by_oid[oid] = self[(sch, opr, lft, rgt)] \
-                = Operator(**oper.__dict__)
-
     def find(self, oper):
         """Return an operator given its signature
 
@@ -170,17 +203,19 @@ class OperatorDict(DbObjectDict):
             if paren == -1 or opr[-1:] != ')':
                 raise KeyError("Invalid operator signature: %s" % opr)
             (leftarg, rightarg) = opr[paren + 1:-1].split(',')
+            if leftarg == 'NONE':
+                leftarg = None
             rightarg = rightarg.lstrip()
+            if rightarg == 'NONE':
+                rightarg = None
             inoper = inopers[key]
             opr = opr[:paren]
             self[(schema.name, opr, leftarg, rightarg)] = oper = Operator(
-                schema=schema.name, name=opr, leftarg=leftarg,
-                rightarg=rightarg)
-            if not inoper:
-                raise ValueError("Operator '%s' has no specification" % opr)
-            for attr, val in list(inoper.items()):
-                setattr(oper, attr, val)
-            if 'oldname' in inoper:
-                oper.oldname = inoper['oldname']
-            if 'description' in inoper:
-                oper.description = inoper['description']
+                opr, schema.name, inoper.pop('description', None),
+                inoper.pop('owner', None), inoper.pop('procedure', None),
+                leftarg, rightarg, inoper.pop('commutator', None),
+                inoper.pop('negator', None), inoper.pop('restrict', None),
+                inoper.pop('join', None), inoper.pop('hashes', False),
+                inoper.pop('merges', None))
+            if inoper and 'oldname' in inoper:
+                oper.oldname = inoper.pop('oldname')
