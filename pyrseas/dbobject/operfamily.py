@@ -17,6 +17,21 @@ class OperatorFamily(DbSchemaObject):
     single_extern_file = True
     catalog = 'pg_opfamily'
 
+    def __init__(self, name, schema, index_method, description, owner,
+                 oid=None):
+        """Initialize the operator family
+
+        :param name: operator name (from opfname)
+        :param schema: schema name (from opfnamespace)
+        :param index_method: index access method (from amname via opfmethod)
+        :param description: comment text (from obj_description())
+        :param owner: owner name (from rolname via opfowner)
+        """
+        super(OperatorFamily, self).__init__(name, schema, description)
+        self._init_own_privs(owner, [])
+        self.index_method = index_method
+        self.oid = oid
+
     @property
     def objtype(self):
         return "OPERATOR FAMILY"
@@ -80,13 +95,10 @@ class OperatorFamilyDict(DbObjectDict):
             idx = key[pos + 7:]  # 7 = len(' using ')
             inopfam = inopfams[key]
             self[(schema.name, opf, idx)] = opfam = OperatorFamily(
-                schema=schema.name, name=opf, index_method=idx)
-            for attr, val in list(inopfam.items()):
-                setattr(opfam, attr, val)
+                opf, schema.name, idx, inopfam.pop('description', None),
+                inopfam.pop('owner', None))
             if 'oldname' in inopfam:
-                opfam.oldname = inopfam['oldname']
-            if 'description' in inopfam:
-                opfam.description = inopfam['description']
+                opfam.oldname = inopfam.get('oldname')
 
     def find(self, obj, meth):
         schema, name = split_schema_obj(obj)
