@@ -17,6 +17,31 @@ class OperatorClass(DbSchemaObject):
     single_extern_file = True
     catalog = 'pg_opclass'
 
+    def __init__(self, name, schema, index_method, description, owner,
+                 family, type, default=None, storage=None, oid=None):
+        """Initialize the operator class
+
+        :param name: operator name (from opcname)
+        :param schema: schema name (from opcnamespace)
+        :param index_method: index access method (from amname via opcmethod)
+        :param description: comment text (from obj_description())
+        :param owner: owner name (from rolname via opcowner)
+        :param family: operator family (from opfname via opcfamily)
+        :param type: data type indexed (from opcintype)
+        :param default: default class for this type? (from opcdefault)
+        :param storage: type of data stored (from opckeytype)
+        """
+        super(OperatorClass, self).__init__(name, schema, description)
+        self._init_own_privs(owner, [])
+        self.index_method = index_method
+        self.family = family
+        self.type = type
+        self.default = default
+        self.storage = storage if storage != '-' else None
+        self.operators = {}
+        self.functions = {}
+        self.oid = oid
+
     @property
     def objtype(self):
         return "OPERATOR CLASS"
@@ -42,6 +67,10 @@ class OperatorClass(DbSchemaObject):
         :return: dictionary
         """
         dct = self._base_map(db, no_owner)
+        if self.storage is None:
+            del dct['storage']
+        if not self.default:
+            del dct['default']
         if self.name == self.family:
             del dct['family']
         return dct
@@ -54,14 +83,14 @@ class OperatorClass(DbSchemaObject):
         :return: SQL statements
         """
         dflt = ''
-        if hasattr(self, 'default') and self.default:
+        if self.default:
             dflt = "DEFAULT "
         clauses = []
         for (strat, oper) in list(self.operators.items()):
             clauses.append("OPERATOR %d %s" % (strat, oper))
         for (supp, func) in list(self.functions.items()):
             clauses.append("FUNCTION %d %s" % (supp, func))
-        if hasattr(self, 'storage'):
+        if self.storage is not None:
             clauses.append("STORAGE %s" % self.storage)
         return ["CREATE OPERATOR CLASS %s\n    %sFOR TYPE %s USING %s "
                 "AS\n    %s" % (
@@ -75,7 +104,7 @@ class OperatorClass(DbSchemaObject):
         if type:
             deps.add(type)
 
-        if getattr(self, 'storage', None):
+        if self.storage is not None:
             type = db.types.find(self.storage)
             if type:
                 deps.add(type)
@@ -90,7 +119,7 @@ class OperatorClass(DbSchemaObject):
             if f is not None:
                 deps.add(f)
 
-        if getattr(self, 'family', None):
+        if self.family is not None:
             f = db.operfams.find(self.family, self.index_method)
             if f is not None:
                 deps.add(f)
@@ -152,23 +181,16 @@ class OperatorClassDict(DbObjectDict):
     def _from_catalog(self):
         """Initialize the dictionary of operator classes from the catalogs"""
         for opclass in self.fetch():
-            if opclass.storage == '-':
-                del opclass.storage
-            self.by_oid[opclass.oid] = self[opclass.key()] \
-                = OperatorClass(**opclass.__dict__)
+            self[opclass.key()] = opclass
         opers = self.dbconn.fetchall(self.opquery)
         self.dbconn.rollback()
         for (sch, opc, idx, strat, oper) in opers:
             opcls = self[(sch, opc, idx)]
-            if not hasattr(opcls, 'operators'):
-                opcls.operators = {}
             opcls.operators.update({strat: oper})
         funcs = self.dbconn.fetchall(self.prquery)
         self.dbconn.rollback()
         for (sch, opc, idx, supp, func) in funcs:
             opcls = self[(sch, opc, idx)]
-            if not hasattr(opcls, 'functions'):
-                opcls.functions = {}
             opcls.functions.update({supp: func})
 
     def from_map(self, schema, inopcls):
@@ -185,12 +207,15 @@ class OperatorClassDict(DbObjectDict):
             idx = key[pos + 7:]  # 7 = len(' using ')
             inopcl = inopcls[key]
             self[(schema.name, opc, idx)] = opclass = OperatorClass(
-                schema=schema.name, name=opc, index_method=idx)
+                opc, schema.name, idx, inopcl.pop('description', None),
+                inopcl.pop('owner', None), inopcl.pop('family', None),
+                inopcl.pop('type', None), inopcl.pop('default', False),
+                inopcl.pop('storage', None))
             if not inopcl:
                 raise ValueError("Operator '%s' has no specification" % opc)
-            for attr, val in list(inopcl.items()):
-                setattr(opclass, attr, val)
+            if 'operators' in inopcl:
+                opclass.operators = inopcl.pop('operators')
+            if 'functions' in inopcl:
+                opclass.functions = inopcl.pop('functions')
             if 'oldname' in inopcl:
-                opclass.oldname = inopcl['oldname']
-            if 'description' in inopcl:
-                opclass.description = inopcl['description']
+                opclass.oldname = inopcl.pop('oldname')

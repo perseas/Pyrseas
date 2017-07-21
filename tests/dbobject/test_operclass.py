@@ -34,7 +34,7 @@ class OperatorClassToMapTestCase(DatabaseToMapTestCase):
 
     superuser = True
 
-    def test_map_operclass(self):
+    def test_map_operclass1(self):
         "Map an operator class"
         dbmap = self.to_map([CREATE_STMT])
         assert dbmap['schema public']['operator class oc1 using btree'] == \
@@ -64,7 +64,7 @@ class OperatorClassToMapTestCase(DatabaseToMapTestCase):
 class OperatorClassToSqlTestCase(InputMapToSqlTestCase):
     """Test SQL generation from input operators"""
 
-    def test_create_operclass(self):
+    def test_create_operclass1(self):
         "Create an operator class"
         inmap = self.std_map()
         inmap['schema public'].update({'operator class oc1 using btree': {
