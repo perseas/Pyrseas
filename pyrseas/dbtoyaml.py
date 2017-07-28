@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """dbtoyaml - extract the schema of a PostgreSQL database in YAML format"""
 
