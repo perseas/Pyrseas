@@ -114,7 +114,11 @@ class Trigger(DbSchemaObject):
         fschema, fname = split_schema_obj(self.procedure, self.schema)
         fname, _ = fname.split('(', 1)  # implicitly assert there is a (
         if not fname.startswith('tsvector_update_trigger'):
-            deps.add(db.functions[fschema, fname, ''])
+            try:
+                deps.add(db.functions[fschema, fname, ''])
+            except KeyError:
+                # can be an error if the function is into an extension it seems
+                pass
 
         return deps
 
