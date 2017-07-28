@@ -68,20 +68,77 @@ def split_schema_obj(obj, sch=None):
     qualsch = sch
     if sch is None:
         qualsch = 'public'
-    if obj[0] == '"' and obj[-1] == '"':
-        if '"."' in obj:
-            (qualsch, obj) = obj.split('"."')
-            qualsch = qualsch[1:]
-            obj = obj[:-1]
-        else:
-            obj = obj[1:-1]
+
+    tokens = tokenize_identifiers(obj)
+    if len(tokens) == 1:
+        obj = tokens[0]
+    elif len(tokens) == 2:
+        qualsch, obj = tokens
     else:
-        # TODO: properly handle functions
-        if '.' in obj and '(' not in obj:
-            (qualsch, obj) = obj.split('.')
+        raise ValueError("invalid object name: %s")
+
     if sch != qualsch:
         sch = qualsch
     return (sch, obj)
+
+
+def tokenize_identifiers(s):
+    """
+    Parse a string representing a dotted sequence of Postgres identifiers
+
+    Return a list of the tokens found, with double-quotes removed
+
+    Stop at a ( in case the name passed is actually a function with args
+    """
+    START, QUOTE, NAME = range(3)
+    state = START
+
+    rv = []
+    t = ''
+    si = iter(s)
+    try:
+        while 1:
+            c = next(si)
+            if state == START:
+                if c == '"':
+                    state = QUOTE
+                elif c == '.':
+                    raise ValueError("invalid object name: %s" % s)
+                else:
+                    state = NAME
+                    t += c
+            elif state == NAME:
+                if c == '"':
+                    raise ValueError("invalid object name: %s" % s)
+                elif c == '.':
+                    # end of token
+                    rv.append(t)
+                    t = ''
+                    state = START
+                elif c == '(':
+                    break
+                else:
+                    t += c
+            elif state == QUOTE:
+                if c == '"':
+                    # end quote or escaped quote?
+                    c2 = next(si)
+                    if c2 == '"':
+                        t += '"'
+                    elif c2 == '.':
+                        rv.append(t)
+                        t = ''
+                        state = START
+                    elif c2 == '(':
+                        break
+                else:
+                    t += c
+    except StopIteration:
+        pass
+
+    rv.append(t)
+
+    return rv
 
 
 def split_func_args(obj):
