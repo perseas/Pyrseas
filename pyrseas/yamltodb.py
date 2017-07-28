@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """yamltodb - generate SQL statements to update a PostgreSQL database
 to match the schema specified in a YAML file"""
