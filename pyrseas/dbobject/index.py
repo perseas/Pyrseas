@@ -216,7 +216,7 @@ class IndexDict(DbObjectDict):
             index.unqualify()
             oid = index.oid
             sch, tbl, idx = index.key()
-            sch, tbl = split_schema_obj('%s.%s' % (sch, tbl))
+            sch, tbl = split_schema_obj(quote_id(sch, tbl))     # TODO: why?
             keydefs, _, _ = index.defn.partition(' WHERE ')
             _, _, keydefs = keydefs.partition(' USING ')
             keydefs = keydefs[keydefs.find(' (') + 2:-1]

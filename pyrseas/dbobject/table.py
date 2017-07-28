@@ -58,7 +58,7 @@ class Sequence(DbClass):
         data = dbconn.fetchone(
             """SELECT start_value, increment_by, max_value, min_value,
                       cache_value
-               FROM %s.%s""" % (quote_id(self.schema), quote_id(self.name)))
+               FROM %s""" % quote_id(self.schema, self.name))
         for key, val in list(data.items()):
             setattr(self, key, val)
 

@@ -7,7 +7,7 @@
     DbAugment and CfgTriggerDict derived from DbAugmentDict.
 """
 from pyrseas.augment import DbAugmentDict, DbAugment
-from pyrseas.dbobject import split_schema_obj
+from pyrseas.dbobject import split_schema_obj, quote_id
 from pyrseas.dbobject.trigger import Trigger
 
 
@@ -35,7 +35,7 @@ class CfgTrigger(DbAugment):
                     newtrg.procedure[:14], table.name)
             (sch, fnc) = split_schema_obj(newtrg.procedure)
             if sch != table.schema:
-                newtrg.procedure = "%s.%s" % (table.schema, fnc)
+                newtrg.procedure = quote_id(table.schema, fnc)
         table.triggers.update({newtrg.name: newtrg})
 
 

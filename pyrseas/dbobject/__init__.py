@@ -39,23 +39,28 @@ def fetch_reserved_words(db):
                                          WHERE catcode = 'R'""")]
 
 
-def quote_id(name):
+def quote_id(*names):
     """Quotes an identifier if necessary.
 
-    :param name: string to be quoted
+    :param names: strings to be quoted. If more than one they will be merged
+        by dot.
 
     :return: possibly quoted string
     """
-    regular_id = True
-    if not name[0] in VALID_FIRST_CHARS or name in RESERVED_WORDS:
-        regular_id = False
-    else:
-        for ltr in name[1:]:
-            if ltr not in VALID_CHARS:
-                regular_id = False
-                break
+    rv = []
+    for name in names:
+        regular_id = True
+        if not name[0] in VALID_FIRST_CHARS or name in RESERVED_WORDS:
+            regular_id = False
+        else:
+            for ltr in name[1:]:
+                if ltr not in VALID_CHARS:
+                    regular_id = False
+                    break
 
-    return regular_id and name or '"%s"' % name
+        rv.append(regular_id and name or '"%s"' % name.replace('"', '""'))
+
+    return '.'.join(rv)
 
 
 def split_schema_obj(obj, sch=None):
@@ -603,7 +608,7 @@ class DbSchemaObject(DbObject):
         if objname is None:
             objname = self.name
         return self.schema == 'public' and quote_id(objname) \
-            or "%s.%s" % (quote_id(self.schema), quote_id(objname))
+            or quote_id(self.schema, objname)
 
     def unqualify(self):
         """Adjust the schema and table name if the latter is qualified"""
@@ -619,8 +624,8 @@ class DbSchemaObject(DbObject):
         return super(DbSchemaObject, self).extern_filename(ext, True)
 
     def rename(self, oldname):
-        return "ALTER %s %s.%s RENAME TO %s" % (
-            self.objtype, quote_id(self.schema), quote_id(oldname),
+        return "ALTER %s %s RENAME TO %s" % (
+            self.objtype, quote_id(self.schema, oldname),
             quote_id(self.name))
 
     def get_implied_deps(self, db):

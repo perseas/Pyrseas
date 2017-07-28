@@ -2,6 +2,7 @@
 """
     pyrseas.relation.join
 """
+from pyrseas.dbobject import quote_id
 from pyrseas.relation.attribute import Attribute
 from pyrseas.relation.tuple import Tuple
 
@@ -98,9 +99,9 @@ class JoinRelation(object):
         attrs = {}
         for name, attr in self.attributes:
             if attr.name != attr.basename:
-                expr = "%s.%s" % (attr.projection.rangevar, attr.basename)
+                expr = quote_id(attr.projection.rangevar, attr.basename)
             else:
-                expr = "%s.%s" % (attr.projection.rangevar, attr.name)
+                expr = quote_id(attr.projection.rangevar, attr.name)
             attrs.update({attr.name: (expr, attr.type)})
         subclauses = []
         params = {}
@@ -156,12 +157,12 @@ class JoinRelation(object):
                 exprs = []
                 for name, attr in self.attributes:
                     if attr.name != attr.basename:
-                        exprs.append("%s.%s AS %s" % (
-                            attr.projection.rangevar, attr.basename,
-                            attr.name))
+                        exprs.append("%s AS %s" % (
+                            quote_id(attr.projection.rangevar, attr.basename),
+                            quote_id(attr.name)))
                     else:
-                        exprs.append("%s.%s" % (attr.projection.rangevar,
-                                                attr.name))
+                        exprs.append(
+                            quote_id(attr.projection.rangevar, attr.name))
                 self.getsubset_qry = "SELECT %s FROM %s" % (
                     ", ".join(exprs), self.from_clause)
             return self.getsubset_qry
