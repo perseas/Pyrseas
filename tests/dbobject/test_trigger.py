@@ -21,13 +21,7 @@ COMMENT_STMT = "COMMENT ON TRIGGER tr1 ON t1 IS 'Test trigger tr1'"
 class TriggerToMapTestCase(DatabaseToMapTestCase):
     """Test mapping of existing triggers"""
 
-    def setUp(self):
-        super(self.__class__, self).setUp()
-        if self.db.version < 90000:
-            if not self.db.is_plpgsql_installed():
-                self.db.execute_commit("CREATE LANGUAGE plpgsql")
-
-    def test_map_trigger(self):
+    def test_map_trigger1(self):
         "Map a simple trigger"
         stmts = [CREATE_TABLE_STMT, CREATE_FUNC_STMT, CREATE_STMT]
         dbmap = self.to_map(stmts)
@@ -47,8 +41,6 @@ class TriggerToMapTestCase(DatabaseToMapTestCase):
 
     def test_map_trigger_update_cols(self):
         "Map trigger with UPDATE OF columns"
-        if self.db.version < 90000:
-            self.skipTest('Only available on PG 9.0')
         stmts = [CREATE_TABLE_STMT, CREATE_FUNC_STMT,
                  "CREATE TRIGGER tr1 AFTER INSERT OR UPDATE OF c1, c2 ON t1 "
                  "FOR EACH ROW EXECUTE PROCEDURE f1()"]
@@ -60,8 +52,6 @@ class TriggerToMapTestCase(DatabaseToMapTestCase):
 
     def test_map_trigger_conditional(self):
         "Map trigger with a WHEN qualification"
-        if self.db.version < 90000:
-            self.skipTest('Only available on PG 9.0')
         stmts = [CREATE_TABLE_STMT, CREATE_FUNC_STMT,
                  "CREATE TRIGGER tr1 AFTER UPDATE ON t1 FOR EACH ROW "
                  "WHEN (OLD.c2 IS DISTINCT FROM NEW.c2) "
@@ -98,12 +88,6 @@ class TriggerToMapTestCase(DatabaseToMapTestCase):
 class ConstraintTriggerToMapTestCase(DatabaseToMapTestCase):
     """Test mapping of existing constraint triggers"""
 
-    def setUp(self):
-        super(self.__class__, self).setUp()
-        if self.db.version < 90000:
-            if not self.db.is_plpgsql_installed():
-                self.db.execute_commit("CREATE LANGUAGE plpgsql")
-
     def test_map_trigger(self):
         "Map a simple constraint trigger"
         stmts = [CREATE_TABLE_STMT, CREATE_FUNC_STMT,
@@ -132,13 +116,7 @@ class ConstraintTriggerToMapTestCase(DatabaseToMapTestCase):
 class TriggerToSqlTestCase(InputMapToSqlTestCase):
     """Test SQL generation from input triggers"""
 
-    def setUp(self):
-        super(self.__class__, self).setUp()
-        if self.db.version < 90000:
-            if not self.db.is_plpgsql_installed():
-                self.db.execute_commit("CREATE LANGUAGE plpgsql")
-
-    def test_create_trigger(self):
+    def test_create_trigger1(self):
         "Create a simple trigger"
         inmap = self.std_map(plpgsql_installed=True)
         inmap['schema public'].update({'function f1()': {
@@ -347,12 +325,6 @@ class TriggerToSqlTestCase(InputMapToSqlTestCase):
 
 class ConstraintTriggerToSqlTestCase(InputMapToSqlTestCase):
     """Test SQL generation from input triggers"""
-
-    def setUp(self):
-        super(self.__class__, self).setUp()
-        if self.db.version < 90000:
-            if not self.db.is_plpgsql_installed():
-                self.db.execute_commit("CREATE LANGUAGE plpgsql")
 
     def test_create_trigger(self):
         "Create a constraint trigger"

@@ -21,8 +21,9 @@ class CfgTrigger(DbAugment):
 
         :param table: table on which the trigger will be created
         """
-        newtrg = Trigger(schema=table.schema, table=table.name,
-                         **self.__dict__)
+        newtrg = Trigger(self.name, table.schema, table.name,
+                         getattr(self, 'description', None),
+                         self.procedure, self.timing, self.level, self.events)
         newtrg._iscfg = True
         if newtrg.name.startswith('{{table_name}}'):
             newtrg.name = newtrg.name.replace(newtrg.name[:14], table.name)

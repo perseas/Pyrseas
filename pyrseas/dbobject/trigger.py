@@ -10,7 +10,7 @@ from pyrseas.dbobject import DbObjectDict, DbSchemaObject
 from pyrseas.dbobject import quote_id, commentable, split_schema_obj
 
 EXEC_PROC = 'EXECUTE PROCEDURE '
-EVENT_TYPES = ['INSERT', 'UPDATE', 'DELETE', 'TRUNCATE']
+EVENT_TYPES = ['insert', 'delete', 'update', 'truncate']
 
 
 class Trigger(DbSchemaObject):
@@ -18,6 +18,74 @@ class Trigger(DbSchemaObject):
 
     keylist = ['schema', 'table', 'name']
     catalog = 'pg_trigger'
+
+    def __init__(self, name, schema, table, description, procedure, timing,
+                 level, events, constraint=False, deferrable=False,
+                 initially_deferred=False,
+                 columns=[], condition=None, arguments='',
+                 oid=None):
+        """Initialize the trigger
+
+        :param name: trigger name (from tgname)
+        :param schema: schema name (from tgnamespace)
+        :param table: table name (from relname via tgrelid)
+        :param description: comment text (from obj_description())
+        :param procedure: function to call (from tgfoid)
+        :param level: row/statement (from tgtype bit 0)
+        :param timing: before/after/instead of (from tgtype bit 1 and 6)
+        :param events: insert/update/delete/truncate (from tgtype bits 2-5)
+        :param constraint: is it a constraint trigger? (from contype)
+        :param deferrable: is it deferrable? (from tgdeferrrable)
+        :param initially_deferred: initially deferred? (from tginitdeferred)
+        :param columns: array of column numbers (from tgattr)
+        :param condition: WHEN condition
+        :param arguments: arguments to pass to trigger (from tgargs)
+        """
+        super(Trigger, self).__init__(name, schema, description)
+        self._init_own_privs(None, [])
+        self.table = table
+        if procedure[-2:] == '()':
+            if arguments and '\\000' in arguments:
+                args = ["'%s'" % a for a in arguments.split('\\000')[:-1]]
+                self.procedure = "%s(%s)" % (procedure[:-2], ", ".join(args))
+            else:
+                self.procedure = procedure
+        elif procedure[-1:] == ')':
+            assert '(' in procedure, "No left parentheses in '%s'" % procedure
+            self.procedure = procedure
+        else:
+            self.procedure = procedure + "()"
+        # see Postgres include/catalog/pg_trigger.h
+        if isinstance(timing, int):
+            if timing == (1 << 1):
+                self.timing = 'before'
+            elif timing == (1 << 6):
+                self.timing = 'instead of'
+            else:
+                self.timing = 'after'
+        else:
+            self.timing = timing
+        self.level = level
+        if isinstance(events, int):
+            self.events = []
+            for (n, ev) in enumerate(EVENT_TYPES):
+                if events & 1 << n:
+                    self.events.append(ev)
+        else:
+            assert isinstance(events, list), "Events must be a list"
+            self.events = events
+        self.constraint = constraint
+        self.deferrable = deferrable
+        self.initially_deferred = initially_deferred
+        self.columns = columns
+        self.condition = condition
+        if condition is not None and condition.startswith('CREATE '):
+            if 'WHEN (' in condition:
+                self.condition = condition[condition.index("WHEN (")+6:
+                                           condition.index(") EXECUTE ")]
+            else:
+                self.condition = None
+        self.oid = oid
 
     def identifier(self):
         """Returns a full identifier for the trigger
@@ -32,9 +100,16 @@ class Trigger(DbSchemaObject):
         :return: dictionary
         """
         dct = self._base_map(db)
-        if hasattr(self, 'columns'):
+        for attr in ['constraint', 'deferrable', 'initially_deferred']:
+            if dct[attr] is False:
+                del dct[attr]
+        if len(self.columns) > 0:
             dct['columns'] = [self._table.column_names()[int(k) - 1]
                               for k in self.columns.split()]
+        else:
+            del dct['columns']
+        if self.condition is None:
+            del dct['condition']
         return {self.name: dct}
 
     @commentable
@@ -44,20 +119,20 @@ class Trigger(DbSchemaObject):
         :return: SQL statements
         """
         constr = defer = ''
-        if hasattr(self, 'constraint') and self.constraint:
+        if self.constraint:
             constr = "CONSTRAINT "
-            if hasattr(self, 'deferrable') and self.deferrable:
+            if self.deferrable:
                 defer = "DEFERRABLE "
-            if hasattr(self, 'initially_deferred') and self.initially_deferred:
+            if self.initially_deferred:
                 defer += "INITIALLY DEFERRED"
             if defer:
                 defer = '\n    ' + defer
         evts = " OR ".join(self.events).upper()
-        if hasattr(self, 'columns') and 'update' in self.events:
+        if len(self.columns) > 0 and 'update' in self.events:
             evts = evts.replace("UPDATE", "UPDATE OF %s" % (
                 ", ".join(self.columns)))
         cond = ''
-        if hasattr(self, 'condition'):
+        if self.condition is not None:
             cond = "\n    WHEN (%s)" % self.condition
         return ["CREATE %sTRIGGER %s\n    %s %s ON %s%s\n    FOR EACH %s"
                 "%s\n    EXECUTE PROCEDURE %s" % (
@@ -118,38 +193,24 @@ class Trigger(DbSchemaObject):
 
         return deps
 
-QUERY_PRE90 = \
-    """SELECT t.oid,
-              nspname AS schema, relname AS table,
-              tgname AS name, tgisconstraint AS constraint,
-              tgdeferrable AS deferrable,
-              tginitdeferred AS initially_deferred,
-              pg_get_triggerdef(t.oid) AS definition,
-              NULL AS columns,
-              obj_description(t.oid, 'pg_trigger') AS description
-       FROM pg_trigger t
-            JOIN pg_class c ON (t.tgrelid = c.oid)
-            JOIN pg_namespace n ON (c.relnamespace = n.oid)
-            JOIN pg_roles ON (n.nspowner = pg_roles.oid)
-            LEFT JOIN pg_constraint cn ON (tgconstraint = cn.oid)
-       WHERE contype != 'f' OR contype IS NULL
-         AND (nspname != 'pg_catalog' AND nspname != 'information_schema')
-       ORDER BY schema, "table", name"""
-
 
 class TriggerDict(DbObjectDict):
     "The collection of triggers in a database"
-
     cls = Trigger
     query = \
         """SELECT t.oid,
-                  nspname AS schema, relname AS table,
-                  tgname AS name, pg_get_triggerdef(t.oid) AS definition,
+                  nspname AS schema, relname AS table, tgname AS name,
+                  tgfoid::regprocedure AS procedure,
+                  CASE WHEN tgtype::integer::bit = '1' THEN 'row'
+                       ELSE 'statement' END AS level,
+                  (tgtype::integer::bit(7) & B'1000010')::integer AS timing,
+                  (tgtype >> 2)::integer::bit(4)::integer AS events,
                   CASE WHEN contype = 't' THEN true ELSE false END AS
                        constraint,
                   tgdeferrable AS deferrable,
-                  tginitdeferred AS initially_deferred,
-                  tgattr AS columns,
+                  tginitdeferred AS initially_deferred, tgattr AS columns,
+                  encode(tgargs, 'escape') AS arguments,
+                  pg_get_triggerdef(t.oid) AS condition,
                   obj_description(t.oid, 'pg_trigger') AS description
            FROM pg_trigger t
                 JOIN pg_class c ON (t.tgrelid = c.oid)
@@ -159,33 +220,6 @@ class TriggerDict(DbObjectDict):
            WHERE NOT tgisinternal
              AND (nspname != 'pg_catalog' AND nspname != 'information_schema')
            ORDER BY schema, "table", name"""
-
-    def _from_catalog(self):
-        """Initialize the dictionary of triggers by querying the catalogs"""
-        if self.dbconn.version < 90000:
-            self.query = QUERY_PRE90
-        for trig in self.fetch():
-            for timing in ['BEFORE', 'AFTER', 'INSTEAD OF']:
-                timspc = timing + ' '
-                if timspc in trig.definition:
-                    trig.timing = timing.lower()
-                    evtstart = trig.definition.index(timspc) + len(timspc)
-            evtend = trig.definition.index(' ON ', evtstart)
-            events = trig.definition[evtstart:evtend]
-            trig.events = []
-            for evt in EVENT_TYPES:
-                if evt in events:
-                    trig.events.append(evt.lower())
-            trig.level = ('FOR EACH ROW' in trig.definition and 'row' or
-                          'statement')
-            if 'WHEN (' in trig.definition:
-                trig.condition = trig.definition[
-                    trig.definition.index('WHEN (') + 6:
-                    trig.definition.index(') EXECUTE PROCEDURE')]
-            trig.procedure = trig.definition[trig.definition.index(EXEC_PROC) +
-                                             len(EXEC_PROC):]
-            del trig.definition
-            self.by_oid[trig.oid] = self[trig.key()] = trig
 
     def from_map(self, table, intriggers):
         """Initalize the dictionary of triggers by converting the input map
@@ -198,12 +232,12 @@ class TriggerDict(DbObjectDict):
             if not intrig:
                 raise ValueError("Trigger '%s' has no specification" % trg)
             self[(table.schema, table.name, trg)] = trig = Trigger(
-                schema=table.schema, table=table.name, name=trg)
-            for attr, val in list(intrig.items()):
-                setattr(trig, attr, val)
-            if not hasattr(trig, 'level'):
-                trig.level = 'statement'
+                trg, table.schema, table.name, intrig.pop('description', None),
+                intrig.pop('procedure', None), intrig.pop('timing', None),
+                intrig.pop('level', 'statement'), intrig.pop('events', []),
+                intrig.pop('constraint', False),
+                intrig.pop('deferrable', False),
+                intrig.pop('initially_deferred', False),
+                intrig.pop('columns', []), intrig.pop('condition', None))
             if 'oldname' in intrig:
-                trig.oldname = intrig['oldname']
-            if 'description' in intrig:
-                trig.description = intrig['description']
+                trig.oldname = intrig.pop('oldname')
