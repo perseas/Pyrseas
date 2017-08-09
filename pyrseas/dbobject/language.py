@@ -114,7 +114,8 @@ class LanguageDict(DbObjectDict):
         """
         for (sch, fnc, arg) in dbfunctions:
             func = dbfunctions[(sch, fnc, arg)]
-            if func.language in ['sql', 'c', 'internal']:
+            if not isinstance(func, Function) or (
+                    func.language in ['sql', 'c', 'internal']):
                 continue
             try:
                 language = self[(func.language)]
@@ -122,7 +123,6 @@ class LanguageDict(DbObjectDict):
                 if func.language in langs:
                     continue
                 raise exc
-            if isinstance(func, Function):
-                if not hasattr(language, 'functions'):
-                    language.functions = {}
-                language.functions.update({fnc: func})
+            if not hasattr(language, 'functions'):
+                language.functions = {}
+            language.functions.update({fnc: func})

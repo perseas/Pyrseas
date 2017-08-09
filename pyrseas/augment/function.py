@@ -53,8 +53,11 @@ class CfgFunction(DbAugment):
         :param trans_tbl: translation table
         :param augdb: augmenter dictionaries
         """
-        newfunc = Function(schema=schema, **self.__dict__)
-        newfunc.volatility = 'v'
+        newdict = self.__dict__.copy()
+        newdict.pop('name')
+        newdict.pop('description')
+        newfunc = Function(self.name, schema, self.description, None, [],
+                           **newdict)
         src = newfunc.source
         if '{{' in src and '}}' in src:
             pref = src.find('{{')

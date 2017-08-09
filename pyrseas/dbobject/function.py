@@ -24,6 +24,22 @@ class Proc(DbSchemaObject):
     def allprivs(self):
         return 'X'
 
+    def __init__(self, name, schema, description, owner, privileges,
+                 arguments):
+        """Initialize the procedure
+
+        :param name: function name (from proname)
+        :param schema: schema name (from pronamespace)
+        :param description: comment text (from obj_description())
+        :param owner: owner name (from rolname via proowner)
+        :param privileges: access privileges (from proacl)
+        :param arguments: argument list (without default values, from
+               pg_function_identity_arguments)
+        """
+        super(Proc, self).__init__(name, schema, description)
+        self._init_own_privs(owner, privileges)
+        self.arguments = arguments
+
     def extern_key(self):
         """Return the key to be used in external maps for this function
 
@@ -43,7 +59,7 @@ class Proc(DbSchemaObject):
         deps = super(Proc, self).get_implied_deps(db)
 
         # Add back the language
-        if getattr(self, 'language', None):
+        if isinstance(self, Function) and getattr(self, 'language', None):
             lang = db.languages.get(self.language)
             if lang:
                 deps.add(lang)
@@ -61,6 +77,49 @@ class Proc(DbSchemaObject):
 class Function(Proc):
     """A procedural language function"""
 
+    def __init__(self, name, schema, description, owner, privileges,
+                 arguments, language, returns, source, obj_file=None,
+                 configuration=None, volatility=None, leakproof=False,
+                 strict=False, security_definer=False, cost=0, rows=0,
+                 allargs=None, oid=None):
+        """Initialize the function
+
+        :param name-arguments: see Proc.__init__ params
+        :param language: implementation language (from prolang)
+        :param returns: return type (from pg_get_function_result/prorettype)
+        :param source: source code, link symbol, etc. (from prosrc)
+        :param obj_file: language-specific info (from probin)
+        :param configuration: configuration variables (from proconfig)
+        :param volatility: volatility type (from provolatile)
+        :param leakproof: has side effects (from proleakproof)
+        :param strict: null handling (from proisstrict)
+        :param security_definer: security definer (from prosecdef)
+        :param cost: execution cost estimate (from procost)
+        :param rows: result row estimate (from prorows)
+        :param allargs: argument list with defaults (from
+               pg_get_function_arguments)
+        """
+        super(Function, self).__init__(
+            name, schema, description, owner, privileges, arguments)
+        self.language = language
+        self.source = source
+        self.returns = returns
+        self.source = source
+        self.obj_file = obj_file
+        self.configuration = configuration
+        self.allargs = allargs
+        if volatility is not None:
+            self.volatility = volatility[:1].lower()
+        else:
+            self.volatility = 'v'
+        assert self.volatility in VOLATILITY_TYPES.keys()
+        self.leakproof = leakproof
+        self.strict = strict
+        self.security_definer = security_definer
+        self.cost = cost
+        self.rows = rows
+        self.oid = oid
+
     def to_map(self, db, no_owner, no_privs):
         """Convert a function to a YAML-suitable format
 
@@ -69,23 +128,37 @@ class Function(Proc):
         :return: dictionary
         """
         dct = self._base_map(db, no_owner, no_privs)
+        for attr in ('leakproof', 'strict', 'security_definer'):
+            if dct[attr] is False:
+                dct.pop(attr)
+        if self.allargs is None or len(self.allargs) == 0 or \
+           self.allargs == self.arguments:
+            dct.pop('allargs')
+        if self.configuration is None:
+            dct.pop('configuration')
         if self.volatility == 'v':
-            del dct['volatility']
+            dct.pop('volatility')
         else:
             dct['volatility'] = VOLATILITY_TYPES[self.volatility]
-        if hasattr(self, 'obj_file'):
+        if self.obj_file is not None:
             dct['link_symbol'] = self.source
             del dct['source']
-        if hasattr(self, 'cost') and self.cost != 0:
+        else:
+            del dct['obj_file']
+        if self.cost != 0:
             if self.language in ['c', 'internal']:
                 if self.cost == 1:
                     del dct['cost']
             else:
                 if self.cost == 100:
                     del dct['cost']
-        if hasattr(self, 'rows') and self.rows != 0:
+        else:
+            del dct['cost']
+        if self.rows != 0:
             if self.rows == 1000:
                 del dct['rows']
+        else:
+            del dct['rows']
 
         return dct
 
@@ -99,7 +172,7 @@ class Function(Proc):
         :return: SQL statements
         """
         stmts = []
-        if hasattr(self, 'obj_file'):
+        if self.obj_file is not None:
             src = "'%s', '%s'" % (self.obj_file,
                                   hasattr(self, 'link_symbol') and
                                   self.link_symbol or self.name)
@@ -108,24 +181,24 @@ class Function(Proc):
         else:
             src = "$_$%s$_$" % (newsrc or self.source)
         volat = leakproof = strict = secdef = cost = rows = config = ''
-        if hasattr(self, 'volatility'):
+        if self.volatility != 'v':
             volat = ' ' + VOLATILITY_TYPES[self.volatility].upper()
-        if hasattr(self, 'leakproof') and self.leakproof is True:
+        if self.leakproof is True:
             leakproof = ' LEAKPROOF'
-        if hasattr(self, 'strict') and self.strict:
+        if self.strict:
             strict = ' STRICT'
-        if hasattr(self, 'security_definer') and self.security_definer:
+        if self.security_definer:
             secdef = ' SECURITY DEFINER'
-        if hasattr(self, 'configuration'):
+        if self.configuration is not None:
             config = ' SET %s' % self.configuration[0]
-        if hasattr(self, 'cost') and self.cost != 0:
+        if self.cost != 0:
             if self.language in ['c', 'internal']:
                 if self.cost != 1:
                     cost = " COST %s" % self.cost
             else:
                 if self.cost != 100:
                     cost = " COST %s" % self.cost
-        if hasattr(self, 'rows') and self.rows != 0:
+        if self.rows != 0:
             if self.rows != 1000:
                 rows = " ROWS %s" % self.rows
 
@@ -137,10 +210,12 @@ class Function(Proc):
                 t._shell_created = True
                 stmts.append("CREATE TYPE %s" % t.qualname())
 
-        # TODO: Add a single "SET check_function_bodies = false"
-        #       before the first CREATE FUNCTION
-
-        args = self.allargs if hasattr(self, 'allargs') else self.arguments
+        if self.allargs is not None:
+            args = self.allargs
+        elif self.arguments is not None:
+            args = self.arguments
+        else:
+            args = ''
         stmts.append("CREATE%s FUNCTION %s(%s) RETURNS %s\n    LANGUAGE %s"
                      "%s%s%s%s%s%s%s\n    AS %s" % (
                          newsrc and " OR REPLACE" or '', self.qualname(),
@@ -159,17 +234,15 @@ class Function(Proc):
         input.
         """
         stmts = []
-        if hasattr(self, 'source') and hasattr(infunction, 'source'):
-            if self.source != infunction.source:
-                stmts.append(self.create(infunction.source))
-        if hasattr(self, 'leakproof') and self.leakproof is True:
-            if hasattr(infunction, 'leakproof') and \
-                    infunction.leakproof is True:
+        if self.source != infunction.source and infunction.source is not None:
+            stmts.append(self.create(infunction.source))
+        if self.leakproof is True:
+            if infunction.leakproof is True:
                 stmts.append("ALTER FUNCTION %s LEAKPROOF" % self.identifier())
             else:
                 stmts.append("ALTER FUNCTION %s NOT LEAKPROOF"
                              % self.identifier())
-        elif hasattr(infunction, 'leakproof') and infunction.leakproof is True:
+        elif infunction.leakproof is True:
             stmts.append("ALTER FUNCTION %s LEAKPROOF" % self.qualname())
         stmts.append(super(Function, self).alter(infunction,
                                                  no_owner=no_owner))
@@ -220,6 +293,28 @@ class Function(Proc):
 class Aggregate(Proc):
     """An aggregate function"""
 
+    def __init__(self, name, schema, description, owner, privileges,
+                 arguments, sfunc=None, stype=None, finalfunc=None,
+                 initcond=None, sortop=None,
+                 oid=None):
+        """Initialize the aggregate
+
+        :param name-arguments: see Proc.__init__ params
+        :param sfunc: state transition function (from aggtransfn)
+        :param stype: state datatype (from aggtranstype)
+        :param finalfunc: final function (from aggfinalfn)
+        :param initcond: initial value (from agginitval)
+        :param sortop: sort operator (from aggsortop)
+        """
+        super(Aggregate, self).__init__(
+            name, schema, description, owner, privileges, arguments)
+        self.sfunc = sfunc
+        self.stype = stype
+        self.finalfunc = finalfunc if finalfunc != '-' else None
+        self.initcond = initcond
+        self.sortop = sortop if sortop != '0' else None
+        self.oid = oid
+
     def to_map(self, db, no_owner, no_privs):
         """Convert an agggregate to a YAML-suitable format
 
@@ -228,7 +323,9 @@ class Aggregate(Proc):
         :return: dictionary
         """
         dct = self._base_map(db, no_owner, no_privs)
-        del dct['language']
+        for attr in ('initcond', 'finalfunc', 'sortop'):
+            if getattr(self, attr) is None:
+                dct.pop(attr)
         return dct
 
     @commentable
@@ -240,11 +337,11 @@ class Aggregate(Proc):
         :return: SQL statements
         """
         opt_clauses = []
-        if hasattr(self, 'finalfunc'):
+        if self.finalfunc is not None:
             opt_clauses.append("FINALFUNC = %s" % self.finalfunc)
-        if hasattr(self, 'initcond'):
+        if self.initcond is not None:
             opt_clauses.append("INITCOND = '%s'" % self.initcond)
-        if hasattr(self, 'sortop'):
+        if self.sortop is not None:
             opt_clauses.append("SORTOP = %s" % self.sortop)
         return ["CREATE AGGREGATE %s(%s) (\n    SFUNC = %s,"
                 "\n    STYPE = %s%s%s)" % (
@@ -259,44 +356,18 @@ class Aggregate(Proc):
         sch, fnc = split_schema_obj(self.sfunc)
         args = self.stype + ', ' + self.arguments
         deps.add(db.functions[sch, fnc, args])
-        if hasattr(self, 'finalfunc'):
+        if self.finalfunc is not None:
             sch, fnc = split_schema_obj(self.finalfunc)
             deps.add(db.functions[sch, fnc, self.stype])
 
         return deps
-
-QUERY_PRE92 = \
-    """SELECT p.oid,
-              nspname AS schema, proname AS name,
-              pg_get_function_identity_arguments(p.oid) AS arguments,
-              pg_get_function_arguments(p.oid) AS allargs,
-              pg_get_function_result(p.oid) AS returns,
-              rolname AS owner, array_to_string(proacl, ',') AS privileges,
-              l.lanname AS language, provolatile AS volatility,
-              proisstrict AS strict, proisagg, prosrc AS source,
-              probin::text AS obj_file, proconfig AS configuration,
-              prosecdef AS security_definer, procost AS cost,
-              aggtransfn::regproc AS sfunc, aggtranstype::regtype AS stype,
-              aggfinalfn::regproc AS finalfunc,
-              agginitval AS initcond, aggsortop::regoper AS sortop,
-              obj_description(p.oid, 'pg_proc') AS description,
-              prorows::integer AS rows
-       FROM pg_proc p
-            JOIN pg_roles r ON (r.oid = proowner)
-            JOIN pg_namespace n ON (pronamespace = n.oid)
-            JOIN pg_language l ON (prolang = l.oid)
-            LEFT JOIN pg_aggregate a ON (p.oid = aggfnoid)
-       WHERE (nspname != 'pg_catalog' AND nspname != 'information_schema')
-         AND p.oid NOT IN (
-             SELECT objid FROM pg_depend WHERE deptype = 'e'
-                          AND classid = 'pg_proc'::regclass)
-       ORDER BY nspname, proname"""
 
 
 class ProcDict(DbObjectDict):
     "The collection of regular and aggregate functions in a database"
 
     cls = Proc
+
     query = \
         """SELECT p.oid,
                   nspname AS schema, proname AS name,
@@ -305,21 +376,38 @@ class ProcDict(DbObjectDict):
                   pg_get_function_result(p.oid) AS returns,
                   rolname AS owner, array_to_string(proacl, ',') AS privileges,
                   l.lanname AS language, provolatile AS volatility,
-                  proisstrict AS strict, proisagg, prosrc AS source,
+                  proisstrict AS strict, prosrc AS source,
                   probin::text AS obj_file, proconfig AS configuration,
                   prosecdef AS security_definer, procost AS cost,
                   proleakproof AS leakproof,
-                  aggtransfn::regproc AS sfunc, aggtranstype::regtype AS stype,
-                  aggfinalfn::regproc AS finalfunc,
-                  agginitval AS initcond, aggsortop::regoper AS sortop,
                   obj_description(p.oid, 'pg_proc') AS description,
                   prorows::integer AS rows
            FROM pg_proc p
                 JOIN pg_roles r ON (r.oid = proowner)
                 JOIN pg_namespace n ON (pronamespace = n.oid)
                 JOIN pg_language l ON (prolang = l.oid)
+           WHERE (nspname != 'pg_catalog' AND nspname != 'information_schema')
+             AND NOT proisagg
+             AND p.oid NOT IN (
+                 SELECT objid FROM pg_depend WHERE deptype = 'e'
+                              AND classid = 'pg_proc'::regclass)
+           ORDER BY nspname, proname"""
+
+    agg_query = \
+        """SELECT p.oid,
+                  nspname AS schema, proname AS name,
+                  pg_get_function_identity_arguments(p.oid) AS arguments,
+                  rolname AS owner, array_to_string(proacl, ',') AS privileges,
+                  aggtransfn::regproc AS sfunc, aggtranstype::regtype AS stype,
+                  aggfinalfn::regproc AS finalfunc,
+                  agginitval AS initcond, aggsortop::regoper AS sortop,
+                  obj_description(p.oid, 'pg_proc') AS description
+           FROM pg_proc p
+                JOIN pg_roles r ON (r.oid = proowner)
+                JOIN pg_namespace n ON (pronamespace = n.oid)
                 LEFT JOIN pg_aggregate a ON (p.oid = aggfnoid)
            WHERE (nspname != 'pg_catalog' AND nspname != 'information_schema')
+             AND proisagg
              AND p.oid NOT IN (
                  SELECT objid FROM pg_depend WHERE deptype = 'e'
                               AND classid = 'pg_proc'::regclass)
@@ -327,28 +415,15 @@ class ProcDict(DbObjectDict):
 
     def _from_catalog(self):
         """Initialize the dictionary of procedures by querying the catalogs"""
-        if self.dbconn.version < 90200:
-            self.query = QUERY_PRE92
-        for proc in self.fetch():
-            sch, prc, arg = proc.key()
-            oid = proc.oid
-            if hasattr(proc, 'allargs') and proc.allargs == proc.arguments:
-                del proc.allargs
-            if hasattr(proc, 'proisagg'):
-                del proc.proisagg
-                del proc.source
-                del proc.volatility
-                del proc.returns
-                del proc.cost
-                if proc.finalfunc == '-':
-                    del proc.finalfunc
-                if proc.sortop == '0':
-                    del proc.sortop
-                self.by_oid[oid] = self[sch, prc, arg] \
-                    = Aggregate(**proc.__dict__)
-            else:
-                self.by_oid[oid] = self[sch, prc, arg] \
-                    = Function(**proc.__dict__)
+        self.cls = Function
+        for func in self.fetch():
+            self[func.key()] = func
+            self.by_oid[func.oid] = func
+        self.cls = Aggregate
+        self.query = self.agg_query
+        for aggr in self.fetch():
+            self[aggr.key()] = aggr
+            self.by_oid[aggr.oid] = aggr
 
     def from_map(self, schema, infuncs):
         """Initalize the dictionary of functions by converting the input map
@@ -367,27 +442,33 @@ class ProcDict(DbObjectDict):
             infunc = infuncs[key]
             fnc = fnc[:paren]
             if objtype == 'function':
-                self[(schema.name, fnc, arguments)] = func = Function(
-                    schema=schema.name, name=fnc, arguments=arguments)
-            else:
-                self[(schema.name, fnc, arguments)] = func = Aggregate(
-                    schema=schema.name, name=fnc, arguments=arguments)
-                func.language = 'internal'
-            if not infunc:
-                raise ValueError("Function '%s' has no specification" % fnc)
-            for attr in infunc:
-                setattr(func, attr, infunc[attr])
-            if hasattr(func, 'volatility'):
-                func.volatility = func.volatility[:1].lower()
-            if isinstance(func, Function):
-                src = hasattr(func, 'source')
-                obj = hasattr(func, 'obj_file')
+                src = infunc.get('source', None)
+                obj = infunc.get('obj_file', None)
                 if (src and obj) or not (src or obj):
                     raise ValueError("Function '%s': either source or "
                                      "obj_file must be specified" % fnc)
-            if 'privileges' in infunc:
-                func.privileges = privileges_from_map(
-                    infunc['privileges'], func.allprivs, func.owner)
+                self[(schema.name, fnc, arguments)] = func = Function(
+                    fnc, schema.name, infunc.pop('description', None),
+                    infunc.pop('owner', None), infunc.pop('privileges', []),
+                    arguments, infunc.pop('language', None),
+                    infunc.pop('returns', None), infunc.pop('source', None),
+                    infunc.pop('obj_file', None),
+                    infunc.pop('configuration', None),
+                    infunc.pop('volatility', None),
+                    infunc.pop('leakproof', False),
+                    infunc.pop('strict', False),
+                    infunc.pop('security_definer', False),
+                    infunc.pop('cost', 0), infunc.pop('rows', 0),
+                    infunc.pop('allargs', None))
+            else:
+                self[(schema.name, fnc, arguments)] = func = Aggregate(
+                    fnc, schema.name, infunc.pop('description', None),
+                    infunc.pop('owner', None), infunc.pop('privileges', []),
+                    arguments, infunc.pop('sfunc', None),
+                    infunc.pop('stype', None), infunc.pop('finalfunc', None),
+                    infunc.pop('initcond', None), infunc.pop('sortop', None))
+            func.privileges = privileges_from_map(func.privileges,
+                                                  func.allprivs, func.owner)
 
     def find(self, func, args):
         """Return a function given its name and arguments

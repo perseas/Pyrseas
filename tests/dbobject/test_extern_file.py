@@ -239,7 +239,8 @@ class ExternalFilenameTestCase(PyrseasTestCase):
 
     def test_function(self):
         "Map a function"
-        obj = Function(name="Weird/Or-what?")
+        obj = Function("Weird/Or-what?", 'public', '', None, [], None, None,
+                       None, None)
         assert obj.extern_filename() == 'function.weird_or_what_.yaml'
 
     def test_schema(self):

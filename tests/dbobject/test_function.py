@@ -29,7 +29,7 @@ CREATE_STMT4 = "CREATE FUNCTION f1(integer, integer) RETURNS integer " \
 class FunctionToMapTestCase(DatabaseToMapTestCase):
     """Test mapping of existing functions"""
 
-    def test_map_function(self):
+    def test_map_function1(self):
         "Map a very simple function with no arguments"
         dbmap = self.to_map([CREATE_STMT1])
         expmap = {'language': 'sql', 'returns': 'text',
@@ -116,8 +116,6 @@ class FunctionToMapTestCase(DatabaseToMapTestCase):
 
     def test_map_function_leakproof(self):
         "Map a function with LEAKPROOF qualifier"
-        if self.db.version < 90200:
-            self.skipTest('Only available on PG 9.2 or later')
         dbmap = self.to_map([CREATE_STMT4], superuser=True)
         expmap = {'language': 'sql', 'returns': 'integer', 'leakproof': True,
                   'source': SOURCE4, 'volatility': 'immutable'}
@@ -128,7 +126,7 @@ class FunctionToMapTestCase(DatabaseToMapTestCase):
 class FunctionToSqlTestCase(InputMapToSqlTestCase):
     """Test SQL generation from input functions"""
 
-    def test_create_function(self):
+    def test_create_function1(self):
         "Create a very simple function with no arguments"
         inmap = self.std_map()
         inmap['schema public'].update({'function f1()': {
@@ -225,7 +223,7 @@ class FunctionToSqlTestCase(InputMapToSqlTestCase):
         with pytest.raises(KeyError):
             self.to_sql(inmap)
 
-    def test_drop_function(self):
+    def test_drop_function1(self):
         "Drop an existing function with no arguments"
         sql = self.to_sql(self.std_map(), [CREATE_STMT1])
         assert sql == ["DROP FUNCTION f1()"]
@@ -292,8 +290,6 @@ class FunctionToSqlTestCase(InputMapToSqlTestCase):
 
     def test_function_leakproof(self):
         "Create a function with LEAKPROOF qualifier"
-        if self.db.version < 90200:
-            self.skipTest('Only available on PG 9.2 or later')
         inmap = self.std_map()
         inmap['schema public'].update({
             'function f1(integer, integer)': {
@@ -306,8 +302,6 @@ class FunctionToSqlTestCase(InputMapToSqlTestCase):
 
     def test_alter_function_leakproof(self):
         "Change a function with LEAKPROOF qualifier"
-        if self.db.version < 90200:
-            self.skipTest('Only available on PG 9.2 or later')
         inmap = self.std_map()
         inmap['schema public'].update({
             'function f1(integer, integer)': {
@@ -363,7 +357,7 @@ class AggregateToMapTestCase(DatabaseToMapTestCase):
 class AggregateToSqlTestCase(InputMapToSqlTestCase):
     """Test SQL generation from input aggregates"""
 
-    def test_create_aggregate(self):
+    def test_create_aggregate1(self):
         "Create a simple aggregate"
         inmap = self.std_map()
         inmap['schema public'].update({'function f1(integer, integer)': {
