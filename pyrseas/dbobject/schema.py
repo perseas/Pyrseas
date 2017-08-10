@@ -9,12 +9,12 @@
 import os
 
 from pyrseas.yamlutil import yamldump
-from pyrseas.dbobject import DbObjectDict, DbObject
-from pyrseas.dbobject import quote_id
-from pyrseas.dbobject import commentable, ownable, grantable
-from pyrseas.dbobject.dbtype import BaseType, Composite, Domain, Enum
-from pyrseas.dbobject.table import Table, Sequence, View, MaterializedView
-from pyrseas.dbobject.privileges import privileges_from_map
+from . import DbObjectDict, DbObject
+from . import quote_id, commentable, ownable, grantable
+from .dbtype import BaseType, Composite, Domain, Enum
+from .table import Table, Sequence
+from .view import View, MaterializedView
+from .privileges import privileges_from_map
 
 
 class Schema(DbObject):

@@ -8,7 +8,8 @@ from pyrseas.testutils import PyrseasTestCase
 from pyrseas.testutils import DatabaseToMapTestCase
 from pyrseas.dbobject.schema import Schema
 from pyrseas.dbobject.function import Function
-from pyrseas.dbobject.table import Sequence, Table, View
+from pyrseas.dbobject.table import Sequence, Table
+from pyrseas.dbobject.view import View
 
 if sys.platform == 'win32':
     COLL = 'French_France.1252'

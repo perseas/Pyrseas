@@ -3,10 +3,9 @@
     pyrseas.dbobject.table
     ~~~~~~~~~~~~~~~~~~~~~~
 
-    This module defines six classes: DbClass derived from
-    DbSchemaObject, Sequence, Table and View derived from DbClass,
-    MaterializedView derived from View, and ClassDict derived from
-    DbObjectDict.
+    This module defines four classes: DbClass derived from
+    DbSchemaObject, Sequence and Table derived from DbClass, and
+    ClassDict derived from DbObjectDict.
 """
 
 import re
@@ -14,12 +13,11 @@ import os
 import sys
 
 from pyrseas.lib.pycompat import PY2
-from pyrseas.dbobject import DbObjectDict, DbSchemaObject
-from pyrseas.dbobject import quote_id, split_schema_obj
-from pyrseas.dbobject import commentable, ownable, grantable
-from pyrseas.dbobject.constraint import CheckConstraint, PrimaryKey
-from pyrseas.dbobject.constraint import ForeignKey, UniqueConstraint
-from pyrseas.dbobject.privileges import privileges_from_map, add_grant
+from . import DbObjectDict, DbSchemaObject, split_schema_obj
+from . import quote_id, commentable, ownable, grantable
+from .constraint import CheckConstraint, PrimaryKey
+from .constraint import ForeignKey, UniqueConstraint
+from .privileges import privileges_from_map, add_grant
 
 MAX_BIGINT = 9223372036854775807
 
@@ -556,125 +554,6 @@ class Table(DbClass):
         return deps
 
 
-class View(DbClass):
-    """A database view definition
-
-    A view is identified by its schema name and view name.
-    """
-
-    privobjtype = "TABLE"
-
-    @property
-    def allprivs(self):
-        return 'arwdDxt'
-
-    def to_map(self, db, opts):
-        """Convert a view to a YAML-suitable format
-
-        :param opts: options to include/exclude tables, etc.
-        :return: dictionary
-        """
-        if hasattr(opts, 'excl_tables') and opts.excl_tables \
-                and self.name in opts.excl_tables:
-            return None
-        view = self._base_map(db, opts.no_owner, opts.no_privs)
-        if 'dependent_funcs' in view:
-            del view['dependent_funcs']
-        if hasattr(self, 'triggers'):
-            for key in list(self.triggers.values()):
-                view['triggers'].update(self.triggers[key.name].to_map(db))
-        return view
-
-    @commentable
-    @grantable
-    @ownable
-    def create(self, newdefn=None):
-        """Return SQL statements to CREATE the view
-
-        :return: SQL statements
-        """
-        defn = newdefn or self.definition
-        if defn[-1:] == ';':
-            defn = defn[:-1]
-        return ["CREATE%s VIEW %s AS\n   %s" % (
-                newdefn and " OR REPLACE" or '', self.qualname(), defn)]
-
-    def alter(self, inview):
-        """Generate SQL to transform an existing view
-
-        :param inview: a YAML map defining the new view
-        :return: list of SQL statements
-
-        Compares the view to an input view and generates SQL
-        statements to transform it into the one represented by the
-        input.
-        """
-        stmts = []
-        if self.definition != inview.definition:
-            stmts.append(self.create(inview.definition))
-        stmts.append(super(View, self).alter(inview))
-        return stmts
-
-
-class MaterializedView(View):
-    """A materialized view definition
-
-    A materialized view is identified by its schema name and view name.
-    """
-
-    @property
-    def objtype(self):
-        return "MATERIALIZED VIEW"
-
-    def to_map(self, db, opts):
-        """Convert a materialized view to a YAML-suitable format
-
-        :param opts: options to include/exclude tables, etc.
-        :return: dictionary
-        """
-        if hasattr(opts, 'excl_tables') and opts.excl_tables \
-                and self.name in opts.excl_tables:
-            return None
-        mvw = self._base_map(db, opts.no_owner, opts.no_privs)
-        if hasattr(self, 'indexes'):
-            if 'indexes' not in mvw:
-                mvw['indexes'] = {}
-            for k in list(self.indexes.values()):
-                mvw['indexes'].update(self.indexes[k.name].to_map(db))
-        return mvw
-
-    @commentable
-    @grantable
-    @ownable
-    def create(self, newdefn=None):
-        """Return SQL statements to CREATE the materialized view
-
-        :return: SQL statements
-        """
-        defn = newdefn or self.definition
-        if defn[-1:] == ';':
-            defn = defn[:-1]
-        return ["CREATE %s %s AS\n   %s" % (
-                self.objtype, self.qualname(), defn)]
-
-
-QUERY_PRE91 = \
-    """SELECT c.oid,
-              nspname AS schema, relname AS name, relkind AS kind,
-              reloptions AS options, spcname AS tablespace,
-              rolname AS owner, array_to_string(relacl, ',') AS privileges,
-              CASE WHEN relkind = 'v' THEN pg_get_viewdef(c.oid, TRUE)
-                   ELSE '' END AS definition,
-              obj_description(c.oid, 'pg_class') AS description
-       FROM pg_class c
-            JOIN pg_roles r ON (r.oid = relowner)
-            JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
-            LEFT JOIN pg_tablespace t ON (reltablespace = t.oid)
-       WHERE relkind in ('r', 'S', 'v')
-             AND (nspname != 'pg_catalog'
-                  AND nspname != 'information_schema')
-       ORDER BY nspname, relname"""
-
 QUERY_PRE93 = \
     """SELECT c.oid,
               nspname AS schema, relname AS name, relkind AS kind,
@@ -730,9 +609,8 @@ class ClassDict(DbObjectDict):
 
     def _from_catalog(self):
         """Initialize the dictionary of tables by querying the catalogs"""
-        if self.dbconn.version < 90100:
-            self.query = QUERY_PRE91
-        elif self.dbconn.version < 90300:
+        from .view import View, MaterializedView
+        if self.dbconn.version < 90300:
             self.query = QUERY_PRE93
         for table in self.fetch():
             oid = table.oid
@@ -771,6 +649,7 @@ class ClassDict(DbObjectDict):
         :param inobjs: YAML map defining the schema objects
         :param newdb: collection of dictionaries defining the database
         """
+        from .view import View, MaterializedView
         for k in inobjs:
             inobj = inobjs[k]
             objtype = None
