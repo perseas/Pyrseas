@@ -16,7 +16,7 @@ VIEW_DEFN = " SELECT t1.c1,\n    t1.c3 * 2 AS mc3\n   FROM t1;"
 class MatViewToMapTestCase(DatabaseToMapTestCase):
     """Test mapping of created materialized views"""
 
-    def test_map_view(self):
+    def test_map_view_simple(self):
         "Map a created materialized view"
         if self.db.version < 90300:
             self.skipTest('Only available on PG 9.3')

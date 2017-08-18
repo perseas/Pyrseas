@@ -15,7 +15,7 @@ CREATE_STOR_PARAMS = CREATE_STMT + \
 class TableToMapTestCase(DatabaseToMapTestCase):
     """Test mapping of created tables"""
 
-    def test_create_table(self):
+    def test_map_table_simple(self):
         "Map a table with two columns"
         dbmap = self.to_map([CREATE_STMT])
         assert dbmap['schema public']['table t1'] == {
@@ -69,7 +69,7 @@ class TableToMapTestCase(DatabaseToMapTestCase):
                   'inherits': ['t1', 't2']}
         assert dbmap['schema public']['table t3'] == expmap
 
-    def test_unlogged_table(self):
+    def test_map_unlogged_table(self):
         "Map an unlogged table"
         if self.db.version < 90100:
             self.skipTest('Only available on PG 9.1')
@@ -130,7 +130,7 @@ class TableToMapTestCase(DatabaseToMapTestCase):
 class TableToSqlTestCase(InputMapToSqlTestCase):
     """Test SQL generation of table statements from input schemas"""
 
-    def test_create_table(self):
+    def test_create_table_simple(self):
         "Create a two-column table"
         inmap = self.std_map()
         inmap['schema public'].update({'table t1': {

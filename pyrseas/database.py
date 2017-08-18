@@ -514,10 +514,8 @@ class Database(object):
         if opts.quote_reserved:
             fetch_reserved_words(self.dbconn)
 
-        langs = None
-        if self.dbconn.version >= 90100:
-            langs = [lang[0] for lang in self.dbconn.fetchall(
-                "SELECT tmplname FROM pg_pltemplate")]
+        langs = [lang[0] for lang in self.dbconn.fetchall(
+            "SELECT tmplname FROM pg_pltemplate")]
         self.from_map(input_map, langs)
         if opts.revert:
             (self.db, self.ndb) = (self.ndb, self.db)

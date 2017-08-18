@@ -470,6 +470,36 @@ class ForeignTable(DbObjectWithOptions, Table):
     privobjtype = "TABLE"
     catalog = 'pg_foreign_table'
 
+    def __init__(self, name, schema, description, owner, privileges,
+                 server=None, options={},
+                 oid=None):
+        """Initialize the foreign table
+
+        :param name-privileges: see DbClass.__init__ params
+        :param server: foreign server (from ftserver)
+        :param options: table options (from ftoptions)
+        """
+        super(ForeignTable, self).__init__(name, schema, description, owner,
+                                           privileges)
+        self.server = server
+        self.options = {} if options is None else options
+        self.oid = oid
+
+    @staticmethod
+    def query():
+        return """
+            SELECT nspname AS schema, relname AS name, srvname AS server,
+                   ftoptions AS options, rolname AS owner,
+                   array_to_string(relacl, ',') AS privileges,
+                   obj_description(c.oid, 'pg_class') AS description, c.oid
+            FROM pg_class c JOIN pg_foreign_table f ON (ftrelid = c.oid)
+                 JOIN pg_roles r ON (r.oid = relowner)
+                 JOIN pg_foreign_server s ON (ftserver = s.oid)
+                 JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
+            WHERE relkind = 'f'
+              AND (nspname != 'pg_catalog' AND nspname != 'information_schema')
+            ORDER BY nspname, relname"""
+
     @property
     def objtype(self):
         return "FOREIGN TABLE"
@@ -491,14 +521,12 @@ class ForeignTable(DbObjectWithOptions, Table):
             if col:
                 cols.append(col)
         tbl = {'columns': cols, 'server': self.server}
-        attrlist = ['options']
         if self.description is not None:
-            attrlist.append('description')
-        if not opts.no_owner:
-            attrlist.append('owner')
-        for attr in attrlist:
-            if hasattr(self, attr):
-                tbl.update({attr: getattr(self, attr)})
+            tbl.update(description=self.description)
+        if not opts.no_owner and self.owner is not None:
+            tbl.update(owner=self.owner)
+        if len(self.options) > 0:
+            tbl.update(options=self.options)
         if not opts.no_privs:
             tbl.update({'privileges': self.map_privs()})
 
@@ -515,12 +543,12 @@ class ForeignTable(DbObjectWithOptions, Table):
         options = []
         for col in self.columns:
             cols.append("    " + col.add()[0])
-        if hasattr(self, 'options'):
+        if len(self.options) > 0:
             options.append(self.options_clause())
         stmts.append("CREATE FOREIGN TABLE %s (\n%s)\n    SERVER %s%s" % (
             self.qualname(), ",\n".join(cols), self.server,
             options and '\n    ' + ',\n    '.join(options) or ''))
-        if hasattr(self, 'owner'):
+        if self.owner is not None:
             stmts.append(self.alter_owner())
         if self.description is not None:
             stmts.append(self.comment())
@@ -543,7 +571,7 @@ class ForeignTable(DbObjectWithOptions, Table):
         :return: list of SQL statements
         """
         stmts = super(ForeignTable, self).alter(intable)
-        if hasattr(intable, 'owner'):
+        if intable.owner is not None:
             if intable.owner != self.owner:
                 stmts.append(self.alter_owner(intable.owner))
         stmts.append(self.diff_description(intable))
@@ -554,25 +582,10 @@ class ForeignTableDict(ClassDict):
     "The collection of foreign tables in a database"
 
     cls = ForeignTable
-    query = \
-        """SELECT c.oid,
-                  nspname AS schema, relname AS name, srvname AS server,
-                  ftoptions AS options, rolname AS owner,
-                  array_to_string(relacl, ',') AS privileges,
-                  obj_description(c.oid, 'pg_class') AS description
-           FROM pg_class c JOIN pg_foreign_table f ON (ftrelid = c.oid)
-                JOIN pg_roles r ON (r.oid = relowner)
-                JOIN pg_foreign_server s ON (ftserver = s.oid)
-                JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
-           WHERE relkind = 'f'
-                 AND (nspname != 'pg_catalog'
-                      AND nspname != 'information_schema')
-           ORDER BY nspname, relname"""
 
     def _from_catalog(self):
         """Initialize the dictionary of tables by querying the catalogs"""
-        if self.dbconn.version < 90100:
-            return
+        self.query = self.cls.query()
         for tbl in self.fetch():
             self[tbl.key()] = tbl
 
@@ -587,23 +600,21 @@ class ForeignTableDict(ClassDict):
             if not key.startswith('foreign table '):
                 raise KeyError("Unrecognized object type: %s" % key)
             ftb = key[14:]
+            inobj = inobjs[key]
             self[(schema.name, ftb)] = ftable = ForeignTable(
-                schema=schema.name, name=ftb)
-            inftable = inobjs[key]
-            if not inftable:
+                ftb, schema.name, inobj.pop('description', None),
+                inobj.pop('owner', None), inobj.pop('privileges', []),
+                inobj.pop('server', None), inobj.pop('options', {}))
+            ftable.privileges = privileges_from_map(
+                ftable.privileges, ftable.allprivs, ftable.owner)
+            if not inobj:
                 raise ValueError("Foreign table '%s' has no specification" %
                                  ftb)
             try:
-                newdb.columns.from_map(ftable, inftable['columns'])
+                newdb.columns.from_map(ftable, inobj['columns'])
             except KeyError as exc:
                 exc.args = ("Foreign table '%s' has no columns" % ftb, )
                 raise
-            for attr in ['server', 'options', 'owner', 'description']:
-                if attr in inftable:
-                    setattr(ftable, attr, inftable[attr])
-            if 'privileges' in inftable:
-                ftable.privileges = privileges_from_map(
-                    inftable['privileges'], ftable.allprivs, ftable.owner)
 
     def link_refs(self, dbcolumns):
         """Connect columns to their respective foreign tables

@@ -257,20 +257,20 @@ class ExternalFilenameTestCase(PyrseasTestCase):
 
     def test_table(self):
         "Map a table"
-        obj = Table(name="Weird/Or-what?HOW.WeiRD")
+        obj = Table("Weird/Or-what?HOW.WeiRD", '', None, None, [])
         assert obj.extern_filename() == 'table.weird_or_what_how_weird.yaml'
 
     def test_table_unicode(self):
         "Map a table with Unicode characters"
-        obj = Table(name="Fundação\\Größe таблица")
+        obj = Table("Fundação\\Größe таблица", '', None, None, [])
         assert obj.extern_filename() == 'table.fundação_größe_таблица.yaml'
 
     def test_sequence(self):
         "Map a sequence"
-        obj = Sequence(name="Weird/Or-what?_seq")
+        obj = Sequence("Weird/Or-what?_seq", '', None, None, [])
         assert obj.extern_filename() == 'sequence.weird_or_what__seq.yaml'
 
     def test_view(self):
         "Map a view"
-        obj = View(name="Weirder/Don't You Think?")
+        obj = View("Weirder/Don't You Think?", '', None, None, [], '')
         assert obj.extern_filename() == 'view.weirder_don_t_you_think_.yaml'

@@ -16,6 +16,31 @@ class View(DbClass):
 
     A view is identified by its schema name and view name.
     """
+    def __init__(self, name, schema, description, owner, privileges,
+                 definition,
+                 oid=None):
+        """Initialize the view
+
+        :param name-privileges: see DbClass.__init__ params
+        :param definition: prettified definition (from pg_getviewdef)
+        """
+        super(View, self).__init__(name, schema, description, owner,
+                                   privileges)
+        self.definition = definition
+        self.oid = oid
+
+    @staticmethod
+    def query():
+        return """
+            SELECT nspname AS schema, relname AS name, rolname AS owner,
+                   array_to_string(relacl, ',') AS privileges,
+                   pg_get_viewdef(c.oid, TRUE) AS definition,
+                   obj_description(c.oid, 'pg_class') AS description, c.oid
+            FROM pg_class c JOIN pg_roles r ON (r.oid = relowner)
+                 JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
+            WHERE relkind = 'v'
+              AND nspname != 'pg_catalog' AND nspname != 'information_schema'
+            ORDER BY nspname, relname"""
 
     privobjtype = "TABLE"
 
@@ -76,6 +101,33 @@ class MaterializedView(View):
 
     A materialized view is identified by its schema name and view name.
     """
+    def __init__(self, name, schema, description, owner, privileges,
+                 definition, with_data=False,
+                 oid=None):
+        """Initialize the materialized view
+
+        :param name-privileges: see DbClass.__init__ params
+        :param definition: prettified definition (from pg_getviewdef)
+        :param with_data: is view populated (from relispopulated)
+        """
+        super(MaterializedView, self).__init__(
+            name, schema, description, owner, privileges, definition)
+        self.with_data = with_data
+        self.oid = oid
+
+    @staticmethod
+    def query():
+        return """
+            SELECT nspname AS schema, relname AS name, rolname AS owner,
+                   array_to_string(relacl, ',') AS privileges,
+                   pg_get_viewdef(c.oid, TRUE) AS definition,
+                   relispopulated AS with_data,
+                   obj_description(c.oid, 'pg_class') AS description, c.oid
+            FROM pg_class c JOIN pg_roles r ON (r.oid = relowner)
+                 JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
+            WHERE relkind = 'm'
+              AND nspname != 'pg_catalog' AND nspname != 'information_schema'
+            ORDER BY nspname, relname"""
 
     @property
     def objtype(self):

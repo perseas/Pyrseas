@@ -35,14 +35,65 @@ def seq_min_value(seq):
 
 
 class DbClass(DbSchemaObject):
-    """A table, sequence or view"""
+    """A table, sequence, index or view"""
 
     keylist = ['schema', 'name']
     catalog = 'pg_class'
 
+    def __init__(self, name, schema, description, owner, privileges):
+        """Initialize the relation "class"
+
+        :param name: relation name (from relname)
+        :param schema: schema name (from relnamespace)
+        :param description: comment text (from obj_description())
+        :param owner: owner name (from rolname via relowner)
+        :param privileges: access privileges (from relacl)
+        """
+        super(DbClass, self).__init__(name, schema, description)
+        self._init_own_privs(owner, privileges)
+
 
 class Sequence(DbClass):
     "A sequence generator definition"
+
+    def __init__(self, name, schema, description, owner, privileges,
+                 start_value=1, increment_by=1, max_value=MAX_BIGINT,
+                 min_value=1, cache_value=1, owner_table=None,
+                 owner_column=None,
+                 oid=None):
+        """Initialize the sequence
+
+        :param name-privileges: see DbClass.__init__ params
+        :param start_value: start value (from start_value)
+        :param max_value: maximum value (from max_value)
+        :param increment_by: value to add (from increment_by)
+        :param min_value: minimum value (from min_value)
+        :param cache_value: cache value (from cache_value)
+        :param owner_table: owner table
+        :param owner_column: owner column
+        """
+        super(Sequence, self).__init__(name, schema, description, owner,
+                                       privileges)
+        self.start_value = start_value
+        self.increment_by = increment_by
+        self.max_value = max_value
+        self.min_value = min_value
+        self.cache_value = cache_value
+        self.owner_table = owner_table
+        self.owner_column = owner_column
+        self.oid = oid
+
+    @staticmethod
+    def query():
+        return """
+            SELECT nspname AS schema, relname AS name, rolname AS owner,
+                   array_to_string(relacl, ',') AS privileges,
+                   obj_description(c.oid, 'pg_class') AS description, c.oid
+            FROM pg_class c JOIN pg_roles r ON (r.oid = relowner)
+                 JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
+            WHERE relkind = 'S'
+              AND nspname != 'pg_catalog' AND nspname != 'information_schema'
+            ORDER BY nspname, relname"""
 
     @property
     def allprivs(self):
@@ -111,6 +162,9 @@ class Sequence(DbClass):
                      self.name in opts.excl_tables):
             return None
         seq = self._base_map(db, opts.no_owner, opts.no_privs)
+        if self.owner_table is None and self.owner_column is None:
+            seq.pop('owner_table')
+            seq.pop('owner_column')
         seq.pop('dependent_table', None)
         for key, val in list(seq.items()):
             if key == 'max_value' and val == MAX_BIGINT:
@@ -191,16 +245,14 @@ class Sequence(DbClass):
         if stmt:
             stmts.append("ALTER SEQUENCE %s" % self.qualname() + stmt)
 
-        if hasattr(inseq, 'owner_column') and \
-                not hasattr(inseq, 'owner_table'):
+        if inseq.owner_column is not None and inseq.owner_table is None:
             raise ValueError("Sequence '%s' incomplete specification: "
                              "owner_column but no owner_table")
-        if hasattr(inseq, 'owner_table'):
-            if not hasattr(inseq, 'owner_column'):
+        if inseq.owner_table is not None:
+            if inseq.owner_column is None:
                 raise ValueError("Sequence '%s' incomplete specification: "
                                  "owner_table but no owner_column")
-            if not (hasattr(self, 'owner_table') and
-                    hasattr(self, 'owner_column')):
+            if self.owner_table is None and self.owner_column is None:
                 stmts.append(inseq.add_owner())
 
         stmts.append(super(Sequence, self).alter(inseq, no_owner=no_owner))
@@ -212,7 +264,7 @@ class Sequence(DbClass):
         :return: list of SQL statements
         """
         stmts = []
-        if not hasattr(self, 'owner_table'):
+        if self.owner_table is None:
             stmts.append(super(Sequence, self).drop())
         return stmts
 
@@ -225,6 +277,45 @@ class Table(DbClass):
     foreign_keys, zero or more unique_constraints, and zero or more
     indexes.
     """
+    def __init__(self, name, schema, description, owner, privileges,
+                 tablespace=None, unlogged=False, options=None,
+                 oid=None):
+        """Initialize the table
+
+        :param name-privileges: see DbClass.__init__ params
+        :param tablespace: storage tablespace (from reltablespace)
+        :param unlogged: unlogged indicator (from relpersistence = 'u')
+        :param options: access method options (from reloptions)
+        """
+        super(Table, self).__init__(name, schema, description, owner,
+                                    privileges)
+        self.tablespace = tablespace
+        self.unlogged = unlogged
+        self.options = options
+        self.inherits = []
+        self.oid = oid
+
+    @staticmethod
+    def query():
+        return """
+            SELECT nspname AS schema, relname AS name, reloptions AS options,
+                   spcname AS tablespace, relpersistence = 'u' AS unlogged,
+                   rolname AS owner,
+                   array_to_string(relacl, ',') AS privileges,
+                   obj_description(c.oid, 'pg_class') AS description, c.oid
+            FROM pg_class c JOIN pg_roles r ON (r.oid = relowner)
+                 JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
+                 LEFT JOIN pg_tablespace t ON (reltablespace = t.oid)
+            WHERE relkind = 'r' AND relpersistence != 't'
+              AND nspname != 'pg_catalog' AND nspname != 'information_schema'
+            ORDER BY nspname, relname"""
+
+    @staticmethod
+    def inhquery():
+        return """SELECT inhrelid::regclass AS sub,
+                         inhparent::regclass AS parent, inhseqno
+                  FROM pg_inherits
+                  ORDER BY 1, 3"""
 
     @property
     def allprivs(self):
@@ -250,6 +341,13 @@ class Table(DbClass):
             return None
 
         tbl = self._base_map(db, opts.no_owner, opts.no_privs)
+        for attr in ['tablespace', 'options']:
+            if tbl[attr] is None:
+                tbl.pop(attr)
+        if self.unlogged is False:
+            tbl.pop('unlogged')
+        if len(self.inherits) == 0:
+            tbl.pop('inherits')
 
         cols = []
         for column in self.columns:
@@ -293,9 +391,6 @@ class Table(DbClass):
                 tbl['indexes'] = idxs
             else:
                 tbl.pop('indexes', None)
-        if hasattr(self, 'inherits'):
-            if 'inherits' not in tbl:
-                tbl['inherits'] = self.inherits
         if hasattr(self, 'rules'):
             if 'rules' not in tbl:
                 tbl['rules'] = {}
@@ -315,11 +410,6 @@ class Table(DbClass):
 
         :return: SQL statements
         """
-        # TODO This was *maybe* in place to guard double creations caused by
-        # the functions. Leaving it here, to be dropped once I'm reasonably
-        # certain we get called only once, when expected.
-        assert not hasattr(self, 'created')
-
         stmts = []
         cols = []
         colprivs = []
@@ -327,17 +417,15 @@ class Table(DbClass):
             if not (hasattr(col, 'inherited') and col.inherited):
                 cols.append("    " + col.add()[0])
             colprivs.append(col.add_privs())
-        unlogged = ''
-        if hasattr(self, 'unlogged') and self.unlogged:
-            unlogged = 'UNLOGGED '
+        unlogged = 'UNLOGGED ' if self.unlogged else ''
         inhclause = ''
-        if hasattr(self, 'inherits'):
+        if len(self.inherits) > 0:
             inhclause = " INHERITS (%s)" % ", ".join(t for t in self.inherits)
         opts = ''
-        if hasattr(self, 'options'):
+        if self.options is not None:
             opts = " WITH (%s)" % ', '.join(self.options)
         tblspc = ''
-        if hasattr(self, 'tablespace'):
+        if self.tablespace is not None:
             tblspc = " TABLESPACE %s" % self.tablespace
         stmts.append("CREATE %sTABLE %s (\n%s)%s%s%s" % (
             unlogged, self.qualname(), ",\n".join(cols), inhclause, opts,
@@ -386,7 +474,7 @@ class Table(DbClass):
             return dict(opt.split('=', 1) for opt in optlist)
 
         oldopts = {}
-        if hasattr(self, 'options'):
+        if self.options is not None:
             oldopts = to_dict(self.options)
         newopts = to_dict(newopts)
         setclauses = []
@@ -450,7 +538,7 @@ class Table(DbClass):
                     stmts.append(descr)
 
         newopts = []
-        if hasattr(intable, 'options'):
+        if intable.options is not None:
             newopts = intable.options
         diff_opts = self.diff_options(newopts)
         if diff_opts:
@@ -458,12 +546,12 @@ class Table(DbClass):
                                              diff_opts))
         if colprivs:
             stmts.append(colprivs)
-        if hasattr(intable, 'tablespace'):
-            if not hasattr(self, 'tablespace') \
+        if intable.tablespace is not None:
+            if self.tablespace is None \
                     or self.tablespace != intable.tablespace:
                 stmts.append(base + "SET TABLESPACE %s"
                              % quote_id(intable.tablespace))
-        elif hasattr(self, 'tablespace'):
+        elif self.tablespace is not None:
             stmts.append(base + "SET TABLESPACE pg_default")
 
         stmts.append(super(Table, self).alter(intable))
@@ -541,7 +629,7 @@ class Table(DbClass):
                     seq = db.tables.find(m.group(1), self.schema)
                     if seq:
                         deps.add(seq)
-                        if hasattr(seq, 'owner_table'):
+                        if seq.owner_table is not None:
                             if not hasattr(self, '_owned_seqs'):
                                 self._owned_seqs = []
                             self._owned_seqs.append(seq)
@@ -554,25 +642,6 @@ class Table(DbClass):
         return deps
 
 
-QUERY_PRE93 = \
-    """SELECT c.oid,
-              nspname AS schema, relname AS name, relkind AS kind,
-              reloptions AS options, relpersistence AS persistence,
-              spcname AS tablespace, rolname AS owner,
-              array_to_string(relacl, ',') AS privileges,
-              CASE WHEN relkind = 'v' THEN pg_get_viewdef(c.oid, TRUE)
-                   ELSE '' END AS definition,
-              obj_description(c.oid, 'pg_class') AS description
-       FROM pg_class c
-            JOIN pg_roles r ON (r.oid = relowner)
-            JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
-            LEFT JOIN pg_tablespace t ON (reltablespace = t.oid)
-       WHERE relkind in ('r', 'S', 'v')
-             AND relpersistence != 't'
-             AND (nspname != 'pg_catalog'
-                  AND nspname != 'information_schema')
-       ORDER BY nspname, relname"""
-
 OBJTYPES = ['table', 'sequence', 'view', 'materialized view']
 
 
@@ -580,67 +649,41 @@ class ClassDict(DbObjectDict):
     "The collection of tables and similar objects in a database"
 
     cls = DbClass
-    query = \
-        """SELECT c.oid,
-                  nspname AS schema, relname AS name, relkind AS kind,
-                  reloptions AS options, relpersistence AS persistence,
-                  spcname AS tablespace, rolname AS owner,
-                  array_to_string(relacl, ',') AS privileges,
-                  CASE WHEN relkind ~ '[vm]' THEN pg_get_viewdef(c.oid, TRUE)
-                       ELSE '' END AS definition,
-                  CASE WHEN relkind = 'm' THEN relispopulated
-                       ELSE FALSE END AS with_data,
-                  obj_description(c.oid, 'pg_class') AS description
-           FROM pg_class c
-                JOIN pg_roles r ON (r.oid = relowner)
-                JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
-                LEFT JOIN pg_tablespace t ON (reltablespace = t.oid)
-           WHERE relkind in ('r', 'S', 'v', 'm')
-                 AND relpersistence != 't'
-                 AND (nspname != 'pg_catalog'
-                      AND nspname != 'information_schema')
-           ORDER BY nspname, relname"""
-
-    inhquery = \
-        """SELECT inhrelid::regclass AS sub, inhparent::regclass AS parent,
-                  inhseqno
-           FROM pg_inherits
-           ORDER BY 1, 3"""
+    query = ""
 
     def _from_catalog(self):
         """Initialize the dictionary of tables by querying the catalogs"""
-        from .view import View, MaterializedView
-        if self.dbconn.version < 90300:
-            self.query = QUERY_PRE93
-        for table in self.fetch():
-            oid = table.oid
-            sch, tbl = table.key()
-            if hasattr(table, 'persistence'):
-                if table.persistence == 'u':
-                    table.unlogged = True
-                del table.persistence
-            kind = table.kind
-            del table.kind
-            if kind == 'r':
-                self.by_oid[oid] = self[sch, tbl] = Table(**table.__dict__)
-            elif kind == 'S':
-                self.by_oid[oid] = self[sch, tbl] = inst \
-                    = Sequence(**table.__dict__)
-                inst.get_attrs(self.dbconn)
-                inst.get_dependent_table(self.dbconn)
-            elif kind == 'v':
-                self.by_oid[oid] = self[sch, tbl] = View(**table.__dict__)
-            elif kind == 'm':
-                self.by_oid[oid] = self[sch, tbl] \
-                    = MaterializedView(**table.__dict__)
-        inhtbls = self.dbconn.fetchall(self.inhquery)
+        self.cls = Table
+        self.query = self.cls.query()
+        for obj in self.fetch():
+            self[obj.key()] = obj
+            self.by_oid[obj.oid] = obj
+        inhtbls = self.dbconn.fetchall(Table.inhquery())
         self.dbconn.rollback()
         for (tbl, partbl, num) in inhtbls:
             (sch, tbl) = split_schema_obj(tbl)
             table = self[(sch, tbl)]
-            if not hasattr(table, 'inherits'):
-                table.inherits = []
             table.inherits.append(partbl)
+        self.cls = Sequence
+        self.query = self.cls.query()
+        for obj in self.fetch():
+            self[obj.key()] = obj
+            self.by_oid[obj.oid] = obj
+            obj.get_attrs(self.dbconn)
+            obj.get_dependent_table(self.dbconn)
+        from .view import View, MaterializedView
+        self.cls = View
+        self.query = self.cls.query()
+        for obj in self.fetch():
+            self[obj.key()] = obj
+            self.by_oid[obj.oid] = obj
+        if self.dbconn.version < 90300:
+            return
+        self.cls = MaterializedView
+        self.query = self.cls.query()
+        for obj in self.fetch():
+            self[obj.key()] = obj
+            self.by_oid[obj.oid] = obj
 
     def from_map(self, schema, inobjs, newdb):
         """Initalize the dictionary of tables by converting the input map
@@ -661,54 +704,64 @@ class ClassDict(DbObjectDict):
                 raise KeyError("Unrecognized object type: %s" % k)
             if objtype == 'table':
                 self[(schema.name, key)] = table = Table(
-                    schema=schema.name, name=key)
-                intable = inobj
-                if not intable:
+                    key, schema.name, inobj.pop('description', None),
+                    inobj.pop('owner', None), inobj.pop('privileges', []),
+                    inobj.pop('tablespace', None),
+                    inobj.pop('unlogged', False), inobj.pop('options', None))
+                if not inobj:
                     raise ValueError("Table '%s' has no specification" % k)
-                for attr in ['inherits', 'owner', 'tablespace', 'oldname',
-                             'description', 'options', 'unlogged']:
-                    if attr in intable:
-                        setattr(table, attr, intable[attr])
+                table.privileges = privileges_from_map(
+                    table.privileges, table.allprivs, table.owner)
+                if inobj and 'oldname' in inobj:
+                    table.oldname = inobj.pop('oldname')
+                if inobj and 'inherits' in inobj:
+                    table.inherits = inobj.pop('inherits')
                 try:
-                    newdb.columns.from_map(table, intable['columns'])
+                    newdb.columns.from_map(table, inobj['columns'])
                 except KeyError as exc:
                     exc.args = ("Table '%s' has no columns" % key, )
                     raise
-                newdb.constraints.from_map(table, intable, rtables=inobjs)
-                if 'indexes' in intable:
-                    newdb.indexes.from_map(table, intable['indexes'])
-                if 'rules' in intable:
-                    newdb.rules.from_map(table, intable['rules'])
-                if 'triggers' in intable:
-                    newdb.triggers.from_map(table, intable['triggers'])
+                newdb.constraints.from_map(table, inobj, rtables=inobjs)
+                if 'indexes' in inobj:
+                    newdb.indexes.from_map(table, inobj['indexes'])
+                if 'rules' in inobj:
+                    newdb.rules.from_map(table, inobj['rules'])
+                if 'triggers' in inobj:
+                    newdb.triggers.from_map(table, inobj['triggers'])
             elif objtype == 'sequence':
                 self[(schema.name, key)] = seq = Sequence(
-                    schema=schema.name, name=key)
-                inseq = inobj
-                if not inseq:
-                    raise ValueError("Sequence '%s' has no specification" % k)
-                for attr, val in list(inseq.items()):
-                    setattr(seq, attr, val)
+                    key, schema.name, inobj.pop('description', None),
+                    inobj.pop('owner', None), inobj.pop('privileges', []),
+                    inobj.pop('start_value', 1), inobj.pop('increment_by', 1),
+                    inobj.pop('max_value', MAX_BIGINT),
+                    inobj.pop('min_value', 1), inobj.pop('cache_value', 1),
+                    inobj.pop('owner_table', None),
+                    inobj.pop('owner_column', None))
+                seq.privileges = privileges_from_map(
+                    seq.privileges, seq.allprivs, seq.owner)
+                if inobj and 'oldname' in inobj:
+                    seq.oldname = inobj.pop('oldname')
             elif objtype == 'view':
                 self[(schema.name, key)] = view = View(
-                    schema=schema.name, name=key)
-                inview = inobj
-                if not inview:
-                    raise ValueError("View '%s' has no specification" % k)
-                for attr, val in list(inview.items()):
-                    setattr(view, attr, val)
-                if 'triggers' in inview:
-                    newdb.triggers.from_map(view, inview['triggers'])
+                    key, schema.name, inobj.pop('description', None),
+                    inobj.pop('owner', None), inobj.pop('privileges', []),
+                    inobj.pop('definition', None))
+                view.privileges = privileges_from_map(
+                    view.privileges, view.allprivs, view.owner)
+                if 'triggers' in inobj:
+                    newdb.triggers.from_map(view, inobj['triggers'])
+                if inobj and 'oldname' in inobj:
+                    view.oldname = inobj.pop('oldname')
             elif objtype == 'materialized view':
                 self[(schema.name, key)] = mview = MaterializedView(
-                    schema=schema.name, name=key)
-                inmview = inobj
-                if not inmview:
-                    raise ValueError("View '%s' has no specification" % k)
-                if 'indexes' in inmview:
-                    newdb.indexes.from_map(mview, inmview['indexes'])
-                for attr, val in list(inmview.items()):
-                    setattr(mview, attr, val)
+                    key, schema.name, inobj.pop('description', None),
+                    inobj.pop('owner', None), inobj.pop('privileges', []),
+                    inobj.pop('definition', None),
+                    inobj.pop('with_data', False))
+                mview.privileges = privileges_from_map(
+                    mview.privileges, mview.allprivs, mview.owner)
+                if 'indexes' in inobj:
+                    newdb.indexes.from_map(mview, inobj['indexes'])
             else:
                 raise KeyError("Unrecognized object type: %s" % k)
             obj = self[(schema.name, key)]

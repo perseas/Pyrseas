@@ -15,7 +15,7 @@ COMMENT_STMT = "COMMENT ON SEQUENCE seq1 IS 'Test sequence seq1'"
 class SequenceToMapTestCase(DatabaseToMapTestCase):
     """Test mapping of created sequences"""
 
-    def test_map_sequence(self):
+    def test_map_sequence_simple(self):
         "Map a created sequence"
         dbmap = self.to_map([CREATE_STMT])
         expmap = {'start_value': 1, 'increment_by': 1, 'max_value': None,
@@ -32,7 +32,7 @@ class SequenceToMapTestCase(DatabaseToMapTestCase):
 class SequenceToSqlTestCase(InputMapToSqlTestCase):
     """Test SQL generation from input sequences"""
 
-    def test_create_sequence(self):
+    def test_create_sequence_simple(self):
         "Create a sequence"
         inmap = self.std_map()
         inmap['schema public'].update({'sequence seq1': {
