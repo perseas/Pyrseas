@@ -507,10 +507,9 @@ class Table(DbClass):
         input.
         """
         stmts = []
-        if not hasattr(intable, 'columns'):
+        if len(intable.columns) < 1:
             raise KeyError("Table '%s' has no columns" % intable.name)
-        colnames = [col.name for col in self.columns
-                    if not hasattr(col, 'dropped')]
+        colnames = [col.name for col in self.columns if not col.dropped]
         dbcols = len(colnames)
 
         colprivs = []
@@ -529,8 +528,7 @@ class Table(DbClass):
                 if descr:
                     stmts.append(descr)
             # add new columns
-            elif incol.name not in colnames and \
-                    not hasattr(incol, 'inherited'):
+            elif incol.name not in colnames and not incol.inherited:
                 (stmt, descr) = incol.add()
                 stmts.append(base + "ADD COLUMN %s" % stmt)
                 colprivs.append(incol.add_privs())

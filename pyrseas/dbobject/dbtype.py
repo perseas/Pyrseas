@@ -162,8 +162,7 @@ class Composite(DbType):
         stmts = []
         if not hasattr(intype, 'attributes'):
             raise KeyError("Composite '%s' has no attributes" % intype.name)
-        attrnames = [attr.name for attr in self.attributes
-                     if not hasattr(attr, 'dropped')]
+        attrnames = [attr.name for attr in self.attributes if not attr.dropped]
         dbattrs = len(attrnames)
 
         base = "ALTER TYPE %s\n    " % (self.qualname())

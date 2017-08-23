@@ -12,10 +12,62 @@ from pyrseas.dbobject.privileges import diff_privs
 
 
 class Column(DbSchemaObject):
-    "A table column definition"
+    "A table column or attribute of a composite type"
 
-    keylist = ['schema', 'table']
+    keylist = ['schema', 'table']    # plus attribute number
     allprivs = 'arwx'
+
+    def __init__(self, name, schema, table, number, type, description=None,
+                 privileges=[], not_null=True, default=None, collation=None,
+                 statistics=None, inherited=False, dropped=False):
+        """Initialize the column
+
+        :param name: column/attribute name (from attname)
+        :param schema: schema name (from nspname attrelid/relnamespace)
+        :param table: table/composite type name (from relame via attrelid)
+        :param description: comment text (from obj_description())
+        :param privileges: access privileges (from attacl)
+        :param number: attribute number (from attnum)
+        :param type: data type (from atttypid/atttypmod)
+        :param not_null: not null constraint (from attnotnull)
+        :param default: default value expression (from pg_attrdef.adbin)
+        :param collation: collation name (from collname via attcollation)
+        :param statistics: statistics detail level (from attstattarget)
+        :param inherited: inherited indicator (from attinhcount)
+        :param dropped: dropped indicator (from attisdropped)
+        """
+        super(Column, self).__init__(name, schema, description)
+        self._init_own_privs(None, privileges)
+        self.table = table
+        self.number = number
+        self.type = type
+        self.not_null = not_null
+        self.default = default
+        self.collation = collation
+        self.statistics = statistics
+        self.inherited = inherited
+        self.dropped = dropped
+
+    @staticmethod
+    def query():
+        return """
+            SELECT nspname AS schema, relname AS table, attname AS name,
+                   attnum AS number, format_type(atttypid, atttypmod) AS type,
+                   attnotnull AS not_null, attinhcount > 0 AS inherited,
+                   pg_get_expr(adbin, adrelid) AS default,
+                   attstattarget AS statistics,
+                   collname AS collation, attisdropped AS dropped,
+                   array_to_string(attacl, ',') AS privileges,
+                   col_description(c.oid, attnum) AS description
+            FROM pg_attribute JOIN pg_class c ON (attrelid = c.oid)
+                 JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
+                 LEFT JOIN pg_attrdef ON (attrelid = pg_attrdef.adrelid
+                      AND attnum = pg_attrdef.adnum)
+                 LEFT JOIN pg_collation l ON (attcollation = l.oid)
+            WHERE relkind in ('c', 'r', 'f')
+              AND (nspname != 'pg_catalog' AND nspname != 'information_schema')
+              AND attnum > 0
+           ORDER BY nspname, relname, attnum"""
 
     def to_map(self, db, no_privs):
         """Convert a column to a YAML-suitable format
@@ -23,16 +75,20 @@ class Column(DbSchemaObject):
         :param no_privs: exclude privilege information
         :return: dictionary
         """
-        if hasattr(self, 'dropped'):
+        if self.dropped:
             return None
         dct = self._base_map(db, False, no_privs)
-        del dct['number'], dct['name']
-        if 'collation' in dct and dct['collation'] == 'default':
-            del dct['collation']
-        if hasattr(self, 'inherited'):
-            dct['inherited'] = (self.inherited != 0)
-        if hasattr(self, 'statistics') and self.statistics == -1:
-            del dct['statistics']
+        del dct['number'], dct['name'], dct['dropped']
+        if not self.not_null:
+            dct.pop('not_null')
+        if self.default is None:
+            dct.pop('default')
+        if self.collation is None or self.collation == 'default':
+            dct.pop('collation')
+        if not self.inherited:
+            dct.pop('inherited')
+        if self.statistics is None or self.statistics == -1:
+            dct.pop('statistics')
         return {self.name: dct}
 
     def add(self):
@@ -41,11 +97,11 @@ class Column(DbSchemaObject):
         :return: partial SQL statement
         """
         stmt = "%s %s" % (quote_id(self.name), self.type)
-        if hasattr(self, 'not_null'):
+        if self.not_null:
             stmt += ' NOT NULL'
-        if hasattr(self, 'default'):
+        if self.default is not None:
             stmt += ' DEFAULT ' + self.default
-        if hasattr(self, 'collation') and self.collation != 'default':
+        if self.collation is not None and self.collation != 'default':
             stmt += ' COLLATE "%s"' % self.collation
         return (stmt, '' if self.description is None else self.comment())
 
@@ -79,7 +135,7 @@ class Column(DbSchemaObject):
 
         :return: SQL statement
         """
-        if hasattr(self, 'dropped'):
+        if self.dropped:
             return []
         if hasattr(self, '_table'):
             (comptype, objtype) = (self._table.objtype, 'COLUMN')
@@ -134,85 +190,46 @@ class Column(DbSchemaObject):
         stmts = []
         base = "ALTER COLUMN %s " % quote_id(self.name)
         # check NOT NULL
-        if not hasattr(self, 'not_null') and hasattr(incol, 'not_null'):
+        if not self.not_null and incol.not_null:
             stmts.append(base + "SET NOT NULL")
-        if hasattr(self, 'not_null') and not hasattr(incol, 'not_null'):
+        if self.not_null and not incol.not_null:
             stmts.append(base + "DROP NOT NULL")
         # check data types
-        if not hasattr(self, 'type'):
+        if self.type is None:
             raise ValueError("Column '%s' missing datatype" % self.name)
-        if not hasattr(incol, 'type'):
+        if incol.type is None:
             raise ValueError("Input column '%s' missing datatype" % incol.name)
         if self.type != incol.type:
             # validate type conversion?
             stmts.append(base + "TYPE %s" % incol.type)
         # check DEFAULTs
-        if not hasattr(self, 'default') and hasattr(incol, 'default'):
+        if self.default is None and incol.default is not None:
             stmts.append(base + "SET DEFAULT %s" % incol.default)
-        if hasattr(self, 'default'):
-            if not hasattr(incol, 'default'):
+        if self.default is not None:
+            if incol.default is None:
                 stmts.append(base + "DROP DEFAULT")
             elif self.default != incol.default:
                 stmts.append(base + "SET DEFAULT %s" % incol.default)
         # check STATISTICS
-        if hasattr(self, 'statistics'):
-            if self.statistics == -1 and (
-                    hasattr(incol, 'statistics') and incol.statistics != -1):
+        if self.statistics is not None:
+            if self.statistics == -1 and (incol.statistics is not None
+                                          and incol.statistics != -1):
                 stmts.append(base + "SET STATISTICS %d" % incol.statistics)
-            if self.statistics != -1 and (not hasattr(incol, 'statistics') or
-                                          incol.statistics == -1):
+            if self.statistics != -1 and (incol.statistics is None
+                                          or incol.statistics == -1):
                 stmts.append(base + "SET STATISTICS -1")
 
         return (", ".join(stmts), self.diff_description(incol))
-
-
-QUERY_PRE91 = \
-    """SELECT nspname AS schema, relname AS table, attname AS name,
-              attnum AS number, format_type(atttypid, atttypmod) AS type,
-              attnotnull AS not_null, attinhcount AS inherited,
-              pg_get_expr(adbin, adrelid) AS default,
-              attstattarget AS statistics, attisdropped AS dropped,
-              array_to_string(attacl, ',') AS privileges,
-              col_description(c.oid, attnum) AS description
-       FROM pg_attribute JOIN pg_class c ON (attrelid = c.oid)
-            JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
-            LEFT JOIN pg_attrdef ON (attrelid = pg_attrdef.adrelid
-                 AND attnum = pg_attrdef.adnum)
-       WHERE relkind in ('c', 'r', 'f')
-             AND (nspname != 'pg_catalog'
-                  AND nspname != 'information_schema')
-             AND attnum > 0
-       ORDER BY nspname, relname, attnum"""
 
 
 class ColumnDict(DbObjectDict):
     "The collection of columns in tables in a database"
 
     cls = Column
-    query = \
-        """SELECT nspname AS schema, relname AS table, attname AS name,
-                  attnum AS number, format_type(atttypid, atttypmod) AS type,
-                  attnotnull AS not_null, attinhcount AS inherited,
-                  pg_get_expr(adbin, adrelid) AS default,
-                  attstattarget AS statistics,
-                  collname AS collation, attisdropped AS dropped,
-                  array_to_string(attacl, ',') AS privileges,
-                  col_description(c.oid, attnum) AS description
-           FROM pg_attribute JOIN pg_class c ON (attrelid = c.oid)
-                JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
-                LEFT JOIN pg_attrdef ON (attrelid = pg_attrdef.adrelid
-                     AND attnum = pg_attrdef.adnum)
-                LEFT JOIN pg_collation l ON (attcollation = l.oid)
-           WHERE relkind in ('c', 'r', 'f')
-                 AND (nspname != 'pg_catalog'
-                      AND nspname != 'information_schema')
-                 AND attnum > 0
-           ORDER BY nspname, relname, attnum"""
 
     def _from_catalog(self):
         """Initialize the dictionary of columns by querying the catalogs"""
-        if self.dbconn.version < 90100:
-            self.query = QUERY_PRE91
+        self.query = self.cls.query()
         for col in self.fetch():
             sch, tbl = col.key()
             if (sch, tbl) not in self:
@@ -229,14 +246,24 @@ class ColumnDict(DbObjectDict):
             raise ValueError("Table '%s' has no columns" % table.name)
         cols = self[(table.schema, table.name)] = []
 
-        for incol in incols:
+        for (num, incol) in enumerate(incols):
             for key in incol:
                 if isinstance(incol[key], dict):
-                    arg = incol[key]
+                    inobj = incol[key]
                 else:
-                    arg = {'type': incol[key]}
-                col = Column(schema=table.schema, table=table.name, name=key,
-                             **arg)
+                    inobj = {'type': incol[key]}
+                col = Column(key, table.schema, table.name, num,
+                             inobj.pop('type', None),
+                             inobj.pop('description', None),
+                             inobj.pop('privileges', []),
+                             inobj.pop('not_null', False),
+                             inobj.pop('default', None),
+                             inobj.pop('collation', None),
+                             inobj.pop('statistics', None),
+                             inobj.pop('inherited', False),
+                             inobj.pop('dropped', False))
+                if inobj and 'oldname' in inobj:
+                    col.oldname = inobj.pop('oldname')
                 if len(col.privileges) > 0:
                     if table.owner is None:
                         raise ValueError("Column '%s.%s' has privileges but "

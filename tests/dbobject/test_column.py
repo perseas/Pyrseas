@@ -87,7 +87,9 @@ TYPELIST = [
     ('tsvector', 'tsvector'),
     ('tsquery', 'tsquery'),
     ('UUID', 'uuid'),
-    ('XML', 'xml')]
+    ('XML', 'xml'),
+    ('JSON', 'json'),
+    ('JSONB', 'jsonb')]
 
 CREATE_STMT1 = "CREATE TABLE t1 (c1 integer, c2 text)"
 CREATE_STMT2 = "CREATE TABLE t1 (c1 integer, c2 text, c3 date)"

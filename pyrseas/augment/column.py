@@ -29,9 +29,11 @@ class CfgColumn(DbAugment):
                     if hasattr(self, 'default'):
                         col.default = self.default
         else:
-            newcol = Column(schema=table.schema, table=table.name,
-                            **self.__dict__)
-            newcol.number = 0
+            dct = self.__dict__.copy()
+            dct.pop('name')
+            dct.pop('type')
+            newcol = Column(self.name, table.schema, table.name, 0, self.type,
+                            **dct)
             newcol._table = table
             table.columns.append(newcol)
 
