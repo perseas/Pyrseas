@@ -70,7 +70,7 @@ class AugClassDict(DbAugmentDict):
         """
         for (sch, tbl) in self:
             if not (sch, tbl) in tables:
-                raise KeyError("Table %s.%s not in current database" % (
-                    sch, tbl))
+                raise KeyError("Table %s not in current database" %
+                    quote_id(sch, tbl))
             if not hasattr(self[(sch, tbl)], 'current'):
                 self[(sch, tbl)].current = tables[(sch, tbl)]

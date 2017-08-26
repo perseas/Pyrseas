@@ -187,7 +187,6 @@ class Trigger(DbSchemaObject):
         # TODO: this breaks if a function name contains a '('
         # (another case for a robust lookup function in db)
         fschema, fname = split_schema_obj(self.procedure, self.schema)
-        fname, _ = fname.split('(', 1)  # implicitly assert there is a (
         if not fname.startswith('tsvector_update_trigger'):
             deps.add(db.functions[fschema, fname, ''])
 

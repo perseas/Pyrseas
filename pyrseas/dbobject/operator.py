@@ -68,8 +68,8 @@ class Operator(DbSchemaObject):
 
         No qualification is used if the schema is 'public'.
         """
-        return self.schema == 'public' and self.name \
-            or "%s.%s" % (quote_id(self.schema), self.name)
+        return self.schema == 'public' and quote_id(self.name) \
+            or quote_id(self.schema, self.name)
 
     def identifier(self):
         """Return a full identifier for an operator object

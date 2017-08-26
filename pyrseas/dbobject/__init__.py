@@ -39,23 +39,28 @@ def fetch_reserved_words(db):
                                          WHERE catcode = 'R'""")]
 
 
-def quote_id(name):
+def quote_id(*names):
     """Quotes an identifier if necessary.
 
-    :param name: string to be quoted
+    :param names: strings to be quoted. If more than one they will be merged
+        by dot.
 
     :return: possibly quoted string
     """
-    regular_id = True
-    if not name[0] in VALID_FIRST_CHARS or name in RESERVED_WORDS:
-        regular_id = False
-    else:
-        for ltr in name[1:]:
-            if ltr not in VALID_CHARS:
-                regular_id = False
-                break
+    rv = []
+    for name in names:
+        regular_id = True
+        if not name[0] in VALID_FIRST_CHARS or name in RESERVED_WORDS:
+            regular_id = False
+        else:
+            for ltr in name[1:]:
+                if ltr not in VALID_CHARS:
+                    regular_id = False
+                    break
 
-    return regular_id and name or '"%s"' % name
+        rv.append(regular_id and name or '"%s"' % name.replace('"', '""'))
+
+    return '.'.join(rv)
 
 
 def split_schema_obj(obj, sch=None):
@@ -68,20 +73,77 @@ def split_schema_obj(obj, sch=None):
     qualsch = sch
     if sch is None:
         qualsch = 'public'
-    if obj[0] == '"' and obj[-1] == '"':
-        if '"."' in obj:
-            (qualsch, obj) = obj.split('"."')
-            qualsch = qualsch[1:]
-            obj = obj[:-1]
-        else:
-            obj = obj[1:-1]
+
+    tokens = tokenize_identifiers(obj)
+    if len(tokens) == 1:
+        obj = tokens[0]
+    elif len(tokens) == 2:
+        qualsch, obj = tokens
     else:
-        # TODO: properly handle functions
-        if '.' in obj and '(' not in obj:
-            (qualsch, obj) = obj.split('.')
+        raise ValueError("invalid object name: %s")
+
     if sch != qualsch:
         sch = qualsch
     return (sch, obj)
+
+
+def tokenize_identifiers(s):
+    """
+    Parse a string representing a dotted sequence of Postgres identifiers
+
+    Return a list of the tokens found, with double-quotes removed
+
+    Stop at a ( in case the name passed is actually a function with args
+    """
+    START, QUOTE, NAME = range(3)
+    state = START
+
+    rv = []
+    t = ''
+    si = iter(s)
+    try:
+        while 1:
+            c = next(si)
+            if state == START:
+                if c == '"':
+                    state = QUOTE
+                elif c == '.':
+                    raise ValueError("invalid object name: %s" % s)
+                else:
+                    state = NAME
+                    t += c
+            elif state == NAME:
+                if c == '"':
+                    raise ValueError("invalid object name: %s" % s)
+                elif c == '.':
+                    # end of token
+                    rv.append(t)
+                    t = ''
+                    state = START
+                elif c == '(':
+                    break
+                else:
+                    t += c
+            elif state == QUOTE:
+                if c == '"':
+                    # end quote or escaped quote?
+                    c2 = next(si)
+                    if c2 == '"':
+                        t += '"'
+                    elif c2 == '.':
+                        rv.append(t)
+                        t = ''
+                        state = START
+                    elif c2 == '(':
+                        break
+                else:
+                    t += c
+    except StopIteration:
+        pass
+
+    rv.append(t)
+
+    return rv
 
 
 def split_func_args(obj):
@@ -546,7 +608,7 @@ class DbSchemaObject(DbObject):
         if objname is None:
             objname = self.name
         return self.schema == 'public' and quote_id(objname) \
-            or "%s.%s" % (quote_id(self.schema), quote_id(objname))
+            or quote_id(self.schema, objname)
 
     def unqualify(self):
         """Adjust the schema and table name if the latter is qualified"""
@@ -562,8 +624,8 @@ class DbSchemaObject(DbObject):
         return super(DbSchemaObject, self).extern_filename(ext, True)
 
     def rename(self, oldname):
-        return "ALTER %s %s.%s RENAME TO %s" % (
-            self.objtype, quote_id(self.schema), quote_id(oldname),
+        return "ALTER %s %s RENAME TO %s" % (
+            self.objtype, quote_id(self.schema, oldname),
             quote_id(self.name))
 
     def get_implied_deps(self, db):

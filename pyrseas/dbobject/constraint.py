@@ -84,8 +84,8 @@ class Constraint(DbSchemaObject):
         elif isinstance(self._table, Domain):
             deps.add(db.types[self.schema, self.table])
         else:
-            raise KeyError("Constraint '%s.%s' on unknown type/class" % (
-                self.schema, self.name))
+            raise KeyError("Constraint '%s' on unknown type/class" % (
+                quote_id(self.schema, self.name)))
 
         return deps
 
@@ -471,7 +471,7 @@ class ConstraintDict(DbObjectDict):
             constr.unqualify()
             oid = constr.oid
             sch, tbl, cns = constr.key()
-            sch, tbl = split_schema_obj('%s.%s' % (sch, tbl))
+            sch, tbl = split_schema_obj(quote_id(sch, tbl))     # TODO why?
             constr_type = constr.type
             del constr.type
             if constr_type != 'f':
