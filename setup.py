@@ -46,7 +46,7 @@ setup(
     author_email='jma@freedomcircle.com',
     description='Framework and utilities to upgrade and maintain databases',
     long_description=open('README.rst').read(),
-    url='http://pyrseas.projects.pgfoundry.org/',
+    url='https://perseas.github.io/',
     classifiers=[
         'Development Status :: 4 - Beta',
         'Environment :: Console',
