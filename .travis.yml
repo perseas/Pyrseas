@@ -2,6 +2,7 @@ language: python
 python:
   - "3.5"
   - "2.7"
+  - "2.6"
 addons:
   postgresql: "9.5"
 before_install:

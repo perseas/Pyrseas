@@ -193,7 +193,7 @@ class PrimaryKey(Constraint):
            and hasattr(self, '_table') and hasattr(self._table, 'columns') \
            and hasattr(self._table, 'primary_key') and \
            hasattr(self._table.primary_key, 'keycols'):
-            selfcols = {i.number: i.name for i in self._table.columns}
+            selfcols = dict((i.number, i.name) for i in self._table.columns)
             selfpk = [selfcols[i] for i in self._table.primary_key.keycols]
             if inpk.keycols != selfpk:
                 stmts.append(
@@ -303,9 +303,9 @@ class ForeignKey(Constraint):
            and hasattr(self, '_table') and hasattr(self._table, 'columns') \
            and hasattr(self, 'references') \
            and hasattr(self.references, 'columns'):
-            selfcols = {i.number: i.name for i in self._table.columns}
+            selfcols = dict((i.number, i.name) for i in self._table.columns)
             selffk = [selfcols[i] for i in self.keycols]
-            selfrefs = {i.number: i.name for i in self.references.columns}
+            selfrefs = dict((i.number, i.name) for i in self.references.columns)
             selffkref = [selfrefs[i] for i in self.ref_cols]
 
             if infk.keycols != selffk or infk.ref_cols != selffkref \
@@ -403,7 +403,7 @@ class UniqueConstraint(Constraint):
         stmts = []
         if hasattr(inuc, 'keycols') and hasattr(self, 'keycols') \
            and hasattr(self, '_table') and hasattr(self._table, 'columns'):
-            selfcols = {i.number: i.name for i in self._table.columns}
+            selfcols = dict((i.number, i.name) for i in self._table.columns)
             selfunique = [selfcols[i] for i in self.keycols]
             if inuc.keycols != selfunique:
                 stmts.append(
