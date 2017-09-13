@@ -59,7 +59,7 @@ class CheckConstraintToSqlTestCase(InputMapToSqlTestCase):
                         {'c2': {'type': 'text'}}],
             'check_constraints': {
                 't1_c1_check': {'columns': ['c1'],
-                                'expression': 'c1 > 0 and c1 < 1000000'}}}})
+                                'expression': '(c1 > 0 and c1 < 1000000)'}}}})
         sql = self.to_sql(inmap)
         assert fix_indent(sql[0]) == "CREATE TABLE t1 (c1 integer, c2 text)"
         assert fix_indent(sql[1]) == "ALTER TABLE t1 ADD CONSTRAINT " \
@@ -76,7 +76,7 @@ class CheckConstraintToSqlTestCase(InputMapToSqlTestCase):
                         {'c3': {'type': 'text'}}],
             'check_constraints': {
                 't1_check_2_1': {'columns': ['c2', 'c1'],
-                                 'expression': 'c2 != c1'}}}})
+                                 'expression': '(c2 != c1)'}}}})
         sql = self.to_sql(inmap, stmts)
         assert fix_indent(sql[0]) == "ALTER TABLE t1 ADD CONSTRAINT " \
             "t1_check_2_1 CHECK (c2 != c1)"
@@ -88,12 +88,12 @@ class CheckConstraintToSqlTestCase(InputMapToSqlTestCase):
         inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
             'columns': [{'c1': {'type': 'integer'}}], 'check_constraints': {
-                't1_c1_check': {'columns': ['c1'], 'expression': 'c1 > 0'}}},
+                't1_c1_check': {'columns': ['c1'], 'expression': '(c1 > 0)'}}},
             'table t2': {
                 'columns': [{'c1': {'type': 'integer', 'inherited': True}},
                             {'c2': {'type': 'text'}}], 'check_constraints': {
                                 't1_c1_check':
-                                {'columns': ['c1'], 'expression': 'c1 > 0',
+                                {'columns': ['c1'], 'expression': '(c1 > 0)',
                                  'inherited': True}}, 'inherits': ['t1']}})
         sql = self.to_sql(inmap, stmts)
         assert fix_indent(sql[0]) == "CREATE TABLE t2 (c2 text) INHERITS (t1)"
@@ -106,8 +106,8 @@ class CheckConstraintToSqlTestCase(InputMapToSqlTestCase):
         inmap = self.std_map()
         inmap['schema public'].update({'table t1': {
             'columns': [{'c1': {'type': 'integer'}}], 'check_constraints': {
-                't1_check1': {'columns': ['c1'], 'expression': 'c1 > 10'},
-                't1_check2': {'columns': ['c1'], 'expression': 'c1 < 100'}
+                't1_check1': {'columns': ['c1'], 'expression': '(c1 > 10)'},
+                't1_check2': {'columns': ['c1'], 'expression': '(c1 < 100)'}
             }}
         })
         sql = self.to_sql(inmap, stmts)
@@ -466,10 +466,10 @@ class ForeignKeyToMapTestCase(DatabaseToMapTestCase):
 
     def test_cross_schema_foreign_key(self):
         "Map a table with a foreign key on a table in another schema"
-        stmts = ["CREATE SCHEMA s1",
-                 "CREATE TABLE t2 (pc1 INTEGER PRIMARY KEY, pc2 TEXT)",
+        stmts = ["CREATE SCHEMA s1", "CREATE SCHEMA s2",
+                 "CREATE TABLE s2.t2 (pc1 INTEGER PRIMARY KEY, pc2 TEXT)",
                  "CREATE TABLE s1.t1 (c1 INTEGER PRIMARY KEY, "
-                 "c2 INTEGER REFERENCES t2 (pc1), c3 TEXT)"]
+                 "c2 INTEGER REFERENCES s2.t2 (pc1), c3 TEXT)"]
         dbmap = self.to_map(stmts)
         t2map = {'columns': [{'pc1': {'type': 'integer', 'not_null': True}},
                              {'pc2': {'type': 'text'}}],
@@ -480,9 +480,9 @@ class ForeignKeyToMapTestCase(DatabaseToMapTestCase):
             'primary_key': {'t1_pkey': {'columns': ['c1']}},
             'foreign_keys': {'t1_c2_fkey': {
                 'columns': ['c2'],
-                'references': {'schema': 'public', 'table': 't2',
+                'references': {'schema': 's2', 'table': 't2',
                                'columns': ['pc1']}}}}}
-        assert dbmap['schema public']['table t2'] == t2map
+        assert dbmap['schema s2']['table t2'] == t2map
         assert dbmap['schema s1'] == t1map
 
     def test_multiple_foreign_key(self):
@@ -544,7 +544,7 @@ class ForeignKeyToMapTestCase(DatabaseToMapTestCase):
         assert fks['t1_c4_fkey'].get('deferrable')
         assert fks['t1_c4_fkey'].get('deferred')
 
-    def test_foreign_key_match(self):
+    def test_map_foreign_key_match(self):
         "Map a foreign key constraint with a MATCH specification"
         stmts = ["CREATE TABLE t2 (pc1 INTEGER PRIMARY KEY, pc2 TEXT)",
                  "CREATE TABLE t1 (c1 INTEGER, "
@@ -577,7 +577,8 @@ class ForeignKeyToSqlTestCase(InputMapToSqlTestCase):
         inmap = self.std_map()
         inmap['schema public'].update(
             {'table t1': {'columns': [{'c11': {'type': 'integer'}},
-                                      {'c12': {'type': 'text'}}]},
+                                      {'c12': {'type': 'text'}}],
+                          'primary_key': {'t1_pkey': {'columns': ['c11']}}},
              'table t2': {'columns': [{'c21': {'type': 'integer'}},
                                       {'c22': {'type': 'text'}},
                                       {'c23': {'type': 'integer'}}],
@@ -596,15 +597,18 @@ class ForeignKeyToSqlTestCase(InputMapToSqlTestCase):
             "CREATE TABLE t1 (c11 integer, c12 text)"
         assert fix_indent(sql[crt2]) == \
             "CREATE TABLE t2 (c21 integer, c22 text, c23 integer)"
-        assert fix_indent(sql[2]) == "ALTER TABLE t2 ADD CONSTRAINT " \
+        assert fix_indent(sql[2]) == \
+            "ALTER TABLE t1 ADD CONSTRAINT t1_pkey PRIMARY KEY (c11)"
+        assert fix_indent(sql[3]) == "ALTER TABLE t2 ADD CONSTRAINT " \
             "t2_c23_fkey FOREIGN KEY (c23) REFERENCES t1 (c11)"
 
     def test_create_foreign_key_deferred(self):
-        "Create a table with various foreign key deferring constraint"
+        "Create a table with various foreign key deferring constraints"
         inmap = self.std_map()
         inmap['schema public'].update(
             {'table t1': {'columns': [{'c11': {'type': 'integer'}},
-                                      {'c12': {'type': 'text'}}]},
+                                      {'c12': {'type': 'text'}}],
+             'unique_constraints': {'t1_c11_key': {'columns': ['c11']}}},
              'table t2': {'columns': [{'c21': {'type': 'integer'}},
                                       {'c22': {'type': 'text'}},
                                       {'c23': {'type': 'integer'}},
@@ -625,6 +629,7 @@ class ForeignKeyToSqlTestCase(InputMapToSqlTestCase):
                                              'table': 't1'},
                               'deferrable': True, 'deferred': True}}}})
         sql = self.to_sql(inmap)
+        assert len(sql) == 6
         # can't control which table/constraint will be created first
         sql[0:2] = list(sorted(sql[0:2]))
         sql[2:5] = list(sorted(sql[2:5]))
@@ -632,11 +637,13 @@ class ForeignKeyToSqlTestCase(InputMapToSqlTestCase):
         assert fix_indent(sql[0]) == "CREATE TABLE t1 (c11 integer, c12 text)"
         assert fix_indent(sql[1]) == "CREATE TABLE t2 (c21 integer, " \
             "c22 text, c23 integer, c24 integer, c25 integer)"
-        assert fix_indent(sql[2]) == "ALTER TABLE t2 ADD CONSTRAINT " \
-            "t2_c23_fkey FOREIGN KEY (c23) REFERENCES t1 (c11)"
+        assert fix_indent(sql[2]) == "ALTER TABLE t1 ADD CONSTRAINT " \
+            "t1_c11_key UNIQUE (c11)"
         assert fix_indent(sql[3]) == "ALTER TABLE t2 ADD CONSTRAINT " \
-            "t2_c24_fkey FOREIGN KEY (c24) REFERENCES t1 (c11) DEFERRABLE"
+            "t2_c23_fkey FOREIGN KEY (c23) REFERENCES t1 (c11)"
         assert fix_indent(sql[4]) == "ALTER TABLE t2 ADD CONSTRAINT " \
+            "t2_c24_fkey FOREIGN KEY (c24) REFERENCES t1 (c11) DEFERRABLE"
+        assert fix_indent(sql[5]) == "ALTER TABLE t2 ADD CONSTRAINT " \
             "t2_c25_fkey FOREIGN KEY (c25) REFERENCES t1 (c11) " \
             "DEFERRABLE INITIALLY DEFERRED"
 
@@ -997,7 +1004,7 @@ class ForeignKeyToSqlTestCase(InputMapToSqlTestCase):
         sql = self.to_sql(inmap, stmts)
         assert fix_indent(sql[0]) == "ALTER TABLE t2 DROP CONSTRAINT t2_fk"
         assert fix_indent(sql[1]) == "ALTER TABLE t2 ADD CONSTRAINT t2_fk " \
-            "FOREIGN KEY (c1, c2) REFERENCES t1 (c1, c2) MATCH SIMPLE"
+            "FOREIGN KEY (c1, c2) REFERENCES t1 (c1, c2)"
         assert len(sql) == 2
 
     def test_change_actions_foreign_key(self):
@@ -1203,7 +1210,7 @@ class ConstraintCommentTestCase(InputMapToSqlTestCase):
         inmap['schema public'].update({'table t1': {
             'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}],
             'check_constraints': {'cns1': {
-                'columns': ['c1'], 'expression': 'c1 > 50',
+                'columns': ['c1'], 'expression': '(c1 > 50)',
                 'description': 'Test constraint cns1'}}}})
         sql = self.to_sql(inmap)
         assert fix_indent(sql[0]) == "CREATE TABLE t1 (c1 integer, c2 text)"
@@ -1269,7 +1276,7 @@ class ConstraintCommentTestCase(InputMapToSqlTestCase):
             'columns': [{'c1': {'type': 'integer'}},
                         {'c2': {'type': 'text'}}],
             'check_constraints': {'cns1': {
-                'columns': ['c1'], 'expression': 'c1 > 50',
+                'columns': ['c1'], 'expression': '(c1 > 50)',
                 'description': 'Test constraint cns1'}}}}})
         sql = self.to_sql(inmap, stmts)
         assert sql[0] == "COMMENT ON CONSTRAINT cns1 ON s1.t1 IS " \

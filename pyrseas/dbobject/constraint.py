@@ -7,31 +7,47 @@
     DbSchemaObject, CheckConstraint, PrimaryKey, ForeignKey and
     UniqueConstraint derived from Constraint, and ConstraintDict
     derived from DbObjectDict.
+
+    TODO: UniqueConstraint and PrimaryKey are nearly identical.
+          Perhaps the latter should inherit from the former.
 """
-import re
-
-from pyrseas.dbobject import DbObjectDict, DbSchemaObject
-from pyrseas.dbobject import quote_id, split_schema_obj, commentable
-from pyrseas.dbobject.index import Index
-
-
-ACTIONS = {'r': 'restrict', 'c': 'cascade', 'n': 'set null',
-           'd': 'set default'}
+from . import DbObjectDict, DbSchemaObject
+from . import quote_id, split_schema_obj, commentable
+from .index import Index
 
 
 class Constraint(DbSchemaObject):
     """A constraint definition, such as a primary key, foreign key or
-       unique constraint"""
+    unique constraint.  This also covers check constraints on domains."""
 
     keylist = ['schema', 'table', 'name']
     catalog = 'pg_constraint'
+
+    def __init__(self, name, schema, table, description):
+        """Initialize the constraint
+
+        :param name: constraint name (from conname)
+        :param schema: schema name (from connamespace)
+        :param table: table/domain name (from conrelid/contypid)
+        :param description: comment text (from obj_description())
+        """
+        super(Constraint, self).__init__(name, schema, description)
+        self._init_own_privs(None, [])
+        self.table = table
+        self.unqualify()
 
     def key_columns(self):
         """Return comma-separated list of key column names
 
         :return: string
         """
-        return ", ".join([quote_id(col) for col in self.keycols])
+        return ", ".join([quote_id(col) for col in self.columns])
+
+    def _normalize_columns(self):
+        "Replace integer column numbers by column names"
+        if isinstance(self.columns[0], int):
+            self.columns = [self._table.columns[k - 1].name
+                            for k in self.columns]
 
     def create(self):
         # TODO: is add really needed?
@@ -48,7 +64,7 @@ class Constraint(DbSchemaObject):
         """
         stmts = []
         tblspc = ''
-        if hasattr(self, 'tablespace'):
+        if self.tablespace is not None:
             tblspc = " USING INDEX TABLESPACE %s" % self.tablespace
         stmts.append("ALTER TABLE %s ADD CONSTRAINT %s %s (%s)%s" % (
             self._table.qualname(), quote_id(self.name),
@@ -93,6 +109,46 @@ class Constraint(DbSchemaObject):
 class CheckConstraint(Constraint):
     "A check constraint definition"
 
+    def __init__(self, name, schema, table, description, columns,
+                 expression, is_domain_check=False, inherited=False,
+                 oid=None):
+        """Initialize the check constraint
+
+        :param name-description: see Constraint.__init__ params
+        :param columns: list of columns (should only be one) (from conkey)
+        :param expression: constraint expression (from consrc)
+        :param is_domain_check: is constraint for a domain? (from contypid)
+        :param inherited: is it inherited? (from coninhcount)
+        """
+        super(CheckConstraint, self).__init__(name, schema, table, description)
+        self.columns = columns
+        if expression[0] == '(':
+            assert expression[-1] == ')'
+        self.expression = expression
+        self.is_domain_check = is_domain_check
+        self.inherited = inherited
+        self.oid = oid
+
+    @staticmethod
+    def query():
+        return """
+            SELECT conname AS name, nspname AS schema,
+                   CASE WHEN contypid = 0 THEN conrelid::regclass::text
+                        ELSE contypid::regtype::text END AS table,
+                   contypid != 0 AS is_domain_check, conkey AS columns,
+                   consrc AS expression, coninhcount > 0 AS inherited, c.oid,
+                   obj_description(c.oid, 'pg_constraint') AS description
+            FROM pg_constraint c
+                 JOIN pg_namespace ON (connamespace = pg_namespace.oid)
+            WHERE nspname != 'pg_catalog' AND nspname != 'information_schema'
+                  AND nspname NOT LIKE 'pg_temp\_%'
+                  AND nspname NOT LIKE 'pg_toast_temp\_%'
+              AND contype = 'c'
+              AND contypid NOT IN (SELECT objid FROM pg_depend
+                                   WHERE deptype = 'e'
+                                     AND classid = 'pg_type'::regclass)
+            ORDER BY schema, "table", name"""
+
     @property
     def objtype(self):
         return "CHECK"
@@ -104,11 +160,13 @@ class CheckConstraint(Constraint):
         :return: dictionary
         """
         dct = self._base_map(db)
-        if 'target' in dct:
-            del dct['target']
-        if dbcols:
-            dct['columns'] = [dbcols[k - 1] for k in self.keycols]
-            del dct['keycols']
+        dct.pop('is_domain_check')
+        if not self.inherited:
+            dct.pop('inherited')
+        if dbcols is not None:
+            dct['columns'] = [dbcols[k - 1] for k in self.columns]
+        else:
+            dct.pop('columns')
         return {self.name: dct}
 
     @commentable
@@ -118,15 +176,15 @@ class CheckConstraint(Constraint):
         :return: SQL statement
         """
         # Don't generate inherited constraints
-        if getattr(self, 'inherited', None):
+        if self.inherited:
             return []
 
-        return ["ALTER %s %s ADD CONSTRAINT %s %s (%s)" % (
+        return ["ALTER %s %s ADD CONSTRAINT %s %s %s" % (
             self._table.objtype, self._table.qualname(), quote_id(self.name),
             self.objtype, self.expression)]
 
     def drop(self):
-        if getattr(self, 'inherited', None):
+        if self.inherited:
             return []
         else:
             return super(CheckConstraint, self).drop()
@@ -142,22 +200,65 @@ class CheckConstraint(Constraint):
         input.
         """
         stmts = []
-        if hasattr(inchk, 'expression') and hasattr(self, 'expression'):
-            if re.sub('[\s()]', '', inchk.expression.lower()) != \
-               re.sub('[\s()]', '', self.expression.lower()):
-                stmts.append(
-                    "ALTER TABLE {tname} DROP CONSTRAINT {conname}".format(
-                        tname=inchk._table.name, conname=inchk.name))
-                stmts.append("ALTER TABLE {tname} ADD CONSTRAINT {conname}"
-                             " CHECK ({exp})".format(
-                                 tname=inchk._table.name, conname=inchk.name,
-                                 exp=inchk.expression))
+        if inchk.expression != self.expression:
+            if inchk.expression.lower() != self.expression.lower():
+                stmts.append(self.drop())
+                stmts.append(inchk.add())
         stmts.append(self.diff_description(inchk))
         return stmts
 
 
 class PrimaryKey(Constraint):
     "A primary key constraint definition"
+
+    def __init__(self, name, schema, table, description, columns,
+                 access_method='btree', tablespace=None, cluster=False,
+                 inherited=False, deferrable=False, deferred=False,
+                 oid=None):
+        """Initialize the primary key
+
+        :param name-description: see Constraint.__init__ params
+        :param columns: list of columns (should only be one) (from conkey)
+        :param access_method: index access method (from am_name via conindid)
+        :param tablespace: storage tablespace (from spcname)
+        :param cluster: is index clustered? (from indisclustered)
+        :param inherited: is PK inherited? (from coninhcount)
+        :param deferrable: is constraint deferrable? (from condeferrable)
+        :param deferred: is constraint deferred? (from condeferred)
+        """
+        super(PrimaryKey, self).__init__(name, schema, table, description)
+        self.columns = columns
+        self.access_method = access_method
+        self.tablespace = tablespace
+        self.cluster = cluster
+        self.inherited = inherited
+        self.deferrable = deferrable
+        self.deferred = deferred
+        self.oid = oid
+
+    @staticmethod
+    def query():
+        return """
+            SELECT conname AS name, nspname AS schema,
+                   conrelid::regclass AS table, conkey AS columns,
+                   condeferrable AS deferrable, condeferred AS deferred,
+                   amname AS access_method, spcname AS tablespace, c.oid,
+                   indisclustered AS cluster, coninhcount > 0 AS inherited,
+                   obj_description(c.oid, 'pg_constraint') AS description
+            FROM pg_constraint c
+                 JOIN pg_namespace ON (connamespace = pg_namespace.oid)
+                 JOIN pg_index i ON (indexrelid = conindid)
+                 JOIN pg_class cl on (indexrelid = cl.oid)
+                 JOIN pg_am on (relam = pg_am.oid)
+                 LEFT JOIN pg_tablespace t ON (cl.reltablespace = t.oid)
+            WHERE nspname != 'pg_catalog' AND nspname != 'information_schema'
+                  AND nspname NOT LIKE 'pg_temp\_%'
+                  AND nspname NOT LIKE 'pg_toast_temp\_%'
+              AND contype = 'p'
+              AND contypid NOT IN (SELECT objid FROM pg_depend
+                                   WHERE deptype = 'e'
+                                     AND classid = 'pg_type'::regclass)
+            ORDER BY schema, "table", name"""
 
     @property
     def objtype(self):
@@ -170,12 +271,16 @@ class PrimaryKey(Constraint):
         :return: dictionary
         """
         dct = self._base_map(db)
-        if dct['access_method'] == 'btree':
-            del dct['access_method']
+        if self.access_method == 'btree':
+            dct.pop('access_method')
+        for attr in ('inherited', 'deferrable', 'deferred', 'cluster'):
+            if getattr(self, attr) is False:
+                dct.pop(attr)
+        if self.tablespace is None:
+            dct.pop('tablespace')
         if '_table' in dct:
             del dct['_table']
-        dct['columns'] = [dbcols[k - 1] for k in self.keycols]
-        del dct['keycols']
+        dct['columns'] = [dbcols[k - 1] for k in self.columns]
         return {self.name: dct}
 
     def alter(self, inpk):
@@ -189,37 +294,116 @@ class PrimaryKey(Constraint):
         input.
         """
         stmts = []
-        if hasattr(inpk, 'keycols') and hasattr(self, 'keycols') \
-           and hasattr(self, '_table') and hasattr(self._table, 'columns') \
-           and hasattr(self._table, 'primary_key') and \
-           hasattr(self._table.primary_key, 'keycols'):
-            selfcols = {i.number: i.name for i in self._table.columns}
-            selfpk = [selfcols[i] for i in self._table.primary_key.keycols]
-            if inpk.keycols != selfpk:
-                stmts.append(
-                    "ALTER TABLE {tname} DROP CONSTRAINT {pkname}".format(
-                        tname=self._table.name, pkname=self.name))
-                stmts.append("ALTER TABLE {tname} ADD CONSTRAINT {pkname} "
-                             "PRIMARY KEY ({cols})".format(
-                                 tname=inpk._table.name, pkname=inpk.name,
-                                 cols=', '.join(inpk.keycols)))
-        if hasattr(inpk, 'cluster'):
-            if not hasattr(self, 'cluster'):
+        self._normalize_columns()
+        if inpk.columns != self.columns:
+            stmts.append(self.drop())
+            stmts.append(inpk.add())
+        if inpk.cluster:
+            if not self.cluster:
                 stmts.append("CLUSTER %s USING %s" % (
                     self._table.qualname(), quote_id(self.name)))
-        elif hasattr(self, 'cluster'):
+        elif self.cluster:
             stmts.append("ALTER TABLE %s\n    SET WITHOUT CLUSTER" %
                          self._table.qualname())
         stmts.append(self.diff_description(inpk))
         return stmts
 
 
+ACTIONS = {'r': 'restrict', 'c': 'cascade', 'n': 'set null',
+           'd': 'set default'}
+MATCH_TYPES = {'f': 'full', 'p': 'partial', 's': 'simple'}
+
+
 class ForeignKey(Constraint):
     "A foreign key constraint definition"
+
+    def __init__(self, name, schema, table, description, columns,
+                 ref_table, ref_cols, on_update, on_delete, match,
+                 access_method='btree', tablespace=None, cluster=False,
+                 inherited=False, deferrable=False, deferred=False,
+                 oid=None):
+        """Initialize the foreign key
+
+        :param name-description: see Constraint.__init__ params
+        :param columns: list of columns (should only be one) (from conkey)
+        :param ref_table: referenced table (from confrelid)
+        :param ref_cols: referenced columns (from confkey)
+        :param on_update: update action code (from confupdtype)
+        :param on_delete: delete action code (from confdeltype)
+        :param match: match action code (from confmatchtype)
+        :param access_method: index access method (from am_name via conindid)
+        :param tablespace: storage tablespace (from spcname)
+        :param cluster: is index clustered? (from indisclustered)
+        :param inherited: is PK inherited? (from coninhcount)
+        :param deferrable: is constraint deferrable? (from condeferrable)
+        :param deferred: is constraint deferred? (from condeferred)
+        """
+        super(ForeignKey, self).__init__(name, schema, table, description)
+        self.columns = columns
+        (self.ref_schema, self.ref_table) = split_schema_obj(ref_table, schema)
+        self.ref_cols = ref_cols
+        if on_update is not None and len(on_update) == 1:
+            self.on_update = None if on_update == 'a' else ACTIONS[on_update]
+        else:
+            assert on_update is None or on_update in ACTIONS.values()
+            self.on_update = on_update
+        if on_delete is not None and len(on_delete) == 1:
+            self.on_delete = None if on_delete == 'a' else ACTIONS[on_delete]
+        else:
+            assert on_delete is None or on_delete in ACTIONS.values()
+            self.on_delete = on_delete
+        if match == 'u':  # used in PG 9.2 and earlier
+            match == 's'
+        if match is not None and len(match) == 1:
+            self.match = MATCH_TYPES[match]
+        else:
+            assert match is None or match in MATCH_TYPES.values()
+            self.match = 'simple' if match is None else match
+        self.access_method = access_method
+        self.tablespace = tablespace
+        self.cluster = cluster
+        self.inherited = inherited
+        self.deferrable = deferrable
+        self.deferred = deferred
+        self.oid = oid
+
+    @staticmethod
+    def query():
+        return """
+            SELECT conname AS name, nspname AS schema,
+                   conrelid::regclass AS table, conkey AS columns,
+                   condeferrable AS deferrable, condeferred AS deferred,
+                   confrelid::regclass AS ref_table, confkey AS ref_cols,
+                   confupdtype AS on_update, confdeltype AS on_delete,
+                   confmatchtype AS match, amname AS access_method,
+                   spcname AS tablespace, c.oid,
+                   indisclustered AS cluster, coninhcount > 0 AS inherited,
+                   obj_description(c.oid, 'pg_constraint') AS description
+            FROM pg_constraint c
+                 JOIN pg_namespace ON (connamespace = pg_namespace.oid)
+                 JOIN pg_index i ON (indexrelid = conindid)
+                 JOIN pg_class cl ON (indexrelid = cl.oid)
+                 JOIN pg_am on (relam = pg_am.oid)
+                 LEFT JOIN pg_tablespace t ON (cl.reltablespace = t.oid)
+            WHERE nspname != 'pg_catalog' AND nspname != 'information_schema'
+                  AND nspname NOT LIKE 'pg_temp\_%'
+                  AND nspname NOT LIKE 'pg_toast_temp\_%'
+              AND contype = 'f'
+              AND contypid NOT IN (SELECT objid FROM pg_depend
+                                   WHERE deptype = 'e'
+                                     AND classid = 'pg_type'::regclass)
+            ORDER BY schema, "table", name"""
 
     @property
     def objtype(self):
         return "FOREIGN KEY"
+
+    def _normalize_columns(self):
+        "Replace integer column numbers by column names"
+        super(ForeignKey, self)._normalize_columns()
+        if isinstance(self.ref_cols[0], int):
+            self.ref_cols = [self._references.columns[k - 1].name
+                             for k in self.ref_cols]
 
     def ref_columns(self):
         """Return comma-separated list of reference column names
@@ -237,8 +421,17 @@ class ForeignKey(Constraint):
         dct = self._base_map(db)
         if '_table' in dct:
             del dct['_table']
-        dct['columns'] = [dbcols[k - 1] for k in self.keycols]
-        del dct['keycols']
+        if self.access_method == 'btree':
+            dct.pop('access_method')
+        for attr in ('inherited', 'deferrable', 'deferred', 'cluster'):
+            if getattr(self, attr) is False:
+                dct.pop(attr)
+        for attr in ('tablespace', 'on_update', 'on_delete'):
+            if getattr(self, attr) is None:
+                dct.pop(attr)
+        if self.match == 'simple':
+            dct.pop('match')
+        dct['columns'] = [dbcols[k - 1] for k in self.columns]
         refsch = hasattr(self, 'ref_schema') and self.ref_schema or self.schema
         ref_cols = [refcols[k - 1] for k in self.ref_cols]
         dct['references'] = {'table': dct['ref_table'], 'columns': ref_cols}
@@ -255,38 +448,23 @@ class ForeignKey(Constraint):
         :return: SQL statement
         """
         match = ''
-        if hasattr(self, 'match'):
+        if self.match is not None and self.match != 'simple':
             match = " MATCH %s" % self.match.upper()
         actions = ''
-        if hasattr(self, 'on_update'):
+        if self.on_update is not None:
             actions = " ON UPDATE %s" % self.on_update.upper()
-        if hasattr(self, 'on_delete'):
+        if self.on_delete is not None:
             actions += " ON DELETE %s" % self.on_delete.upper()
-        if getattr(self, 'deferrable', False):
+        if self.deferrable:
             actions += " DEFERRABLE"
-        if getattr(self, 'deferred', False):
+        if self.deferred:
             actions += " INITIALLY DEFERRED"
 
         return "ALTER TABLE %s ADD CONSTRAINT %s FOREIGN KEY (%s) " \
             "REFERENCES %s (%s)%s%s" % (
                 self._table.qualname(), quote_id(self.name),
-                self.key_columns(), self.references.qualname(),
+                self.key_columns(), self._references.qualname(),
                 self.ref_columns(), match, actions)
-
-    def get_match_actions(self):
-        match = ""
-        actions = ""
-        if hasattr(self, 'match'):
-            match = " MATCH %s" % self.match.upper()
-        if hasattr(self, 'on_update'):
-            actions = " ON UPDATE %s" % self.on_update.upper()
-        if hasattr(self, 'on_delete'):
-            actions += " ON DELETE %s" % self.on_delete.upper()
-        if getattr(self, 'deferrable', False):
-            actions += " DEFERRABLE"
-        if getattr(self, 'deferred', False):
-            actions += " INITIALLY DEFERRED"
-        return {'match': match, 'actions': actions}
 
     def alter(self, infk):
         """Generate SQL to transform an existing foreign key
@@ -299,32 +477,14 @@ class ForeignKey(Constraint):
         input.
         """
         stmts = []
-        if hasattr(infk, 'keycols') and hasattr(self, 'keycols') \
-           and hasattr(self, '_table') and hasattr(self._table, 'columns') \
-           and hasattr(self, 'references') \
-           and hasattr(self.references, 'columns'):
-            selfcols = {i.number: i.name for i in self._table.columns}
-            selffk = [selfcols[i] for i in self.keycols]
-            selfrefs = {i.number: i.name for i in self.references.columns}
-            selffkref = [selfrefs[i] for i in self.ref_cols]
-
-            if infk.keycols != selffk or infk.ref_cols != selffkref \
-                    or infk.get_match_actions()['match'] \
-                    != self.get_match_actions()['match'] \
-                    or infk.get_match_actions()['actions'] \
-                    != self.get_match_actions()['actions']:
-                stmts.append(
-                    "ALTER TABLE {tname} DROP CONSTRAINT {fkname}".format(
-                        tname=self._table.name, fkname=self.name))
-                stmts.append("ALTER TABLE {tname} ADD CONSTRAINT {fkname} "
-                             "FOREIGN KEY ({cols}) REFERENCES {rtname} "
-                             "({rcols}){match}{actions}".format(
-                                 tname=infk._table.name, fkname=infk.name,
-                                 cols=', '.join(infk.keycols),
-                                 rtname=infk.ref_table,
-                                 rcols=', '.join(infk.ref_cols),
-                                 match=infk.get_match_actions()['match'],
-                                 actions=infk.get_match_actions()['actions']))
+        self._normalize_columns()
+        if infk.columns != self.columns or infk.ref_cols != self.ref_cols \
+           or infk.match != self.match or infk.on_update != self.on_update \
+                or infk.on_delete != self.on_delete:
+            stmts.append(
+                "ALTER TABLE {tname} DROP CONSTRAINT {fkname}".format(
+                    tname=self._table.name, fkname=self.name))
+            stmts.append(infk.add())
         stmts.append(self.diff_description(infk))
         return stmts
 
@@ -332,28 +492,24 @@ class ForeignKey(Constraint):
         deps = super(ForeignKey, self).get_implied_deps(db)
 
         # add the table we reference
-        deps.add(self.references)
+        deps.add(self._references)
 
         # A fkey needs a pkey, unique constraint or complete unique index
         # defined on the fields it references to be restored.
-        idx = self._find_referenced_index(db, self.references)
+        idx = self._find_referenced_index(db, self._references)
         if idx:
             deps.add(idx)
 
         return deps
 
     def _find_referenced_index(self, db, ref_table):
-        pkey = getattr(ref_table, 'primary_key', None)
-        if pkey:
-            if (hasattr(pkey, 'keycols') and pkey.keycols == self.ref_cols) \
-               or (hasattr(pkey, 'col_names') and
-                   pkey.col_names == self.ref_cols):
-                return pkey
+        pkey = ref_table.primary_key
+        if pkey is not None and pkey.columns == self.ref_cols:
+            return pkey
 
-        if hasattr(ref_table, 'unique_constraints'):
-            for uc in list(ref_table.unique_constraints.values()):
-                if uc.keycols == self.ref_cols:
-                    return uc
+        for uc in list(ref_table.unique_constraints.values()):
+            if uc.columns == self.ref_cols:
+                return uc
 
         if hasattr(ref_table, 'indexes'):
             if isinstance(self.ref_cols[0], int):
@@ -372,6 +528,56 @@ class ForeignKey(Constraint):
 class UniqueConstraint(Constraint):
     "A unique constraint definition"
 
+    def __init__(self, name, schema, table, description, columns,
+                 access_method='btree', tablespace=None, cluster=False,
+                 inherited=False, deferrable=False, deferred=False,
+                 oid=None):
+        """Initialize the unique constraint
+
+        :param name-description: see Constraint.__init__ params
+        :param columns: list of columns (should only be one) (from conkey)
+        :param access_method: index access method (from am_name via conindid)
+        :param tablespace: storage tablespace (from spcname)
+        :param cluster: is index clustered? (from indisclustered)
+        :param inherited: is it inherited? (from coninhcount)
+        :param deferrable: is constraint deferrable? (from condeferrable)
+        :param deferred: is constraint deferred? (from condeferred)
+        """
+        super(UniqueConstraint, self).__init__(
+            name, schema, table, description)
+        self.columns = columns
+        self.access_method = access_method
+        self.tablespace = tablespace
+        self.cluster = cluster
+        self.inherited = inherited
+        self.deferrable = deferrable
+        self.deferred = deferred
+        self.oid = oid
+
+    @staticmethod
+    def query():
+        return """
+            SELECT conname AS name, nspname AS schema,
+                   conrelid::regclass AS table, conkey AS columns,
+                   condeferrable AS deferrable, condeferred AS deferred,
+                   amname AS access_method, spcname AS tablespace, c.oid,
+                   indisclustered AS cluster, coninhcount > 0 AS inherited,
+                   obj_description(c.oid, 'pg_constraint') AS description
+            FROM pg_constraint c
+                 JOIN pg_namespace ON (connamespace = pg_namespace.oid)
+                 JOIN pg_index i ON (indexrelid = conindid)
+                 JOIN pg_class cl on (indexrelid = cl.oid)
+                 JOIN pg_am on (relam = pg_am.oid)
+                 LEFT JOIN pg_tablespace t ON (cl.reltablespace = t.oid)
+            WHERE nspname != 'pg_catalog' AND nspname != 'information_schema'
+                  AND nspname NOT LIKE 'pg_temp\_%'
+                  AND nspname NOT LIKE 'pg_toast_temp\_%'
+              AND contype = 'u'
+              AND contypid NOT IN (SELECT objid FROM pg_depend
+                                   WHERE deptype = 'e'
+                                     AND classid = 'pg_type'::regclass)
+            ORDER BY schema, "table", name"""
+
     @property
     def objtype(self):
         return "UNIQUE"
@@ -383,11 +589,14 @@ class UniqueConstraint(Constraint):
         :return: dictionary
         """
         dct = self._base_map(db)
-        if dct['access_method'] == 'btree':
-            del dct['access_method']
-        dct['columns'] = []
-        dct['columns'] = [dbcols[k - 1] for k in self.keycols]
-        del dct['keycols']
+        if self.access_method == 'btree':
+            dct.pop('access_method')
+        for attr in ('inherited', 'deferrable', 'deferred', 'cluster'):
+            if getattr(self, attr) is False:
+                dct.pop(attr)
+        if self.tablespace is None:
+            dct.pop('tablespace')
+        dct['columns'] = [dbcols[k - 1] for k in self.columns]
         return {self.name: dct}
 
     def alter(self, inuc):
@@ -401,115 +610,54 @@ class UniqueConstraint(Constraint):
         represented by the input.
         """
         stmts = []
-        if hasattr(inuc, 'keycols') and hasattr(self, 'keycols') \
-           and hasattr(self, '_table') and hasattr(self._table, 'columns'):
-            selfcols = {i.number: i.name for i in self._table.columns}
-            selfunique = [selfcols[i] for i in self.keycols]
-            if inuc.keycols != selfunique:
-                stmts.append(
-                    "ALTER TABLE {tname} DROP CONSTRAINT {conname}".format(
-                        tname=self._table.name, conname=self.name))
-                stmts.append("ALTER TABLE {tname} ADD CONSTRAINT {conname} "
-                             "UNIQUE ({cols})".format(
-                                 tname=inuc._table.name, conname=inuc.name,
-                                 cols=', '.join(inuc.keycols)))
-        if hasattr(inuc, 'cluster'):
-            if not hasattr(self, 'cluster'):
+        self._normalize_columns()
+        if inuc.columns != self.columns:
+            stmts.append(self.drop())
+            stmts.append("ALTER TABLE {tname} ADD CONSTRAINT {conname} "
+                         "UNIQUE ({cols})".format(
+                             tname=inuc._table.name, conname=inuc.name,
+                             cols=', '.join(inuc.columns)))
+        if inuc.cluster:
+            if not self.cluster:
                 stmts.append("CLUSTER %s USING %s" % (
                     self._table.qualname(), quote_id(self.name)))
-        elif hasattr(self, 'cluster'):
+        elif self.cluster:
             stmts.append("ALTER TABLE %s\n    SET WITHOUT CLUSTER" %
                          self._table.qualname())
         stmts.append(self.diff_description(inuc))
         return stmts
 
+
 MATCHTYPES_PRE93 = {'f': 'full', 'p': 'partial', 'u': 'simple'}
-COMMON_ATTRS = ['access_method', 'tablespace', 'description', 'cluster',
-                'depends_on']
 
 
 class ConstraintDict(DbObjectDict):
     "The collection of table or column constraints in a database"
 
     cls = Constraint
-    query = \
-        """SELECT c.oid,
-                  nspname AS schema,
-                  CASE WHEN contypid = 0 THEN conrelid::regclass::text
-                       ELSE contypid::regtype::text END AS table,
-                  conname AS name,
-                  CASE WHEN contypid != 0 THEN 'd' ELSE '' END AS target,
-                  contype AS type, conkey AS keycols,
-                  condeferrable AS deferrable, condeferred AS deferred,
-                  confrelid::regclass AS ref_table, confkey AS ref_cols,
-                  consrc AS expression, confupdtype AS on_update,
-                  confdeltype AS on_delete, confmatchtype AS match,
-                  amname AS access_method, spcname AS tablespace,
-                  indisclustered AS cluster,
-                  coninhcount > 0 AS inherited,
-                  obj_description(c.oid, 'pg_constraint') AS description
-           FROM pg_constraint c
-                JOIN pg_namespace ON (connamespace = pg_namespace.oid)
-                LEFT JOIN pg_class cl on (conname = relname)
-                LEFT JOIN pg_index i ON (i.indexrelid = cl.oid)
-                LEFT JOIN pg_tablespace t ON (cl.reltablespace = t.oid)
-                LEFT JOIN pg_am on (relam = pg_am.oid)
-           WHERE nspname != 'pg_catalog' AND nspname != 'information_schema'
-                 AND nspname NOT LIKE 'pg_temp\_%'
-                 AND nspname NOT LIKE 'pg_toast_temp\_%'
-             AND contypid NOT IN (SELECT objid FROM pg_depend
-                                   WHERE deptype = 'e'
-                                     AND classid = 'pg_type'::regclass)
-           ORDER BY schema, "table", name"""
-    match_types = {'f': 'full', 'p': 'partial', 's': 'simple'}
 
     def _from_catalog(self):
         """Initialize the dictionary of constraints by querying the catalogs"""
-        if self.dbconn.version < 90300:
-            self.match_types = MATCHTYPES_PRE93
-        for constr in self.fetch():
-            constr.unqualify()
-            oid = constr.oid
-            sch, tbl, cns = constr.key()
-            sch, tbl = split_schema_obj('%s.%s' % (sch, tbl))
-            constr_type = constr.type
-            del constr.type
-            if constr_type != 'f':
-                del constr.ref_table
-                del constr.on_update
-                del constr.on_delete
-                del constr.match
-            if constr_type == 'c':
-                self.by_oid[oid] = self[(sch, tbl, cns)] \
-                    = CheckConstraint(**constr.__dict__)
-            elif constr_type == 'p':
-                self.by_oid[oid] = self[(sch, tbl, cns)] \
-                    = PrimaryKey(**constr.__dict__)
-            elif constr_type == 'f':
-                # normalize reference schema/table:
-                # if reftbl is qualified, split the schema out,
-                # otherwise it's in the 'public' schema (set as default
-                # when connecting)
-                if constr.on_update == 'a':
-                    del constr.on_update
-                else:
-                    constr.on_update = ACTIONS[constr.on_update]
-                if constr.on_delete == 'a':
-                    del constr.on_delete
-                else:
-                    constr.on_delete = ACTIONS[constr.on_delete]
-                if self.match_types[constr.match] == 'simple':
-                    del constr.match
-                else:
-                    constr.match = self.match_types[constr.match]
-                reftbl = constr.ref_table
-                (constr.ref_schema, constr.ref_table) = split_schema_obj(
-                    reftbl)
-                self.by_oid[oid] = self[(sch, tbl, cns)] \
-                    = ForeignKey(**constr.__dict__)
-            elif constr_type == 'u':
-                self.by_oid[oid] = self[(sch, tbl, cns)] \
-                    = UniqueConstraint(**constr.__dict__)
+        self.cls = CheckConstraint
+        self.query = self.cls.query()
+        for obj in self.fetch():
+            self[obj.key()] = obj
+            self.by_oid[obj.oid] = obj
+        self.cls = PrimaryKey
+        self.query = self.cls.query()
+        for obj in self.fetch():
+            self[obj.key()] = obj
+            self.by_oid[obj.oid] = obj
+        self.cls = UniqueConstraint
+        self.query = self.cls.query()
+        for obj in self.fetch():
+            self[obj.key()] = obj
+            self.by_oid[obj.oid] = obj
+        self.cls = ForeignKey
+        self.query = self.cls.query()
+        for obj in self.fetch():
+            self[obj.key()] = obj
+            self.by_oid[obj.oid] = obj
 
     def from_map(self, table, inconstrs, target='', rtables=None):
         """Initialize the dictionary of constraints by converting the input map
@@ -520,114 +668,76 @@ class ConstraintDict(DbObjectDict):
         if 'check_constraints' in inconstrs:
             chks = inconstrs['check_constraints']
             for cns in chks:
-                check = CheckConstraint(table=table.name, schema=table.schema,
-                                        name=cns)
-                val = chks[cns]
-                try:
-                    check.expression = val['expression']
-                except KeyError as exc:
-                    exc.args = ("Constraint '%s' is missing expression"
-                                % cns, )
-                    raise
-                check.depends_on.extend(val.get('depends_on', ()))
-                if check.expression[0] == '(' and check.expression[-1] == ')':
-                    check.expression = check.expression[1:-1]
-                if 'columns' in val:
-                    check.col_names = val['columns']
-                if target:
-                    check.target = target
-                if 'description' in val:
-                    check.description = val['description']
-                if 'inherited' in val:
-                    check.inherited = val['inherited']
+                inobj = chks[cns]
+                check = CheckConstraint(
+                    cns, table.schema, table.name,
+                    inobj.pop('description', None),
+                    inobj.pop('columns', []), inobj.pop('expression', None),
+                    (target != ''), inobj.pop('inherited', False))
+                if 'depends_on' in inobj:
+                    check.depends_on.extend(inobj.pop('depends_on'))
                 self[(table.schema, table.name, cns)] = check
         if 'primary_key' in inconstrs:
             cns = list(inconstrs['primary_key'].keys())[0]
-            pkey = PrimaryKey(table=table.name, schema=table.schema,
-                              name=cns)
-            val = inconstrs['primary_key'][cns]
-            try:
-                pkey.keycols = val['columns']
-            except KeyError as exc:
-                exc.args = ("Constraint '%s' is missing columns" % cns,)
-                raise
-            for attr, value in list(val.items()):
-                if attr in COMMON_ATTRS:
-                    setattr(pkey, attr, value)
+            inobj = inconstrs['primary_key'][cns]
+            pkey = PrimaryKey(
+                cns, table.schema, table.name, inobj.pop('description', None),
+                inobj.pop('columns', []), inobj.pop('access_method', 'btree'),
+                inobj.pop('tablespace', None), inobj.pop('cluster', False),
+                inobj.pop('inherited', False), inobj.pop('deferrable', False),
+                inobj.pop('deferred', False))
             self[(table.schema, table.name, cns)] = pkey
         if 'foreign_keys' in inconstrs:
             fkeys = inconstrs['foreign_keys']
             for cns in fkeys:
-                fkey = ForeignKey(table=table.name, schema=table.schema,
-                                  name=cns)
-                val = fkeys[cns]
-                fkey.depends_on.extend(val.get('depends_on', ()))
-                if 'on_update' in val:
-                    act = val['on_update']
-                    if act.lower() not in list(ACTIONS.values()):
-                        raise ValueError("Invalid action '%s' for constraint "
-                                         "'%s'" % (act, cns))
-                    fkey.on_update = act
-                if 'on_delete' in val:
-                    act = val['on_delete']
-                    if act.lower() not in list(ACTIONS.values()):
-                        raise ValueError("Invalid action '%s' for constraint "
-                                         "'%s'" % (act, cns))
-                    fkey.on_delete = act
-                if 'deferrable' in val:
-                    fkey.deferrable = True
-                if 'deferred' in val:
-                    fkey.deferred = True
-                if 'match' in val:
-                    mat = val['match']
-                    if mat.lower() not in list(self.match_types.values()):
-                        raise ValueError("Invalid match type '%s' for "
-                                         "constraint '%s'" % (mat, cns))
-                    fkey.match = mat
+                inobj = fkeys[cns]
+                ref_table = ref_cols = None
                 try:
-                    fkey.keycols = val['columns']
-                except KeyError as exc:
-                    exc.args = ("Constraint '%s' is missing columns" % cns,)
-                    raise
-                try:
-                    refs = val['references']
+                    refs = inobj['references']
                 except KeyError as exc:
                     exc.args = ("Constraint '%s' missing references" % cns,)
                     raise
                 try:
-                    fkey.ref_table = refs['table']
+                    ref_table = refs['table']
                 except KeyError as exc:
                     exc.args = ("Constraint '%s' missing table reference"
                                 % cns, )
                     raise
+                if 'schema' in refs and refs['schema'] != table.schema:
+                    ref_table = "%s.%s" % (refs['schema'], ref_table)
                 try:
-                    fkey.ref_cols = refs['columns']
+                    ref_cols = refs['columns']
                 except KeyError as exc:
                     exc.args = ("Constraint '%s' missing reference columns"
                                 % cns,)
                     raise
-                sch = table.schema
-                if 'schema' in refs:
-                    sch = refs['schema']
-                fkey.ref_schema = sch
-                if 'description' in val:
-                    fkey.description = val['description']
+                fkey = ForeignKey(
+                    cns, table.schema, table.name,
+                    inobj.pop('description', None),
+                    inobj.pop('columns', []), ref_table, ref_cols,
+                    inobj.pop('on_update', None), inobj.pop('on_delete', None),
+                    inobj.pop('match', None),
+                    inobj.pop('access_method', 'btree'),
+                    inobj.pop('tablespace', None), inobj.pop('cluster', False),
+                    inobj.pop('inherited', False),
+                    inobj.pop('deferrable', False),
+                    inobj.pop('deferred', False))
+                fkey.depends_on.extend(inobj.get('depends_on', ()))
                 self[(table.schema, table.name, cns)] = fkey
         if 'unique_constraints' in inconstrs:
             uconstrs = inconstrs['unique_constraints']
             for cns in uconstrs:
-                unq = UniqueConstraint(table=table.name, schema=table.schema,
-                                       name=cns)
-                val = uconstrs[cns]
-                try:
-                    unq.keycols = val['columns']
-                except KeyError as exc:
-                    exc.args = ("Constraint '%s' is missing columns" % cns, )
-                    raise
-                for attr, value in list(val.items()):
-                    if attr in COMMON_ATTRS:
-                        setattr(unq, attr, value)
-                self[(table.schema, table.name, cns)] = unq
+                inobj = uconstrs[cns]
+                obj = UniqueConstraint(
+                    cns, table.schema, table.name,
+                    inobj.pop('description', None),
+                    inobj.pop('columns', []),
+                    inobj.pop('access_method', 'btree'),
+                    inobj.pop('tablespace', None), inobj.pop('cluster', False),
+                    inobj.pop('inherited', False),
+                    inobj.pop('deferrable', False),
+                    inobj.pop('deferred', False))
+                self[(table.schema, table.name, cns)] = obj
 
     def link_refs(self, db):
         for c in list(self.values()):

@@ -293,6 +293,10 @@ class Table(DbClass):
         self.unlogged = unlogged
         self.options = options
         self.inherits = []
+        self.check_constraints = {}
+        self.primary_key = None
+        self.foreign_keys = {}
+        self.unique_constraints = {}
         self.oid = oid
 
     @staticmethod
@@ -356,31 +360,33 @@ class Table(DbClass):
                 cols.append(col)
         tbl['columns'] = cols
 
-        if hasattr(self, 'check_constraints'):
-            if 'check_constraints' not in tbl:
-                tbl.update(check_constraints={})
+        if len(self.check_constraints) > 0:
             for k in list(self.check_constraints.values()):
                 tbl['check_constraints'].update(
                     self.check_constraints[k.name].to_map(
                         db, self.column_names()))
-        if hasattr(self, 'primary_key'):
+        else:
+            tbl.pop('check_constraints')
+        if self.primary_key is not None:
             tbl['primary_key'] = self.primary_key.to_map(
                 db, self.column_names())
-        if hasattr(self, 'foreign_keys'):
-            if 'foreign_keys' not in tbl:
-                tbl['foreign_keys'] = {}
+        else:
+            tbl.pop('primary_key')
+        if len(self.foreign_keys) > 0:
             for k in list(self.foreign_keys.values()):
                 tbls = dbschemas[k.ref_schema].tables
                 tbl['foreign_keys'].update(self.foreign_keys[k.name].to_map(
                     db, self.column_names(),
-                    tbls[self.foreign_keys[k.name].ref_table]. column_names()))
-        if hasattr(self, 'unique_constraints'):
-            if 'unique_constraints' not in tbl:
-                tbl.update(unique_constraints={})
+                    tbls[self.foreign_keys[k.name].ref_table].column_names()))
+        else:
+            tbl.pop('foreign_keys')
+        if len(self.unique_constraints) > 0:
             for k in list(self.unique_constraints.values()):
                 tbl['unique_constraints'].update(
                     self.unique_constraints[k.name].to_map(
                         db, self.column_names()))
+        else:
+            tbl.pop('unique_constraints')
         if hasattr(self, 'indexes'):
             idxs = {}
             for idx in self.indexes.values():
@@ -584,9 +590,9 @@ class Table(DbClass):
         :param dirpath: full path to the directory for the file to be created
         """
         filepath = os.path.join(dirpath, self.extern_filename('data'))
-        if hasattr(self, 'primary_key'):
+        if self.primary_key is not None:
             order_by = [self.columns[col - 1].name
-                        for col in self.primary_key.keycols]
+                        for col in self.primary_key.columns]
         else:
             order_by = ['%d' % (n + 1) for n in range(len(self.columns))]
         dbconn.sql_copy_to(
@@ -813,7 +819,7 @@ class ClassDict(DbObjectDict):
                 if isinstance(table.owner_column, int):
                     table.owner_column = self[(sch, table.owner_table)]. \
                         column_names()[table.owner_column - 1]
-            elif isinstance(table, Table) and hasattr(table, 'inherits'):
+            elif isinstance(table, Table):
                 for partbl in table.inherits:
                     (parsch, partbl) = split_schema_obj(partbl)
                     assert self[(parsch, partbl)]
@@ -823,28 +829,23 @@ class ClassDict(DbObjectDict):
                     parent._descendants.append(table)
         for (sch, tbl, cns) in dbconstrs:
             constr = dbconstrs[(sch, tbl, cns)]
-            if hasattr(constr, 'target'):
+            if isinstance(constr, CheckConstraint) and constr.is_domain_check:
                 continue
             assert self[(sch, tbl)]
             constr._table = table = self[(sch, tbl)]
             if isinstance(constr, CheckConstraint):
-                if not hasattr(table, 'check_constraints'):
-                    table.check_constraints = {}
                 table.check_constraints.update({cns: constr})
             elif isinstance(constr, PrimaryKey):
                 table.primary_key = constr
             elif isinstance(constr, ForeignKey):
-                if not hasattr(table, 'foreign_keys'):
-                    table.foreign_keys = {}
                 # link referenced and referrer
-                constr.references = self[(constr.ref_schema, constr.ref_table)]
+                constr._references = self[(
+                    constr.ref_schema, constr.ref_table)]
                 # TODO: there can be more than one
                 self[(constr.ref_schema, constr.ref_table)]._referred_by = \
                     constr
                 table.foreign_keys.update({cns: constr})
             elif isinstance(constr, UniqueConstraint):
-                if not hasattr(table, 'unique_constraints'):
-                    table.unique_constraints = {}
                 table.unique_constraints.update({cns: constr})
 
         def link_one(targdict, schema, tbl, objkey, objtype):

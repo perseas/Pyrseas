@@ -455,7 +455,8 @@ class TypeDict(DbObjectDict):
                     attr._type = self[(sch, typ)]
         for (sch, typ, cns) in dbconstrs:
             constr = dbconstrs[(sch, typ, cns)]
-            if not hasattr(constr, 'target') or constr.target != 'd':
+            if not hasattr(constr, 'is_domain_check') or \
+               constr.is_domain_check is False:
                 continue
             assert self[(sch, typ)]
             constr._table = dbtype = self[(sch, typ)]
