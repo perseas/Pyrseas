@@ -88,8 +88,7 @@ TYPELIST = [
     ('tsquery', 'tsquery'),
     ('UUID', 'uuid'),
     ('XML', 'xml'),
-    ('JSON', 'json'),
-    ('JSONB', 'jsonb')]
+    ('JSON', 'json')]
 
 CREATE_STMT1 = "CREATE TABLE t1 (c1 integer, c2 text)"
 CREATE_STMT2 = "CREATE TABLE t1 (c1 integer, c2 text, c3 date)"
@@ -104,6 +103,8 @@ class ColumnToMapTestCase(DatabaseToMapTestCase):
         "Map a table with columns for (almost) each native PostgreSQL type"
         colstab = []
         colsmap = []
+        if self.db.version >= 90400:
+            TYPELIST.append(('JSONB', 'jsonb'))
         for colnum, (coltype, maptype) in enumerate(TYPELIST):
             col = "c%d" % (colnum + 1)
             colstab.append("%s %s" % (col, coltype))

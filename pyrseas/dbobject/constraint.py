@@ -11,6 +11,7 @@
     TODO: UniqueConstraint and PrimaryKey are nearly identical.
           Perhaps the latter should inherit from the former.
 """
+from pyrseas.lib.pycompat import PY2, u
 from . import DbObjectDict, DbSchemaObject
 from . import quote_id, split_schema_obj, commentable
 from .index import Index
@@ -352,8 +353,8 @@ class ForeignKey(Constraint):
         else:
             assert on_delete is None or on_delete in ACTIONS.values()
             self.on_delete = on_delete
-        if match == 'u':  # used in PG 9.2 and earlier
-            match == 's'
+        if match == u('u'):  # used in PG 9.2 and earlier
+            match = 's'
         if match is not None and len(match) == 1:
             self.match = MATCH_TYPES[match]
         else:

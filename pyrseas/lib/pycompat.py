@@ -11,5 +11,9 @@ PY2 = sys.version_info[0] == 2
 
 if not PY2:
     strtypes = (str, )
+    def u(s):
+        return s
 else:
     strtypes = (str, unicode)
+    def u(s):
+        return unicode(s)
