@@ -49,9 +49,11 @@ class ExternalFilenameMapTestCase(DatabaseToMapTestCase):
 
     def test_map_extension(self):
         "Map extensions"
-        if self.db.version < 90100:
-            self.skipTest('Only available on PG 9.1')
-        TRGM_VERS = '1.0' if self.db.version < 90300 else '1.1'
+        TRGM_VERS = '1.3'
+        if self.db.version < 90600:
+            TRGM_VERS = '1.1'
+        if self.db.version < 90300:
+            TRGM_VERS = '1.0'
         self.to_map(["CREATE EXTENSION pg_trgm"], superuser=True,
                     multiple_files=True)
         expmap = {'extension plpgsql': {

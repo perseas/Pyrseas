@@ -18,17 +18,17 @@ class ExtensionToMapTestCase(DatabaseToMapTestCase):
 
     def test_map_extension(self):
         "Map an existing extension"
-        if self.db.version < 90100:
-            self.skipTest('Only available on PG 9.1')
-        VERS = '1.0' if self.db.version < 90300 else '1.1'
+        VERS = '1.3'
+        if self.db.version < 90600:
+            VERS = '1.1'
+        if self.db.version < 90300:
+            VERS = '1.0'
         dbmap = self.to_map([CREATE_STMT])
         assert dbmap['extension pg_trgm'] == {
             'schema': 'public', 'version': VERS, 'description': TRGM_COMMENT}
 
     def test_map_no_depends(self):
         "Ensure no dependencies are included when mapping an extension"
-        if self.db.version < 90100:
-            self.skipTest('Only available on PG 9.1')
         dbmap = self.to_map([CREATE_STMT])
         assert 'type gtrgm' not in dbmap['schema public']
         assert 'operator %(text, text)' not in dbmap['schema public']
@@ -36,8 +36,6 @@ class ExtensionToMapTestCase(DatabaseToMapTestCase):
 
     def test_map_lang_extension(self):
         "Map a procedural language as an extension"
-        if self.db.version < 90100:
-            self.skipTest('Only available on PG 9.1')
         dbmap = self.to_map(["CREATE EXTENSION plperl"])
         assert dbmap['extension plperl'] == {
             'schema': 'pg_catalog', 'version': '1.0',
@@ -46,9 +44,11 @@ class ExtensionToMapTestCase(DatabaseToMapTestCase):
 
     def test_map_extension_schema(self):
         "Map an existing extension"
-        if self.db.version < 90100:
-            self.skipTest('Only available on PG 9.1')
-        VERS = '1.0' if self.db.version < 90300 else '1.1'
+        VERS = '1.3'
+        if self.db.version < 90600:
+            VERS = '1.1'
+        if self.db.version < 90300:
+            VERS = '1.0'
         dbmap = self.to_map(["CREATE SCHEMA s1", CREATE_STMT + " SCHEMA s1"])
         assert dbmap['extension pg_trgm'] == {
             'schema': 's1', 'version': VERS, 'description': TRGM_COMMENT}
