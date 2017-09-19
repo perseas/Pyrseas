@@ -120,6 +120,30 @@ class Function(Proc):
         self.rows = rows
         self.oid = oid
 
+    @staticmethod
+    def query():
+        return """
+            SELECT nspname AS schema, proname AS name,
+                   pg_get_function_identity_arguments(p.oid) AS arguments,
+                   pg_get_function_arguments(p.oid) AS allargs,
+                   pg_get_function_result(p.oid) AS returns, rolname AS owner,
+                   array_to_string(proacl, ',') AS privileges,
+                   l.lanname AS language, provolatile AS volatility,
+                   proisstrict AS strict, prosrc AS source,
+                   probin::text AS obj_file, proconfig AS configuration,
+                   prosecdef AS security_definer, procost AS cost,
+                   proleakproof AS leakproof, prorows::integer AS rows,
+                   obj_description(p.oid, 'pg_proc') AS description, p.oid
+            FROM pg_proc p JOIN pg_roles r ON (r.oid = proowner)
+                 JOIN pg_namespace n ON (pronamespace = n.oid)
+                 JOIN pg_language l ON (prolang = l.oid)
+            WHERE (nspname != 'pg_catalog' AND nspname != 'information_schema')
+              AND NOT proisagg
+              AND p.oid NOT IN (
+                  SELECT objid FROM pg_depend WHERE deptype = 'e'
+                               AND classid = 'pg_proc'::regclass)
+            ORDER BY nspname, proname"""
+
     def to_map(self, db, no_owner, no_privs):
         """Convert a function to a YAML-suitable format
 
@@ -315,6 +339,28 @@ class Aggregate(Proc):
         self.sortop = sortop if sortop != '0' else None
         self.oid = oid
 
+    @staticmethod
+    def query():
+        return """
+            SELECT nspname AS schema, proname AS name,
+                   pg_get_function_identity_arguments(p.oid) AS arguments,
+                   rolname AS owner,
+                   array_to_string(proacl, ',') AS privileges,
+                   aggtransfn::regproc AS sfunc,
+                   aggtranstype::regtype AS stype,
+                   aggfinalfn::regproc AS finalfunc,
+                   agginitval AS initcond, aggsortop::regoper AS sortop,
+                   obj_description(p.oid, 'pg_proc') AS description, p.oid
+            FROM pg_proc p JOIN pg_roles r ON (r.oid = proowner)
+                 JOIN pg_namespace n ON (pronamespace = n.oid)
+                 LEFT JOIN pg_aggregate a ON (p.oid = aggfnoid)
+            WHERE (nspname != 'pg_catalog' AND nspname != 'information_schema')
+              AND proisagg
+              AND p.oid NOT IN (
+                  SELECT objid FROM pg_depend WHERE deptype = 'e'
+                               AND classid = 'pg_proc'::regclass)
+            ORDER BY nspname, proname"""
+
     def to_map(self, db, no_owner, no_privs):
         """Convert an agggregate to a YAML-suitable format
 
@@ -368,51 +414,6 @@ class ProcDict(DbObjectDict):
 
     cls = Proc
 
-    query = \
-        """SELECT p.oid,
-                  nspname AS schema, proname AS name,
-                  pg_get_function_identity_arguments(p.oid) AS arguments,
-                  pg_get_function_arguments(p.oid) AS allargs,
-                  pg_get_function_result(p.oid) AS returns,
-                  rolname AS owner, array_to_string(proacl, ',') AS privileges,
-                  l.lanname AS language, provolatile AS volatility,
-                  proisstrict AS strict, prosrc AS source,
-                  probin::text AS obj_file, proconfig AS configuration,
-                  prosecdef AS security_definer, procost AS cost,
-                  proleakproof AS leakproof,
-                  obj_description(p.oid, 'pg_proc') AS description,
-                  prorows::integer AS rows
-           FROM pg_proc p
-                JOIN pg_roles r ON (r.oid = proowner)
-                JOIN pg_namespace n ON (pronamespace = n.oid)
-                JOIN pg_language l ON (prolang = l.oid)
-           WHERE (nspname != 'pg_catalog' AND nspname != 'information_schema')
-             AND NOT proisagg
-             AND p.oid NOT IN (
-                 SELECT objid FROM pg_depend WHERE deptype = 'e'
-                              AND classid = 'pg_proc'::regclass)
-           ORDER BY nspname, proname"""
-
-    agg_query = \
-        """SELECT p.oid,
-                  nspname AS schema, proname AS name,
-                  pg_get_function_identity_arguments(p.oid) AS arguments,
-                  rolname AS owner, array_to_string(proacl, ',') AS privileges,
-                  aggtransfn::regproc AS sfunc, aggtranstype::regtype AS stype,
-                  aggfinalfn::regproc AS finalfunc,
-                  agginitval AS initcond, aggsortop::regoper AS sortop,
-                  obj_description(p.oid, 'pg_proc') AS description
-           FROM pg_proc p
-                JOIN pg_roles r ON (r.oid = proowner)
-                JOIN pg_namespace n ON (pronamespace = n.oid)
-                LEFT JOIN pg_aggregate a ON (p.oid = aggfnoid)
-           WHERE (nspname != 'pg_catalog' AND nspname != 'information_schema')
-             AND proisagg
-             AND p.oid NOT IN (
-                 SELECT objid FROM pg_depend WHERE deptype = 'e'
-                              AND classid = 'pg_proc'::regclass)
-           ORDER BY nspname, proname"""
-
     def _from_catalog(self):
         """Initialize the dictionary of procedures by querying the catalogs"""
         self.cls = Function
@@ -420,7 +421,6 @@ class ProcDict(DbObjectDict):
             self[func.key()] = func
             self.by_oid[func.oid] = func
         self.cls = Aggregate
-        self.query = self.agg_query
         for aggr in self.fetch():
             self[aggr.key()] = aggr
             self.by_oid[aggr.oid] = aggr
@@ -439,34 +439,33 @@ class ProcDict(DbObjectDict):
             if paren == -1 or fnc[-1:] != ')':
                 raise KeyError("Invalid function signature: %s" % fnc)
             arguments = fnc[paren + 1:-1]
-            infunc = infuncs[key]
+            inobj = infuncs[key]
             fnc = fnc[:paren]
             if objtype == 'function':
-                src = infunc.get('source', None)
-                obj = infunc.get('obj_file', None)
+                src = inobj.get('source', None)
+                obj = inobj.get('obj_file', None)
                 if (src and obj) or not (src or obj):
                     raise ValueError("Function '%s': either source or "
                                      "obj_file must be specified" % fnc)
                 self[(schema.name, fnc, arguments)] = func = Function(
-                    fnc, schema.name, infunc.pop('description', None),
-                    infunc.pop('owner', None), infunc.pop('privileges', []),
-                    arguments, infunc.pop('language', None),
-                    infunc.pop('returns', None), infunc.pop('source', None),
-                    infunc.pop('obj_file', None),
-                    infunc.pop('configuration', None),
-                    infunc.pop('volatility', None),
-                    infunc.pop('leakproof', False),
-                    infunc.pop('strict', False),
-                    infunc.pop('security_definer', False),
-                    infunc.pop('cost', 0), infunc.pop('rows', 0),
-                    infunc.pop('allargs', None))
+                    fnc, schema.name, inobj.pop('description', None),
+                    inobj.pop('owner', None), inobj.pop('privileges', []),
+                    arguments, inobj.pop('language', None),
+                    inobj.pop('returns', None), inobj.pop('source', None),
+                    inobj.pop('obj_file', None),
+                    inobj.pop('configuration', None),
+                    inobj.pop('volatility', None),
+                    inobj.pop('leakproof', False), inobj.pop('strict', False),
+                    inobj.pop('security_definer', False),
+                    inobj.pop('cost', 0), inobj.pop('rows', 0),
+                    inobj.pop('allargs', None))
             else:
                 self[(schema.name, fnc, arguments)] = func = Aggregate(
-                    fnc, schema.name, infunc.pop('description', None),
-                    infunc.pop('owner', None), infunc.pop('privileges', []),
-                    arguments, infunc.pop('sfunc', None),
-                    infunc.pop('stype', None), infunc.pop('finalfunc', None),
-                    infunc.pop('initcond', None), infunc.pop('sortop', None))
+                    fnc, schema.name, inobj.pop('description', None),
+                    inobj.pop('owner', None), inobj.pop('privileges', []),
+                    arguments, inobj.pop('sfunc', None),
+                    inobj.pop('stype', None), inobj.pop('finalfunc', None),
+                    inobj.pop('initcond', None), inobj.pop('sortop', None))
             func.privileges = privileges_from_map(func.privileges,
                                                   func.allprivs, func.owner)
 

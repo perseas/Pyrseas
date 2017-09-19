@@ -51,6 +51,24 @@ class Operator(DbSchemaObject):
         self.merges = merges
         self.oid = oid
 
+    @staticmethod
+    def query():
+        return """
+            SELECT nspname AS schema, oprname AS name, rolname AS owner,
+                   oprleft::regtype AS leftarg, oprright::regtype AS rightarg,
+                   oprcode AS procedure, oprcom::regoper AS commutator,
+                   oprnegate::regoper AS negator, oprrest AS restrict,
+                   oprjoin AS join, oprcanhash AS hashes,
+                   oprcanmerge AS merges,
+                   obj_description(o.oid, 'pg_operator') AS description, o.oid
+            FROM pg_operator o JOIN pg_roles r ON (r.oid = oprowner)
+                 JOIN pg_namespace n ON (oprnamespace = n.oid)
+            WHERE (nspname != 'pg_catalog' AND nspname != 'information_schema')
+              AND o.oid NOT IN (
+                  SELECT objid FROM pg_depend WHERE deptype = 'e'
+                               AND classid = 'pg_operator'::regclass)
+            ORDER BY nspname, oprname"""
+
     def extern_key(self):
         """Return the key to be used in external maps for this operator
 
@@ -160,23 +178,6 @@ class OperatorDict(DbObjectDict):
     "The collection of operators in a database"
 
     cls = Operator
-    query = \
-        """SELECT o.oid,
-                  nspname AS schema, oprname AS name, rolname AS owner,
-                  oprleft::regtype AS leftarg, oprright::regtype AS rightarg,
-                  oprcode AS procedure, oprcom::regoper AS commutator,
-                  oprnegate::regoper AS negator, oprrest AS restrict,
-                  oprjoin AS join, oprcanhash AS hashes,
-                  oprcanmerge AS merges,
-                  obj_description(o.oid, 'pg_operator') AS description
-           FROM pg_operator o
-                JOIN pg_roles r ON (r.oid = oprowner)
-                JOIN pg_namespace n ON (oprnamespace = n.oid)
-           WHERE (nspname != 'pg_catalog' AND nspname != 'information_schema')
-             AND o.oid NOT IN (
-                 SELECT objid FROM pg_depend WHERE deptype = 'e'
-                              AND classid = 'pg_operator'::regclass)
-           ORDER BY nspname, oprname"""
 
     def find(self, oper):
         """Return an operator given its signature
@@ -208,14 +209,14 @@ class OperatorDict(DbObjectDict):
             rightarg = rightarg.lstrip()
             if rightarg == 'NONE':
                 rightarg = None
-            inoper = inopers[key]
+            inobj = inopers[key]
             opr = opr[:paren]
             self[(schema.name, opr, leftarg, rightarg)] = oper = Operator(
-                opr, schema.name, inoper.pop('description', None),
-                inoper.pop('owner', None), inoper.pop('procedure', None),
-                leftarg, rightarg, inoper.pop('commutator', None),
-                inoper.pop('negator', None), inoper.pop('restrict', None),
-                inoper.pop('join', None), inoper.pop('hashes', False),
-                inoper.pop('merges', None))
-            if inoper and 'oldname' in inoper:
-                oper.oldname = inoper.pop('oldname')
+                opr, schema.name, inobj.pop('description', None),
+                inobj.pop('owner', None), inobj.pop('procedure', None),
+                leftarg, rightarg, inobj.pop('commutator', None),
+                inobj.pop('negator', None), inobj.pop('restrict', None),
+                inobj.pop('join', None), inobj.pop('hashes', False),
+                inobj.pop('merges', None))
+            if inobj and 'oldname' in inobj:
+                oper.oldname = inobj.get('oldname')

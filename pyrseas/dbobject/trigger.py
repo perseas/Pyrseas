@@ -87,6 +87,30 @@ class Trigger(DbSchemaObject):
                 self.condition = None
         self.oid = oid
 
+    @staticmethod
+    def query():
+        return """
+            SELECT nspname AS schema, relname AS table, tgname AS name,
+                   tgfoid::regprocedure AS procedure,
+                   CASE WHEN tgtype::integer::bit = '1' THEN 'row'
+                        ELSE 'statement' END AS level,
+                   (tgtype::integer::bit(7) & B'1000010')::integer AS timing,
+                   (tgtype >> 2)::integer::bit(4)::integer AS events,
+                   CASE WHEN contype = 't' THEN true ELSE false END AS
+                        constraint,
+                   tgdeferrable AS deferrable,
+                   tginitdeferred AS initially_deferred, tgattr AS columns,
+                   encode(tgargs, 'escape') AS arguments,
+                   pg_get_triggerdef(t.oid) AS condition,
+                   obj_description(t.oid, 'pg_trigger') AS description, t.oid
+            FROM pg_trigger t JOIN pg_class c ON (t.tgrelid = c.oid)
+                 JOIN pg_namespace n ON (c.relnamespace = n.oid)
+                 JOIN pg_roles ON (n.nspowner = pg_roles.oid)
+                 LEFT JOIN pg_constraint cn ON (tgconstraint = cn.oid)
+            WHERE NOT tgisinternal
+              AND (nspname != 'pg_catalog' AND nspname != 'information_schema')
+            ORDER BY schema, "table", name"""
+
     def identifier(self):
         """Returns a full identifier for the trigger
 
@@ -197,29 +221,6 @@ class Trigger(DbSchemaObject):
 class TriggerDict(DbObjectDict):
     "The collection of triggers in a database"
     cls = Trigger
-    query = \
-        """SELECT t.oid,
-                  nspname AS schema, relname AS table, tgname AS name,
-                  tgfoid::regprocedure AS procedure,
-                  CASE WHEN tgtype::integer::bit = '1' THEN 'row'
-                       ELSE 'statement' END AS level,
-                  (tgtype::integer::bit(7) & B'1000010')::integer AS timing,
-                  (tgtype >> 2)::integer::bit(4)::integer AS events,
-                  CASE WHEN contype = 't' THEN true ELSE false END AS
-                       constraint,
-                  tgdeferrable AS deferrable,
-                  tginitdeferred AS initially_deferred, tgattr AS columns,
-                  encode(tgargs, 'escape') AS arguments,
-                  pg_get_triggerdef(t.oid) AS condition,
-                  obj_description(t.oid, 'pg_trigger') AS description
-           FROM pg_trigger t
-                JOIN pg_class c ON (t.tgrelid = c.oid)
-                JOIN pg_namespace n ON (c.relnamespace = n.oid)
-                JOIN pg_roles ON (n.nspowner = pg_roles.oid)
-                LEFT JOIN pg_constraint cn ON (tgconstraint = cn.oid)
-           WHERE NOT tgisinternal
-             AND (nspname != 'pg_catalog' AND nspname != 'information_schema')
-           ORDER BY schema, "table", name"""
 
     def from_map(self, table, intriggers):
         """Initalize the dictionary of triggers by converting the input map
@@ -228,16 +229,16 @@ class TriggerDict(DbObjectDict):
         :param intriggers: YAML map defining the triggers
         """
         for trg in intriggers:
-            intrig = intriggers[trg]
-            if not intrig:
+            inobj = intriggers[trg]
+            if not inobj:
                 raise ValueError("Trigger '%s' has no specification" % trg)
             self[(table.schema, table.name, trg)] = trig = Trigger(
-                trg, table.schema, table.name, intrig.pop('description', None),
-                intrig.pop('procedure', None), intrig.pop('timing', None),
-                intrig.pop('level', 'statement'), intrig.pop('events', []),
-                intrig.pop('constraint', False),
-                intrig.pop('deferrable', False),
-                intrig.pop('initially_deferred', False),
-                intrig.pop('columns', []), intrig.pop('condition', None))
-            if 'oldname' in intrig:
-                trig.oldname = intrig.pop('oldname')
+                trg, table.schema, table.name, inobj.pop('description', None),
+                inobj.pop('procedure', None), inobj.pop('timing', None),
+                inobj.pop('level', 'statement'), inobj.pop('events', []),
+                inobj.pop('constraint', False),
+                inobj.pop('deferrable', False),
+                inobj.pop('initially_deferred', False),
+                inobj.pop('columns', []), inobj.pop('condition', None))
+            if 'oldname' in inobj:
+                trig.oldname = inobj.get('oldname')

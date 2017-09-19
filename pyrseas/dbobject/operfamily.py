@@ -32,6 +32,21 @@ class OperatorFamily(DbSchemaObject):
         self.index_method = index_method
         self.oid = oid
 
+    @staticmethod
+    def query():
+        return """
+            SELECT nspname AS schema, opfname AS name, rolname AS owner,
+                   amname AS index_method,
+                   obj_description(o.oid, 'pg_opfamily') AS description, o.oid
+            FROM pg_opfamily o JOIN pg_roles r ON (r.oid = opfowner)
+                 JOIN pg_am a ON (opfmethod = a.oid)
+                 JOIN pg_namespace n ON (opfnamespace = n.oid)
+            WHERE (nspname != 'pg_catalog' AND nspname != 'information_schema')
+              AND o.oid NOT IN (
+                  SELECT objid FROM pg_depend WHERE deptype = 'e'
+                               AND classid = 'pg_opfamily'::regclass)
+            ORDER BY opfnamespace, opfname, amname"""
+
     @property
     def objtype(self):
         return "OPERATOR FAMILY"
@@ -66,20 +81,6 @@ class OperatorFamilyDict(DbObjectDict):
     "The collection of operator families in a database"
 
     cls = OperatorFamily
-    query = \
-        """SELECT o.oid,
-                  nspname AS schema, opfname AS name, rolname AS owner,
-                  amname AS index_method,
-                  obj_description(o.oid, 'pg_opfamily') AS description
-           FROM pg_opfamily o
-                JOIN pg_roles r ON (r.oid = opfowner)
-                JOIN pg_am a ON (opfmethod = a.oid)
-                JOIN pg_namespace n ON (opfnamespace = n.oid)
-           WHERE (nspname != 'pg_catalog' AND nspname != 'information_schema')
-             AND o.oid NOT IN (
-                 SELECT objid FROM pg_depend WHERE deptype = 'e'
-                              AND classid = 'pg_opfamily'::regclass)
-           ORDER BY opfnamespace, opfname, amname"""
 
     def from_map(self, schema, inopfams):
         """Initalize the dict of operator families by converting the input map
@@ -93,12 +94,12 @@ class OperatorFamilyDict(DbObjectDict):
             pos = key.rfind(' using ')
             opf = key[16:pos]  # 16 = len('operator family ')
             idx = key[pos + 7:]  # 7 = len(' using ')
-            inopfam = inopfams[key]
+            inobj = inopfams[key]
             self[(schema.name, opf, idx)] = opfam = OperatorFamily(
-                opf, schema.name, idx, inopfam.pop('description', None),
-                inopfam.pop('owner', None))
-            if 'oldname' in inopfam:
-                opfam.oldname = inopfam.get('oldname')
+                opf, schema.name, idx, inobj.pop('description', None),
+                inobj.pop('owner', None))
+            if 'oldname' in inobj:
+                opfam.oldname = inobj.get('oldname')
 
     def find(self, obj, meth):
         schema, name = split_schema_obj(obj)

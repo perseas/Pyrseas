@@ -34,6 +34,18 @@ class Collation(DbSchemaObject):
         self.lc_ctype = lc_ctype
         self.oid = oid
 
+    @staticmethod
+    def query():
+        return """
+            SELECT nspname AS schema, collname AS name, rolname AS owner,
+                   collcollate AS lc_collate, collctype AS lc_ctype,
+                   obj_description(c.oid, 'pg_collation') AS description, c.oid
+            FROM pg_collation c
+                 JOIN pg_roles r ON (r.oid = collowner)
+                JOIN pg_namespace n ON (collnamespace = n.oid)
+            WHERE (nspname != 'pg_catalog' AND nspname != 'information_schema')
+            ORDER BY nspname, collname"""
+
     @commentable
     @ownable
     def create(self):
@@ -50,16 +62,6 @@ class CollationDict(DbObjectDict):
     "The collection of collations in a database."
 
     cls = Collation
-    query = \
-        """SELECT c.oid,
-                  nspname AS schema, collname AS name, rolname AS owner,
-                  collcollate AS lc_collate, collctype AS lc_ctype,
-                  obj_description(c.oid, 'pg_collation') AS description
-           FROM pg_collation c
-                JOIN pg_roles r ON (r.oid = collowner)
-                JOIN pg_namespace n ON (collnamespace = n.oid)
-           WHERE (nspname != 'pg_catalog' AND nspname != 'information_schema')
-           ORDER BY nspname, collname"""
 
     def from_map(self, schema, inmap):
         """Initialize the dictionary of collations by examining the input map
@@ -71,11 +73,11 @@ class CollationDict(DbObjectDict):
             if not key.startswith('collation '):
                 raise KeyError("Unrecognized object type: %s" % key)
             cll = key[10:]
-            incoll = inmap[key]
-            coll = Collation(cll, schema.name, incoll.pop('description', None),
-                             incoll.pop('owner', None), **incoll)
-            if incoll and 'oldname' in incoll:
-                coll.oldname = incoll.pop('oldname')
+            inobj = inmap[key]
+            coll = Collation(cll, schema.name, inobj.pop('description', None),
+                             inobj.pop('owner', None), **inobj)
+            if inobj and 'oldname' in inobj:
+                coll.oldname = inobj.pop('oldname')
             self[(schema.name, cll)] = coll
 
     def _from_catalog(self):

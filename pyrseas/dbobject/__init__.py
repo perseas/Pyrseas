@@ -649,6 +649,8 @@ class DbObjectDict(dict):
 
         :return: list of self.cls objects
         """
+        if hasattr(self.cls, 'query'):
+            self.query = self.cls.query()
         data = self.dbconn.fetchall(self.query)
         self.dbconn.rollback()
         return [self.cls(**dict(row)) for row in data]

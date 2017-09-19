@@ -42,6 +42,58 @@ class OperatorClass(DbSchemaObject):
         self.functions = {}
         self.oid = oid
 
+    @staticmethod
+    def query():
+        return """
+            SELECT nspname AS schema, opcname AS name, rolname AS owner,
+                   amname AS index_method, opfname AS family,
+                   opcintype::regtype AS type, opcdefault AS default,
+                   opckeytype::regtype AS storage,
+                   obj_description(o.oid, 'pg_opclass') AS description, o.oid
+            FROM pg_opclass o JOIN pg_am a ON (opcmethod = a.oid)
+                 JOIN pg_roles r ON (r.oid = opcowner)
+                 JOIN pg_opfamily f ON (opcfamily = f.oid)
+                 JOIN pg_namespace n ON (opcnamespace = n.oid)
+            WHERE (nspname != 'pg_catalog' AND nspname != 'information_schema')
+              AND o.oid NOT IN (
+                  SELECT objid FROM pg_depend WHERE deptype = 'e'
+                               AND classid = 'pg_opclass'::regclass)
+            ORDER BY nspname, opcname, amname"""
+
+    @staticmethod
+    def opquery():
+        return """
+            SELECT nspname AS schema, opcname AS name, amname AS index_method,
+                   amopstrategy AS strategy, amopopr::regoperator AS operator
+            FROM pg_opclass o JOIN pg_am a ON (opcmethod = a.oid)
+                 JOIN pg_namespace n ON (opcnamespace = n.oid), pg_amop ao,
+                 pg_depend
+            WHERE refclassid = 'pg_opclass'::regclass
+              AND classid = 'pg_amop'::regclass AND objid = ao.oid
+              AND refobjid = o.oid
+              AND (nspname != 'pg_catalog' AND nspname != 'information_schema')
+              AND o.oid NOT IN (
+                  SELECT objid FROM pg_depend WHERE deptype = 'e'
+                               AND classid = 'pg_opclass'::regclass)
+            ORDER BY nspname, opcname, amname, amopstrategy"""
+
+    @staticmethod
+    def prquery():
+        return """
+            SELECT nspname AS schema, opcname AS name, amname AS index_method,
+                   amprocnum AS support, amproc::regprocedure AS function
+            FROM pg_opclass o JOIN pg_am a ON (opcmethod = a.oid)
+                 JOIN pg_namespace n ON (opcnamespace = n.oid), pg_amproc ap,
+                 pg_depend
+            WHERE refclassid = 'pg_opclass'::regclass
+              AND classid = 'pg_amproc'::regclass AND objid = ap.oid
+              AND refobjid = o.oid
+              AND (nspname != 'pg_catalog' AND nspname != 'information_schema')
+              AND o.oid NOT IN (
+                  SELECT objid FROM pg_depend WHERE deptype = 'e'
+                               AND classid = 'pg_opclass'::regclass)
+            ORDER BY nspname, opcname, amname, amprocnum"""
+
     @property
     def objtype(self):
         return "OPERATOR CLASS"
@@ -131,63 +183,17 @@ class OperatorClassDict(DbObjectDict):
     "The collection of operator classes in a database"
 
     cls = OperatorClass
-    query = \
-        """SELECT o.oid,
-                  nspname AS schema, opcname AS name, rolname AS owner,
-                  amname AS index_method, opfname AS family,
-                  opcintype::regtype AS type, opcdefault AS default,
-                  opckeytype::regtype AS storage,
-                  obj_description(o.oid, 'pg_opclass') AS description
-           FROM pg_opclass o JOIN pg_am a ON (opcmethod = a.oid)
-                JOIN pg_roles r ON (r.oid = opcowner)
-                JOIN pg_opfamily f ON (opcfamily = f.oid)
-                JOIN pg_namespace n ON (opcnamespace = n.oid)
-           WHERE (nspname != 'pg_catalog' AND nspname != 'information_schema')
-             AND o.oid NOT IN (
-                 SELECT objid FROM pg_depend WHERE deptype = 'e'
-                              AND classid = 'pg_opclass'::regclass)
-           ORDER BY nspname, opcname, amname"""
-
-    opquery = \
-        """SELECT nspname AS schema, opcname AS name, amname AS index_method,
-                  amopstrategy AS strategy, amopopr::regoperator AS operator
-           FROM pg_opclass o JOIN pg_am a ON (opcmethod = a.oid)
-                JOIN pg_namespace n ON (opcnamespace = n.oid), pg_amop ao,
-                pg_depend
-           WHERE refclassid = 'pg_opclass'::regclass
-             AND classid = 'pg_amop'::regclass AND objid = ao.oid
-             AND refobjid = o.oid
-             AND (nspname != 'pg_catalog' AND nspname != 'information_schema')
-             AND o.oid NOT IN (
-                 SELECT objid FROM pg_depend WHERE deptype = 'e'
-                              AND classid = 'pg_opclass'::regclass)
-           ORDER BY nspname, opcname, amname, amopstrategy"""
-
-    prquery = \
-        """SELECT nspname AS schema, opcname AS name, amname AS index_method,
-                  amprocnum AS support, amproc::regprocedure AS function
-           FROM pg_opclass o JOIN pg_am a ON (opcmethod = a.oid)
-                JOIN pg_namespace n ON (opcnamespace = n.oid), pg_amproc ap,
-                pg_depend
-           WHERE refclassid = 'pg_opclass'::regclass
-             AND classid = 'pg_amproc'::regclass AND objid = ap.oid
-             AND refobjid = o.oid
-             AND (nspname != 'pg_catalog' AND nspname != 'information_schema')
-             AND o.oid NOT IN (
-                 SELECT objid FROM pg_depend WHERE deptype = 'e'
-                              AND classid = 'pg_opclass'::regclass)
-           ORDER BY nspname, opcname, amname, amprocnum"""
 
     def _from_catalog(self):
         """Initialize the dictionary of operator classes from the catalogs"""
         for opclass in self.fetch():
             self[opclass.key()] = opclass
-        opers = self.dbconn.fetchall(self.opquery)
+        opers = self.dbconn.fetchall(self.cls.opquery())
         self.dbconn.rollback()
         for (sch, opc, idx, strat, oper) in opers:
             opcls = self[(sch, opc, idx)]
             opcls.operators.update({strat: oper})
-        funcs = self.dbconn.fetchall(self.prquery)
+        funcs = self.dbconn.fetchall(self.cls.prquery())
         self.dbconn.rollback()
         for (sch, opc, idx, supp, func) in funcs:
             opcls = self[(sch, opc, idx)]
@@ -205,17 +211,17 @@ class OperatorClassDict(DbObjectDict):
             pos = key.rfind(' using ')
             opc = key[15:pos]  # 15 = len('operator class ')
             idx = key[pos + 7:]  # 7 = len(' using ')
-            inopcl = inopcls[key]
+            inobj = inopcls[key]
             self[(schema.name, opc, idx)] = opclass = OperatorClass(
-                opc, schema.name, idx, inopcl.pop('description', None),
-                inopcl.pop('owner', None), inopcl.pop('family', None),
-                inopcl.pop('type', None), inopcl.pop('default', False),
-                inopcl.pop('storage', None))
-            if not inopcl:
+                opc, schema.name, idx, inobj.pop('description', None),
+                inobj.pop('owner', None), inobj.pop('family', None),
+                inobj.pop('type', None), inobj.pop('default', False),
+                inobj.pop('storage', None))
+            if not inobj:
                 raise ValueError("Operator '%s' has no specification" % opc)
-            if 'operators' in inopcl:
-                opclass.operators = inopcl.pop('operators')
-            if 'functions' in inopcl:
-                opclass.functions = inopcl.pop('functions')
-            if 'oldname' in inopcl:
-                opclass.oldname = inopcl.pop('oldname')
+            if 'operators' in inobj:
+                opclass.operators = inobj.get('operators')
+            if 'functions' in inobj:
+                opclass.functions = inobj.get('functions')
+            if 'oldname' in inobj:
+                opclass.oldname = inobj.get('oldname')

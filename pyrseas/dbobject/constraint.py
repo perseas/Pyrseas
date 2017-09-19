@@ -11,7 +11,7 @@
     TODO: UniqueConstraint and PrimaryKey are nearly identical.
           Perhaps the latter should inherit from the former.
 """
-from pyrseas.lib.pycompat import PY2, u
+from pyrseas.lib.pycompat import u
 from . import DbObjectDict, DbSchemaObject
 from . import quote_id, split_schema_obj, commentable
 from .index import Index
@@ -640,22 +640,18 @@ class ConstraintDict(DbObjectDict):
     def _from_catalog(self):
         """Initialize the dictionary of constraints by querying the catalogs"""
         self.cls = CheckConstraint
-        self.query = self.cls.query()
         for obj in self.fetch():
             self[obj.key()] = obj
             self.by_oid[obj.oid] = obj
         self.cls = PrimaryKey
-        self.query = self.cls.query()
         for obj in self.fetch():
             self[obj.key()] = obj
             self.by_oid[obj.oid] = obj
         self.cls = UniqueConstraint
-        self.query = self.cls.query()
         for obj in self.fetch():
             self[obj.key()] = obj
             self.by_oid[obj.oid] = obj
         self.cls = ForeignKey
-        self.query = self.cls.query()
         for obj in self.fetch():
             self[obj.key()] = obj
             self.by_oid[obj.oid] = obj

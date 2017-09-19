@@ -653,12 +653,10 @@ class ClassDict(DbObjectDict):
     "The collection of tables and similar objects in a database"
 
     cls = DbClass
-    query = ""
 
     def _from_catalog(self):
         """Initialize the dictionary of tables by querying the catalogs"""
         self.cls = Table
-        self.query = self.cls.query()
         for obj in self.fetch():
             self[obj.key()] = obj
             self.by_oid[obj.oid] = obj
@@ -669,7 +667,6 @@ class ClassDict(DbObjectDict):
             table = self[(sch, tbl)]
             table.inherits.append(partbl)
         self.cls = Sequence
-        self.query = self.cls.query()
         for obj in self.fetch():
             self[obj.key()] = obj
             self.by_oid[obj.oid] = obj
@@ -677,14 +674,12 @@ class ClassDict(DbObjectDict):
             obj.get_dependent_table(self.dbconn)
         from .view import View, MaterializedView
         self.cls = View
-        self.query = self.cls.query()
         for obj in self.fetch():
             self[obj.key()] = obj
             self.by_oid[obj.oid] = obj
         if self.dbconn.version < 90300:
             return
         self.cls = MaterializedView
-        self.query = self.cls.query()
         for obj in self.fetch():
             self[obj.key()] = obj
             self.by_oid[obj.oid] = obj

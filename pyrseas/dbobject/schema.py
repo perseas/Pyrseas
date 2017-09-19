@@ -42,6 +42,19 @@ class Schema(DbObject):
         self._init_own_privs(owner, privileges)
         self.oldname = None
 
+    @staticmethod
+    def query():
+        return """
+            SELECT nspname AS name, rolname AS owner,
+                   array_to_string(nspacl, ',') AS privileges,
+                   obj_description(n.oid, 'pg_namespace') AS description, n.oid
+            FROM pg_namespace n
+                 JOIN pg_roles r ON (r.oid = nspowner)
+            WHERE nspname NOT IN ('information_schema', 'pg_toast')
+                  AND nspname NOT LIKE 'pg_temp\_%'
+                  AND nspname NOT LIKE 'pg_toast_temp\_%'
+            ORDER BY nspname"""
+
     def extern_dir(self, root='.'):
         """Return the path to a directory to hold the schema objects.
 
@@ -198,17 +211,6 @@ class SchemaDict(DbObjectDict):
     "The collection of schemas in a database.  Minimally, the 'public' schema."
 
     cls = Schema
-    query = \
-        """SELECT n.oid,
-                  nspname AS name, rolname AS owner,
-                  array_to_string(nspacl, ',') AS privileges,
-                  obj_description(n.oid, 'pg_namespace') AS description
-           FROM pg_namespace n
-                JOIN pg_roles r ON (r.oid = nspowner)
-           WHERE nspname NOT IN ('information_schema', 'pg_toast')
-                 AND nspname NOT LIKE 'pg_temp\_%'
-                 AND nspname NOT LIKE 'pg_toast_temp\_%'
-           ORDER BY nspname"""
 
     def from_map(self, inmap, newdb):
         """Initialize the dictionary of schemas by converting the input map
@@ -224,23 +226,23 @@ class SchemaDict(DbObjectDict):
             (objtype, spc, sch) = key.partition(' ')
             if spc != ' ' or objtype != 'schema':
                 raise KeyError("Unrecognized object type: %s" % key)
-            inschema = inmap[key]
-            schema = self[sch] = Schema(sch, inschema.pop('description', None),
-                                        inschema.pop('owner', None),
-                                        inschema.pop('privileges', []))
+            inobj = inmap[key]
+            schema = self[sch] = Schema(sch, inobj.pop('description', None),
+                                        inobj.pop('owner', None),
+                                        inobj.pop('privileges', []))
             schema.privileges = privileges_from_map(schema.privileges,
                                                     schema.allprivs,
                                                     schema.owner)
 
             objdict = {}
-            for key in sorted(inschema.keys()):
+            for key in sorted(inobj.keys()):
                 mapped = False
                 for prefix in PREFIXES:
                     if key.startswith(prefix):
                         otype = PREFIXES[prefix]
                         if otype not in objdict:
                             objdict[otype] = {}
-                        objdict[otype].update({key: inschema[key]})
+                        objdict[otype].update({key: inobj[key]})
                         mapped = True
                         break
                 # Needs separate processing because it overlaps
@@ -249,10 +251,10 @@ class SchemaDict(DbObjectDict):
                     otype = 'operators'
                     if otype not in objdict:
                         objdict[otype] = {}
-                    objdict[otype].update({key: inschema[key]})
+                    objdict[otype].update({key: inobj[key]})
                     mapped = True
                 elif key == 'oldname':
-                    setattr(schema, key, inschema[key])
+                    setattr(schema, key, inobj[key])
                     mapped = True
                 if not mapped and key != 'schema':
                     raise KeyError("Expected typed object, found '%s'" % key)

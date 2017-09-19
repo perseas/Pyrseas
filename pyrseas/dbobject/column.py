@@ -229,7 +229,6 @@ class ColumnDict(DbObjectDict):
 
     def _from_catalog(self):
         """Initialize the dictionary of columns by querying the catalogs"""
-        self.query = self.cls.query()
         for col in self.fetch():
             sch, tbl = col.key()
             if (sch, tbl) not in self:

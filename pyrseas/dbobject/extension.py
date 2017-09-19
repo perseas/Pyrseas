@@ -6,8 +6,8 @@
     This module defines two classes: Extension derived from DbObject,
     and ExtensionDict derived from DbObjectDict.
 """
-from pyrseas.dbobject import DbObjectDict, DbObject
-from pyrseas.dbobject import quote_id, commentable
+from . import DbObjectDict, DbObject
+from . import quote_id, commentable
 
 
 class Extension(DbObject):
@@ -32,6 +32,18 @@ class Extension(DbObject):
         self.schema = schema
         self.version = version
         self.oid = oid
+
+    @staticmethod
+    def query():
+        return """
+            SELECT extname AS name, nspname AS schema, extversion AS version,
+                   rolname AS owner,
+                   obj_description(e.oid, 'pg_extension') AS description, oid
+            FROM pg_extension e
+                 JOIN pg_roles r ON (r.oid = extowner)
+                 JOIN pg_namespace n ON (extnamespace = n.oid)
+            WHERE nspname != 'information_schema'
+            ORDER BY extname"""
 
     def get_implied_deps(self, db):
         """Return the implied dependencies of the object
@@ -86,23 +98,12 @@ class ExtensionDict(DbObjectDict):
     "The collection of extensions in a database"
 
     cls = Extension
-    query = \
-        """SELECT oid,
-                  extname AS name, nspname AS schema, extversion AS version,
-                  rolname AS owner,
-                  obj_description(e.oid, 'pg_extension') AS description
-           FROM pg_extension e
-                JOIN pg_roles r ON (r.oid = extowner)
-                JOIN pg_namespace n ON (extnamespace = n.oid)
-           WHERE nspname != 'information_schema'
-           ORDER BY extname"""
 
     def _from_catalog(self):
         """Initialize the dictionary of extensions by querying the catalogs"""
-        if self.dbconn.version < 90100:
-            return
-        for ext in self.fetch():
-            self.by_oid[ext.oid] = self[ext.key()] = ext
+        for obj in self.fetch():
+            self[obj.key()] = obj
+            self.by_oid[obj.oid] = obj
 
     def from_map(self, inexts, langtempls, newdb):
         """Initalize the dictionary of extensions by converting the input map
@@ -115,12 +116,11 @@ class ExtensionDict(DbObjectDict):
             if not key.startswith('extension '):
                 raise KeyError("Unrecognized object type: %s" % key)
             ext = key[10:]
-            inexten = inexts[key]
-            self[ext] = Extension(name=ext,
-                                  description=inexten.get('description'),
-                                  owner=inexten.get('owner'),
-                                  schema=inexten['schema'],
-                                  version=inexten.get('version'))
+            inobj = inexts[key]
+            self[ext] = Extension(ext, inobj.pop('description', None),
+                                  inobj.pop('owner', None),
+                                  inobj.get('schema'),
+                                  inobj.pop('version', None))
             if self[ext].name in langtempls:
                 lang = {'language %s' % self[ext].name: {'_ext': 'e'}}
                 newdb.languages.from_map(lang)
