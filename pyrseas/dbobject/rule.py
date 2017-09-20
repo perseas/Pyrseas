@@ -6,8 +6,8 @@
     This defines two classes, Rule and RuleDict, derived from
     DbSchemaObject and DbObjectDict, respectively.
 """
-from pyrseas.dbobject import DbObjectDict, DbSchemaObject
-from pyrseas.dbobject import quote_id, commentable, split_schema_obj
+from . import DbObjectDict, DbSchemaObject
+from . import quote_id, commentable, split_schema_obj
 
 
 class Rule(DbSchemaObject):
@@ -26,7 +26,7 @@ class Rule(DbSchemaObject):
         :param table: table name (from relname via ev_class)
         :param description: comment text (from obj_description())
         :param event: event type (from ev_type)
-        :param instead: is it an INSTEAD rule (from is_instead)
+        :param instead: is it an INSTEAD rule? (from is_instead)
         :param actions: rule actions (from ev_action via definition)
         :param condition: qualifying condition (from ev_qual via definition)
         :param definition: "raw" definition (from pg_get_ruledef)
@@ -117,6 +117,11 @@ class Rule(DbSchemaObject):
                 self._table.qualname(), where, instead, self.actions)]
 
     def get_implied_deps(self, db):
+        """Return set of implicit dependencies
+
+        :param db: Database.Dicts object
+        :return: set of dependencies
+        """
         deps = super(Rule, self).get_implied_deps(db)
         deps.add(db.tables[split_schema_obj(self.table, self.schema)])
         return deps
