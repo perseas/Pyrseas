@@ -10,14 +10,35 @@
     ForeignTable derived from DbObjectWithOptions and Table, and
     ForeignTableDict derived from ClassDict.
 """
-from pyrseas.dbobject import DbObjectDict, DbObject
-from pyrseas.dbobject import quote_id, commentable, ownable, grantable
-from pyrseas.dbobject.table import ClassDict, Table
-from pyrseas.dbobject.privileges import privileges_from_map
+from . import DbObjectDict, DbObject
+from . import quote_id, commentable, ownable, grantable
+from .table import ClassDict, Table
+from .privileges import privileges_from_map
 
 
 class DbObjectWithOptions(DbObject):
     """Helper class for database objects with OPTIONS clauses"""
+
+    def __init__(self, name, options):
+        """Initialize the database object with options
+
+        :param name: object name (from fdwname, srvname, etc.)
+        :param options: object specific options (from fdwoptions, etc.)
+        """
+        super(DbObjectWithOptions, self).__init__(name, None)
+        self.options = {} if options is None else options
+
+    def to_map(self, db, no_owner=False, no_privs=False):
+        """Convert objects to a YAML-suitable format
+
+        :param no_owner: exclude object owner information
+        :param no_privs: exclude privilege information
+        :return: dictionary
+        """
+        dct = self._base_map(db, no_owner, no_privs)
+        if len(self.options) == 0:
+            dct.pop('options')
+        return dct
 
     def options_clause(self):
         """Create the OPTIONS clause
@@ -44,7 +65,7 @@ class DbObjectWithOptions(DbObject):
             return dict(opt.split('=', 1) for opt in optlist)
 
         oldopts = {}
-        if hasattr(self, 'options'):
+        if len(self.options) > 0:
             oldopts = to_dict(self.options)
         newopts = to_dict(newopts)
         clauses = []
@@ -66,7 +87,7 @@ class DbObjectWithOptions(DbObject):
         """
         stmts = super(DbObjectWithOptions, self).alter(inobj)
         newopts = []
-        if hasattr(inobj, 'options'):
+        if len(inobj.options) > 0:
             newopts = inobj.options
         diff_opts = self.diff_options(newopts)
         if diff_opts:
@@ -80,6 +101,58 @@ class ForeignDataWrapper(DbObjectWithOptions):
 
     single_extern_file = True
     catalog = 'pg_foreign_data_wrapper'
+
+    def __init__(self, name, options, description, owner, privileges,
+                 handler=None, validator=None,
+                 oid=None):
+        """Initialize the foreign data wrapper
+
+        :param name-options: see DbObjectWithOptions.__init__ params
+        :param description: comment text (from obj_description())
+        :param owner: owner name (from rolname via fdwowner)
+        :param privileges: access privileges (from fdwacl)
+        :param handler: handler function (from fdwhandler)
+        :param validator: validator function (from fdwvalidator)
+        """
+        super(ForeignDataWrapper, self).__init__(name, options)
+        self.description = description
+        self._init_own_privs(owner, privileges)
+        self.handler = handler
+        self.validator = validator
+        self.oid = oid
+
+    @staticmethod
+    def query():
+        return """
+            SELECT fdwname AS name, CASE WHEN fdwhandler = 0 THEN NULL
+                       ELSE fdwhandler::regproc END AS handler,
+                   CASE WHEN fdwvalidator = 0 THEN NULL
+                       ELSE fdwvalidator::regproc END AS validator,
+                   fdwoptions AS options, rolname AS owner,
+                   array_to_string(fdwacl, ',') AS privileges,
+                   obj_description(w.oid, 'pg_foreign_data_wrapper') AS
+                       description, w.oid
+            FROM pg_foreign_data_wrapper w
+                JOIN pg_roles r ON (r.oid = fdwowner)
+            ORDER BY fdwname"""
+
+    @staticmethod
+    def from_map(name, inobj):
+        """Initialize an FDW instance from a YAML map
+
+        :param name: FDW name
+        :param inobj: YAML map of the FDW
+        :return: FDW instance
+        """
+        fdw = ForeignDataWrapper(
+            name, inobj.pop('options', {}), inobj.pop('description', None),
+            inobj.pop('owner', None), inobj.pop('privileges', []),
+            inobj.pop('handler', None), inobj.pop('validator', None))
+        fdw.privileges = privileges_from_map(
+            fdw.privileges, fdw.allprivs, fdw.owner)
+        if 'oldname' in inobj:
+            fdw.oldname = inobj.get('oldname')
+        return fdw
 
     @property
     def objtype(self):
@@ -96,14 +169,17 @@ class ForeignDataWrapper(DbObjectWithOptions):
         :param no_privs: exclude privilege information
         :return: dictionary
         """
-        wrapper = self._base_map(db, no_owner, no_privs)
+        dct = super(ForeignDataWrapper, self).to_map(db, no_owner, no_privs)
+        for attr in ('handler', 'validator'):
+            if getattr(self, attr) is None:
+                dct.pop(attr)
         if hasattr(self, 'servers'):
             srvs = {}
             for srv in self.servers:
                 srvs.update(self.servers[srv].to_map(db, no_owner, no_privs))
-            wrapper.update(srvs)
-            del wrapper['servers']
-        return wrapper
+            dct.update(srvs)
+            dct.pop('servers')
+        return dct
 
     @commentable
     @grantable
@@ -114,52 +190,20 @@ class ForeignDataWrapper(DbObjectWithOptions):
         :return: SQL statements
         """
         clauses = []
-        for fnc in ['validator', 'handler']:
-            if hasattr(self, fnc):
+        for fnc in ('validator', 'handler'):
+            if getattr(self, fnc) is not None:
                 clauses.append("%s %s" % (fnc.upper(), getattr(self, fnc)))
-        if hasattr(self, 'options'):
+        if len(self.options) > 0:
             clauses.append(self.options_clause())
         return ["CREATE FOREIGN DATA WRAPPER %s%s" % (
                 quote_id(self.name),
                 clauses and '\n    ' + ',\n    '.join(clauses) or '')]
 
 
-QUERY_PRE91 = \
-    """SELECT w.oid,
-              fdwname AS name, CASE WHEN fdwvalidator = 0 THEN NULL
-                ELSE fdwvalidator::regproc END AS validator,
-                fdwoptions AS options, rolname AS owner,
-              array_to_string(fdwacl, ',') AS privileges,
-              obj_description(w.oid, 'pg_foreign_data_wrapper') AS
-                  description
-       FROM pg_foreign_data_wrapper w
-            JOIN pg_roles r ON (r.oid = fdwowner)
-       ORDER BY fdwname"""
-
-
 class ForeignDataWrapperDict(DbObjectDict):
     "The collection of foreign data wrappers in a database"
 
     cls = ForeignDataWrapper
-    query = \
-        """SELECT w.oid,
-                  fdwname AS name, CASE WHEN fdwhandler = 0 THEN NULL
-                      ELSE fdwhandler::regproc END AS handler,
-                  CASE WHEN fdwvalidator = 0 THEN NULL
-                      ELSE fdwvalidator::regproc END AS validator,
-                  fdwoptions AS options, rolname AS owner,
-                  array_to_string(fdwacl, ',') AS privileges,
-                  obj_description(w.oid, 'pg_foreign_data_wrapper') AS
-                      description
-           FROM pg_foreign_data_wrapper w
-                JOIN pg_roles r ON (r.oid = fdwowner)
-           ORDER BY fdwname"""
-
-    def _from_catalog(self):
-        """Initialize the dictionary of wrappers by querying the catalogs"""
-        if self.dbconn.version < 90100:
-            self.query = QUERY_PRE91
-        super(ForeignDataWrapperDict, self)._from_catalog()
 
     def from_map(self, inwrappers, newdb):
         """Initialize the dictionary of wrappers by examining the input map
@@ -171,21 +215,13 @@ class ForeignDataWrapperDict(DbObjectDict):
             if not key.startswith('foreign data wrapper '):
                 raise KeyError("Unrecognized object type: %s" % key)
             fdw = key[21:]
-            self[fdw] = wrapper = ForeignDataWrapper(name=fdw)
-            inwrapper = inwrappers[key]
+            inobj = inwrappers[key]
             inservs = {}
-            for key in inwrapper:
+            for key in inobj:
                 if key.startswith('server '):
-                    inservs.update({key: inwrapper[key]})
-                elif key in ['handler', 'validator', 'options', 'owner',
-                             'oldname', 'description']:
-                    setattr(wrapper, key, inwrapper[key])
-                elif key == 'privileges':
-                    wrapper.privileges = privileges_from_map(
-                        inwrapper[key], wrapper.allprivs, inwrapper['owner'])
-                else:
-                    raise KeyError("Expected typed object, found '%s'" % key)
-            newdb.servers.from_map(wrapper, inservs, newdb)
+                    inservs.update({key: inobj[key]})
+            self[fdw] = ForeignDataWrapper.from_map(fdw, inobj)
+            newdb.servers.from_map(self[fdw], inservs, newdb)
 
     def link_refs(self, dbservers):
         """Connect servers to their respective foreign data wrappers
@@ -207,6 +243,58 @@ class ForeignServer(DbObjectWithOptions):
     privobjtype = "FOREIGN SERVER"
     keylist = ['wrapper', 'name']
     catalog = 'pg_foreign_server'
+
+    def __init__(self, name, options, description, owner, privileges,
+                 wrapper, type=None, version=None,
+                 oid=None):
+        """Initialize the foreign server
+
+        :param name-options: see DbObjectWithOptions.__init__ params
+        :param description: comment text (from obj_description())
+        :param owner: owner name (from rolname via srvowner)
+        :param privileges: access privileges (from srvacl)
+        :param wrapper: foreign data wrapper (from fdwname via srvfdw)
+        :param type: server type (from srvtype)
+        :param version: version (from srvversion)
+        """
+        super(ForeignServer, self).__init__(name, options)
+        self.description = description
+        self._init_own_privs(owner, privileges)
+        self.wrapper = wrapper
+        self.type = type
+        self.version = version
+        self.oid = oid
+
+    @staticmethod
+    def query():
+        return """
+            SELECT fdwname AS wrapper, srvname AS name, srvtype AS type,
+                   srvversion AS version, srvoptions AS options,
+                   rolname AS owner,
+                   array_to_string(srvacl, ',') AS privileges, s.oid,
+                   obj_description(s.oid, 'pg_foreign_server') AS description
+            FROM pg_foreign_server s JOIN pg_roles r ON (r.oid = srvowner)
+                 JOIN pg_foreign_data_wrapper w ON (srvfdw = w.oid)
+            ORDER BY fdwname, srvname"""
+
+    @staticmethod
+    def from_map(name, wrapper, inobj):
+        """Initialize a foreign server instance from a YAML map
+
+        :param name: server name
+        :param wrapper: FDW name
+        :param inobj: YAML map of the server
+        :return: foreign server instance
+        """
+        srv = ForeignServer(
+            name, inobj.pop('options', {}), inobj.pop('description', None),
+            inobj.pop('owner', None), inobj.pop('privileges', []), wrapper,
+            inobj.pop('type', None), inobj.pop('version', None))
+        srv.privileges = privileges_from_map(
+                    srv.privileges, srv.allprivs, srv.owner)
+        if 'oldname' in inobj:
+            srv.oldname = inobj.get('oldname')
+        return srv
 
     @property
     def objtype(self):
@@ -230,8 +318,12 @@ class ForeignServer(DbObjectWithOptions):
         :param no_privs: exclude privilege information
         :return: dictionary
         """
+        dct = super(ForeignServer, self).to_map(db, no_owner, no_privs)
+        for attr in ('type', 'version'):
+            if getattr(self, attr) is None:
+                dct.pop(attr)
         key = self.extern_key()
-        server = {key: self._base_map(db, no_owner, no_privs)}
+        server = {key: dct}
         if hasattr(self, 'usermaps'):
             umaps = {}
             for umap in self.usermaps:
@@ -250,10 +342,10 @@ class ForeignServer(DbObjectWithOptions):
         """
         clauses = []
         options = []
-        for opt in ['type', 'version']:
-            if hasattr(self, opt):
+        for opt in ('type', 'version'):
+            if getattr(self, opt) is not None:
                 clauses.append("%s '%s'" % (opt.upper(), getattr(self, opt)))
-        if hasattr(self, 'options'):
+        if len(self.options) > 0:
             options.append(self.options_clause())
         return ["CREATE SERVER %s%s\n    FOREIGN DATA WRAPPER %s%s" % (
                 quote_id(self.name),
@@ -271,15 +363,6 @@ class ForeignServerDict(DbObjectDict):
     "The collection of foreign servers in a database"
 
     cls = ForeignServer
-    query = \
-        """SELECT s.oid, fdwname AS wrapper, srvname AS name, srvtype AS type,
-                  srvversion AS version, srvoptions AS options,
-                  rolname AS owner, array_to_string(srvacl, ',') AS privileges,
-                  obj_description(s.oid, 'pg_foreign_server') AS description
-           FROM pg_foreign_server s
-                JOIN pg_roles r ON (r.oid = srvowner)
-                JOIN pg_foreign_data_wrapper w ON (srvfdw = w.oid)
-           ORDER BY fdwname, srvname"""
 
     def from_map(self, wrapper, inservers, newdb):
         """Initialize the dictionary of servers by examining the input map
@@ -292,19 +375,11 @@ class ForeignServerDict(DbObjectDict):
             if not key.startswith('server '):
                 raise KeyError("Unrecognized object type: %s" % key)
             srv = key[7:]
-            self[(wrapper.name, srv)] = serv = ForeignServer(
-                wrapper=wrapper.name, name=srv)
-            inserv = inservers[key]
-            if inserv:
-                for attr, val in list(inserv.items()):
-                    setattr(serv, attr, val)
-                if 'user mappings' in inserv:
-                    newdb.usermaps.from_map(serv, inserv['user mappings'])
-                if 'oldname' in inserv:
-                    del inserv['oldname']
-                if 'privileges' in inserv:
-                    serv.privileges = privileges_from_map(
-                        inserv['privileges'], serv.allprivs, serv.owner)
+            inobj = inservers[key]
+            self[(wrapper.name, srv)] = serv = ForeignServer.from_map(
+                srv, wrapper.name, inobj)
+            if 'user mappings' in inobj:
+                newdb.usermaps.from_map(serv, inobj['user mappings'])
 
     def to_map(self, db, no_owner, no_privs):
         """Convert the server dictionary to a regular dictionary
@@ -341,6 +416,46 @@ class UserMapping(DbObjectWithOptions):
     keylist = ['wrapper', 'server', 'name']
     catalog = 'pg_user_mappings'
 
+    def __init__(self, name, options, wrapper, server,
+                 oid=None):
+        """Initialize the user mapping
+
+        :param name-options: see DbObjectWithOptions.__init__ params
+        :param wrapper: foreign data wrapper (from fdwname via srvfdw)
+        :param server: server name (from umserver)
+        :param version: version (from srvversion)
+        """
+        super(UserMapping, self).__init__(name, options)
+        self.wrapper = wrapper
+        self.server = server
+        self.oid = oid
+
+    @staticmethod
+    def query():
+        return """
+            SELECT fdwname AS wrapper, s.srvname AS server,
+                   CASE umuser WHEN 0 THEN 'PUBLIC' ELSE
+                   usename END AS name, umoptions AS options, u.umid AS oid
+            FROM pg_user_mappings u
+                 JOIN pg_foreign_server s ON (u.srvid = s.oid)
+                 JOIN pg_foreign_data_wrapper w ON (srvfdw = w.oid)
+            ORDER BY fdwname, s.srvname, 3"""
+
+    @staticmethod
+    def from_map(name, server, inobj):
+        """Initialize a user mapping instance from a YAML map
+
+        :param name: mapping name
+        :param server: foreign map
+        :param inobj: YAML map of the user mapping
+        :return: user mapping instance
+        """
+        umap = UserMapping(name, inobj.pop('options', {}), server.wrapper,
+                           server.name)
+        if 'oldname' in inobj:
+            umap.oldname = inobj.get('oldname')
+        return umap
+
     @property
     def objtype(self):
         return "USER MAPPING"
@@ -367,7 +482,7 @@ class UserMapping(DbObjectWithOptions):
         :return: SQL statements
         """
         options = []
-        if hasattr(self, 'options'):
+        if len(self.options) > 0:
             options.append(self.options_clause())
         return ["CREATE USER MAPPING FOR %s\n    SERVER %s%s" % (
                 self.name == 'PUBLIC' and 'PUBLIC' or
@@ -384,15 +499,6 @@ class UserMappingDict(DbObjectDict):
     "The collection of user mappings in a database"
 
     cls = UserMapping
-    query = \
-        """SELECT u.umid AS oid,
-                  fdwname AS wrapper, s.srvname AS server,
-                  CASE umuser WHEN 0 THEN 'PUBLIC' ELSE
-                  usename END AS name, umoptions AS options
-           FROM pg_user_mappings u
-                JOIN pg_foreign_server s ON (u.srvid = s.oid)
-                JOIN pg_foreign_data_wrapper w ON (srvfdw = w.oid)
-           ORDER BY fdwname, s.srvname, 3"""
 
     def from_map(self, server, inusermaps):
         """Initialize the dictionary of mappings by examining the input map
@@ -401,15 +507,9 @@ class UserMappingDict(DbObjectDict):
         :param inusermaps: input YAML map defining the user mappings
         """
         for key in inusermaps:
-            usermap = UserMapping(wrapper=server.wrapper, server=server.name,
-                                  name=key)
-            inusermap = inusermaps[key]
-            if inusermap:
-                for attr, val in list(inusermap.items()):
-                    setattr(usermap, attr, val)
-                if 'oldname' in inusermap:
-                    del inusermap['oldname']
-            self[(server.wrapper, server.name, key)] = usermap
+            inobj = inusermaps[key]
+            self[(server.wrapper, server.name, key)] = UserMapping.from_map(
+                key, server, inobj)
 
     def to_map(self, db):
         """Convert the user mapping dictionary to a regular dictionary
@@ -464,7 +564,7 @@ class UserMappingDict(DbObjectDict):
         return stmts
 
 
-class ForeignTable(DbObjectWithOptions, Table):
+class ForeignTable(Table, DbObjectWithOptions):
     """A foreign table definition"""
 
     privobjtype = "TABLE"
@@ -487,6 +587,7 @@ class ForeignTable(DbObjectWithOptions, Table):
 
     @staticmethod
     def query():
+        print("ForeignTable query")
         return """
             SELECT nspname AS schema, relname AS name, srvname AS server,
                    ftoptions AS options, rolname AS owner,
@@ -499,6 +600,24 @@ class ForeignTable(DbObjectWithOptions, Table):
             WHERE relkind = 'f'
               AND (nspname != 'pg_catalog' AND nspname != 'information_schema')
             ORDER BY nspname, relname"""
+
+    @staticmethod
+    def from_map(name, schema, inobj):
+        """Initialize a foreign table instance from a YAML map
+
+        :param name: foreign table name
+        :param name: schema name
+        :param inobj: YAML map of the table
+        :return: foreign table instance
+        """
+        ftbl = ForeignTable(name, schema.name, inobj.pop('description', None),
+                            inobj.pop('owner', None),
+                            inobj.pop('privileges', []),
+                            inobj.pop('server', None),
+                            inobj.pop('options', {}))
+        ftbl.privileges = privileges_from_map(
+                ftbl.privileges, ftbl.allprivs, ftbl.owner)
+        return ftbl
 
     @property
     def objtype(self):
@@ -585,7 +704,6 @@ class ForeignTableDict(ClassDict):
 
     def _from_catalog(self):
         """Initialize the dictionary of tables by querying the catalogs"""
-        self.query = self.cls.query()
         for tbl in self.fetch():
             self[tbl.key()] = tbl
 
@@ -601,15 +719,8 @@ class ForeignTableDict(ClassDict):
                 raise KeyError("Unrecognized object type: %s" % key)
             ftb = key[14:]
             inobj = inobjs[key]
-            self[(schema.name, ftb)] = ftable = ForeignTable(
-                ftb, schema.name, inobj.pop('description', None),
-                inobj.pop('owner', None), inobj.pop('privileges', []),
-                inobj.pop('server', None), inobj.pop('options', {}))
-            ftable.privileges = privileges_from_map(
-                ftable.privileges, ftable.allprivs, ftable.owner)
-            if not inobj:
-                raise ValueError("Foreign table '%s' has no specification" %
-                                 ftb)
+            self[(schema.name, ftb)] = ftable = ForeignTable.from_map(
+                ftb, schema, inobj)
             try:
                 newdb.columns.from_map(ftable, inobj['columns'])
             except KeyError as exc:
