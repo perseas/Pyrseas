@@ -6,10 +6,12 @@
     This module defines two classes: EventTrigger derived from
     DbObject, and EventTriggerDict derived from DbObjectDict.
 """
-from pyrseas.dbobject import DbObjectDict, DbObject
-from pyrseas.dbobject import quote_id, commentable, split_schema_obj
+from . import DbObjectDict, DbObject
+from . import quote_id, commentable, split_schema_obj
 
 EXEC_PROC = 'EXECUTE PROCEDURE '
+
+ENABLE_MODES = {'O': True, 'D': False, 'R': 'replica', 'A': 'always'}
 
 
 class EventTrigger(DbObject):
@@ -18,9 +20,75 @@ class EventTrigger(DbObject):
     keylist = ['name']
     catalog = 'pg_event_trigger'
 
+    def __init__(self, name, description, owner, event, procedure,
+                 enabled=False, tags=None,
+                 oid=None):
+        """Initialize the event trigger
+
+        :param name: trigger name (from evtname)
+        :param description: comment text (from obj_description())
+        :param owner: owner name (from rolname via evtowner)
+        :param event: event that causes firing (from evtevent)
+        :param procedure: function to be called (from evtfoid)
+        :param enabled: replication mode firing control (from evtenabled)
+        :param tags: command tags (from evttags)
+        """
+        super(EventTrigger, self).__init__(name, description)
+        self._init_own_privs(owner, [])
+        self.event = event
+        self.procedure = procedure
+        if enabled is False or enabled is True:
+            self.enabled = enabled
+        elif len(enabled) == 1:
+            self.enabled = ENABLE_MODES[enabled]
+        else:
+            assert enabled is not None and enabled in ENABLE_MODES.values()
+            self.enabled = enabled
+        self.tags = tags
+        self.oid = oid
+
+    @staticmethod
+    def query():
+        return """
+            SELECT evtname AS name, evtevent AS event, rolname AS owner,
+                   evtenabled AS enabled, evtfoid::regprocedure AS procedure,
+                   evttags AS tags, t.oid,
+                   obj_description(t.oid, 'pg_event_trigger') AS description
+            FROM pg_event_trigger t JOIN pg_roles ON (evtowner = pg_roles.oid)
+            WHERE t.oid NOT IN (
+                  SELECT objid FROM pg_depend WHERE deptype = 'e')
+            ORDER BY name"""
+
+    @staticmethod
+    def from_map(name, inobj):
+        """Initialize an event trigger instance from a YAML map
+
+        :param name: trigger name
+        :param inobj: YAML map of the event trigger
+        :return: event trigger instance
+        """
+        trig = EventTrigger(
+            name, inobj.pop('description', None), inobj.pop('owner', None),
+            inobj.pop('event', None), inobj.pop('procedure', None),
+            inobj.pop('enabled', False), inobj.pop('tags', None))
+        if 'oldname' in inobj:
+            trig.oldname = inobj.get('oldname')
+        return trig
+
     @property
     def objtype(self):
         return "EVENT TRIGGER"
+
+    def to_map(self, db, no_owner=False, no_privs=False):
+        """Convert an event trigger  definition to a YAML-suitable format
+
+        :param db: db used to tie the objects together
+        :return: dictionary
+        """
+        dct = super(EventTrigger, self).to_map(db, no_owner)
+        if self.tags is None:
+            dct.pop('tags')
+        return dct
 
     @commentable
     def create(self):
@@ -29,7 +97,7 @@ class EventTrigger(DbObject):
         :return: SQL statements
         """
         filter = ''
-        if hasattr(self, 'tags'):
+        if self.tags is not None:
             filter = "\n    WHEN tag IN (%s)" % ", ".join(
                 ["'%s'" % tag for tag in self.tags])
         return ["CREATE %s %s\n    ON %s%s\n    EXECUTE PROCEDURE %s" % (
@@ -47,27 +115,12 @@ class EventTriggerDict(DbObjectDict):
     "The collection of event triggers in a database"
 
     cls = EventTrigger
-    query = \
-        """SELECT t.oid,
-                  evtname AS name, evtevent AS event, rolname AS owner,
-                  evtenabled AS enabled, evtfoid::regprocedure AS procedure,
-                  evttags AS tags,
-                  obj_description(t.oid, 'pg_event_trigger') AS description
-           FROM pg_event_trigger t
-                JOIN pg_roles ON (evtowner = pg_roles.oid)
-           WHERE t.oid NOT IN (SELECT objid FROM pg_depend WHERE deptype = 'e')
-           ORDER BY name"""
-
-    enable_modes = {'O': True, 'D': False, 'R': 'replica',
-                    'A': 'always'}
 
     def _from_catalog(self):
         """Initialize the dictionary of triggers by querying the catalogs"""
         if self.dbconn.version < 90300:
             return
-        for trig in self.fetch():
-            trig.enabled = self.enable_modes[trig.enabled]
-            self.by_oid[trig.oid] = self[trig.key()] = trig
+        super(EventTriggerDict, self)._from_catalog()
 
     def from_map(self, intriggers, newdb):
         """Initalize the dictionary of triggers by converting the input map
@@ -79,14 +132,8 @@ class EventTriggerDict(DbObjectDict):
             if not key.startswith('event trigger '):
                 raise KeyError("Unrecognized object type: %s" % key)
             trg = key[14:]
-            intrig = intriggers[key]
-            if not intrig:
+            inobj = intriggers[key]
+            if not inobj:
                 raise ValueError("Event trigger '%s' has no specification" %
                                  trg)
-            self[trg] = trig = EventTrigger(name=trg)
-            for attr, val in list(intrig.items()):
-                setattr(trig, attr, val)
-            if 'oldname' in intrig:
-                trig.oldname = intrig['oldname']
-            if 'description' in intrig:
-                trig.description = intrig['description']
+            self[trg] = EventTrigger.from_map(trg, inobj)
