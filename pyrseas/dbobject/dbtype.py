@@ -8,14 +8,13 @@
     DbType, and TypeDict derived from DbObjectDict.
 """
 
-from pyrseas.dbobject import DbObjectDict, DbSchemaObject
-from pyrseas.dbobject import split_schema_obj, commentable, ownable
-from pyrseas.dbobject.constraint import CheckConstraint
-
+from . import DbObjectDict, DbSchemaObject
+from . import split_schema_obj, commentable, ownable
+from .constraint import CheckConstraint
+from .privileges import privileges_from_map
 
 ALIGNMENT_TYPES = {'c': 'char', 's': 'int2', 'i': 'int4', 'd': 'double'}
 STORAGE_TYPES = {'p': 'plain', 'e': 'external', 'm': 'main', 'x': 'extended'}
-OPT_FUNCS = ('receive', 'send', 'typmod_in', 'typmod_out', 'analyze')
 
 
 class DbType(DbSchemaObject):
@@ -23,6 +22,18 @@ class DbType(DbSchemaObject):
 
     keylist = ['schema', 'name']
     catalog = 'pg_type'
+
+    def __init__(self, name, schema, description, owner, privileges):
+        """Initialize the type
+
+        :param name: type name (from typname)
+        :param schema: schema name (from typnamespace)
+        :param description: comment text (from obj_description())
+        :param owner: owner name (from rolname via typowner)
+        :param privileges: access privileges (from typacl)
+        """
+        super(DbType, self).__init__(name, schema, description)
+        self._init_own_privs(owner, privileges)
 
     @property
     def objtype(self):
@@ -33,21 +44,121 @@ class DbType(DbSchemaObject):
 
 
 class BaseType(DbType):
-    """A composite type"""
+    """A base type"""
 
-    def to_map(self, db, no_owner):
+    def __init__(self, name, schema, description, owner, privileges,
+                 input, output, receive=None, send=None, typmod_in=None,
+                 typmod_out=None, analyze=None, internallength=1,
+                 alignment=None, storage=None, delimiter=',',
+                 category=None, preferred=False,
+                 oid=None):
+        """Initialize the base type
+
+        :param name-privileges: see DbType.__init__ params
+        :param input: input function (see typinput)
+        :param output: output function (see typoutput)
+        :param receive: input conversion function (see typreceive)
+        :param send: output conversion function (see typsend)
+        :param typmod_in: type modifier input function (see typmodin)
+        :param typmod_out: type modifier output function (see typmodout)
+        :param analyze: custom ANALYZE function (see typanalyze)
+        :param internallength: length in bytes or -1 (variable) (see typlen)
+        :param alignment: storage alignment (see typalign)
+        :param storage: storage type for varlena types (see typstorage)
+        :param delimiter: delimiter character for array type (see typdelim)
+        :param category: PG data type classification (see typcategory)
+        :param preferred: preferred cast target? (see typispreferred)
+        """
+        super(BaseType, self).__init__(name, schema, description, owner,
+                                       privileges)
+        self.input = input
+        self.output = output
+        self.receive = receive if receive != '-' else None
+        self.send = send if send != '-' else None
+        self.typmod_in = typmod_in if typmod_in != '-' else None
+        self.typmod_out = typmod_out if typmod_out != '-' else None
+        self.analyze = analyze if analyze != '-' else None
+        self.internallength = internallength
+        if alignment is not None and len(alignment) == 1:
+            self.alignment = ALIGNMENT_TYPES[alignment]
+        else:
+            assert alignment in ALIGNMENT_TYPES.values()
+            self.alignment = alignment
+        if storage is not None and len(storage) == 1:
+            self.storage = STORAGE_TYPES[storage]
+        else:
+            assert storage in STORAGE_TYPES.values()
+            self.storage = storage
+        self.delimiter = delimiter
+        self.category = category
+        self.preferred = preferred
+        self.oid = oid
+
+    @staticmethod
+    def query():
+        return """
+            SELECT nspname AS schema, typname AS name, rolname AS owner,
+                   array_to_string(typacl, ',') AS privileges,
+                   typinput::regproc AS input, typoutput::regproc AS output,
+                   typreceive::regproc AS receive, typsend::regproc AS send,
+                   typmodin::regproc AS typmod_in,
+                   typmodout::regproc AS typmod_out,
+                   typanalyze::regproc AS analyze,
+                   typlen AS internallength, typalign AS alignment,
+                   typstorage AS storage, typdelim AS delimiter,
+                   typcategory AS category, typispreferred AS preferred,
+                   obj_description(t.oid, 'pg_type') AS description, t.oid
+            FROM pg_type t JOIN pg_roles r ON (r.oid = typowner)
+                 JOIN pg_namespace n ON (typnamespace = n.oid)
+                 LEFT JOIN pg_class c ON (typrelid = c.oid)
+            WHERE typisdefined AND typtype = 'b' AND typarray != 0
+              AND nspname NOT IN ('pg_catalog', 'pg_toast',
+                                  'information_schema')
+              AND t.oid NOT IN (
+                  SELECT objid FROM pg_depend WHERE deptype = 'e'
+                               AND classid = 'pg_type'::regclass)
+            ORDER BY nspname, typname"""
+
+    @staticmethod
+    def from_map(name, schema, inobj):
+        """Initialize a BaseType instance from a YAML map
+
+        :param name: BaseType name
+        :param schema: schema map
+        :param inobj: YAML map of the BaseType
+        :return: BaseType instance
+        """
+        typ = BaseType(
+            name, schema.name, inobj.pop('description', None),
+            inobj.pop('owner', None), inobj.pop('privileges', []),
+            inobj.pop('input', None), inobj.pop('output', None),
+            inobj.pop('receive', None), inobj.pop('send', None),
+            inobj.pop('typmod_in', None), inobj.pop('typmod_out', None),
+            inobj.pop('analyze', None), inobj.pop('internallength', 1),
+            inobj.pop('alignment', None), inobj.pop('storage', None),
+            inobj.pop('delimiter', ','), inobj.pop('category', None),
+            inobj.pop('preferred', False))
+        typ.privileges = privileges_from_map(
+            typ.privileges, typ.allprivs, typ.owner)
+        return typ
+
+    def to_map(self, db, no_owner, no_privs):
         """Convert a type to a YAML-suitable format
 
         :param no_owner: exclude type owner information
         :return: dictionary
         """
-        dct = self._base_map(db, no_owner)
+        dct = super(BaseType, self).to_map(db, no_owner, no_privs)
+        for attr in ('receive', 'send', 'typmod_in', 'typmod_out', 'analyze',
+                     'alignment', 'storage', 'category'):
+            if getattr(self, attr) is None:
+                dct.pop(attr)
         if self.internallength < 0:
             dct['internallength'] = 'variable'
-        dct['alignment'] = ALIGNMENT_TYPES[self.alignment]
-        dct['storage'] = STORAGE_TYPES[self.storage]
         if self.delimiter == ',':
-            del dct['delimiter']
+            dct.pop('delimiter')
+        if self.preferred is False:
+            dct.pop('preferred')
         return dct
 
     @commentable
@@ -59,21 +170,20 @@ class BaseType(DbType):
         """
         stmts = []
         opt_clauses = []
-        if hasattr(self, 'send'):
+        if self.send is not None:
             opt_clauses.append("SEND = %s" % self.send)
-        if hasattr(self, 'receive'):
+        if self.receive is not None:
             opt_clauses.append("RECEIVE = %s" % self.receive)
-        if hasattr(self, 'internallength'):
-            opt_clauses.append("INTERNALLENGTH = %s" % self.internallength)
-        if hasattr(self, 'alignment'):
+        opt_clauses.append("INTERNALLENGTH = %s" % self.internallength)
+        if self.alignment is not None:
             opt_clauses.append("ALIGNMENT = %s" % self.alignment)
-        if hasattr(self, 'storage'):
+        if self.storage is not None:
             opt_clauses.append("STORAGE = %s" % self.storage)
-        if hasattr(self, 'delimiter'):
+        if self.delimiter is not None and self.delimiter != ',':
             opt_clauses.append("DELIMITER = '%s'" % self.delimiter)
-        if hasattr(self, 'category'):
+        if self.category is not None:
             opt_clauses.append("CATEGORY = '%s'" % self.category)
-        if hasattr(self, 'preferred'):
+        if self.preferred:
             opt_clauses.append("PREFERRED = TRUE")
         stmts.append("CREATE TYPE %s (\n    INPUT = %s,"
                      "\n    OUTPUT = %s%s%s)" % (
@@ -116,24 +226,65 @@ class BaseType(DbType):
 class Composite(DbType):
     """A composite type"""
 
-    def to_map(self, db, no_owner):
+    def __init__(self, name, schema, description, owner, privileges,
+                 oid=None):
+        """Initialize the composite type
+
+        :param name-privileges: see DbType.__init__ params
+        """
+        super(Composite, self).__init__(name, schema, description, owner,
+                                        privileges)
+        self.attributes = []
+        self.oid = oid
+
+    @staticmethod
+    def query():
+        return """
+            SELECT nspname AS schema, typname AS name, rolname AS owner,
+                   array_to_string(typacl, ',') AS privileges,
+                   obj_description(t.oid, 'pg_type') AS description, t.oid
+            FROM pg_type t JOIN pg_roles r ON (r.oid = typowner)
+                 JOIN pg_namespace n ON (typnamespace = n.oid)
+                 LEFT JOIN pg_class c ON (typrelid = c.oid)
+            WHERE typisdefined AND (typtype = 'c' AND relkind = 'c')
+              AND nspname NOT IN ('pg_catalog', 'pg_toast',
+                                  'information_schema')
+              AND t.oid NOT IN (
+                  SELECT objid FROM pg_depend WHERE deptype = 'e'
+                               AND classid = 'pg_type'::regclass)
+            ORDER BY nspname, typname"""
+
+    @staticmethod
+    def from_map(name, schema, inobj):
+        """Initialize a Composite instance from a YAML map
+
+        :param name: Composite name
+        :param schema: schema map
+        :param inobj: YAML map of the Composite
+        :return: Composite instance
+        """
+        typ = Composite(
+            name, schema.name, inobj.pop('description', None),
+            inobj.pop('owner', None), inobj.pop('privileges', []))
+        typ.privileges = privileges_from_map(
+            typ.privileges, typ.allprivs, typ.owner)
+        return typ
+
+    def to_map(self, db, no_owner, no_privs):
         """Convert a type to a YAML-suitable format
 
         :param no_owner: exclude type owner information
         :return: dictionary
         """
-        if not hasattr(self, 'attributes'):
+        if len(self.attributes) == 0:
             return
+        dct = super(Composite, self).to_map(db, no_owner, no_privs)
         attrs = []
         for attr in self.attributes:
             att = attr.to_map(db, False)
             if att:
                 attrs.append(att)
-        dct = {'attributes': attrs}
-        if not no_owner and self.owner is not None:
-            dct.update(owner=self.owner)
-        if self.description is not None:
-            dct.update(description=self.description)
+        dct['attributes'] = attrs
         return dct
 
     @commentable
@@ -208,6 +359,54 @@ class Composite(DbType):
 class Enum(DbType):
     "An enumerated type definition"
 
+    def __init__(self, name, schema, description, owner, privileges,
+                 labels, oid=None):
+        """Initialize the enumerated type
+
+        :param name-privileges: see DbType.__init__ params
+        """
+        super(Enum, self).__init__(name, schema, description, owner,
+                                   privileges)
+        self.labels = labels
+        self.oid = oid
+
+    @staticmethod
+    def query():
+        return """
+            SELECT nspname AS schema, typname AS name, rolname AS owner,
+                   array_to_string(typacl, ',') AS privileges,
+                   ARRAY(SELECT enumlabel FROM pg_enum e
+                         WHERE t.oid = enumtypid
+                         ORDER BY e.oid) AS labels,
+                   obj_description(t.oid, 'pg_type') AS description, t.oid
+            FROM pg_type t JOIN pg_roles r ON (r.oid = typowner)
+                 JOIN pg_namespace n ON (typnamespace = n.oid)
+                 LEFT JOIN pg_class c ON (typrelid = c.oid)
+            WHERE typisdefined AND typtype = 'e'
+              AND nspname NOT IN ('pg_catalog', 'pg_toast',
+                                  'information_schema')
+              AND t.oid NOT IN (
+                  SELECT objid FROM pg_depend WHERE deptype = 'e'
+                               AND classid = 'pg_type'::regclass)
+            ORDER BY nspname, typname"""
+
+    @staticmethod
+    def from_map(name, schema, inobj):
+        """Initialize an Enum instance from a YAML map
+
+        :param name: Enum name
+        :param schema: schema map
+        :param inobj: YAML map of the Enum
+        :return: Enum instance
+        """
+        typ = Enum(
+            name, schema.name, inobj.pop('description', None),
+            inobj.pop('owner', None), inobj.pop('privileges', []),
+            inobj.pop('labels', []))
+        typ.privileges = privileges_from_map(
+            typ.privileges, typ.allprivs, typ.owner)
+        return typ
+
     @commentable
     @ownable
     def create(self):
@@ -223,23 +422,82 @@ class Enum(DbType):
 class Domain(DbType):
     "A domain definition"
 
+    def __init__(self, name, schema, description, owner, privileges,
+                 type, not_null=False, default=None,
+                 oid=None):
+        """Initialize the domain
+
+        :param name-privileges: see DbType.__init__ params
+        :param type: type modifier (see typtypmod)
+        :param not_null: not null indicator (see typnotnull)
+        :param default: default value (see typdefault)
+        """
+        super(Domain, self).__init__(name, schema, description, owner,
+                                     privileges)
+        self.type = type
+        self.not_null = not_null
+        self.default = default
+        self.check_constraints = {}
+        self.oid = oid
+
+    @staticmethod
+    def query():
+        return """
+            SELECT nspname AS schema, typname AS name, rolname AS owner,
+                   format_type(typbasetype, typtypmod) AS type,
+                   typnotnull AS not_null, typdefault AS default,
+                   array_to_string(typacl, ',') AS privileges,
+                   obj_description(t.oid, 'pg_type') AS description, t.oid
+            FROM pg_type t JOIN pg_roles r ON (r.oid = typowner)
+                 JOIN pg_namespace n ON (typnamespace = n.oid)
+                 LEFT JOIN pg_class c ON (typrelid = c.oid)
+            WHERE typisdefined AND typtype = 'd'
+              AND nspname NOT IN ('pg_catalog', 'pg_toast',
+                                  'information_schema')
+              AND t.oid NOT IN (
+                  SELECT objid FROM pg_depend WHERE deptype = 'e'
+                               AND classid = 'pg_type'::regclass)
+            ORDER BY nspname, typname"""
+
+    @staticmethod
+    def from_map(name, schema, inobj):
+        """Initialize an Domain instance from a YAML map
+
+        :param name: Domain name
+        :param schema: schema map
+        :param inobj: YAML map of the Domain
+        :return: Domain instance
+        """
+        typ = Domain(
+            name, schema.name, inobj.pop('description', None),
+            inobj.pop('owner', None), inobj.pop('privileges', []),
+            inobj.pop('type', None), inobj.pop('not_null', False),
+            inobj.pop('default', None))
+        typ.privileges = privileges_from_map(
+            typ.privileges, typ.allprivs, typ.owner)
+        return typ
+
     @property
     def objtype(self):
         return "DOMAIN"
 
-    def to_map(self, db, no_owner):
+    def to_map(self, db, no_owner, no_privs):
         """Convert a domain to a YAML-suitable format
 
         :param no_owner: exclude domain owner information
         :return: dictionary
         """
-        dct = self._base_map(db, no_owner)
-        if hasattr(self, 'check_constraints'):
-            if 'check_constraints' not in dct:
-                dct.update(check_constraints={})
+        dct = super(Domain, self).to_map(db, no_owner, no_privs)
+        if self.not_null is False:
+            dct.pop('not_null')
+        if self.default is None:
+            dct.pop('default')
+        if len(self.check_constraints) > 0:
             for cns in list(self.check_constraints.values()):
                 dct['check_constraints'].update(
                     self.check_constraints[cns.name].to_map(db, None))
+        else:
+            dct.pop('check_constraints')
 
         return dct
 
@@ -251,9 +509,9 @@ class Domain(DbType):
         :return: SQL statements
         """
         create = "CREATE DOMAIN %s AS %s" % (self.qualname(), self.type)
-        if hasattr(self, 'not_null'):
+        if self.not_null:
             create += ' NOT NULL'
-        if hasattr(self, 'default'):
+        if self.default is not None:
             create += ' DEFAULT ' + str(self.default)
         return [create]
 
@@ -277,102 +535,20 @@ class Domain(DbType):
         return deps
 
 
-QUERY_PRE92 = \
-    """SELECT t.oid, nspname AS schema, typname AS name, typtype AS kind,
-              format_type(typbasetype, typtypmod) AS type,
-              typnotnull AS not_null, typdefault AS default,
-              ARRAY(SELECT enumlabel FROM pg_enum e WHERE t.oid = enumtypid
-              ORDER BY e.oid) AS labels, rolname AS owner, NULL AS privileges,
-              typinput::regproc AS input, typoutput::regproc AS output,
-              typreceive::regproc AS receive, typsend::regproc AS send,
-              typmodin::regproc AS typmod_in, typmodout::regproc AS typmod_out,
-              typanalyze::regproc AS analyze, typlen AS internallength,
-              typalign AS alignment, typstorage AS storage,
-              typdelim AS delimiter, typcategory AS category,
-              typispreferred AS preferred,
-              obj_description(t.oid, 'pg_type') AS description
-         FROM pg_type t JOIN pg_roles r ON (r.oid = typowner)
-              JOIN pg_namespace n ON (typnamespace = n.oid)
-              LEFT JOIN pg_class c ON (typrelid = c.oid)
-        WHERE typisdefined AND (typtype in ('d', 'e')
-              OR (typtype = 'c' AND relkind = 'c')
-              OR (typtype = 'b' AND typarray != 0))
-          AND nspname NOT IN ('pg_catalog', 'pg_toast', 'information_schema')
-          AND t.oid NOT IN (SELECT objid FROM pg_depend WHERE deptype = 'e'
-                            AND classid = 'pg_type'::regclass)
-       ORDER BY nspname, typname"""
-
-
 class TypeDict(DbObjectDict):
     "The collection of domains and enums in a database"
 
     cls = DbType
-    query = \
-        """SELECT t.oid,
-                  nspname AS schema, typname AS name, typtype AS kind,
-                  format_type(typbasetype, typtypmod) AS type,
-                  typnotnull AS not_null, typdefault AS default,
-                  ARRAY(SELECT enumlabel FROM pg_enum e WHERE t.oid = enumtypid
-                  ORDER BY e.oid) AS labels, rolname AS owner,
-                  array_to_string(typacl, ',') AS privileges,
-                  typinput::regproc AS input, typoutput::regproc AS output,
-                  typreceive::regproc AS receive, typsend::regproc AS send,
-                  typmodin::regproc AS typmod_in,
-                  typmodout::regproc AS typmod_out,
-                  typanalyze::regproc AS analyze,
-                  typlen AS internallength, typalign AS alignment,
-                  typstorage AS storage, typdelim AS delimiter,
-                  typcategory AS category, typispreferred AS preferred,
-                  obj_description(t.oid, 'pg_type') AS description
-           FROM pg_type t
-                JOIN pg_roles r ON (r.oid = typowner)
-                JOIN pg_namespace n ON (typnamespace = n.oid)
-                LEFT JOIN pg_class c ON (typrelid = c.oid)
-           WHERE typisdefined AND (typtype in ('d', 'e')
-                 OR (typtype = 'c' AND relkind = 'c')
-                 OR (typtype = 'b' AND typarray != 0))
-             AND nspname NOT IN ('pg_catalog', 'pg_toast',
-                                 'information_schema')
-             AND t.oid NOT IN (
-                 SELECT objid FROM pg_depend WHERE deptype = 'e'
-                              AND classid = 'pg_type'::regclass)
-           ORDER BY nspname, typname"""
-
     # TODO: consider to fetch all the objects belonging to extensions:
     # not to dump them but to trace dependency from objects to the extension
 
     def _from_catalog(self):
         """Initialize the dictionary of types by querying the catalogs"""
-        if self.dbconn.version < 90200:
-            self.query = QUERY_PRE92
-        for dbtype in self.fetch():
-            oid = dbtype.oid
-            sch, typ = dbtype.key()
-            kind = dbtype.kind
-            del dbtype.kind
-            if kind != 'b':
-                del dbtype.input, dbtype.output
-                del dbtype.receive, dbtype.send
-                del dbtype.typmod_in, dbtype.typmod_out, dbtype.analyze
-                del dbtype.internallength, dbtype.alignment, dbtype.storage
-                del dbtype.delimiter, dbtype.category
-            if kind == 'd':
-                self.by_oid[oid] = self[sch, typ] = Domain(**dbtype.__dict__)
-            elif kind == 'e':
-                del dbtype.type
-                self.by_oid[oid] = self[(sch, typ)] = Enum(**dbtype.__dict__)
-                if not hasattr(self[sch, typ], 'labels'):
-                    self[(sch, typ)].labels = {}
-            elif kind == 'c':
-                del dbtype.type
-                self.by_oid[oid] = self[sch, typ] = Composite(
-                    **dbtype.__dict__)
-            elif kind == 'b':
-                del dbtype.type
-                for attr in OPT_FUNCS:
-                    if getattr(dbtype, attr) == '-':
-                        delattr(dbtype, attr)
-                self.by_oid[oid] = self[sch, typ] = BaseType(**dbtype.__dict__)
+        for cls in (BaseType, Composite, Domain, Enum):
+            self.cls = cls
+            for obj in self.fetch():
+                self[obj.key()] = obj
+                self.by_oid[obj.oid] = obj
 
     def from_map(self, schema, inobjs, newdb):
         """Initalize the dictionary of types by converting the input map
@@ -386,43 +562,30 @@ class TypeDict(DbObjectDict):
             if spc != ' ' or objtype not in ['domain', 'type']:
                 raise KeyError("Unrecognized object type: %s" % k)
             if objtype == 'domain':
-                self[(schema.name, key)] = domain = Domain(
-                    schema=schema.name, name=key)
-                indomain = inobjs[k]
-                if not indomain:
-                    raise ValueError("Domain '%s' has no specification" % k)
-                for attr, val in list(indomain.items()):
-                    setattr(domain, attr, val)
-                if 'oldname' in indomain:
-                    domain.oldname = indomain['oldname']
-                newdb.constraints.from_map(domain, indomain, 'd')
-                if 'description' in indomain:
-                    domain.description = indomain['description']
+                inobj = inobjs[k]
+                self[(schema.name, key)] = obj = Domain.from_map(
+                    key, schema, inobj)
+                newdb.constraints.from_map(obj, inobj, 'd')
             elif objtype == 'type':
-                intype = inobjs[k]
-                if 'labels' in intype:
-                    self[(schema.name, key)] = dtype = Enum(
-                        schema=schema.name, name=key)
-                    dtype.labels = intype['labels']
-                elif 'attributes' in intype:
-                    self[(schema.name, key)] = dtype = Composite(
-                        schema=schema.name, name=key)
+                inobj = inobjs[k]
+                if 'input' in inobj:
+                    self[(schema.name, key)] = BaseType.from_map(
+                        key, schema, inobj)
+                elif 'attributes' in inobj:
+                    self[(schema.name, key)] = obj = Composite.from_map(
+                        key, schema, inobj)
                     try:
-                        newdb.columns.from_map(dtype, intype['attributes'])
+                        newdb.columns.from_map(obj, inobj['attributes'])
                     except KeyError as exc:
                         exc.args = ("Type '%s' has no attributes" % key, )
                         raise
-                elif 'input' in intype:
-                    self[(schema.name, key)] = dtype = BaseType(
-                        schema=schema.name, name=key)
-                for attr, val in list(intype.items()):
-                    setattr(dtype, attr, val)
-                if 'oldname' in intype:
-                    dtype.oldname = intype['oldname']
-                if 'description' in intype:
-                    dtype.description = intype['description']
+                elif 'labels' in inobj:
+                    self[(schema.name, key)] = obj = Enum.from_map(
+                        key, schema, inobj)
             else:
                 raise KeyError("Unrecognized object type: %s" % k)
+            if 'oldname' in inobj:
+                obj.oldname = inobj['oldname']
 
     def find(self, obj):
         """Find a type given its name.

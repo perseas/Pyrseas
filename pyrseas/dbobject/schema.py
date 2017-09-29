@@ -101,20 +101,25 @@ class Schema(DbObject):
         for objtypes in ['ftables', 'sequences', 'views', 'matviews']:
             mapper(objtypes)
 
-        def mapper2(objtypes):
+        def mapper2(objtypes, privs=False):
             if hasattr(self, objtypes):
                 schemadict = getattr(self, objtypes)
                 for objkey in schemadict:
                     obj = schemadict[objkey]
-                    schobjs.append((obj, obj.to_map(db, no_owner)))
+                    if privs:
+                        dct = obj.to_map(db, no_owner, no_privs)
+                    else:
+                        dct = obj.to_map(db, no_owner)
+                    schobjs.append((obj, dct))
 
         if hasattr(opts, 'tables') and not opts.tables or \
                 not hasattr(opts, 'tables'):
-            for objtypes in ['conversions', 'domains',
-                             'operators', 'operclasses', 'operfams',
-                             'tsconfigs', 'tsdicts', 'tsparsers', 'tstempls',
-                             'types', 'collations']:
+            for objtypes in ('conversions', 'collations', 'operators',
+                             'operclasses', 'operfams', 'tsconfigs',
+                             'tsdicts', 'tsparsers', 'tstempls'):
                 mapper2(objtypes)
+            for objtypes in ('types', 'domains'):
+                mapper2(objtypes, True)
             if hasattr(self, 'functions'):
                 for objkey in self.functions:
                     obj = self.functions[objkey]

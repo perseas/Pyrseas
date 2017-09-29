@@ -587,7 +587,6 @@ class ForeignTable(Table, DbObjectWithOptions):
 
     @staticmethod
     def query():
-        print("ForeignTable query")
         return """
             SELECT nspname AS schema, relname AS name, srvname AS server,
                    ftoptions AS options, rolname AS owner,
