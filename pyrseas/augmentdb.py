@@ -79,7 +79,7 @@ class AugmentDatabase(Database):
             :param lang: the possibly new language
             """
             if lang not in self.current.languages:
-                self.current.languages[lang] = Language(name=lang)
+                self.current.languages[lang] = Language(lang)
 
     def from_augmap(self, aug_map):
         """Populate the augment objects from the input augment map

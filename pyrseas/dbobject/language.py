@@ -5,9 +5,14 @@
 
     This defines two classes, Language and LanguageDict, derived from
     DbObject and DbObjectDict, respectively.
+
+    See note at
+    https://www.postgresql.org/docs/current/static/sql-createlanguage.html
+    regarding status of procedural languages since Postgres 9.1.
 """
-from pyrseas.dbobject import DbObjectDict, DbObject, quote_id
-from pyrseas.dbobject.function import Function
+from . import DbObjectDict, DbObject, quote_id
+from .function import Function
+from .privileges import privileges_from_map
 
 
 class Language(DbObject):
@@ -17,6 +22,54 @@ class Language(DbObject):
     single_extern_file = True
     catalog = 'pg_language'
 
+    def __init__(self, name, description=None, owner=None, privileges=[],
+                 trusted=False,
+                 oid=None):
+        """Initialize the language
+
+        :param name: language name (from lanname)
+        :param description: comment text (from obj_description())
+        :param owner: owner name (from rolname via lanowner)
+        :param privileges: access privileges (from lanacl)
+        :param trusted: is this a trusted language? (from lanpltrusted)
+        """
+        super(Language, self).__init__(name, description)
+        self._init_own_privs(owner, privileges)
+        self.trusted = trusted
+        self.oid = oid
+
+    @staticmethod
+    def query():
+        return """
+            SELECT lanname AS name, lanpltrusted AS trusted, rolname AS owner,
+                   array_to_string(lanacl, ',') AS privileges,
+                   obj_description(l.oid, 'pg_language') AS description, l.oid
+            FROM pg_language l JOIN pg_roles r ON (r.oid = lanowner)
+            WHERE lanispl
+              AND l.oid NOT IN (
+                  SELECT objid FROM pg_depend WHERE deptype = 'e'
+                               AND classid = 'pg_language'::regclass)
+            ORDER BY lanname"""
+
+    @staticmethod
+    def from_map(name, inobj):
+        """Initialize a Language instance from a YAML map
+
+        :param name: Language name
+        :param inobj: YAML map of the Language
+        :return: Language instance
+        """
+        lang = Language(name, inobj.pop('description', None),
+                        inobj.pop('owner', None), inobj.pop('privileges', []),
+                        inobj.pop('trusted', False))
+        lang.privileges = privileges_from_map(
+            lang.privileges, lang.allprivs, lang.owner)
+        if '_ext' in inobj:
+            lang._ext = inobj['_ext']
+        if 'oldname' in inobj:
+            lang.oldname = inobj.get('oldname')
+        return lang
+
     def to_map(self, db, no_owner, no_privs):
         """Convert language to a YAML-suitable format
 
@@ -25,7 +78,7 @@ class Language(DbObject):
         """
         if hasattr(self, '_ext'):
             return None
-        dct = self._base_map(db, no_owner, no_privs)
+        dct = super(Language, self).to_map(db, no_owner, no_privs)
         if 'functions' in dct:
             del dct['functions']
         return dct
@@ -38,7 +91,7 @@ class Language(DbObject):
         stmts = []
         if not hasattr(self, '_ext'):
             stmts.append("CREATE LANGUAGE %s" % quote_id(self.name))
-            if hasattr(self, 'owner'):
+            if self.owner is not None:
                 stmts.append(self.alter_owner())
             if self.description is not None:
                 stmts.append(self.comment())
@@ -54,37 +107,10 @@ class Language(DbObject):
             return []
 
 
-QUERY_PRE91 = \
-    """SELECT l.oid, lanname AS name, lanpltrusted AS trusted,
-              rolname AS owner, array_to_string(lanacl, ',') AS privileges,
-              obj_description(l.oid, 'pg_language') AS description
-       FROM pg_language l
-            JOIN pg_roles r ON (r.oid = lanowner)
-       WHERE lanispl
-       ORDER BY lanname"""
-
-
 class LanguageDict(DbObjectDict):
     "The collection of procedural languages in a database."
 
     cls = Language
-    query = \
-        """SELECT l.oid, lanname AS name, lanpltrusted AS trusted,
-                  rolname AS owner, array_to_string(lanacl, ',') AS privileges,
-                  obj_description(l.oid, 'pg_language') AS description
-           FROM pg_language l
-                JOIN pg_roles r ON (r.oid = lanowner)
-           WHERE lanispl
-             AND l.oid NOT IN (
-                 SELECT objid FROM pg_depend WHERE deptype = 'e'
-                              AND classid = 'pg_language'::regclass)
-           ORDER BY lanname"""
-
-    def _from_catalog(self):
-        """Initialize the dictionary of languages by querying the catalogs"""
-        if self.dbconn.version < 90100:
-            self.query = QUERY_PRE91
-        super(LanguageDict, self)._from_catalog()
 
     def from_map(self, inmap):
         """Initialize the dictionary of languages by examining the input map
@@ -95,13 +121,8 @@ class LanguageDict(DbObjectDict):
             (objtype, spc, lng) = key.partition(' ')
             if spc != ' ' or objtype != 'language':
                 raise KeyError("Unrecognized object type: %s" % key)
-            language = self[lng] = Language(name=lng)
-            inlanguage = inmap[key]
-            if inlanguage:
-                for attr, val in list(inlanguage.items()):
-                    setattr(language, attr, val)
-                if 'oldname' in inlanguage:
-                    del inlanguage['oldname']
+            inobj = inmap[key]
+            self[lng] = Language.from_map(lng, inobj)
 
     def link_refs(self, dbfunctions, langs):
         """Connect functions to their respective languages

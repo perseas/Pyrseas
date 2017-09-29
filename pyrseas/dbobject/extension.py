@@ -86,13 +86,6 @@ class Extension(DbObject):
         """
         return super(Extension, self).alter(inobj, no_owner=no_owner)
 
-    def drop(self):
-        # TODO: this should not be special-cased -- see Language
-        if self.name != 'plpgsql':
-            return super(Extension, self).drop()
-        else:
-            return []
-
 
 class ExtensionDict(DbObjectDict):
     "The collection of extensions in a database"
