@@ -59,8 +59,8 @@ class IndexToMapTestCase(DatabaseToMapTestCase):
                                          'predicate': '(c1 > 42)'}}}
         assert dbmap['schema public']['table t1'] == expmap
 
-    def test_index_function(self):
-        "Map an index using a function"
+    def test_index_function_simple(self):
+        "Map an index using a function -- issue #98"
         stmts = [CREATE_TABLE_STMT, "CREATE INDEX t1_idx ON t1 ((lower(c2)))"]
         dbmap = self.to_map(stmts)
         expmap = {'columns': [{'c1': {'type': 'integer'}},
@@ -144,7 +144,7 @@ class IndexToMapTestCase(DatabaseToMapTestCase):
         assert dbmap['schema public']['table t1']['indexes']['t1_idx'][
             'description'] == 'Test index t1_idx'
 
-    def test_bug_98(self):
+    def test_map_multicol_index_with_exprs(self):
         "Map a multicol index with expressions"
         dbmap = self.to_map(["CREATE TABLE holiday (id serial PRIMARY KEY,"
                              "date date NOT NULL, recurring boolean NOT NULL)",
@@ -264,7 +264,7 @@ class IndexToSqlTestCase(InputMapToSqlTestCase):
         assert sql[1] == "CREATE INDEX t1_idx ON t1 " \
             "(c1 cidr_ops NULLS FIRST, c2)"
 
-    def test_index_mixed(self):
+    def test_create_index_mixed(self):
         "Create indexes using functions, a regular column and expressions"
         stmts = ["CREATE TABLE t1 (c1 integer, c2 text, c3 text)"]
         inmap = self.std_map()

@@ -297,6 +297,7 @@ class Table(DbClass):
         self.primary_key = None
         self.foreign_keys = {}
         self.unique_constraints = {}
+        self.indexes = {}
         self.oid = oid
 
     @staticmethod
@@ -387,7 +388,7 @@ class Table(DbClass):
                         db, self.column_names()))
         else:
             tbl.pop('unique_constraints')
-        if hasattr(self, 'indexes'):
+        if len(self.indexes) > 0:
             idxs = {}
             for idx in self.indexes.values():
                 if not getattr(idx, '_for_constraint', None):
@@ -397,6 +398,8 @@ class Table(DbClass):
                 tbl['indexes'] = idxs
             else:
                 tbl.pop('indexes', None)
+        else:
+            tbl.pop('indexes')
         if hasattr(self, 'rules'):
             if 'rules' not in tbl:
                 tbl['rules'] = {}

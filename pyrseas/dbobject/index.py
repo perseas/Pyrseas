@@ -6,8 +6,8 @@
     This defines two classes, Index and IndexDict, derived
     from DbSchemaObject and DbObjectDict, respectively.
 """
-from pyrseas.dbobject import DbObjectDict, DbSchemaObject
-from pyrseas.dbobject import quote_id, split_schema_obj, commentable
+from . import DbObjectDict, DbSchemaObject
+from . import quote_id, split_schema_obj, commentable
 
 
 def split_exprs(idx_exprs):
@@ -44,10 +44,157 @@ def split_exprs(idx_exprs):
 class Index(DbSchemaObject):
     """A physical index definition, other than a primary key or unique
     constraint index.
+
+    An index is identified by its schema name and index name.  However,
+    at this time, Pyrseas uses the triple schema-table-index names as the
+    identifier.
+    TODO:  This should be fixed in this or a subsequent release.
     """
 
     keylist = ['schema', 'table', 'name']
     catalog = 'pg_index'
+
+    def __init__(self, name, schema, table, description, unique=False,
+                 access_method='btree', keys=[], predicate=None,
+                 tablespace=None, cluster=False, keyexprs=None, defn=None,
+                 oid=None):
+        """Initialize the index
+
+        :param name: index name (from relname)
+        :param schema: schema name (from nspname via relnamespace)
+        :param table: table name (from indrelid)
+        :param description: comment text (from obj_description)
+        :param unique: unique indicator (from indisunique)
+        :param access_method: access method (from amname via relam)
+        :param keys: list of columns (from indkey)
+        :param predicate: partial index predicate (from indpred)
+        :param tablespace: tablespace name (from spcname via reltablespace)
+        :param cluster: clustered indicator (from indisclustered)
+        :param keyexprs: list of expressions (from indexprs)
+        :param defn: index definition (from pg_get_indexdef)
+        """
+        super(Index, self).__init__(name, schema, description)
+        self.table = table
+        self.unqualify()
+        self.unique = unique
+        self.access_method = access_method
+        if defn is not None:
+            self.keys = self._parse_keys(keys, keyexprs, defn)
+        else:
+            self.keys = keys
+        self.predicate = predicate
+        self.tablespace = tablespace
+        self.cluster = cluster
+        self.oid = oid
+
+    @staticmethod
+    def query():
+        return """
+            SELECT nspname AS schema, indrelid::regclass AS table,
+                   c.relname AS name, amname AS access_method,
+                   indisunique AS unique, indkey AS keys,
+                   pg_get_expr(indexprs, indrelid) AS keyexprs,
+                   pg_get_expr(indpred, indrelid) AS predicate,
+                   pg_get_indexdef(indexrelid) AS defn,
+                   spcname AS tablespace, indisclustered AS cluster,
+                   obj_description (c.oid, 'pg_class') AS description, c.oid
+            FROM pg_index i JOIN pg_class c ON (indexrelid = c.oid)
+                 JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
+                 JOIN pg_am ON (relam = pg_am.oid)
+                 LEFT JOIN pg_tablespace t ON (c.reltablespace = t.oid)
+            WHERE NOT indisprimary AND c.relpersistence != 't'
+              AND (nspname != 'pg_catalog' AND nspname != 'information_schema')
+              AND NOT EXISTS (
+                     SELECT 1 FROM pg_constraint
+                     WHERE contype in ('p', 'u')
+                     AND conindid = c.oid)
+           ORDER BY schema, "table", name"""
+
+    @staticmethod
+    def from_map(name, table, inobj):
+        """Initialize an index instance from a YAML map
+
+        :param name: index name
+        :param table: map of table
+        :param inobj: YAML map of the index
+        :return: Index instance
+        """
+        keys = 'keys'
+        if 'columns' in inobj:
+            keys = 'columns'
+        elif 'keys' not in inobj:
+            raise KeyError("Index '%s' is missing keys specification" % name)
+        idx = Index(
+            name, table.schema, table.name, inobj.pop('description', None),
+            inobj.pop('unique', False), inobj.pop('access_method', 'btree'),
+            inobj.pop(keys, []), inobj.pop('predicate', None),
+            inobj.pop('tablespace', None), inobj.pop('cluster', False))
+        if 'depends_on' in inobj:
+            idx.depends_on.extend(inobj['depends_on'])
+        if 'oldname' in inobj:
+            idx.oldname = inobj.get('oldname')
+        return idx
+
+    def _parse_keys(self, keycols, exprs, defn):
+        keydefs, _, _ = defn.partition(' WHERE ')
+        _, _, keydefs = keydefs.partition(' USING ')
+        keydefs = keydefs[keydefs.find(' (') + 2:-1]
+        # split expressions
+        if exprs is not None:
+            exprs = split_exprs(exprs)
+        i = 0
+        rest = keydefs
+        keys = []
+        for col in keycols.split():
+            keyopts = []
+            extra = {}
+            if col == '0':
+                expr = exprs[i]
+                if rest and rest[0] == '(':
+                    expr = '(' + expr + ')'
+                assert(rest.startswith(expr))
+                key = expr
+                extra = {'type': 'expression'}
+                explen = len(expr)
+                loc = rest[explen:].find(',')
+                if loc == 0:
+                    keyopts = []
+                    rest = rest[explen + 1:].lstrip()
+                elif loc == -1:
+                    keyopts = rest[explen:].split()
+                    rest = ''
+                else:
+                    keyopts = rest[explen:explen + loc].split()
+                    rest = rest[explen + loc + 1:].lstrip()
+                i += 1
+            else:
+                loc = rest.find(',')
+                key = rest[:loc] if loc != -1 else rest.lstrip()
+                keyopts = key.split()[1:]
+                key = key.split()[0]
+                rest = rest[loc + 1:]
+            rest = rest.lstrip()
+            skipnext = False
+            for j, opt in enumerate(keyopts):
+                if skipnext:
+                    skipnext = False
+                    continue
+                if opt.upper() not in ['COLLATE', 'ASC', 'DESC', 'NULLS',
+                                       'FIRST', 'LAST']:
+                    extra.update(opclass=opt)
+                    continue
+                elif opt == 'COLLATE':
+                    extra.update(collation=keyopts[j + 1])
+                    skipnext = True
+                elif opt == 'NULLS':
+                    extra.update(nulls=keyopts[j + 1].lower())
+                    skipnext = True
+                elif opt == 'DESC':
+                    extra.update(order='desc')
+            if extra:
+                key = {key: extra}
+            keys.append(key)
+        return keys
 
     def key_expressions(self):
         """Return comma-separated list of key column names and qualifiers
@@ -77,9 +224,16 @@ class Index(DbSchemaObject):
 
         :return: dictionary
         """
-        dct = self._base_map(db)
-        if dct['access_method'] == 'btree':
-            del dct['access_method']
+        dct = super(Index, self).to_map(db)
+        if self.access_method == 'btree':
+            dct.pop('access_method')
+        if not self.unique:
+            dct.pop('unique')
+        for attr in ['predicate', 'tablespace']:
+            if getattr(self, attr) is None:
+                dct.pop(attr)
+        if not self.cluster:
+            dct.pop('cluster')
         return {self.name: dct}
 
     @commentable
@@ -94,21 +248,20 @@ class Index(DbSchemaObject):
         if getattr(self, '_for_constraint', None):
             return stmts
 
-        unq = hasattr(self, 'unique') and self.unique
         acc = ''
-        if hasattr(self, 'access_method') and self.access_method != 'btree':
+        if self.access_method != 'btree':
             acc = 'USING %s ' % self.access_method
         tblspc = ''
-        if hasattr(self, 'tablespace'):
+        if self.tablespace is not None:
             tblspc = '\n    TABLESPACE %s' % self.tablespace
         pred = ''
-        if hasattr(self, 'predicate'):
+        if self.predicate is not None:
             pred = '\n    WHERE %s' % self.predicate
         stmts.append("CREATE %sINDEX %s ON %s %s(%s)%s%s" % (
-            'UNIQUE ' if unq else '', quote_id(self.name),
+            'UNIQUE ' if self.unique else '', quote_id(self.name),
             self.qualname(self.table), acc, self.key_expressions(), tblspc,
             pred))
-        if hasattr(self, 'cluster') and self.cluster:
+        if self.cluster:
             stmts.append("CLUSTER %s USING %s" % (
                 self.qualname(self.table), quote_id(self.name)))
         return stmts
@@ -148,11 +301,11 @@ class Index(DbSchemaObject):
                              % quote_id(inindex.tablespace))
         elif hasattr(self, 'tablespace'):
             stmts.append(base + "SET TABLESPACE pg_default")
-        if hasattr(inindex, 'cluster'):
-            if not hasattr(self, 'cluster'):
+        if inindex.cluster:
+            if not self.cluster:
                 stmts.append("CLUSTER %s USING %s" % (
                     self.qualname(self.table), quote_id(self.name)))
-        elif hasattr(self, 'cluster'):
+        elif self.cluster:
             stmts.append("ALTER TABLE %s\n    SET WITHOUT CLUSTER" %
                          self.qualname(self.table))
         stmts.append(super(Index, self).alter(inindex))
@@ -183,102 +336,13 @@ class IndexDict(DbObjectDict):
     "The collection of indexes on tables in a database"
 
     cls = Index
-    query = \
-        """SELECT c.oid,
-                  nspname AS schema, indrelid::regclass AS table,
-                  c.relname AS name, amname AS access_method,
-                  indisunique AS unique, indkey AS keycols,
-                  pg_get_expr(indexprs, indrelid) AS keyexprs,
-                  pg_get_expr(indpred, indrelid) AS predicate,
-                  pg_get_indexdef(indexrelid) AS defn,
-                  spcname AS tablespace, indisclustered AS cluster,
-                  EXISTS (
-                    SELECT 1 FROM pg_constraint
-                    WHERE contype in ('p', 'u')
-                    AND conindid = c.oid) AS _for_constraint,
-                  obj_description (c.oid, 'pg_class') AS description
-           FROM pg_index JOIN pg_class c ON (indexrelid = c.oid)
-                JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
-                JOIN pg_am ON (relam = pg_am.oid)
-                LEFT JOIN pg_tablespace t ON (c.reltablespace = t.oid)
-           WHERE NOT indisprimary
-                 AND c.relpersistence != 't'
-                 AND (nspname != 'pg_catalog'
-                      AND nspname != 'information_schema')
-                 AND c.relname NOT IN (
-                     SELECT conname FROM pg_constraint
-                     WHERE contype = 'u')
-           ORDER BY schema, "table", name"""
 
     def _from_catalog(self):
         """Initialize the dictionary of indexes by querying the catalogs"""
-        for index in self.fetch():
-            index.unqualify()
-            oid = index.oid
-            sch, tbl, idx = index.key()
-            sch, tbl = split_schema_obj('%s.%s' % (sch, tbl))
-            keydefs, _, _ = index.defn.partition(' WHERE ')
-            _, _, keydefs = keydefs.partition(' USING ')
-            keydefs = keydefs[keydefs.find(' (') + 2:-1]
-            # split expressions (result of pg_get_expr)
-            if hasattr(index, 'keyexprs'):
-                keyexprs = split_exprs(index.keyexprs)
-                del index.keyexprs
-            # parse the keys
-            i = 0
-            rest = keydefs
-            index.keys = []
-            for col in index.keycols.split():
-                keyopts = []
-                extra = {}
-                if col == '0':
-                    expr = keyexprs[i]
-                    if rest and rest[0] == '(':
-                        expr = '(' + expr + ')'
-                    assert(rest.startswith(expr))
-                    key = expr
-                    extra = {'type': 'expression'}
-                    explen = len(expr)
-                    loc = rest[explen:].find(',')
-                    if loc == 0:
-                        keyopts = []
-                        rest = rest[explen + 1:].lstrip()
-                    elif loc == -1:
-                        keyopts = rest[explen:].split()
-                        rest = ''
-                    else:
-                        keyopts = rest[explen:explen + loc].split()
-                        rest = rest[explen + loc + 1:].lstrip()
-                    i += 1
-                else:
-                    loc = rest.find(',')
-                    key = rest[:loc] if loc != -1 else rest.lstrip()
-                    keyopts = key.split()[1:]
-                    key = key.split()[0]
-                    rest = rest[loc + 1:]
-                rest = rest.lstrip()
-                skipnext = False
-                for j, opt in enumerate(keyopts):
-                    if skipnext:
-                        skipnext = False
-                        continue
-                    if opt.upper() not in ['COLLATE', 'ASC', 'DESC', 'NULLS',
-                                           'FIRST', 'LAST']:
-                        extra.update(opclass=opt)
-                        continue
-                    elif opt == 'COLLATE':
-                        extra.update(collation=keyopts[j + 1])
-                        skipnext = True
-                    elif opt == 'NULLS':
-                        extra.update(nulls=keyopts[j + 1].lower())
-                        skipnext = True
-                    elif opt == 'DESC':
-                        extra.update(order='desc')
-                if extra:
-                    key = {key: extra}
-                index.keys.append(key)
-            del index.defn, index.keycols
-            self.by_oid[oid] = self[(sch, tbl, idx)] = index
+        self.query = self.cls.query()
+        for obj in self.fetch():
+            self[obj.key()] = obj
+            self.by_oid[obj.oid] = obj
 
     def from_map(self, table, inindexes):
         """Initialize the dictionary of indexes by converting the input map
@@ -287,26 +351,6 @@ class IndexDict(DbObjectDict):
         :param inindexes: YAML map defining the indexes
         """
         for i in inindexes:
-            idx = Index(schema=table.schema, table=table.name, name=i)
-            val = inindexes[i]
-            if 'keys' in val:
-                idx.keys = val['keys']
-            elif 'columns' in val:
-                idx.keys = val['columns']
-            else:
-                raise KeyError("Index '%s' is missing keys specification" % i)
-            for attr in ['access_method', 'unique', 'tablespace', 'predicate',
-                         'cluster']:
-                if attr in val:
-                    setattr(idx, attr, val[attr])
-            if not hasattr(idx, 'access_method'):
-                idx.access_method = 'btree'
-            if not hasattr(idx, 'unique'):
-                idx.unique = False
-            if 'description' in val:
-                idx.description = val['description']
-            if 'oldname' in val:
-                idx.oldname = val['oldname']
-            if 'depends_on' in val:
-                idx.depends_on.extend(val['depends_on'])
-            self[(table.schema, table.name, i)] = idx
+            inobj = inindexes[i]
+            self[(table.schema, table.name, i)] = idx = Index.from_map(
+                i, table, inobj)
