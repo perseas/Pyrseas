@@ -73,7 +73,7 @@ class TSConfiguration(DbSchemaObject):
 
         :return: dictionary
         """
-        dct = self._base_map(db, no_owner)
+        dct = super(TSConfiguration, self).to_map(db, no_owner)
         if '.' in self.parser:
             (sch, pars) = self.parser.split('.')
             if sch == self.schema:

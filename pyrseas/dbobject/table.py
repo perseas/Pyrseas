@@ -161,7 +161,7 @@ class Sequence(DbClass):
                      hasattr(opts, 'excl_tables') and opts.excl_tables and
                      self.name in opts.excl_tables):
             return None
-        seq = self._base_map(db, opts.no_owner, opts.no_privs)
+        seq = super(Sequence, self).to_map(db, opts.no_owner, opts.no_privs)
         if self.owner_table is None and self.owner_column is None:
             seq.pop('owner_table')
             seq.pop('owner_column')
@@ -345,7 +345,7 @@ class Table(DbClass):
                 not hasattr(self, 'columns'):
             return None
 
-        tbl = self._base_map(db, opts.no_owner, opts.no_privs)
+        tbl = super(Table, self).to_map(db, opts.no_owner, opts.no_privs)
         for attr in ['tablespace', 'options']:
             if tbl[attr] is None:
                 tbl.pop(attr)

@@ -35,7 +35,7 @@ class DbObjectWithOptions(DbObject):
         :param no_privs: exclude privilege information
         :return: dictionary
         """
-        dct = self._base_map(db, no_owner, no_privs)
+        dct = super(DbObjectWithOptions, self).to_map(db, no_owner, no_privs)
         if len(self.options) == 0:
             dct.pop('options')
         return dct

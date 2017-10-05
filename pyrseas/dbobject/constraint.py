@@ -160,7 +160,7 @@ class CheckConstraint(Constraint):
         :param dbcols: dictionary of dbobject columns
         :return: dictionary
         """
-        dct = self._base_map(db)
+        dct = super(CheckConstraint, self).to_map(db)
         dct.pop('is_domain_check')
         if not self.inherited:
             dct.pop('inherited')
@@ -271,7 +271,7 @@ class PrimaryKey(Constraint):
         :param dbcols: dictionary of dbobject columns
         :return: dictionary
         """
-        dct = self._base_map(db)
+        dct = super(PrimaryKey, self).to_map(db)
         if self.access_method == 'btree':
             dct.pop('access_method')
         for attr in ('inherited', 'deferrable', 'deferred', 'cluster'):
@@ -419,7 +419,7 @@ class ForeignKey(Constraint):
         :param dbcols: dictionary of dbobject columns
         :return: dictionary
         """
-        dct = self._base_map(db)
+        dct = super(ForeignKey, self).to_map(db)
         if '_table' in dct:
             del dct['_table']
         if self.access_method == 'btree':
@@ -589,7 +589,7 @@ class UniqueConstraint(Constraint):
         :param dbcols: dictionary of dbobject columns
         :return: dictionary
         """
-        dct = self._base_map(db)
+        dct = super(UniqueConstraint, self).to_map(db)
         if self.access_method == 'btree':
             dct.pop('access_method')
         for attr in ('inherited', 'deferrable', 'deferred', 'cluster'):

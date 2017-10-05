@@ -77,7 +77,7 @@ class Column(DbSchemaObject):
         """
         if self.dropped:
             return None
-        dct = self._base_map(db, False, no_privs)
+        dct = super(Column, self).to_map(db, False, no_privs)
         del dct['number'], dct['name'], dct['dropped']
         if not self.not_null:
             dct.pop('not_null')

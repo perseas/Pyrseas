@@ -118,7 +118,7 @@ class OperatorClass(DbSchemaObject):
 
         :return: dictionary
         """
-        dct = self._base_map(db, no_owner)
+        dct = super(OperatorClass, self).to_map(db, no_owner)
         if self.storage is None:
             del dct['storage']
         if not self.default:

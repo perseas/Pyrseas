@@ -58,7 +58,7 @@ class Conversion(DbSchemaObject):
 
         :return: dictionary
         """
-        dct = self._base_map(db, no_owner)
+        dct = super(Conversion, self).to_map(db, no_owner)
         if not self.default:
             del dct['default']
         return dct

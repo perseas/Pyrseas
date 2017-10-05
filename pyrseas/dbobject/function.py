@@ -151,7 +151,7 @@ class Function(Proc):
         :param no_privs: exclude privilege information
         :return: dictionary
         """
-        dct = self._base_map(db, no_owner, no_privs)
+        dct = super(Function, self).to_map(db, no_owner, no_privs)
         for attr in ('leakproof', 'strict', 'security_definer'):
             if dct[attr] is False:
                 dct.pop(attr)
@@ -368,7 +368,7 @@ class Aggregate(Proc):
         :param no_privs: exclude privilege information
         :return: dictionary
         """
-        dct = self._base_map(db, no_owner, no_privs)
+        dct = super(Aggregate, self).to_map(db, no_owner, no_privs)
         for attr in ('initcond', 'finalfunc', 'sortop'):
             if getattr(self, attr) is None:
                 dct.pop(attr)

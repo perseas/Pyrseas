@@ -323,8 +323,8 @@ class DbObject(object):
         """
         return quote_id(self.__dict__[self.keylist[0]])
 
-    def _base_map(self, db, no_owner=False, no_privs=False):
-        """Return a base map, i.e., copy of attributes excluding keys
+    def to_map(self, db, no_owner=False, no_privs=False):
+        """Convert an object to a YAML-suitable format
 
         :param db: db used to tie the objects together
         :param no_owner: exclude object owner information
@@ -358,21 +358,6 @@ class DbObject(object):
                 del dct[k]
 
         return dct
-
-    def to_map(self, db, no_owner=False, no_privs=False):
-        """Convert an object to a YAML-suitable format
-
-        :param db: db used to tie the objects together
-        :param no_owner: exclude object owner information
-        :param no_privs: exclude privilege information
-        :return: dictionary
-
-        This base implementation simply copies the internal Python
-        dictionary, removes the :attr:`keylist` attributes, and
-        returns a new dictionary using the :meth:`extern_key` result
-        as the key.
-        """
-        return self._base_map(db, no_owner, no_privs)
 
     def map_privs(self):
         """Return a list of access privileges on the current object

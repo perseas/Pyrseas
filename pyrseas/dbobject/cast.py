@@ -88,7 +88,7 @@ class Cast(DbObject):
 
         :return: dictionary
         """
-        dct = self._base_map(db)
+        dct = super(Cast, self).to_map(db)
         del dct['name']
         if self.function is None:
             del dct['function']

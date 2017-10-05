@@ -96,7 +96,7 @@ class Rule(DbSchemaObject):
 
         :return: dictionary
         """
-        dct = self._base_map(db)
+        dct = super(Rule, self).to_map(db)
         if not self.instead:
             dct.pop('instead')
         return {self.name: dct}

@@ -123,7 +123,7 @@ class Trigger(DbSchemaObject):
 
         :return: dictionary
         """
-        dct = self._base_map(db)
+        dct = super(Trigger, self).to_map(db)
         for attr in ['constraint', 'deferrable', 'initially_deferred']:
             if dct[attr] is False:
                 del dct[attr]

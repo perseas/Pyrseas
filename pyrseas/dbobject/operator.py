@@ -103,7 +103,7 @@ class Operator(DbSchemaObject):
         :param no_owner: exclude object owner information
         :return: dictionary
         """
-        dct = self._base_map(db, no_owner)
+        dct = super(Operator, self).to_map(db, no_owner)
         for attr in ['commutator', 'join', 'negator', 'restrict']:
             if dct[attr] is None:
                 dct.pop(attr)

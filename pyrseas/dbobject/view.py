@@ -57,7 +57,7 @@ class View(DbClass):
         if hasattr(opts, 'excl_tables') and opts.excl_tables \
                 and self.name in opts.excl_tables:
             return None
-        view = self._base_map(db, opts.no_owner, opts.no_privs)
+        view = super(View, self).to_map(db, opts.no_owner, opts.no_privs)
         if 'dependent_funcs' in view:
             del view['dependent_funcs']
         if hasattr(self, 'triggers'):
@@ -142,7 +142,7 @@ class MaterializedView(View):
         if hasattr(opts, 'excl_tables') and opts.excl_tables \
                 and self.name in opts.excl_tables:
             return None
-        mvw = self._base_map(db, opts.no_owner, opts.no_privs)
+        mvw = super(MaterializedView, self).to_map(db, opts)
         if hasattr(self, 'indexes'):
             if 'indexes' not in mvw:
                 mvw['indexes'] = {}
