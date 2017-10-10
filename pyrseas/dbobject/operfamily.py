@@ -6,8 +6,8 @@
     This module defines two classes: OperatorFamily derived from
     DbSchemaObject and OperatorFamilyDict derived from DbObjectDict.
 """
-from pyrseas.dbobject import DbObjectDict, DbSchemaObject
-from pyrseas.dbobject import commentable, ownable, split_schema_obj
+from . import DbObjectDict, DbSchemaObject
+from . import commentable, ownable, split_schema_obj
 
 
 class OperatorFamily(DbSchemaObject):
@@ -46,6 +46,22 @@ class OperatorFamily(DbSchemaObject):
                   SELECT objid FROM pg_depend WHERE deptype = 'e'
                                AND classid = 'pg_opfamily'::regclass)
             ORDER BY opfnamespace, opfname, amname"""
+
+    @staticmethod
+    def from_map(name, schema, index_method, inobj):
+        """Initialize an operator family instance from a YAML map
+
+        :param name: operator family name
+        :param name: schema name
+        :param index_method: index method
+        :param inobj: YAML map of the operator family
+        :return: operator family instance
+        """
+        obj = OperatorFamily(
+            name, schema.name, index_method, inobj.pop('description', None),
+            inobj.pop('owner', None))
+        obj.set_oldname(inobj)
+        return obj
 
     @property
     def objtype(self):
@@ -95,11 +111,8 @@ class OperatorFamilyDict(DbObjectDict):
             opf = key[16:pos]  # 16 = len('operator family ')
             idx = key[pos + 7:]  # 7 = len(' using ')
             inobj = inopfams[key]
-            self[(schema.name, opf, idx)] = opfam = OperatorFamily(
-                opf, schema.name, idx, inobj.pop('description', None),
-                inobj.pop('owner', None))
-            if 'oldname' in inobj:
-                opfam.oldname = inobj.get('oldname')
+            self[(schema.name, opf, idx)] = OperatorFamily.from_map(
+                opf, schema, idx, inobj)
 
     def find(self, obj, meth):
         schema, name = split_schema_obj(obj)

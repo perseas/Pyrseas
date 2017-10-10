@@ -11,7 +11,6 @@
 from . import DbObjectDict, DbSchemaObject
 from . import split_schema_obj, commentable, ownable
 from .constraint import CheckConstraint
-from .privileges import privileges_from_map
 
 ALIGNMENT_TYPES = {'c': 'char', 's': 'int2', 'i': 'int4', 'd': 'double'}
 STORAGE_TYPES = {'p': 'plain', 'e': 'external', 'm': 'main', 'x': 'extended'}
@@ -128,7 +127,7 @@ class BaseType(DbType):
         :param inobj: YAML map of the BaseType
         :return: BaseType instance
         """
-        typ = BaseType(
+        obj = BaseType(
             name, schema.name, inobj.pop('description', None),
             inobj.pop('owner', None), inobj.pop('privileges', []),
             inobj.pop('input', None), inobj.pop('output', None),
@@ -138,9 +137,9 @@ class BaseType(DbType):
             inobj.pop('alignment', None), inobj.pop('storage', None),
             inobj.pop('delimiter', ','), inobj.pop('category', None),
             inobj.pop('preferred', False))
-        typ.privileges = privileges_from_map(
-            typ.privileges, typ.allprivs, typ.owner)
-        return typ
+        obj.fix_privileges()
+        obj.set_oldname(inobj)
+        return obj
 
     def to_map(self, db, no_owner, no_privs):
         """Convert a type to a YAML-suitable format
@@ -263,12 +262,12 @@ class Composite(DbType):
         :param inobj: YAML map of the Composite
         :return: Composite instance
         """
-        typ = Composite(
+        obj = Composite(
             name, schema.name, inobj.pop('description', None),
             inobj.pop('owner', None), inobj.pop('privileges', []))
-        typ.privileges = privileges_from_map(
-            typ.privileges, typ.allprivs, typ.owner)
-        return typ
+        obj.fix_privileges()
+        obj.set_oldname(inobj)
+        return obj
 
     def to_map(self, db, no_owner, no_privs):
         """Convert a type to a YAML-suitable format
@@ -311,7 +310,7 @@ class Composite(DbType):
         input.
         """
         stmts = []
-        if not hasattr(intype, 'attributes'):
+        if len(intype.attributes) == 0:
             raise KeyError("Composite '%s' has no attributes" % intype.name)
         attrnames = [attr.name for attr in self.attributes if not attr.dropped]
         dbattrs = len(attrnames)
@@ -399,13 +398,13 @@ class Enum(DbType):
         :param inobj: YAML map of the Enum
         :return: Enum instance
         """
-        typ = Enum(
+        obj = Enum(
             name, schema.name, inobj.pop('description', None),
             inobj.pop('owner', None), inobj.pop('privileges', []),
             inobj.pop('labels', []))
-        typ.privileges = privileges_from_map(
-            typ.privileges, typ.allprivs, typ.owner)
-        return typ
+        obj.fix_privileges()
+        obj.set_oldname(inobj)
+        return obj
 
     @commentable
     @ownable
@@ -468,14 +467,14 @@ class Domain(DbType):
         :param inobj: YAML map of the Domain
         :return: Domain instance
         """
-        typ = Domain(
+        obj = Domain(
             name, schema.name, inobj.pop('description', None),
             inobj.pop('owner', None), inobj.pop('privileges', []),
             inobj.pop('type', None), inobj.pop('not_null', False),
             inobj.pop('default', None))
-        typ.privileges = privileges_from_map(
-            typ.privileges, typ.allprivs, typ.owner)
-        return typ
+        obj.fix_privileges()
+        obj.set_oldname(inobj)
+        return obj
 
     @property
     def objtype(self):
@@ -584,8 +583,6 @@ class TypeDict(DbObjectDict):
                         key, schema, inobj)
             else:
                 raise KeyError("Unrecognized object type: %s" % k)
-            if 'oldname' in inobj:
-                obj.oldname = inobj['oldname']
 
     def find(self, obj):
         """Find a type given its name.
@@ -618,12 +615,7 @@ class TypeDict(DbObjectDict):
                     attr._type = self[(sch, typ)]
         for (sch, typ, cns) in dbconstrs:
             constr = dbconstrs[(sch, typ, cns)]
-            if not hasattr(constr, 'is_domain_check') or \
-               constr.is_domain_check is False:
-                continue
-            assert self[(sch, typ)]
-            constr._table = dbtype = self[(sch, typ)]
-            if isinstance(constr, CheckConstraint):
-                if not hasattr(dbtype, 'check_constraints'):
-                    dbtype.check_constraints = {}
+            if isinstance(constr, CheckConstraint) and \
+               constr.is_domain_check:
+                constr._table = dbtype = self[(sch, typ)]
                 dbtype.check_constraints.update({cns: constr})

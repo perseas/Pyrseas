@@ -76,13 +76,12 @@ class Rule(DbSchemaObject):
         :param inobj: YAML map of the rule
         :return: Rule instance
         """
-        rule = Rule(name, table.schema, table.name,
-                    inobj.pop('description', None), inobj.get('event'),
-                    inobj.pop('instead', False), inobj.pop('actions', None),
-                    inobj.pop('condition', None))
-        if 'oldname' in inobj:
-            rule.oldname = inobj.get('oldname')
-        return rule
+        obj = Rule(
+            name, table.schema, table.name, inobj.pop('description', None),
+            inobj.get('event'), inobj.pop('instead', False),
+            inobj.pop('actions', None), inobj.pop('condition', None))
+        obj.set_oldname(inobj)
+        return obj
 
     def identifier(self):
         """Return a full identifier for a rule object

@@ -14,8 +14,8 @@ from functools import wraps
 
 from pyrseas.lib.pycompat import PY2, strtypes
 from pyrseas.yamlutil import MultiLineStr, yamldump
-from pyrseas.dbobject.privileges import privileges_to_map
-from pyrseas.dbobject.privileges import add_grant, diff_privs
+from .privileges import privileges_to_map, add_grant, diff_privs
+from .privileges import privileges_from_map
 
 
 VALID_FIRST_CHARS = string.ascii_lowercase + '_'
@@ -374,6 +374,25 @@ class DbObject(object):
             sorted_privlist.append([item for item in privlist
                                     if list(item.keys())[0] == sortedItem][0])
         return sorted_privlist
+
+    def set_oldname(self, inobj):
+        """Set oldname attribute if present in the input YAML map
+
+        :param inobj: YAML map of input object
+        """
+        if 'oldname' in inobj:
+            self.oldname = inobj.get('oldname')
+
+    def fix_privileges(self):
+        """Adjust raw privilege information from YAML map"""
+        if len(self.privileges) > 0:
+            if self.owner is None:
+                raise ValueError(
+                    "%s '%s' has privileges but no owner information" % (
+                        self.objtype.capitalize(), self.name))
+            else:
+                self.privileges = privileges_from_map(
+                    self.privileges, self.allprivs, self.owner)
 
     def _comment_text(self):
         """Return the text for the SQL COMMENT statement

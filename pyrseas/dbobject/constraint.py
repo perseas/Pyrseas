@@ -70,7 +70,7 @@ class Constraint(DbSchemaObject):
         stmts.append("ALTER TABLE %s ADD CONSTRAINT %s %s (%s)%s" % (
             self._table.qualname(), quote_id(self.name),
             self.objtype, self.key_columns(), tblspc))
-        if hasattr(self, 'cluster') and self.cluster:
+        if self.cluster:
             stmts.append("CLUSTER %s USING %s" % (
                 self._table.qualname(), quote_id(self.name)))
         return stmts
@@ -149,6 +149,24 @@ class CheckConstraint(Constraint):
                                    WHERE deptype = 'e'
                                      AND classid = 'pg_type'::regclass)
             ORDER BY schema, "table", name"""
+
+    @staticmethod
+    def from_map(name, table, target, inobj):
+        """Initialize a CheckConstraint instance from a YAML map
+
+        :param name: constraint name
+        :param table: table map
+        :param target: column (default) or domain indicator
+        :param inobj: YAML map of the constraint
+        :return: CheckConstraint instance
+        """
+        obj = CheckConstraint(
+            name, table.schema, table.name, inobj.pop('description', None),
+            inobj.pop('columns', []), inobj.pop('expression', None),
+            (target != ''), inobj.pop('inherited', False))
+        if 'depends_on' in inobj:
+            obj.depends_on.extend(inobj.pop('depends_on'))
+        return obj
 
     @property
     def objtype(self):
@@ -260,6 +278,22 @@ class PrimaryKey(Constraint):
                                    WHERE deptype = 'e'
                                      AND classid = 'pg_type'::regclass)
             ORDER BY schema, "table", name"""
+
+    @staticmethod
+    def from_map(name, table, inobj):
+        """Initialize a PrimaryKey instance from a YAML map
+
+        :param name: key name
+        :param table: table map
+        :param inobj: YAML map of the primary key
+        :return: PrimaryKey instance
+        """
+        return PrimaryKey(
+            name, table.schema, table.name, inobj.pop('description', None),
+            inobj.pop('columns', []), inobj.pop('access_method', 'btree'),
+            inobj.pop('tablespace', None), inobj.pop('cluster', False),
+            inobj.pop('inherited', False), inobj.pop('deferrable', False),
+            inobj.pop('deferred', False))
 
     @property
     def objtype(self):
@@ -395,6 +429,36 @@ class ForeignKey(Constraint):
                                      AND classid = 'pg_type'::regclass)
             ORDER BY schema, "table", name"""
 
+    @staticmethod
+    def from_map(name, table, inobj):
+        """Initialize a ForeignKey instance from a YAML map
+
+        :param name: key name
+        :param table: table map
+        :param inobj: YAML map of the foreign key
+        :return: ForeignKey instance
+        """
+        if 'references' not in inobj:
+            raise KeyError("Constraint '%s' missing references" % name)
+        refs = inobj['references']
+        if 'table' not in refs:
+            raise KeyError("Constraint '%s' missing table reference" % name)
+        ref_table = refs['table']
+        if 'schema' in refs and refs['schema'] != table.schema:
+            ref_table = "%s.%s" % (refs['schema'], ref_table)
+        if 'columns' not in refs:
+            raise KeyError("Constraint '%s' missing reference columns" % name)
+        obj = ForeignKey(
+            name, table.schema, table.name, inobj.pop('description', None),
+            inobj.pop('columns', []), ref_table, refs['columns'],
+            inobj.pop('on_update', None), inobj.pop('on_delete', None),
+            inobj.pop('match', None), inobj.pop('access_method', 'btree'),
+            inobj.pop('tablespace', None), inobj.pop('cluster', False),
+            inobj.pop('inherited', False), inobj.pop('deferrable', False),
+            inobj.pop('deferred', False))
+        obj.depends_on.extend(inobj.get('depends_on', ()))
+        return obj
+
     @property
     def objtype(self):
         return "FOREIGN KEY"
@@ -433,13 +497,13 @@ class ForeignKey(Constraint):
         if self.match == 'simple':
             dct.pop('match')
         dct['columns'] = [dbcols[k - 1] for k in self.columns]
-        refsch = hasattr(self, 'ref_schema') and self.ref_schema or self.schema
         ref_cols = [refcols[k - 1] for k in self.ref_cols]
         dct['references'] = {'table': dct['ref_table'], 'columns': ref_cols}
         if 'ref_schema' in dct:
-            dct['references'].update(schema=refsch)
-            del dct['ref_schema']
-        del dct['ref_table'], dct['ref_cols']
+            dct['references'].update(schema=self.ref_schema)
+            dct.pop('ref_schema')
+        dct.pop('ref_table')
+        dct.pop('ref_cols')
         return {self.name: dct}
 
     @commentable
@@ -579,6 +643,22 @@ class UniqueConstraint(Constraint):
                                      AND classid = 'pg_type'::regclass)
             ORDER BY schema, "table", name"""
 
+    @staticmethod
+    def from_map(name, table, inobj):
+        """Initialize a UniqueConstraint instance from a YAML map
+
+        :param name: constraint name
+        :param table: table map
+        :param inobj: YAML map of the constraint
+        :return: UniqueConstraint instance
+        """
+        return UniqueConstraint(
+            name, table.schema, table.name, inobj.pop('description', None),
+            inobj.pop('columns', []), inobj.pop('access_method', 'btree'),
+            inobj.pop('tablespace', None), inobj.pop('cluster', False),
+            inobj.pop('inherited', False), inobj.pop('deferrable', False),
+            inobj.pop('deferred', False))
+
     @property
     def objtype(self):
         return "UNIQUE"
@@ -666,75 +746,25 @@ class ConstraintDict(DbObjectDict):
             chks = inconstrs['check_constraints']
             for cns in chks:
                 inobj = chks[cns]
-                check = CheckConstraint(
-                    cns, table.schema, table.name,
-                    inobj.pop('description', None),
-                    inobj.pop('columns', []), inobj.pop('expression', None),
-                    (target != ''), inobj.pop('inherited', False))
-                if 'depends_on' in inobj:
-                    check.depends_on.extend(inobj.pop('depends_on'))
-                self[(table.schema, table.name, cns)] = check
+                self[(table.schema, table.name, cns)] = \
+                    CheckConstraint.from_map(cns, table, target, inobj)
         if 'primary_key' in inconstrs:
             cns = list(inconstrs['primary_key'].keys())[0]
             inobj = inconstrs['primary_key'][cns]
-            pkey = PrimaryKey(
-                cns, table.schema, table.name, inobj.pop('description', None),
-                inobj.pop('columns', []), inobj.pop('access_method', 'btree'),
-                inobj.pop('tablespace', None), inobj.pop('cluster', False),
-                inobj.pop('inherited', False), inobj.pop('deferrable', False),
-                inobj.pop('deferred', False))
-            self[(table.schema, table.name, cns)] = pkey
+            self[(table.schema, table.name, cns)] = PrimaryKey.from_map(
+                cns, table, inobj)
         if 'foreign_keys' in inconstrs:
             fkeys = inconstrs['foreign_keys']
             for cns in fkeys:
                 inobj = fkeys[cns]
-                ref_table = ref_cols = None
-                try:
-                    refs = inobj['references']
-                except KeyError as exc:
-                    exc.args = ("Constraint '%s' missing references" % cns,)
-                    raise
-                try:
-                    ref_table = refs['table']
-                except KeyError as exc:
-                    exc.args = ("Constraint '%s' missing table reference"
-                                % cns, )
-                    raise
-                if 'schema' in refs and refs['schema'] != table.schema:
-                    ref_table = "%s.%s" % (refs['schema'], ref_table)
-                try:
-                    ref_cols = refs['columns']
-                except KeyError as exc:
-                    exc.args = ("Constraint '%s' missing reference columns"
-                                % cns,)
-                    raise
-                fkey = ForeignKey(
-                    cns, table.schema, table.name,
-                    inobj.pop('description', None),
-                    inobj.pop('columns', []), ref_table, ref_cols,
-                    inobj.pop('on_update', None), inobj.pop('on_delete', None),
-                    inobj.pop('match', None),
-                    inobj.pop('access_method', 'btree'),
-                    inobj.pop('tablespace', None), inobj.pop('cluster', False),
-                    inobj.pop('inherited', False),
-                    inobj.pop('deferrable', False),
-                    inobj.pop('deferred', False))
-                fkey.depends_on.extend(inobj.get('depends_on', ()))
-                self[(table.schema, table.name, cns)] = fkey
+                self[(table.schema, table.name, cns)] = ForeignKey.from_map(
+                    cns, table, inobj)
         if 'unique_constraints' in inconstrs:
             uconstrs = inconstrs['unique_constraints']
             for cns in uconstrs:
                 inobj = uconstrs[cns]
-                obj = UniqueConstraint(
-                    cns, table.schema, table.name,
-                    inobj.pop('description', None),
-                    inobj.pop('columns', []),
-                    inobj.pop('access_method', 'btree'),
-                    inobj.pop('tablespace', None), inobj.pop('cluster', False),
-                    inobj.pop('inherited', False),
-                    inobj.pop('deferrable', False),
-                    inobj.pop('deferred', False))
-                self[(table.schema, table.name, cns)] = obj
+                self[(table.schema, table.name, cns)] = \
+                    UniqueConstraint.from_map(cns, table, inobj)
 
     def link_refs(self, db):
         for c in list(self.values()):

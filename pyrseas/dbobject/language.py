@@ -12,7 +12,6 @@
 """
 from . import DbObjectDict, DbObject, quote_id
 from .function import Function
-from .privileges import privileges_from_map
 
 
 class Language(DbObject):
@@ -59,16 +58,14 @@ class Language(DbObject):
         :param inobj: YAML map of the Language
         :return: Language instance
         """
-        lang = Language(name, inobj.pop('description', None),
-                        inobj.pop('owner', None), inobj.pop('privileges', []),
-                        inobj.pop('trusted', False))
-        lang.privileges = privileges_from_map(
-            lang.privileges, lang.allprivs, lang.owner)
+        obj = Language(
+            name, inobj.pop('description', None), inobj.pop('owner', None),
+            inobj.pop('privileges', []), inobj.pop('trusted', False))
+        obj.fix_privileges()
         if '_ext' in inobj:
-            lang._ext = inobj['_ext']
-        if 'oldname' in inobj:
-            lang.oldname = inobj.get('oldname')
-        return lang
+            obj._ext = inobj['_ext']
+        obj.set_oldname(inobj)
+        return obj
 
     def to_map(self, db, no_owner, no_privs):
         """Convert language to a YAML-suitable format

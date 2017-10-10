@@ -5,6 +5,8 @@ import sys
 import os
 import getpass
 import tempfile
+import glob
+import subprocess
 from unittest import TestCase
 
 import yaml
@@ -287,7 +289,7 @@ class PyrseasTestCase(TestCase):
     def setUp(self):
         self.db = _connect_clear(TEST_DBNAME)
         self.cfg = Config(sys_only=True)
-        if not 'database' in self.cfg:
+        if 'database' not in self.cfg:
             self.cfg.update(database={})
         dbc = self.cfg['database']
         dbc['dbname'] = self.db.name
@@ -364,8 +366,11 @@ class DatabaseToMapTestCase(PyrseasTestCase):
     def sort_privileges(data):
         try:
             sorted_privlist = []
-            for sortedItem in sorted([list(i.keys())[0] for i in data['privileges']]):
-                sorted_privlist.append([item for item in data['privileges'] if list(item.keys())[0] == sortedItem][0])
+            for sortedItem in sorted([list(i.keys())[0]
+                                      for i in data['privileges']]):
+                sorted_privlist.append(
+                    [item for item in data['privileges']
+                     if list(item.keys())[0] == sortedItem][0])
             data['privileges'] = sorted_privlist
         finally:
             return data
@@ -412,16 +417,13 @@ class InputMapToSqlTestCase(PyrseasTestCase):
                 'description': 'standard public schema'}}
         if (self.db._version >= 90000 or plpgsql_installed) \
                 and self.db._version < 90100:
-            base.update({'language plpgsql': {'trusted': True}})
-        if self.db._version >= 90100:
-            base.update({'extension plpgsql': {
-                        'schema': 'pg_catalog',
-                        'description': "PL/pgSQL procedural language"}})
+            base.update({'language plpgsql': {'trusted': True,
+                                              'owner': PG_OWNER}})
+        base.update({'extension plpgsql': {
+            'schema': 'pg_catalog', 'owner': PG_OWNER,
+            'description': "PL/pgSQL procedural language"}})
         return base
 
-
-import glob
-import subprocess
 
 TEST_DBNAME_SRC = os.environ.get("PYRSEAS_TEST_DB_SRC", 'pyrseas_testdb_src')
 

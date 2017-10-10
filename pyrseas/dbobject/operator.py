@@ -6,9 +6,9 @@
     This module defines two classes: Operator derived from
     DbSchemaObject and OperatorDict derived from DbObjectDict.
 """
-from pyrseas.dbobject import DbObjectDict, DbSchemaObject
-from pyrseas.dbobject import quote_id, commentable, ownable
-from pyrseas.dbobject import split_schema_obj, split_func_args
+from . import DbObjectDict, DbSchemaObject
+from . import quote_id, commentable, ownable
+from . import split_schema_obj, split_func_args
 
 
 class Operator(DbSchemaObject):
@@ -68,6 +68,27 @@ class Operator(DbSchemaObject):
                   SELECT objid FROM pg_depend WHERE deptype = 'e'
                                AND classid = 'pg_operator'::regclass)
             ORDER BY nspname, oprname"""
+
+    @staticmethod
+    def from_map(name, schema, leftarg, rightarg, inobj):
+        """Initialize an operator instance from a YAML map
+
+        :param name: operator name
+        :param name: schema name
+        :param leftarg: left-hand argument
+        :param rightarg: right-hand argument
+        :param inobj: YAML map of the operator
+        :return: operator instance
+        """
+        obj = Operator(
+            name, schema.name, inobj.pop('description', None),
+            inobj.pop('owner', None), inobj.pop('procedure', None),
+            leftarg, rightarg, inobj.pop('commutator', None),
+            inobj.pop('negator', None), inobj.pop('restrict', None),
+            inobj.pop('join', None), inobj.pop('hashes', False),
+            inobj.pop('merges', None))
+        obj.set_oldname(inobj)
+        return obj
 
     def extern_key(self):
         """Return the key to be used in external maps for this operator
@@ -211,12 +232,5 @@ class OperatorDict(DbObjectDict):
                 rightarg = None
             inobj = inopers[key]
             opr = opr[:paren]
-            self[(schema.name, opr, leftarg, rightarg)] = oper = Operator(
-                opr, schema.name, inobj.pop('description', None),
-                inobj.pop('owner', None), inobj.pop('procedure', None),
-                leftarg, rightarg, inobj.pop('commutator', None),
-                inobj.pop('negator', None), inobj.pop('restrict', None),
-                inobj.pop('join', None), inobj.pop('hashes', False),
-                inobj.pop('merges', None))
-            if inobj and 'oldname' in inobj:
-                oper.oldname = inobj.get('oldname')
+            self[(schema.name, opr, leftarg, rightarg)] = Operator.from_map(
+                opr, schema, leftarg, rightarg, inobj)

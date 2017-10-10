@@ -6,8 +6,8 @@
     This module defines two classes: OperatorClass derived from
     DbSchemaObject and OperatorClassDict derived from DbObjectDict.
 """
-from pyrseas.dbobject import DbObjectDict, DbSchemaObject
-from pyrseas.dbobject import commentable, ownable, split_func_args
+from . import DbObjectDict, DbSchemaObject
+from . import commentable, ownable, split_func_args
 
 
 class OperatorClass(DbSchemaObject):
@@ -93,6 +93,28 @@ class OperatorClass(DbSchemaObject):
                   SELECT objid FROM pg_depend WHERE deptype = 'e'
                                AND classid = 'pg_opclass'::regclass)
             ORDER BY nspname, opcname, amname, amprocnum"""
+
+    @staticmethod
+    def from_map(name, schema, index_method, inobj):
+        """Initialize an operator class instance from a YAML map
+
+        :param name: operator class name
+        :param name: schema name
+        :param index_method: index method
+        :param inobj: YAML map of the operator class
+        :return: operator class instance
+        """
+        obj = OperatorClass(
+            name, schema.name, index_method, inobj.pop('description', None),
+            inobj.pop('owner', None), inobj.pop('family', None),
+            inobj.pop('type', None), inobj.pop('default', False),
+            inobj.pop('storage', None))
+        if 'operators' in inobj:
+            obj.operators = inobj.get('operators')
+        if 'functions' in inobj:
+            obj.functions = inobj.get('functions')
+        obj.set_oldname(inobj)
+        return obj
 
     @property
     def objtype(self):
@@ -212,16 +234,5 @@ class OperatorClassDict(DbObjectDict):
             opc = key[15:pos]  # 15 = len('operator class ')
             idx = key[pos + 7:]  # 7 = len(' using ')
             inobj = inopcls[key]
-            self[(schema.name, opc, idx)] = opclass = OperatorClass(
-                opc, schema.name, idx, inobj.pop('description', None),
-                inobj.pop('owner', None), inobj.pop('family', None),
-                inobj.pop('type', None), inobj.pop('default', False),
-                inobj.pop('storage', None))
-            if not inobj:
-                raise ValueError("Operator '%s' has no specification" % opc)
-            if 'operators' in inobj:
-                opclass.operators = inobj.get('operators')
-            if 'functions' in inobj:
-                opclass.functions = inobj.get('functions')
-            if 'oldname' in inobj:
-                opclass.oldname = inobj.get('oldname')
+            self[(schema.name, opc, idx)] = OperatorClass.from_map(
+                opc, schema, idx, inobj)

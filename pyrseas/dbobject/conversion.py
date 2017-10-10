@@ -6,8 +6,8 @@
     This defines two classes, Conversion and ConversionDict, derived from
     DbSchemaObject and DbObjectDict, respectively.
 """
-from pyrseas.dbobject import DbObjectDict, DbSchemaObject
-from pyrseas.dbobject import commentable, ownable
+from . import DbObjectDict, DbSchemaObject
+from . import commentable, ownable
 
 
 class Conversion(DbSchemaObject):
@@ -53,6 +53,23 @@ class Conversion(DbSchemaObject):
             WHERE (nspname != 'pg_catalog' AND nspname != 'information_schema')
             ORDER BY nspname, conname"""
 
+    @staticmethod
+    def from_map(name, schema, inobj):
+        """Initialize a Conversion instance from a YAML map
+
+        :param name: conversion name
+        :param table: schema map
+        :param inobj: YAML map of the conversion
+        :return: Conversion instance
+        """
+        obj = Conversion(
+            name, schema.name, inobj.pop('description', None),
+            inobj.pop('owner', None), inobj.pop('source_encoding'),
+            inobj.pop('dest_encoding'), inobj.pop('function'),
+            inobj.pop('default', False))
+        obj.set_oldname(inobj)
+        return obj
+
     def to_map(self, db, no_owner=False, no_privs=False):
         """Convert a conversion to a YAML-suitable format
 
@@ -94,13 +111,4 @@ class ConversionDict(DbObjectDict):
                 raise KeyError("Unrecognized object type: %s" % key)
             cnv = key[11:]
             inobj = inmap[key]
-            conv = Conversion(cnv, schema.name,
-                              inobj.pop('description', None),
-                              inobj.pop('owner', None),
-                              inobj.pop('source_encoding'),
-                              inobj.pop('dest_encoding'),
-                              inobj.pop('function'),
-                              inobj.pop('default', False))
-            if inobj and 'oldname' in inobj:
-                conv.oldname = inobj.pop('oldname')
-            self[(schema.name, cnv)] = conv
+            self[(schema.name, cnv)] = Conversion.from_map(cnv, schema, inobj)

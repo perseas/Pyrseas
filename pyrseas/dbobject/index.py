@@ -7,7 +7,7 @@
     from DbSchemaObject and DbObjectDict, respectively.
 """
 from . import DbObjectDict, DbSchemaObject
-from . import quote_id, split_schema_obj, commentable
+from . import quote_id, commentable
 
 
 def split_exprs(idx_exprs):
@@ -124,16 +124,15 @@ class Index(DbSchemaObject):
             keys = 'columns'
         elif 'keys' not in inobj:
             raise KeyError("Index '%s' is missing keys specification" % name)
-        idx = Index(
+        obj = Index(
             name, table.schema, table.name, inobj.pop('description', None),
             inobj.pop('unique', False), inobj.pop('access_method', 'btree'),
             inobj.pop(keys, []), inobj.pop('predicate', None),
             inobj.pop('tablespace', None), inobj.pop('cluster', False))
         if 'depends_on' in inobj:
-            idx.depends_on.extend(inobj['depends_on'])
-        if 'oldname' in inobj:
-            idx.oldname = inobj.get('oldname')
-        return idx
+            obj.depends_on.extend(inobj['depends_on'])
+        obj.set_oldname(inobj)
+        return obj
 
     def _parse_keys(self, keycols, exprs, defn):
         keydefs, _, _ = defn.partition(' WHERE ')
@@ -282,8 +281,6 @@ class Index(DbSchemaObject):
         if getattr(self, '_for_constraint', None):
             return stmts
 
-        if not hasattr(self, 'unique'):
-            self.unique = False
         if self.access_method != inindex.access_method \
                 or self.unique != inindex.unique \
                 or self.keys != inindex.keys:
@@ -294,12 +291,12 @@ class Index(DbSchemaObject):
             stmts.append(self.create())
 
         base = "ALTER INDEX %s\n    " % self.qualname()
-        if hasattr(inindex, 'tablespace'):
-            if not hasattr(self, 'tablespace') \
+        if inindex.tablespace is not None:
+            if self.tablespace is not None \
                     or self.tablespace != inindex.tablespace:
                 stmts.append(base + "SET TABLESPACE %s"
                              % quote_id(inindex.tablespace))
-        elif hasattr(self, 'tablespace'):
+        elif self.tablespace is not None:
             stmts.append(base + "SET TABLESPACE pg_default")
         if inindex.cluster:
             if not self.cluster:
@@ -352,5 +349,5 @@ class IndexDict(DbObjectDict):
         """
         for i in inindexes:
             inobj = inindexes[i]
-            self[(table.schema, table.name, i)] = idx = Index.from_map(
+            self[(table.schema, table.name, i)] = Index.from_map(
                 i, table, inobj)

@@ -14,7 +14,6 @@ from . import quote_id, commentable, ownable, grantable
 from .dbtype import BaseType, Composite, Domain, Enum
 from .table import Table, Sequence
 from .view import View, MaterializedView
-from .privileges import privileges_from_map
 
 
 class Schema(DbObject):
@@ -54,6 +53,21 @@ class Schema(DbObject):
                   AND nspname NOT LIKE 'pg_temp\_%'
                   AND nspname NOT LIKE 'pg_toast_temp\_%'
             ORDER BY nspname"""
+
+    @staticmethod
+    def from_map(name, inobj):
+        """Initialize a schema instance from a YAML map
+
+        :param name: schema name
+        :param inobj: YAML map of the schema
+        :return: schema instance
+        """
+        obj = Schema(
+            name, inobj.pop('description', None), inobj.pop('owner', None),
+            inobj.pop('privileges', []))
+        obj.fix_privileges()
+        obj.set_oldname(inobj)
+        return obj
 
     def extern_dir(self, root='.'):
         """Return the path to a directory to hold the schema objects.
@@ -232,13 +246,7 @@ class SchemaDict(DbObjectDict):
             if spc != ' ' or objtype != 'schema':
                 raise KeyError("Unrecognized object type: %s" % key)
             inobj = inmap[key]
-            schema = self[sch] = Schema(sch, inobj.pop('description', None),
-                                        inobj.pop('owner', None),
-                                        inobj.pop('privileges', []))
-            schema.privileges = privileges_from_map(schema.privileges,
-                                                    schema.allprivs,
-                                                    schema.owner)
-
+            schema = self[sch] = Schema.from_map(sch, inobj)
             objdict = {}
             for key in sorted(inobj.keys()):
                 mapped = False
@@ -259,7 +267,7 @@ class SchemaDict(DbObjectDict):
                     objdict[otype].update({key: inobj[key]})
                     mapped = True
                 elif key == 'oldname':
-                    setattr(schema, key, inobj[key])
+                    inobj.pop(key)
                     mapped = True
                 if not mapped and key != 'schema':
                     raise KeyError("Expected typed object, found '%s'" % key)

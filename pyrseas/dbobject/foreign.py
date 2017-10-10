@@ -13,7 +13,6 @@
 from . import DbObjectDict, DbObject
 from . import quote_id, commentable, ownable, grantable
 from .table import ClassDict, Table
-from .privileges import privileges_from_map
 
 
 class DbObjectWithOptions(DbObject):
@@ -119,6 +118,7 @@ class ForeignDataWrapper(DbObjectWithOptions):
         self._init_own_privs(owner, privileges)
         self.handler = handler
         self.validator = validator
+        self.servers = {}
         self.oid = oid
 
     @staticmethod
@@ -144,15 +144,13 @@ class ForeignDataWrapper(DbObjectWithOptions):
         :param inobj: YAML map of the FDW
         :return: FDW instance
         """
-        fdw = ForeignDataWrapper(
+        obj = ForeignDataWrapper(
             name, inobj.pop('options', {}), inobj.pop('description', None),
             inobj.pop('owner', None), inobj.pop('privileges', []),
             inobj.pop('handler', None), inobj.pop('validator', None))
-        fdw.privileges = privileges_from_map(
-            fdw.privileges, fdw.allprivs, fdw.owner)
-        if 'oldname' in inobj:
-            fdw.oldname = inobj.get('oldname')
-        return fdw
+        obj.fix_privileges()
+        obj.set_oldname(inobj)
+        return obj
 
     @property
     def objtype(self):
@@ -173,12 +171,11 @@ class ForeignDataWrapper(DbObjectWithOptions):
         for attr in ('handler', 'validator'):
             if getattr(self, attr) is None:
                 dct.pop(attr)
-        if hasattr(self, 'servers'):
-            srvs = {}
-            for srv in self.servers:
-                srvs.update(self.servers[srv].to_map(db, no_owner, no_privs))
-            dct.update(srvs)
-            dct.pop('servers')
+        srvs = {}
+        for srv in self.servers:
+            srvs.update(self.servers[srv].to_map(db, no_owner, no_privs))
+        dct.update(srvs)
+        dct.pop('servers')
         return dct
 
     @commentable
@@ -263,6 +260,7 @@ class ForeignServer(DbObjectWithOptions):
         self.wrapper = wrapper
         self.type = type
         self.version = version
+        self.usermaps = {}
         self.oid = oid
 
     @staticmethod
@@ -286,15 +284,13 @@ class ForeignServer(DbObjectWithOptions):
         :param inobj: YAML map of the server
         :return: foreign server instance
         """
-        srv = ForeignServer(
+        obj = ForeignServer(
             name, inobj.pop('options', {}), inobj.pop('description', None),
             inobj.pop('owner', None), inobj.pop('privileges', []), wrapper,
             inobj.pop('type', None), inobj.pop('version', None))
-        srv.privileges = privileges_from_map(
-                    srv.privileges, srv.allprivs, srv.owner)
-        if 'oldname' in inobj:
-            srv.oldname = inobj.get('oldname')
-        return srv
+        obj.fix_privileges()
+        obj.set_oldname(inobj)
+        return obj
 
     @property
     def objtype(self):
@@ -324,12 +320,13 @@ class ForeignServer(DbObjectWithOptions):
                 dct.pop(attr)
         key = self.extern_key()
         server = {key: dct}
-        if hasattr(self, 'usermaps'):
+        server[key].pop('usermaps')
+        if len(self.usermaps) > 0:
             umaps = {}
             for umap in self.usermaps:
                 umaps.update({umap: self.usermaps[umap].to_map(db)})
             server[key]['user mappings'] = umaps
-            del server[key]['usermaps']
+
         return server
 
     @commentable
@@ -405,8 +402,6 @@ class ForeignServerDict(DbObjectDict):
             dbusermap = dbusermaps[(fdw, srv, usr)]
             assert self[(fdw, srv)]
             server = self[(fdw, srv)]
-            if not hasattr(server, 'usermaps'):
-                server.usermaps = {}
             server.usermaps.update({usr: dbusermap})
 
 
@@ -446,15 +441,14 @@ class UserMapping(DbObjectWithOptions):
         """Initialize a user mapping instance from a YAML map
 
         :param name: mapping name
-        :param server: foreign map
+        :param server: foreign server map
         :param inobj: YAML map of the user mapping
         :return: user mapping instance
         """
-        umap = UserMapping(name, inobj.pop('options', {}), server.wrapper,
-                           server.name)
-        if 'oldname' in inobj:
-            umap.oldname = inobj.get('oldname')
-        return umap
+        obj = UserMapping(name, inobj.pop('options', {}), server.wrapper,
+                          server.name)
+        obj.set_oldname(inobj)
+        return obj
 
     @property
     def objtype(self):
@@ -583,6 +577,7 @@ class ForeignTable(Table, DbObjectWithOptions):
                                            privileges)
         self.server = server
         self.options = {} if options is None else options
+        self.columns = []
         self.oid = oid
 
     @staticmethod
@@ -609,14 +604,12 @@ class ForeignTable(Table, DbObjectWithOptions):
         :param inobj: YAML map of the table
         :return: foreign table instance
         """
-        ftbl = ForeignTable(name, schema.name, inobj.pop('description', None),
-                            inobj.pop('owner', None),
-                            inobj.pop('privileges', []),
-                            inobj.pop('server', None),
-                            inobj.pop('options', {}))
-        ftbl.privileges = privileges_from_map(
-                ftbl.privileges, ftbl.allprivs, ftbl.owner)
-        return ftbl
+        obj = ForeignTable(
+            name, schema.name, inobj.pop('description', None),
+            inobj.pop('owner', None), inobj.pop('privileges', []),
+            inobj.pop('server', None), inobj.pop('options', {}))
+        obj.fix_privileges()
+        return obj
 
     @property
     def objtype(self):
@@ -631,7 +624,7 @@ class ForeignTable(Table, DbObjectWithOptions):
         if hasattr(opts, 'excl_tables') and opts.excl_tables \
                 and self.name in opts.excl_tables:
             return {}
-        if not hasattr(self, 'columns'):
+        if len(self.columns) == 0:
             return {}
         cols = []
         for i in range(len(self.columns)):

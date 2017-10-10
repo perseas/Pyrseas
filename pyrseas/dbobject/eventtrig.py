@@ -67,13 +67,12 @@ class EventTrigger(DbObject):
         :param inobj: YAML map of the event trigger
         :return: event trigger instance
         """
-        trig = EventTrigger(
+        obj = EventTrigger(
             name, inobj.pop('description', None), inobj.pop('owner', None),
             inobj.pop('event', None), inobj.pop('procedure', None),
             inobj.pop('enabled', False), inobj.pop('tags', None))
-        if 'oldname' in inobj:
-            trig.oldname = inobj.get('oldname')
-        return trig
+        obj.set_oldname(inobj)
+        return obj
 
     @property
     def objtype(self):

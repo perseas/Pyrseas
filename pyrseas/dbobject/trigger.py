@@ -6,8 +6,8 @@
     This module defines two classes: Trigger derived from
     DbSchemaObject, and TriggerDict derived from DbObjectDict.
 """
-from pyrseas.dbobject import DbObjectDict, DbSchemaObject
-from pyrseas.dbobject import quote_id, commentable, split_schema_obj
+from . import DbObjectDict, DbSchemaObject
+from . import quote_id, commentable, split_schema_obj
 
 EXEC_PROC = 'EXECUTE PROCEDURE '
 EVENT_TYPES = ['insert', 'delete', 'update', 'truncate']
@@ -110,6 +110,25 @@ class Trigger(DbSchemaObject):
             WHERE NOT tgisinternal
               AND (nspname != 'pg_catalog' AND nspname != 'information_schema')
             ORDER BY schema, "table", name"""
+
+    @staticmethod
+    def from_map(name, table, inobj):
+        """Initialize a trigger instance from a YAML map
+
+        :param name: trigger name
+        :param table: table map
+        :param inobj: YAML map of the trigger
+        :return: trigger instance
+        """
+        obj = Trigger(
+            name, table.schema, table.name, inobj.pop('description', None),
+            inobj.pop('procedure', None), inobj.pop('timing', None),
+            inobj.pop('level', 'statement'), inobj.pop('events', []),
+            inobj.pop('constraint', False), inobj.pop('deferrable', False),
+            inobj.pop('initially_deferred', False), inobj.pop('columns', []),
+            inobj.pop('condition', None))
+        obj.set_oldname(inobj)
+        return obj
 
     def identifier(self):
         """Returns a full identifier for the trigger
@@ -230,15 +249,5 @@ class TriggerDict(DbObjectDict):
         """
         for trg in intriggers:
             inobj = intriggers[trg]
-            if not inobj:
-                raise ValueError("Trigger '%s' has no specification" % trg)
-            self[(table.schema, table.name, trg)] = trig = Trigger(
-                trg, table.schema, table.name, inobj.pop('description', None),
-                inobj.pop('procedure', None), inobj.pop('timing', None),
-                inobj.pop('level', 'statement'), inobj.pop('events', []),
-                inobj.pop('constraint', False),
-                inobj.pop('deferrable', False),
-                inobj.pop('initially_deferred', False),
-                inobj.pop('columns', []), inobj.pop('condition', None))
-            if 'oldname' in inobj:
-                trig.oldname = inobj.get('oldname')
+            self[(table.schema, table.name, trg)] = Trigger.from_map(
+                trg, table, inobj)

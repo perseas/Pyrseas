@@ -7,9 +7,8 @@
     DbSchemaObject, Function and Aggregate derived from Proc, and
     FunctionDict derived from DbObjectDict.
 """
-from pyrseas.dbobject import DbObjectDict, DbSchemaObject
-from pyrseas.dbobject import commentable, ownable, grantable, split_schema_obj
-from pyrseas.dbobject.privileges import privileges_from_map
+from . import DbObjectDict, DbSchemaObject
+from . import commentable, ownable, grantable, split_schema_obj
 
 VOLATILITY_TYPES = {'i': 'immutable', 's': 'stable', 'v': 'volatile'}
 
@@ -143,6 +142,36 @@ class Function(Proc):
                   SELECT objid FROM pg_depend WHERE deptype = 'e'
                                AND classid = 'pg_proc'::regclass)
             ORDER BY nspname, proname"""
+
+    @staticmethod
+    def from_map(name, schema, arguments, inobj):
+        """Initialize a function instance from a YAML map
+
+        :param name: function name
+        :param name: schema name
+        :param arguments: arguments
+        :param inobj: YAML map of the function
+        :return: function instance
+        """
+        src = inobj.get('source', None)
+        objfile = inobj.get('obj_file', None)
+        if (src and objfile) or not (src or objfile):
+            raise ValueError("Function '%s': either source or obj_file must "
+                             "be specified" % name)
+        obj = Function(
+            name, schema.name, inobj.pop('description', None),
+            inobj.pop('owner', None), inobj.pop('privileges', []),
+            arguments, inobj.pop('language', None),
+            inobj.pop('returns', None), inobj.pop('source', None),
+            inobj.pop('obj_file', None),
+            inobj.pop('configuration', None),
+            inobj.pop('volatility', None),
+            inobj.pop('leakproof', False), inobj.pop('strict', False),
+            inobj.pop('security_definer', False),
+            inobj.pop('cost', 0), inobj.pop('rows', 0),
+            inobj.pop('allargs', None))
+        obj.fix_privileges()
+        return obj
 
     def to_map(self, db, no_owner, no_privs):
         """Convert a function to a YAML-suitable format
@@ -290,7 +319,7 @@ class Function(Proc):
         deps = super(Function, self).get_deps(db)
 
         # avoid circular import dependencies
-        from pyrseas.dbobject.dbtype import DbType
+        from .dbtype import DbType
 
         # drop the dependency on the type if this function is an in/out
         # because there is a loop here.
@@ -360,6 +389,25 @@ class Aggregate(Proc):
                   SELECT objid FROM pg_depend WHERE deptype = 'e'
                                AND classid = 'pg_proc'::regclass)
             ORDER BY nspname, proname"""
+
+    @staticmethod
+    def from_map(name, schema, arguments, inobj):
+        """Initialize an aggregate instance from a YAML map
+
+        :param name: aggregate name
+        :param name: schema name
+        :param arguments: arguments
+        :param inobj: YAML map of the aggregate
+        :return: aggregate instance
+        """
+        obj = Aggregate(
+            name, schema.name, inobj.pop('description', None),
+            inobj.pop('owner', None), inobj.pop('privileges', []),
+            arguments, inobj.pop('sfunc', None),
+            inobj.pop('stype', None), inobj.pop('finalfunc', None),
+            inobj.pop('initcond', None), inobj.pop('sortop', None))
+        obj.fix_privileges()
+        return obj
 
     def to_map(self, db, no_owner, no_privs):
         """Convert an agggregate to a YAML-suitable format
@@ -442,32 +490,10 @@ class ProcDict(DbObjectDict):
             inobj = infuncs[key]
             fnc = fnc[:paren]
             if objtype == 'function':
-                src = inobj.get('source', None)
-                obj = inobj.get('obj_file', None)
-                if (src and obj) or not (src or obj):
-                    raise ValueError("Function '%s': either source or "
-                                     "obj_file must be specified" % fnc)
-                self[(schema.name, fnc, arguments)] = func = Function(
-                    fnc, schema.name, inobj.pop('description', None),
-                    inobj.pop('owner', None), inobj.pop('privileges', []),
-                    arguments, inobj.pop('language', None),
-                    inobj.pop('returns', None), inobj.pop('source', None),
-                    inobj.pop('obj_file', None),
-                    inobj.pop('configuration', None),
-                    inobj.pop('volatility', None),
-                    inobj.pop('leakproof', False), inobj.pop('strict', False),
-                    inobj.pop('security_definer', False),
-                    inobj.pop('cost', 0), inobj.pop('rows', 0),
-                    inobj.pop('allargs', None))
+                func = Function.from_map(fnc, schema, arguments, inobj)
             else:
-                self[(schema.name, fnc, arguments)] = func = Aggregate(
-                    fnc, schema.name, inobj.pop('description', None),
-                    inobj.pop('owner', None), inobj.pop('privileges', []),
-                    arguments, inobj.pop('sfunc', None),
-                    inobj.pop('stype', None), inobj.pop('finalfunc', None),
-                    inobj.pop('initcond', None), inobj.pop('sortop', None))
-            func.privileges = privileges_from_map(func.privileges,
-                                                  func.allprivs, func.owner)
+                func = Aggregate.from_map(fnc, schema, arguments, inobj)
+            self[(schema.name, fnc, arguments)] = func
 
     def find(self, func, args):
         """Return a function given its name and arguments

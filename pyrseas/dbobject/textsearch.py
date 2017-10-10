@@ -57,12 +57,11 @@ class TSConfiguration(DbSchemaObject):
         :param inobj: YAML map of the configuration
         :return: configuration instance
         """
-        tsc = TSConfiguration(
+        obj = TSConfiguration(
             name, schema.name, inobj.pop('description', None),
             inobj.pop('owner', None), inobj.pop('parser', None))
-        if 'oldname' in inobj:
-            tsc.oldname = inobj.get('oldname')
-        return tsc
+        obj.set_oldname(inobj)
+        return obj
 
     @property
     def objtype(self):
@@ -163,13 +162,12 @@ class TSDictionary(DbSchemaObject):
         :param inobj: YAML map of the dictionary
         :return: dictionary instance
         """
-        tsd = TSDictionary(
+        obj = TSDictionary(
             name, schema.name, inobj.pop('description', None),
             inobj.pop('owner', None), inobj.pop('template', None),
             inobj.pop('options', None))
-        if 'oldname' in inobj:
-            tsd.oldname = inobj.get('oldname')
-        return tsd
+        obj.set_oldname(inobj)
+        return obj
 
     @property
     def objtype(self):
@@ -261,13 +259,12 @@ class TSParser(DbSchemaObject):
         :param inobj: YAML map of the parser
         :return: parser instance
         """
-        tsp = TSParser(name, schema.name, inobj.pop('description', None),
+        obj = TSParser(name, schema.name, inobj.pop('description', None),
                        inobj.pop('start', None), inobj.pop('gettoken', None),
                        inobj.pop('end', None), inobj.pop('headline', None),
                        inobj.pop('lextypes', None))
-        if 'oldname' in inobj:
-            tsp.oldname = inobj.get('oldname')
-        return tsp
+        obj.set_oldname(inobj)
+        return obj
 
     @property
     def objtype(self):
@@ -351,11 +348,10 @@ class TSTemplate(DbSchemaObject):
         :param inobj: YAML map of the template
         :return: template instance
         """
-        tst = TSTemplate(name, schema.name, inobj.pop('description', None),
+        obj = TSTemplate(name, schema.name, inobj.pop('description', None),
                          inobj.pop('init', None), inobj.pop('lexize', None))
-        if 'oldname' in inobj:
-            tst.oldname = inobj.get('oldname')
-        return tst
+        obj.set_oldname(inobj)
+        return obj
 
     @property
     def objtype(self):
@@ -391,5 +387,4 @@ class TSTemplateDict(DbObjectDict):
                 raise KeyError("Unrecognized object type: %s" % key)
             tst = key[21:]
             inobj = intemplates[key]
-            self[(schema.name, tst)] = TSTemplate.from_map(
-                tst, schema, inobj)
+            self[(schema.name, tst)] = TSTemplate.from_map(tst, schema, inobj)

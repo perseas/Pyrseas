@@ -6,9 +6,8 @@
     This module defines two classes: Column derived from
     DbSchemaObject and ColumnDict derived from DbObjectDict.
 """
-from pyrseas.dbobject import DbObjectDict, DbSchemaObject, quote_id
-from pyrseas.dbobject.privileges import privileges_from_map, add_grant
-from pyrseas.dbobject.privileges import diff_privs
+from . import DbObjectDict, DbSchemaObject, quote_id
+from .privileges import privileges_from_map, add_grant, diff_privs
 
 
 class Column(DbSchemaObject):
@@ -47,6 +46,8 @@ class Column(DbSchemaObject):
         self.statistics = statistics
         self.inherited = inherited
         self.dropped = dropped
+        self._table = None
+        self._type = None
 
     @staticmethod
     def query():
@@ -68,6 +69,31 @@ class Column(DbSchemaObject):
               AND (nspname != 'pg_catalog' AND nspname != 'information_schema')
               AND attnum > 0
            ORDER BY nspname, relname, attnum"""
+
+    @staticmethod
+    def from_map(name, table, num, inobj):
+        """Initialize a Column instance from a YAML map
+
+        :param name: column name
+        :param table: table map
+        :param num: column number
+        :param inobj: YAML map of the column
+        :return: Column instance
+        """
+        obj = Column(
+            name, table.schema, table.name, num, inobj.pop('type', None),
+            inobj.pop('description', None), inobj.pop('privileges', []),
+            inobj.pop('not_null', False), inobj.pop('default', None),
+            inobj.pop('collation', None), inobj.pop('statistics', None),
+            inobj.pop('inherited', False), inobj.pop('dropped', False))
+        obj.set_oldname(inobj)
+        if len(obj.privileges) > 0:
+            if table.owner is None:
+                raise ValueError("Column '%s.%s' has privileges but "
+                                 "no owner information" % (table.name, name))
+            obj.privileges = privileges_from_map(
+                obj.privileges, obj.allprivs, table.owner)
+        return obj
 
     def to_map(self, db, no_privs):
         """Convert a column to a YAML-suitable format
@@ -137,10 +163,10 @@ class Column(DbSchemaObject):
         """
         if self.dropped:
             return []
-        if hasattr(self, '_table'):
+        if self._table is not None:
             (comptype, objtype) = (self._table.objtype, 'COLUMN')
             compname = self._table.qualname()
-        elif hasattr(self, '_type'):
+        elif self._type is not None:
             (comptype, objtype) = ('TYPE', 'ATTRIBUTE')
             compname = self._type.qualname()
         else:
@@ -154,10 +180,10 @@ class Column(DbSchemaObject):
         :param newname: the new name of the object
         :return: SQL statement
         """
-        if hasattr(self, '_table'):
+        if self._table is not None:
             (comptype, objtype) = (self._table.objtype, 'COLUMN')
             compname = self._table.qualname()
-        elif hasattr(self, '_type'):
+        elif self._type is not None:
             (comptype, objtype) = ('TYPE', 'ATTRIBUTE')
             compname = self._type.qualname()
         else:
@@ -251,23 +277,4 @@ class ColumnDict(DbObjectDict):
                     inobj = incol[key]
                 else:
                     inobj = {'type': incol[key]}
-                col = Column(key, table.schema, table.name, num,
-                             inobj.pop('type', None),
-                             inobj.pop('description', None),
-                             inobj.pop('privileges', []),
-                             inobj.pop('not_null', False),
-                             inobj.pop('default', None),
-                             inobj.pop('collation', None),
-                             inobj.pop('statistics', None),
-                             inobj.pop('inherited', False),
-                             inobj.pop('dropped', False))
-                if inobj and 'oldname' in inobj:
-                    col.oldname = inobj.pop('oldname')
-                if len(col.privileges) > 0:
-                    if table.owner is None:
-                        raise ValueError("Column '%s.%s' has privileges but "
-                                         "no owner information" % (
-                                             table.name, key))
-                    col.privileges = privileges_from_map(
-                        col.privileges, col.allprivs, table.owner)
-                cols.append(col)
+                cols.append(Column.from_map(key, table, num, inobj))

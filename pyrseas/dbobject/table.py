@@ -17,7 +17,7 @@ from . import DbObjectDict, DbSchemaObject, split_schema_obj
 from . import quote_id, commentable, ownable, grantable
 from .constraint import CheckConstraint, PrimaryKey
 from .constraint import ForeignKey, UniqueConstraint
-from .privileges import privileges_from_map, add_grant
+from .privileges import add_grant
 
 MAX_BIGINT = 9223372036854775807
 
@@ -94,6 +94,26 @@ class Sequence(DbClass):
             WHERE relkind = 'S'
               AND nspname != 'pg_catalog' AND nspname != 'information_schema'
             ORDER BY nspname, relname"""
+
+    @staticmethod
+    def from_map(name, schema, inobj):
+        """Initialize a sequence instance from a YAML map
+
+        :param name: sequence name
+        :param name: schema map
+        :param inobj: YAML map of the sequence
+        :return: sequence instance
+        """
+        obj = Sequence(
+            name, schema.name, inobj.pop('description', None),
+            inobj.pop('owner', None), inobj.pop('privileges', []),
+            inobj.pop('start_value', 1), inobj.pop('increment_by', 1),
+            inobj.pop('max_value', MAX_BIGINT), inobj.pop('min_value', 1),
+            inobj.pop('cache_value', 1), inobj.pop('owner_table', None),
+            inobj.pop('owner_column', None))
+        obj.fix_privileges()
+        obj.set_oldname(inobj)
+        return obj
 
     @property
     def allprivs(self):
@@ -292,6 +312,7 @@ class Table(DbClass):
         self.tablespace = tablespace
         self.unlogged = unlogged
         self.options = options
+        self.columns = []
         self.inherits = []
         self.check_constraints = {}
         self.primary_key = None
@@ -321,6 +342,24 @@ class Table(DbClass):
                          inhparent::regclass AS parent, inhseqno
                   FROM pg_inherits
                   ORDER BY 1, 3"""
+
+    @staticmethod
+    def from_map(name, schema, inobj):
+        """Initialize a table instance from a YAML map
+
+        :param name: table name
+        :param name: schema map
+        :param inobj: YAML map of the table
+        :return: table instance
+        """
+        obj = Table(
+            name, schema.name, inobj.pop('description', None),
+            inobj.pop('owner', None), inobj.pop('privileges', []),
+            inobj.pop('tablespace', None), inobj.pop('unlogged', False),
+            inobj.pop('options', None))
+        obj.fix_privileges()
+        obj.set_oldname(inobj)
+        return obj
 
     @property
     def allprivs(self):
@@ -516,7 +555,7 @@ class Table(DbClass):
         input.
         """
         stmts = []
-        if len(intable.columns) < 1:
+        if len(intable.columns) == 0:
             raise KeyError("Table '%s' has no columns" % intable.name)
         colnames = [col.name for col in self.columns if not col.dropped]
         dbcols = len(colnames)
@@ -705,17 +744,8 @@ class ClassDict(DbObjectDict):
             if objtype is None:
                 raise KeyError("Unrecognized object type: %s" % k)
             if objtype == 'table':
-                self[(schema.name, key)] = table = Table(
-                    key, schema.name, inobj.pop('description', None),
-                    inobj.pop('owner', None), inobj.pop('privileges', []),
-                    inobj.pop('tablespace', None),
-                    inobj.pop('unlogged', False), inobj.pop('options', None))
-                if not inobj:
-                    raise ValueError("Table '%s' has no specification" % k)
-                table.privileges = privileges_from_map(
-                    table.privileges, table.allprivs, table.owner)
-                if inobj and 'oldname' in inobj:
-                    table.oldname = inobj.pop('oldname')
+                self[(schema.name, key)] = table = Table.from_map(
+                    key, schema, inobj)
                 if inobj and 'inherits' in inobj:
                     table.inherits = inobj.pop('inherits')
                 try:
@@ -731,50 +761,21 @@ class ClassDict(DbObjectDict):
                 if 'triggers' in inobj:
                     newdb.triggers.from_map(table, inobj['triggers'])
             elif objtype == 'sequence':
-                self[(schema.name, key)] = seq = Sequence(
-                    key, schema.name, inobj.pop('description', None),
-                    inobj.pop('owner', None), inobj.pop('privileges', []),
-                    inobj.pop('start_value', 1), inobj.pop('increment_by', 1),
-                    inobj.pop('max_value', MAX_BIGINT),
-                    inobj.pop('min_value', 1), inobj.pop('cache_value', 1),
-                    inobj.pop('owner_table', None),
-                    inobj.pop('owner_column', None))
-                seq.privileges = privileges_from_map(
-                    seq.privileges, seq.allprivs, seq.owner)
-                if inobj and 'oldname' in inobj:
-                    seq.oldname = inobj.pop('oldname')
+                self[(schema.name, key)] = Sequence.from_map(
+                    key, schema, inobj)
             elif objtype == 'view':
-                self[(schema.name, key)] = view = View(
-                    key, schema.name, inobj.pop('description', None),
-                    inobj.pop('owner', None), inobj.pop('privileges', []),
-                    inobj.pop('definition', None))
-                view.privileges = privileges_from_map(
-                    view.privileges, view.allprivs, view.owner)
+                self[(schema.name, key)] = view = View.from_map(
+                    key, schema, inobj)
                 if 'triggers' in inobj:
                     newdb.triggers.from_map(view, inobj['triggers'])
-                if inobj and 'oldname' in inobj:
-                    view.oldname = inobj.pop('oldname')
             elif objtype == 'materialized view':
-                self[(schema.name, key)] = mview = MaterializedView(
-                    key, schema.name, inobj.pop('description', None),
-                    inobj.pop('owner', None), inobj.pop('privileges', []),
-                    inobj.pop('definition', None),
-                    inobj.pop('with_data', False))
-                mview.privileges = privileges_from_map(
-                    mview.privileges, mview.allprivs, mview.owner)
+                self[(schema.name, key)] = mview = MaterializedView.from_map(
+                    key, schema, inobj)
                 if 'indexes' in inobj:
                     newdb.indexes.from_map(mview, inobj['indexes'])
             else:
                 raise KeyError("Unrecognized object type: %s" % k)
             obj = self[(schema.name, key)]
-            if 'privileges' in inobj:
-                    if obj.owner is None:
-                        raise ValueError("%s '%s' has privileges but no "
-                                         "owner information" %
-                                         obj.objtype.capital(), table.name)
-                    obj.privileges = privileges_from_map(
-                        inobj['privileges'], obj.allprivs, obj.owner)
-
             if 'depends_on' in inobj:
                 obj.depends_on.extend(inobj['depends_on'])
 

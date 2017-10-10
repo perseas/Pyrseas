@@ -6,8 +6,8 @@
     This module defines two classes: Cast derived from DbObject and
     CastDict derived from DbObjectDict.
 """
-from pyrseas.dbobject import DbObject, DbObjectDict, commentable
-from pyrseas.dbobject import split_func_args
+from . import DbObject, DbObjectDict, commentable
+from . import split_func_args
 
 
 CONTEXTS = {'a': 'assignment', 'e': 'explicit', 'i': 'implicit'}
@@ -67,6 +67,20 @@ class Cast(DbObject):
                OR substring(tn.nspname for 3) != 'pg_'
                OR (castfunc != 0 AND substring(pn.nspname for 3) != 'pg_')
             ORDER BY castsource, casttarget"""
+
+    @staticmethod
+    def from_map(source, target, inobj):
+        """Initialize a Cast instance from a YAML map
+
+        :param source: source type name
+        :param target: target type name
+        :param inobj: YAML map of the cast
+        :return: cast instance
+        """
+        return Cast(
+            source, target, inobj.pop('description', None),
+            inobj.pop('function', None), inobj.get('context'),
+            inobj.get('method'))
 
     def extern_key(self):
         """Return the key to be used in external maps for this cast
@@ -157,7 +171,4 @@ class CastDict(DbObjectDict):
             inobj = incasts[key]
             if not inobj:
                 raise ValueError("Cast '%s' has no specification" % key[5:])
-            self[(src, trg)] = Cast(src, trg, inobj.pop('description', None),
-                                    inobj.pop('function', None),
-                                    inobj.get('context'),
-                                    inobj.get('method'))
+            self[(src, trg)] = Cast.from_map(src, trg, inobj)

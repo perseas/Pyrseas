@@ -53,12 +53,11 @@ class ExtensionToMapTestCase(DatabaseToMapTestCase):
         assert dbmap['extension pg_trgm'] == {
             'schema': 's1', 'version': VERS, 'description': TRGM_COMMENT}
 
-    def test_map_extension_bug_103(self):
+    def test_map_extension_plpythonu(self):
         "Test a function created with extension other than plpgsql/plperl"
-        if self.db.version < 90100:
-            self.skipTest('Only available on PG 9.1')
+        # See issue #103
         dbmap = self.to_map(["CREATE EXTENSION plpythonu",
-                             "CREATE FUNCTION test103() RETURNS int AS "
+                             "CREATE FUNCTION test() RETURNS int AS "
                              "'return 1' LANGUAGE plpythonu"])
         assert 'extension plpythonu' in dbmap
 
@@ -66,10 +65,8 @@ class ExtensionToMapTestCase(DatabaseToMapTestCase):
 class ExtensionToSqlTestCase(InputMapToSqlTestCase):
     """Test SQL generation for input extensions"""
 
-    def test_create_extension(self):
+    def test_create_extension_simple(self):
         "Create a extension that didn't exist"
-        if self.db.version < 90100:
-            self.skipTest('Only available on PG 9.1')
         inmap = self.std_map()
         inmap.update({'extension pg_trgm': {'schema': 'public'}})
         sql = self.to_sql(inmap)
@@ -83,16 +80,12 @@ class ExtensionToSqlTestCase(InputMapToSqlTestCase):
             self.to_sql(inmap)
 
     def test_drop_extension(self):
-        if self.db.version < 90100:
-            self.skipTest('Only available on PG 9.1')
         "Drop an existing extension"
         sql = self.to_sql(self.std_map(), [CREATE_STMT], superuser=True)
         assert sql == ["DROP EXTENSION pg_trgm"]
 
     def test_create_extension_schema(self):
         "Create a extension in a given schema"
-        if self.db.version < 90100:
-            self.skipTest('Only available on PG 9.1')
         inmap = self.std_map()
         inmap.update({'schema s1': {},
                       'extension pg_trgm': {'schema': 's1', 'version': '1.0'}})
@@ -103,8 +96,6 @@ class ExtensionToSqlTestCase(InputMapToSqlTestCase):
 
     def test_create_lang_extension(self):
         "Create a language extension and a function in that language"
-        if self.db.version < 90100:
-            self.skipTest('Only available on PG 9.1')
         inmap = self.std_map()
         inmap.update({'extension plperl': {'schema': 'pg_catalog',
                                            'description':
@@ -120,8 +111,6 @@ class ExtensionToSqlTestCase(InputMapToSqlTestCase):
 
     def test_comment_extension(self):
         "Change the comment for an existing extension"
-        if self.db.version < 90100:
-            self.skipTest('Only available on PG 9.1')
         inmap = self.std_map()
         inmap.update({'extension pg_trgm': {
             'schema': 'public', 'description': "Trigram extension"}})
@@ -133,8 +122,6 @@ class ExtensionToSqlTestCase(InputMapToSqlTestCase):
 
         ALTER EXTENSION extension_name OWNER is not a valid form.
         """
-        if self.db.version < 90100:
-            self.skipTest('Only available on PG 9.1')
         # create a new owner that is different from self.db.user
         new_owner = 'new_%s' % self.db.user
         inmap = self.std_map()

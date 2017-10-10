@@ -6,8 +6,8 @@
     This defines two classes, Collation and CollationDict, derived from
     DbSchemaObject and DbObjectDict, respectively.
 """
-from pyrseas.dbobject import DbObjectDict, DbSchemaObject
-from pyrseas.dbobject import commentable, ownable
+from . import DbObjectDict, DbSchemaObject
+from . import commentable, ownable
 
 
 class Collation(DbSchemaObject):
@@ -46,6 +46,22 @@ class Collation(DbSchemaObject):
             WHERE (nspname != 'pg_catalog' AND nspname != 'information_schema')
             ORDER BY nspname, collname"""
 
+    @staticmethod
+    def from_map(name, schema, inobj):
+        """Initialize a Collation instance from a YAML map
+
+        :param name: collation name
+        :param name: schema map
+        :param inobj: YAML map of the collation
+        :return: Collation instance
+        """
+        obj = Collation(
+            name, schema.name, inobj.pop('description', None),
+            inobj.pop('owner', None), inobj.pop('lc_collate', None),
+            inobj.pop('lc_ctype', None))
+        obj.set_oldname(inobj)
+        return obj
+
     @commentable
     @ownable
     def create(self):
@@ -72,17 +88,6 @@ class CollationDict(DbObjectDict):
         for key in inmap:
             if not key.startswith('collation '):
                 raise KeyError("Unrecognized object type: %s" % key)
-            cll = key[10:]
+            name = key[10:]
             inobj = inmap[key]
-            coll = Collation(cll, schema.name, inobj.pop('description', None),
-                             inobj.pop('owner', None), **inobj)
-            if inobj and 'oldname' in inobj:
-                coll.oldname = inobj.pop('oldname')
-            self[(schema.name, cll)] = coll
-
-    def _from_catalog(self):
-        """Initialize the dictionary of collations by querying the catalogs"""
-        if self.dbconn.version < 90100:
-            return
-        for coll in self.fetch():
-            self.by_oid[coll.oid] = self[coll.key()] = coll
+            self[(schema.name, name)] = Collation.from_map(name, schema, inobj)

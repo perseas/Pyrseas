@@ -45,6 +45,18 @@ class Extension(DbObject):
             WHERE nspname != 'information_schema'
             ORDER BY extname"""
 
+    @staticmethod
+    def from_map(name, inobj):
+        """Initialize an Extension instance from a YAML map
+
+        :param name: extension name
+        :param inobj: YAML map of the extension
+        :return: extension instance
+        """
+        return Extension(
+            name, inobj.pop('description', None), inobj.pop('owner', None),
+            inobj.get('schema'), inobj.pop('version', None))
+
     def get_implied_deps(self, db):
         """Return the implied dependencies of the object
 
@@ -108,12 +120,10 @@ class ExtensionDict(DbObjectDict):
         for key in inexts:
             if not key.startswith('extension '):
                 raise KeyError("Unrecognized object type: %s" % key)
-            ext = key[10:]
+            name = key[10:]
             inobj = inexts[key]
-            self[ext] = Extension(ext, inobj.pop('description', None),
-                                  inobj.pop('owner', None),
-                                  inobj.get('schema'),
-                                  inobj.pop('version', None))
-            if self[ext].name in langtempls:
-                lang = {'language %s' % self[ext].name: {'_ext': 'e'}}
+            self[name] = Extension.from_map(name, inobj)
+            if self[name].name in langtempls:
+                lang = {'language %s' % self[name].name: {
+                    '_ext': 'e', 'owner': self[name].owner}}
                 newdb.languages.from_map(lang)

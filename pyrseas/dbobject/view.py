@@ -42,6 +42,23 @@ class View(DbClass):
               AND nspname != 'pg_catalog' AND nspname != 'information_schema'
             ORDER BY nspname, relname"""
 
+    @staticmethod
+    def from_map(name, schema, inobj):
+        """Initialize a view instance from a YAML map
+
+        :param name: view name
+        :param name: schema map
+        :param inobj: YAML map of the view
+        :return: view instance
+        """
+        obj = View(
+            name, schema.name, inobj.pop('description', None),
+            inobj.pop('owner', None), inobj.pop('privileges', []),
+            inobj.pop('definition', None))
+        obj.fix_privileges()
+        obj.set_oldname(inobj)
+        return obj
+
     privobjtype = "TABLE"
 
     @property
@@ -128,6 +145,23 @@ class MaterializedView(View):
             WHERE relkind = 'm'
               AND nspname != 'pg_catalog' AND nspname != 'information_schema'
             ORDER BY nspname, relname"""
+
+    @staticmethod
+    def from_map(name, schema, inobj):
+        """Initialize a materialized view instance from a YAML map
+
+        :param name: view name
+        :param name: schema map
+        :param inobj: YAML map of the view
+        :return: materialized view instance
+        """
+        obj = MaterializedView(
+            name, schema.name, inobj.pop('description', None),
+            inobj.pop('owner', None), inobj.pop('privileges', []),
+            inobj.pop('definition', None))
+        obj.fix_privileges()
+        obj.set_oldname(inobj)
+        return obj
 
     @property
     def objtype(self):
