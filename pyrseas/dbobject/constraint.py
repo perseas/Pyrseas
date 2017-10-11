@@ -719,22 +719,12 @@ class ConstraintDict(DbObjectDict):
 
     def _from_catalog(self):
         """Initialize the dictionary of constraints by querying the catalogs"""
-        self.cls = CheckConstraint
-        for obj in self.fetch():
-            self[obj.key()] = obj
-            self.by_oid[obj.oid] = obj
-        self.cls = PrimaryKey
-        for obj in self.fetch():
-            self[obj.key()] = obj
-            self.by_oid[obj.oid] = obj
-        self.cls = UniqueConstraint
-        for obj in self.fetch():
-            self[obj.key()] = obj
-            self.by_oid[obj.oid] = obj
-        self.cls = ForeignKey
-        for obj in self.fetch():
-            self[obj.key()] = obj
-            self.by_oid[obj.oid] = obj
+        for cls in (CheckConstraint, PrimaryKey, ForeignKey,
+                    UniqueConstraint):
+            self.cls = cls
+            for obj in self.fetch():
+                self[obj.key()] = obj
+                self.by_oid[obj.oid] = obj
 
     def from_map(self, table, inconstrs, target='', rtables=None):
         """Initialize the dictionary of constraints by converting the input map

@@ -464,14 +464,11 @@ class ProcDict(DbObjectDict):
 
     def _from_catalog(self):
         """Initialize the dictionary of procedures by querying the catalogs"""
-        self.cls = Function
-        for func in self.fetch():
-            self[func.key()] = func
-            self.by_oid[func.oid] = func
-        self.cls = Aggregate
-        for aggr in self.fetch():
-            self[aggr.key()] = aggr
-            self.by_oid[aggr.oid] = aggr
+        for cls in (Function, Aggregate):
+            self.cls = cls
+            for obj in self.fetch():
+                self[obj.key()] = obj
+                self.by_oid[obj.oid] = obj
 
     def from_map(self, schema, infuncs):
         """Initalize the dictionary of functions by converting the input map
