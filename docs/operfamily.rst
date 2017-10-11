@@ -16,6 +16,8 @@ represents a `PostgreSQL operator family
 
 .. autoclass:: OperatorFamily
 
+.. automethod:: OperatorFamily.from_map
+
 .. automethod:: OperatorFamily.extern_key
 
 .. automethod:: OperatorFamily.identifier
@@ -32,5 +34,3 @@ represents the collection of operator families in a database.
 .. autoclass:: OperatorFamilyDict
 
 .. automethod:: OperatorFamilyDict.from_map
-
-.. automethod:: OperatorFamilyDict.diff_map

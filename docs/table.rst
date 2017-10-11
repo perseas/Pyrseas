@@ -46,6 +46,8 @@ are defaults so in practice an empty dictionary is also acceptable.
 
 .. autoclass:: Sequence
 
+.. automethod:: Sequence.from_map
+
 .. automethod:: Sequence.get_attrs
 
 .. automethod:: Sequence.get_dependent_table
@@ -56,7 +58,9 @@ are defaults so in practice an empty dictionary is also acceptable.
 
 .. automethod:: Sequence.add_owner
 
-.. automethod:: Sequence.diff_map
+.. automethod:: Sequence.alter
+
+.. automethod:: Sequence.drop
 
 Table
 -----
@@ -103,6 +107,8 @@ such specification.
 
 .. autoclass:: Table
 
+.. automethod:: Table.from_map
+
 .. automethod:: Table.column_names
 
 .. automethod:: Table.to_map
@@ -113,11 +119,27 @@ such specification.
 
 .. automethod:: Table.diff_options
 
-.. automethod:: Table.diff_map
+.. automethod:: Table.alter
+
+.. automethod:: Table.alter_drop_columns
 
 .. automethod:: Table.data_export
 
 .. automethod:: Table.data_import
+
+Class Dictionary
+----------------
+
+Class :class:`ClassDict` is derived from
+:class:`~pyrseas.dbobject.DbObjectDict` and represents the collection
+of tables, views and sequences in a database.
+
+.. autoclass:: ClassDict
+
+.. automethod:: ClassDict.from_map
+
+
+.. module:: pyrseas.dbobject.view
 
 View
 ----
@@ -138,11 +160,13 @@ The map returned by :meth:`to_map` and expected as argument by
 
 .. autoclass:: View
 
+.. automethod:: View.from_map
+
 .. automethod:: View.to_map
 
 .. automethod:: View.create
 
-.. automethod:: View.diff_map
+.. automethod:: View.alter
 
 Materialized View
 -----------------
@@ -155,21 +179,8 @@ are the schema name and the view name.
 
 .. autoclass:: MaterializedView
 
+.. automethod:: MaterializedView.from_map
+
 .. automethod:: MaterializedView.to_map
 
-.. automethod:: MaterializedView.diff_map
-
-Class Dictionary
-----------------
-
-Class :class:`ClassDict` is derived from
-:class:`~pyrseas.dbobject.DbObjectDict` and represents the collection
-of tables, views and sequences in a database.
-
-.. autoclass:: ClassDict
-
-.. automethod:: ClassDict.from_map
-
-.. automethod:: ClassDict.link_refs
-
-.. automethod:: ClassDict.diff_map
+.. automethod:: MaterializedView.create

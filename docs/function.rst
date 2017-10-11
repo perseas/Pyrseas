@@ -31,11 +31,15 @@ Function
 
 .. autoclass:: Function
 
+.. automethod:: Function.from_map
+
 .. automethod:: Function.to_map
 
 .. automethod:: Function.create
 
-.. automethod:: Function.diff_map
+.. automethod:: Function.alter
+
+.. automethod:: Function.drop
 
 Aggregate Function
 ------------------
@@ -45,6 +49,8 @@ Aggregate Function
 <http://www.postgresql.org/docs/current/static/sql-createaggregate.html>`_.
 
 .. autoclass:: Aggregate
+
+.. automethod:: Aggregate.from_map
 
 .. automethod:: Aggregate.to_map
 
@@ -61,5 +67,3 @@ database.
 .. autoclass:: ProcDict
 
 .. automethod:: ProcDict.from_map
-
-.. automethod:: ProcDict.diff_map

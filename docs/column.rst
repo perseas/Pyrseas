@@ -21,6 +21,8 @@ attribute is also present but is not made visible externally.
 
 .. autoclass:: Column
 
+.. automethod:: Column.from_map
+
 .. automethod:: Column.to_map
 
 .. automethod:: Column.add
@@ -37,7 +39,7 @@ attribute is also present but is not made visible externally.
 
 .. automethod:: Column.set_sequence_default
 
-.. automethod:: Column.diff_map
+.. automethod:: Column.alter
 
 Column Dictionary
 -----------------
@@ -51,5 +53,3 @@ schema name and table name, and each value is a list of
 .. autoclass:: ColumnDict
 
 .. automethod:: ColumnDict.from_map
-
-.. automethod:: ColumnDict.diff_map

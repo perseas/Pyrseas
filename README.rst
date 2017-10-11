@@ -18,9 +18,6 @@ Features
 - Generates SQL statements to modify a database so that it will match
   an input YAML/JSON specification
 
-- (planned) Generates a flexible web application to update PostgreSQL
-  tables
-
 Requirements
 ------------
 

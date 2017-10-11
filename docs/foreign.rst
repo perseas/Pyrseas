@@ -22,11 +22,13 @@ with the OPTIONS clauses common to the foreign data objects.
 
 .. autoclass:: DbObjectWithOptions
 
+.. automethod:: DbObjectWithOptions.to_map
+
 .. automethod:: DbObjectWithOptions.options_clause
 
 .. automethod:: DbObjectWithOptions.diff_options
 
-.. automethod:: DbObjectWithOptions.diff_map
+.. automethod:: DbObjectWithOptions.alter
 
 Foreign Data Wrapper
 --------------------
@@ -42,11 +44,11 @@ and `Writing A Foreign Data Wrapper
 
 .. autoclass:: ForeignDataWrapper
 
+.. automethod:: ForeignDataWrapper.from_map
+
 .. automethod:: ForeignDataWrapper.to_map
 
 .. automethod:: ForeignDataWrapper.create
-
-.. automethod:: ForeignDataWrapper.diff_map
 
 Foreign Data Wrapper Dictionary
 -------------------------------
@@ -59,10 +61,6 @@ represents the collection of foreign data wrappers in a database.
 
 .. automethod:: ForeignDataWrapperDict.from_map
 
-.. automethod:: ForeignDataWrapperDict.link_refs
-
-.. automethod:: ForeignDataWrapperDict.diff_map
-
 Foreign Server
 --------------
 
@@ -72,13 +70,13 @@ and represents a `PostgreSQL foreign server
 
 .. autoclass:: ForeignServer
 
+.. automethod:: ForeignServer.from_map
+
 .. automethod:: ForeignServer.identifier
 
 .. automethod:: ForeignServer.to_map
 
 .. automethod:: ForeignServer.create
-
-.. automethod:: ForeignServer.diff_map
 
 Foreign Server Dictionary
 -------------------------
@@ -93,10 +91,6 @@ that represents the collection of foreign servers in a database.
 
 .. automethod:: ForeignServerDict.to_map
 
-.. automethod:: ForeignServerDict.link_refs
-
-.. automethod:: ForeignServerDict.diff_map
-
 User Mapping
 ------------
 
@@ -105,6 +99,8 @@ represents a `PostgreSQL user mapping of a user to a foreign server
 <http://www.postgresql.org/docs/current/static/sql-createusermapping.html>`_.
 
 .. autoclass:: UserMapping
+
+.. automethod:: UserMapping.from_map
 
 .. automethod:: UserMapping.extern_key
 
@@ -125,7 +121,7 @@ represents the collection of user mappings in a database.
 
 .. automethod:: UserMappingDict.to_map
 
-.. automethod:: UserMappingDict.diff_map
+.. automethod:: UserMappingDict.alter
 
 Foreign Table
 -------------
@@ -138,13 +134,13 @@ table
 
 .. autoclass:: ForeignTable
 
+.. automethod:: ForeignTable.from_map
+
 .. automethod:: ForeignTable.to_map
 
 .. automethod:: ForeignTable.create
 
 .. automethod:: ForeignTable.drop
-
-.. automethod:: ForeignTable.diff_map
 
 Foreign Table Dictionary
 ------------------------
@@ -156,7 +152,3 @@ represents the collection of foreign tables in a database.
 .. autoclass:: ForeignTableDict
 
 .. automethod:: ForeignTableDict.from_map
-
-.. automethod:: ForeignTableDict.link_refs
-
-.. automethod:: ForeignTableDict.diff_map

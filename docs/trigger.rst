@@ -20,6 +20,8 @@ or `constraint trigger
 
 .. autoclass:: Trigger
 
+.. automethod:: Trigger.from_map
+
 .. automethod:: Trigger.identifier
 
 .. automethod:: Trigger.to_map
@@ -36,5 +38,3 @@ represents the collection of triggers in a database.
 .. autoclass:: TriggerDict
 
 .. automethod:: TriggerDict.from_map
-
-.. automethod:: TriggerDict.diff_map

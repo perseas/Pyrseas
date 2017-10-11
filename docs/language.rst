@@ -15,7 +15,11 @@ and represents a procedural language.
 
 .. autoclass:: Language
 
+.. automethod:: Language.from_map
+
 .. automethod:: Language.to_map
+
+.. automethod:: Language.drop
 
 .. automethod:: Language.create
 
@@ -30,7 +34,3 @@ database. Internal languages ('internal', 'c' and 'sql') are excluded.
 .. autoclass:: LanguageDict
 
 .. automethod:: LanguageDict.from_map
-
-.. automethod:: LanguageDict.link_refs
-
-.. automethod:: LanguageDict.diff_map

@@ -21,13 +21,17 @@ An :class:`Index` has the following attributes: :attr:`access_method`,
 
 .. autoclass:: Index
 
+.. automethod:: Index.from_map
+
 .. automethod:: Index.key_expressions
 
 .. automethod:: Index.to_map
 
 .. automethod:: Index.create
 
-.. automethod:: Index.diff_map
+.. automethod:: Index.alter
+
+.. automethod:: Index.drop
 
 Index Dictionary
 ----------------
@@ -39,5 +43,3 @@ of indexes in a database.
 .. autoclass:: IndexDict
 
 .. automethod:: IndexDict.from_map
-
-.. automethod:: IndexDict.diff_map

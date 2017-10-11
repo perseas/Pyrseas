@@ -47,6 +47,8 @@ present)::
 
 .. automethod:: BaseType.to_map
 
+.. automethod:: BaseType.to_map
+
 .. automethod:: BaseType.create
 
 .. automethod:: BaseType.drop
@@ -60,11 +62,13 @@ and represents a standalone `composite type
 
 .. autoclass:: Composite
 
+.. automethod:: Composite.from_map
+
 .. automethod:: Composite.to_map
 
 .. automethod:: Composite.create
 
-.. automethod:: Composite.diff_map
+.. automethod:: Composite.alter
 
 Enum
 ----
@@ -75,6 +79,8 @@ represents an `enumerated type
 
 .. autoclass:: Enum
 
+.. automethod:: Enum.from_map
+
 .. automethod:: Enum.create
 
 Domain
@@ -84,6 +90,8 @@ Domain
 represents a domain.
 
 .. autoclass:: Domain
+
+.. automethod:: Domain.from_map
 
 .. automethod:: Domain.to_map
 
@@ -99,7 +107,3 @@ represents the collection of domains and enums in a database.
 .. autoclass:: TypeDict
 
 .. automethod:: TypeDict.from_map
-
-.. automethod:: TypeDict.link_refs
-
-.. automethod:: TypeDict.diff_map

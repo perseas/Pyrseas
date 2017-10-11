@@ -19,6 +19,8 @@ represents a `PostgreSQL text search configuration
 
 .. autoclass:: TSConfiguration
 
+.. automethod:: TSConfiguration.from_map
+
 .. automethod:: TSConfiguration.to_map
 
 .. automethod:: TSConfiguration.create
@@ -34,8 +36,6 @@ represents the collection of text search configurations in a database.
 
 .. automethod:: TSConfigurationDict.from_map
 
-.. automethod:: TSConfigurationDict.diff_map
-
 Text Search Dictionary
 ----------------------
 
@@ -44,6 +44,8 @@ represents a `PostgreSQL text search dictionary
 <http://www.postgresql.org/docs/current/static/textsearch-dictionaries.html>`_.
 
 .. autoclass:: TSDictionary
+
+.. automethod:: TSDictionary.from_map
 
 .. automethod:: TSDictionary.create
 
@@ -59,8 +61,6 @@ database.
 
 .. automethod:: TSDictionaryDict.from_map
 
-.. automethod:: TSDictionaryDict.diff_map
-
 Text Search Parser
 ------------------
 
@@ -69,6 +69,8 @@ represents a `PostgreSQL text search parser
 <http://www.postgresql.org/docs/current/static/sql-createtsparser.html>`_.
 
 .. autoclass:: TSParser
+
+.. automethod:: TSParser.from_map
 
 .. automethod:: TSParser.create
 
@@ -83,8 +85,6 @@ represents the collection of text search parsers in a database.
 
 .. automethod:: TSParserDict.from_map
 
-.. automethod:: TSParserDict.diff_map
-
 Text Search Template
 --------------------
 
@@ -93,6 +93,8 @@ represents a `PostgreSQL text search template
 <http://www.postgresql.org/docs/current/static/sql-createtstemplate.html>`_.
 
 .. autoclass:: TSTemplate
+
+.. automethod:: TSTemplate.from_map
 
 .. automethod:: TSTemplate.create
 
@@ -106,5 +108,3 @@ represents the collection of text search templates in a database.
 .. autoclass:: TSTemplateDict
 
 .. automethod:: TSTemplateDict.from_map
-
-.. automethod:: TSTemplateDict.diff_map

@@ -17,6 +17,8 @@ rewrite rule
 
 .. autoclass:: Rule
 
+.. automethod:: Rule.from_map
+
 .. automethod:: Rule.identifier
 
 .. automethod:: Rule.to_map
@@ -33,5 +35,3 @@ represents the collection of rewrite rules in a database.
 .. autoclass:: RuleDict
 
 .. automethod:: RuleDict.from_map
-
-.. automethod:: RuleDict.diff_map

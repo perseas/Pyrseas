@@ -22,11 +22,15 @@ course the identifying attribute in the :class:`Schema`
 
 .. autoclass:: Schema
 
+.. automethod:: Schema.from_map
+
 .. automethod:: Schema.extern_dir
 
 .. automethod:: Schema.to_map
 
 .. automethod:: Schema.create
+
+.. automethod:: Schema.drop
 
 .. automethod:: Schema.data_import
 
@@ -51,10 +55,6 @@ filled in as the recursive interpretation proceeds.
 
 .. automethod:: SchemaDict.from_map
 
-.. automethod:: SchemaDict.link_refs
-
 .. automethod:: SchemaDict.to_map
-
-.. automethod:: SchemaDict.diff_map
 
 .. automethod:: SchemaDict.data_import

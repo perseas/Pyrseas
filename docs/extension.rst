@@ -17,8 +17,11 @@ extension
 
 .. autoclass:: Extension
 
+.. automethod:: Extension.from_map
+
 .. automethod:: Extension.create
 
+.. automethod:: Extension.alter
 
 Extension Dictionary
 --------------------
@@ -30,5 +33,3 @@ represents the collection of extensions in a database.
 .. autoclass:: ExtensionDict
 
 .. automethod:: ExtensionDict.from_map
-
-.. automethod:: ExtensionDict.diff_map

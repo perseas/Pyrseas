@@ -17,6 +17,8 @@ conversion between character set encodings
 
 .. autoclass:: Conversion
 
+.. automethod:: Conversion.to_map
+
 .. automethod:: Conversion.create
 
 Conversion Dictionary
@@ -29,5 +31,3 @@ represents the collection of conversions in a database.
 .. autoclass:: ConversionDict
 
 .. automethod:: ConversionDict.from_map
-
-.. automethod:: ConversionDict.diff_map

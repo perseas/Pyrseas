@@ -17,9 +17,6 @@ Features
 - Generates an augmented YAML description of a PostgreSQL database
   from its catalogs and an augmentation specification.
 
-- (planned) Generates a flexible web application to update PostgreSQL
-  tables
-
 Requirements
 ------------
 

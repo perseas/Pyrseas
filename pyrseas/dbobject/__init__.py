@@ -588,11 +588,14 @@ class DbObjectDict(dict):
     cls = DbObject
     """The class, derived from :class:`DbObject` that the objects belong to.
     """
-    query = ''
-    """The SQL SELECT query to fetch object instances from the catalogs
 
-    This is used by the method :meth:`fetch`.
-    """
+    @staticmethod
+    def query():
+        """The SQL SELECT query to fetch object instances from the catalogs
+
+        This is used by the method :meth:`fetch`.
+        """
+        return ""
 
     def __init__(self, dbconn=None):
         """Initialize the dictionary

@@ -17,6 +17,10 @@ available from PostgreSQL 9.3 onwards.
 
 .. autoclass:: EventTrigger
 
+.. automethod:: EventTrigger.from_map
+
+.. automethod:: EventTrigger.to_map
+
 .. automethod:: EventTrigger.create
 
 Event Trigger Dictionary
@@ -29,5 +33,3 @@ represents the collection of event triggers in a database.
 .. autoclass:: EventTriggerDict
 
 .. automethod:: EventTriggerDict.from_map
-
-.. automethod:: EventTriggerDict.diff_map

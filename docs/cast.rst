@@ -16,6 +16,8 @@ represents a `PostgreSQL cast
 
 .. autoclass:: Cast
 
+.. automethod:: Cast.from_map
+
 .. automethod:: Cast.extern_key
 
 .. automethod:: Cast.identifier
@@ -23,8 +25,6 @@ represents a `PostgreSQL cast
 .. automethod:: Cast.to_map
 
 .. automethod:: Cast.create
-
-.. automethod:: Cast.diff_map
 
 Cast Dictionary
 ---------------
@@ -36,5 +36,3 @@ represents the collection of casts in a database.
 .. autoclass:: CastDict
 
 .. automethod:: CastDict.from_map
-
-.. automethod:: CastDict.diff_map

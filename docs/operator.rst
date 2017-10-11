@@ -16,6 +16,8 @@ represents a `PostgreSQL user-defined operator
 
 .. autoclass:: Operator
 
+.. automethod:: Operator.from_map
+
 .. automethod:: Operator.extern_key
 
 .. automethod:: Operator.qualname
@@ -34,5 +36,3 @@ represents the collection of operators in a database.
 .. autoclass:: OperatorDict
 
 .. automethod:: OperatorDict.from_map
-
-.. automethod:: OperatorDict.diff_map

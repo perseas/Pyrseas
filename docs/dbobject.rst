@@ -49,7 +49,7 @@ properties and sometimes from a second object:
 
 .. automethod:: DbObject.rename
 
-.. automethod:: DbObject.diff_map
+.. automethod:: DbObject.alter
 
 .. automethod:: DbObject.diff_privileges
 
@@ -74,7 +74,7 @@ e.g., :class:`~pyrseas.schema.SchemaDict` sets :attr:`cls` to
 
 .. autoattribute:: DbObjectDict.cls
 
-.. autoattribute:: DbObjectDict.query
+.. automethod:: DbObjectDict.query
 
 .. automethod:: DbObjectDict.to_map
 

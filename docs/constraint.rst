@@ -35,11 +35,15 @@ a CHECK constraint.
 
 .. autoclass:: CheckConstraint
 
+.. automethod:: CheckConstraint.from_map
+
 .. automethod:: CheckConstraint.to_map
 
 .. automethod:: CheckConstraint.add
 
-.. automethod:: CheckConstraint.diff_map
+.. automethod:: CheckConstraint.drop
+
+.. automethod:: CheckConstraint.alter
 
 Primary Key
 -----------
@@ -49,9 +53,11 @@ a primary key constraint.
 
 .. autoclass:: PrimaryKey
 
+.. automethod:: PrimaryKey.from_map
+
 .. automethod:: PrimaryKey.to_map
 
-.. automethod:: PrimaryKey.diff_map
+.. automethod:: PrimaryKey.alter
 
 Foreign Key
 -----------
@@ -75,13 +81,15 @@ The following shows a foreign key segment of a map returned by
 
 .. autoclass:: ForeignKey
 
+.. automethod:: ForeignKey.from_map
+
 .. automethod:: ForeignKey.ref_columns
 
 .. automethod:: ForeignKey.to_map
 
 .. automethod:: ForeignKey.add
 
-.. automethod:: ForeignKey.diff_map
+.. automethod:: ForeignKey.alter
 
 Unique Constraint
 -----------------
@@ -91,9 +99,11 @@ represents a UNIQUE, non-primary key constraint.
 
 .. autoclass:: UniqueConstraint
 
+.. automethod:: UniqueConstraint.from_map
+
 .. automethod:: UniqueConstraint.to_map
 
-.. automethod:: UniqueConstraint.diff_map
+.. automethod:: UniqueConstraint.alter
 
 Constraint Dictionary
 ---------------------
@@ -105,5 +115,3 @@ of constraints in a database.
 .. autoclass:: ConstraintDict
 
 .. automethod:: ConstraintDict.from_map
-
-.. automethod:: ConstraintDict.diff_map

@@ -18,6 +18,8 @@ collation
 
 .. autoclass:: Collation
 
+.. automethod:: Collation.from_map
+
 .. automethod:: Collation.create
 
 Collation Dictionary
@@ -30,5 +32,3 @@ represents the collection of collations in a database.
 .. autoclass:: CollationDict
 
 .. automethod:: CollationDict.from_map
-
-.. automethod:: CollationDict.diff_map
