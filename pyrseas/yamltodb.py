@@ -42,7 +42,12 @@ def main():
     if options.multiple_files:
         inmap = db.map_from_dir()
     else:
-        inmap = yaml.safe_load(options.spec)
+        try:
+            inmap = yaml.safe_load(options.spec)
+        except Exception as exc:
+            print("Unable to process the input YAML file")
+            print("Error is '%s'" % exc)
+            return 1
 
     stmts = db.diff_map(inmap)
     if stmts:
