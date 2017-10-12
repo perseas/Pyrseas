@@ -124,6 +124,24 @@ class ViewToSqlTestCase(InputMapToSqlTestCase):
         assert fix_indent(sql[0]) == "CREATE OR REPLACE VIEW v1 AS " \
             "SELECT now()::date AS todays_date"
 
+    def test_view_depend_pk(self):
+        "Create a view that depends on a primary key.  See issue #72"
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+            'columns': [{'c1': {'type': 'integer'}},
+                        {'c2': {'type': 'text'}}],
+            'primary_key': {'t1_pkey': {'columns': ['c1']}}},
+            'view v1': {
+                'definition': " SELECT t1.c1,\n    t1.c2\n   FROM t1\n  "
+                "GROUP BY t1.c1;",
+                'depends_on': ['table t1']}})
+        sql = self.to_sql(inmap)
+        assert fix_indent(sql[0]) == "CREATE TABLE t1 (c1 integer, c2 text)"
+        assert fix_indent(sql[1]) == "ALTER TABLE t1 ADD CONSTRAINT t1_pkey " \
+            "PRIMARY KEY (c1)"
+        assert fix_indent(sql[2]) == "CREATE VIEW v1 AS SELECT t1.c1, t1.c2 " \
+            "FROM t1 GROUP BY t1.c1"
+
     def test_view_with_comment(self):
         "Create a view with a comment"
         inmap = self.std_map()
