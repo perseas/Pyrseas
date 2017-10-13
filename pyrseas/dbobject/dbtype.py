@@ -417,6 +417,23 @@ class Enum(DbType):
         return ["CREATE TYPE %s AS ENUM (%s)" % (
                 self.qualname(), ",\n    ".join(lbls))]
 
+    def alter(self, intype, no_owner=False):
+        """Generate SQL to transform an existing enum type
+
+        :param intype: the new enum type
+        :return: list of SQL statements
+
+        Compares the enum to an input enum and generates SQL
+        statements to transform it into the one represented by the
+        input.
+        """
+        stmts = []
+        if self.labels != intype.labels:
+            stmts.append(self.drop())
+            stmts.append(intype.create())
+        stmts.append(super(Enum, self).alter(intype, no_owner))
+        return stmts
+
 
 class Domain(DbType):
     "A domain definition"

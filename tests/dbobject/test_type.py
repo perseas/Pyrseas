@@ -142,6 +142,16 @@ class EnumToSqlTestCase(InputMapToSqlTestCase):
         sql = self.to_sql(self.std_map(), [CREATE_ENUM_STMT])
         assert sql == ["DROP TYPE t1"]
 
+    def test_change_enum(self):
+        "Change an existing enum"
+        inmap = self.std_map()
+        inmap['schema public'].update({'type t1': {
+            'labels': ['red', 'yellow', 'blue']}})
+        sql = self.to_sql(inmap, [CREATE_ENUM_STMT])
+        assert sql[0] == "DROP TYPE t1"
+        assert fix_indent(sql[1]) == \
+            "CREATE TYPE t1 AS ENUM ('red', 'yellow', 'blue')"
+
     def test_rename_enum(self):
         "Rename an existing enum"
         inmap = self.std_map()
