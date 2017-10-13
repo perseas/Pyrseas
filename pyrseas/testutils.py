@@ -404,10 +404,9 @@ class InputMapToSqlTestCase(PyrseasTestCase):
         if 'datacopy' in config:
             self.cfg.merge({'files': {'data_path': os.path.join(
                             TEST_DIR, self.cfg['repository']['data'])}})
-        self.config_options(schemas=schemas, revert=revert,
-                            quote_reserved=quote_reserved)
+        self.config_options(schemas=schemas, revert=revert),
         self.cfg.merge(config)
-        return self.database().diff_map(inmap)
+        return self.database().diff_map(inmap, quote_reserved=quote_reserved)
 
     def std_map(self, plpgsql_installed=False):
         "Return a standard schema map for the default database"

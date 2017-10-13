@@ -488,10 +488,11 @@ class Database(object):
 
         return dbmap
 
-    def diff_map(self, input_map):
+    def diff_map(self, input_map, quote_reserved=True):
         """Generate SQL to transform an existing database
 
         :param input_map: a YAML map defining the new database
+        :param quote_reserved: fetch reserved words
         :return: list of SQL statements
 
         Compares the existing database definition, as fetched from the
@@ -511,7 +512,8 @@ class Database(object):
                     del input_map[sch]
             self._trim_objects(opts.schemas)
 
-        if opts.quote_reserved:
+        # quote_reserved is only set to False by most tests
+        if quote_reserved:
             fetch_reserved_words(self.dbconn)
 
         langs = [lang[0] for lang in self.dbconn.fetchall(

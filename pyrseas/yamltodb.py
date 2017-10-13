@@ -30,8 +30,6 @@ def main():
                         help="apply changes to database (implies -1)")
     parser.add_argument('--revert', action='store_true',
                         help="generate SQL to revert changes")
-    parser.add_argument('--quote-reserved', action='store_true',
-                        help="quote SQL reserved words")
     parser.add_argument('-n', '--schema', metavar='SCHEMA', dest='schemas',
                         action='append', default=[],
                         help="process only named schema(s) (default all)")

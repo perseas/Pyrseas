@@ -83,13 +83,6 @@ addition to the :doc:`cmdargs`):
     **dbname**.  This implies the :option:`--single-transaction`
     option.
 
-.. cmdoption:: --quote-reserved
-
-    When generating SQL, use delimited (quoted) identifiers around
-    reserved words used as identifiers, e.g., a table named "order".
-    Normally, only identifiers with embedded spaces or other
-    disallowed characters are quoted.
-
 .. cmdoption:: --revert
 
     Generate SQL in reversion mode, that is, to undo the changes that
