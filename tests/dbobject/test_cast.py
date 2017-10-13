@@ -144,3 +144,26 @@ class CastToSqlTestCase(InputMapToSqlTestCase):
             'source': SOURCE}})
         assert self.to_sql(inmap, stmts, superuser=True) == \
             ["COMMENT ON CAST (smallint AS boolean) IS 'Changed cast 1'"]
+
+    def test_cast_function_view_depends(self):
+        "Cast that depends on a function that depends on a view.  See #86"
+        stmts = ["CREATE TABLE t1 (id integer)"]
+        inmap = self.std_map()
+        inmap.update({'cast (v1 as t1)': {
+            'context': 'explicit', 'function': 'v1_to_t1(v1)',
+            'method': 'function'}})
+        inmap['schema public'].update({
+            'function v1_to_t1(v1)': {'returns': 't1', 'language': 'plpgsql',
+            'source': "\nDECLARE o t1;\nBEGIN o:= ROW($1.id)::t1;\n" \
+                                      "RETURN o;\nEND"},
+            'table t1': {'columns': [{'id': {'type': 'integer'}}]},
+            'view v1': {'definition': " SELECT t1.id\n    FROM t1;",
+                        'depends_on': ['table t1']}})
+        sql = self.to_sql(inmap, stmts)
+        assert len(sql) == 3
+        assert fix_indent(sql[0]) == "CREATE VIEW v1 AS SELECT t1.id FROM t1"
+        assert fix_indent(sql[1]) == "CREATE FUNCTION v1_to_t1(v1) " \
+            "RETURNS t1 LANGUAGE plpgsql AS $_$\nDECLARE o t1;\nBEGIN " \
+            "o:= ROW($1.id)::t1;\nRETURN o;\nEND$_$"
+        assert fix_indent(sql[2]) == "CREATE CAST (v1 AS t1) WITH " \
+            "FUNCTION v1_to_t1(v1)"
