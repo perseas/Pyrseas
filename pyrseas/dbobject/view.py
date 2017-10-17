@@ -27,6 +27,7 @@ class View(DbClass):
         super(View, self).__init__(name, schema, description, owner,
                                    privileges)
         self.definition = definition
+        self.triggers = {}
         self.oid = oid
 
     @staticmethod
@@ -77,9 +78,11 @@ class View(DbClass):
         view = super(View, self).to_map(db, opts.no_owner, opts.no_privs)
         if 'dependent_funcs' in view:
             del view['dependent_funcs']
-        if hasattr(self, 'triggers'):
+        if len(self.triggers) > 0:
             for key in list(self.triggers.values()):
                 view['triggers'].update(self.triggers[key.name].to_map(db))
+        else:
+            view.pop('triggers')
         return view
 
     @commentable
@@ -130,6 +133,7 @@ class MaterializedView(View):
         super(MaterializedView, self).__init__(
             name, schema, description, owner, privileges, definition)
         self.with_data = with_data
+        self.indexes = {}
         self.oid = oid
 
     @staticmethod
@@ -177,11 +181,11 @@ class MaterializedView(View):
                 and self.name in opts.excl_tables:
             return None
         mvw = super(MaterializedView, self).to_map(db, opts)
-        if hasattr(self, 'indexes'):
-            if 'indexes' not in mvw:
-                mvw['indexes'] = {}
+        if len(self.indexes) > 0:
             for k in list(self.indexes.values()):
                 mvw['indexes'].update(self.indexes[k.name].to_map(db))
+        else:
+            mvw.pop('indexes')
         return mvw
 
     @commentable

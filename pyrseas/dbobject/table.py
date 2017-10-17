@@ -176,7 +176,7 @@ class Sequence(DbClass):
         """
         if hasattr(opts, 'tables') and opts.tables and \
                 (self.name not in opts.tables and
-                 not hasattr(self, 'owner_table') or
+                 self.owner_table is None or
                  self.owner_table not in opts.tables) or (
                      hasattr(opts, 'excl_tables') and opts.excl_tables and
                      self.name in opts.excl_tables):
@@ -319,6 +319,8 @@ class Table(DbClass):
         self.foreign_keys = {}
         self.unique_constraints = {}
         self.indexes = {}
+        self.triggers = {}
+        self.rules = {}
         self.oid = oid
 
     @staticmethod
@@ -380,8 +382,7 @@ class Table(DbClass):
         :return: dictionary
         """
         if hasattr(opts, 'excl_tables') and opts.excl_tables \
-                and self.name in opts.excl_tables or \
-                not hasattr(self, 'columns'):
+                and self.name in opts.excl_tables or len(self.columns) == 0:
             return None
 
         tbl = super(Table, self).to_map(db, opts.no_owner, opts.no_privs)
@@ -439,17 +440,16 @@ class Table(DbClass):
                 tbl.pop('indexes', None)
         else:
             tbl.pop('indexes')
-        if hasattr(self, 'rules'):
-            if 'rules' not in tbl:
-                tbl['rules'] = {}
-
+        if len(self.rules) > 0:
             for k in list(self.rules.values()):
                 tbl['rules'].update(self.rules[k.name].to_map(db))
-        if hasattr(self, 'triggers'):
-            if 'triggers' not in tbl:
-                tbl['triggers'] = {}
+        else:
+            tbl.pop('rules')
+        if len(self.triggers) > 0:
             for k in list(self.triggers.values()):
                 tbl['triggers'].update(self.triggers[k.name].to_map(db))
+        else:
+            tbl.pop('triggers')
 
         return tbl
 
@@ -462,7 +462,7 @@ class Table(DbClass):
         cols = []
         colprivs = []
         for col in self.columns:
-            if not (hasattr(col, 'inherited') and col.inherited):
+            if not col.inherited:
                 cols.append("    " + col.add()[0])
             colprivs.append(col.add_privs())
         unlogged = 'UNLOGGED ' if self.unlogged else ''
@@ -614,7 +614,7 @@ class Table(DbClass):
         statements to drop any columns missing from the one
         represented by the input.
         """
-        if not hasattr(intable, 'columns'):
+        if len(intable.columns) == 0:
             raise KeyError("Table '%s' has no columns" % intable.name)
         stmts = []
         incolnames = set(attr.name for attr in intable.columns)
@@ -814,7 +814,7 @@ class ClassDict(DbObjectDict):
                     col._table = self[(sch, tbl)]
         for (sch, tbl) in self:
             table = self[(sch, tbl)]
-            if isinstance(table, Sequence) and hasattr(table, 'owner_table'):
+            if isinstance(table, Sequence) and table.owner_table is not None:
                 if isinstance(table.owner_column, int):
                     table.owner_column = self[(sch, table.owner_table)]. \
                         column_names()[table.owner_column - 1]
