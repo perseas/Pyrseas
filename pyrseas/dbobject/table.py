@@ -124,10 +124,19 @@ class Sequence(DbClass):
 
         :param dbconn: a DbConnection object
         """
-        data = dbconn.fetchone(
-            """SELECT start_value, increment_by, max_value, min_value,
-                      cache_value
-               FROM %s.%s""" % (quote_id(self.schema), quote_id(self.name)))
+        if dbconn.version < 100000:
+            query = """SELECT start_value, increment_by, max_value, min_value,
+                              cache_value
+                       FROM %s.%s"""
+        else:
+            query = """SELECT start_value, increment_by, max_value, min_value,
+                              cache_size AS cache_value
+                       FROM pg_sequences
+                       WHERE schemaname = '%s'
+                       AND sequencename = '%s'"""
+        data = dbconn.fetchone(query % (
+            quote_id(self.schema), quote_id(self.name)))
+
         for key, val in list(data.items()):
             setattr(self, key, val)
 
