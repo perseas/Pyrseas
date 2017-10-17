@@ -196,8 +196,16 @@ class Trigger(DbSchemaObject):
         # has always none (they are accessed through `tg_argv`).
         # TODO: this breaks if a function name contains a '('
         # (another case for a robust lookup function in db)
-        fschema, fname = split_schema_obj(self.procedure, self.schema)
-        fname, _ = fname.split('(', 1)  # implicitly assert there is a (
+        fschema, fullfname = split_schema_obj(self.procedure, self.schema)
+        fullfname, _ = fullfname.split('(', 1)  # implicitly assert there is a (
+        # workaround when trigger function lies in schema different from table
+        fullfname = fullfname.split(".")
+        if len(fullfname) == 2:
+            fschema = fullfname[0]
+            fname = fullfname[1]
+        else:
+            fschema = 'public'
+            fname = fullfname[0]
         if not fname.startswith('tsvector_update_trigger'):
             deps.add(db.functions[fschema, fname, ''])
 

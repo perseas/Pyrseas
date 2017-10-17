@@ -227,10 +227,10 @@ class TriggerToSqlTestCase(InputMapToSqlTestCase):
                             {'c3': {'type': 'timestamp with time zone'}}],
                 'triggers': {'tr1': {
                     'timing': 'before', 'events': ['insert', 'update'],
-                    'level': 'row', 'procedure': 'f1()'}}}}})
+                    'level': 'row', 'procedure': 's1.f1()'}}}}})
         sql = self.to_sql(inmap, ["CREATE SCHEMA s1"])
         assert fix_indent(sql[2]) == "CREATE TRIGGER tr1 BEFORE INSERT OR " \
-            "UPDATE ON s1.t1 FOR EACH ROW EXECUTE PROCEDURE f1()"
+            "UPDATE ON s1.t1 FOR EACH ROW EXECUTE PROCEDURE s1.f1()"
 
     def test_drop_trigger(self):
         "Drop an existing trigger"

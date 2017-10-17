@@ -120,16 +120,25 @@ class Sequence(DbClass):
         return 'rwU'
 
     def get_attrs(self, dbconn):
-        """Get the attributes for the sequence
+        """Get the attributes for the sequence PostgreSQL
 
         :param dbconn: a DbConnection object
         """
-        data = dbconn.fetchone(
-            """SELECT start_value, increment_by, max_value, min_value,
-                      cache_value
-               FROM %s.%s""" % (quote_id(self.schema), quote_id(self.name)))
+        if dbconn.version < 100000:
+            data = dbconn.fetchone(
+                """SELECT start_value, increment_by, max_value, min_value,
+                          cache_value
+                   FROM %s.%s""" % (quote_id(self.schema), quote_id(self.name)))
+        else:
+            data = dbconn.fetchone(
+                "SELECT start_value, increment_by, max_value, min_value, "
+                "cache_size as cache_value "
+                "FROM pg_sequences WHERE true "
+                "AND schemaname = '%s' "
+                "AND sequencename = '%s'" % (quote_id(self.schema), quote_id(self.name)))
         for key, val in list(data.items()):
             setattr(self, key, val)
+
 
     def get_dependent_table(self, dbconn):
         """Get the table and column name that uses or owns the sequence

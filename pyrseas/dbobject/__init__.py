@@ -600,7 +600,7 @@ class DbObjectDict(dict):
     def __init__(self, dbconn=None):
         """Initialize the dictionary
 
-        :param dbconn: a DbConnection object
+        :param pgdbconn.dbconn.DbConnection dbconn: a DbConnection object
 
         If dbconn is not None, the _from_catalog method is called to
         initialize the dictionary from the catalogs.

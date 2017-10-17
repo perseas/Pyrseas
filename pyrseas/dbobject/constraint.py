@@ -259,7 +259,8 @@ class PrimaryKey(Constraint):
     def query():
         return """
             SELECT conname AS name, nspname AS schema,
-                   conrelid::regclass AS table, conkey AS columns,
+                   regexp_replace(conrelid::regclass::text,'"','','g') AS table, 
+                   conkey AS columns,
                    condeferrable AS deferrable, condeferred AS deferred,
                    amname AS access_method, spcname AS tablespace, c.oid,
                    indisclustered AS cluster, coninhcount > 0 AS inherited,
@@ -406,7 +407,8 @@ class ForeignKey(Constraint):
     def query():
         return """
             SELECT conname AS name, nspname AS schema,
-                   conrelid::regclass AS table, conkey AS columns,
+                   regexp_replace(conrelid::regclass::text,'"','','g') AS table, 
+                   conkey AS columns,
                    condeferrable AS deferrable, condeferred AS deferred,
                    confrelid::regclass AS ref_table, confkey AS ref_cols,
                    confupdtype AS on_update, confdeltype AS on_delete,
@@ -573,8 +575,15 @@ class ForeignKey(Constraint):
             return pkey
 
         for uc in list(ref_table.unique_constraints.values()):
-            if uc.columns == self.ref_cols:
-                return uc
+            # TODO: refactor this workaround (sometimes returns dict, sometimes list)
+            # May be problem in different behaviour of pk and unique idx
+            if hasattr(uc,'keys'):
+                if 'columns' in uc.keys():
+                    if uc['columns'] == self.ref_cols:
+                        return uc
+            else:
+                if uc.columns == self.ref_cols:
+                    return uc
 
         if hasattr(ref_table, 'indexes'):
             if isinstance(self.ref_cols[0], int):
@@ -623,7 +632,8 @@ class UniqueConstraint(Constraint):
     def query():
         return """
             SELECT conname AS name, nspname AS schema,
-                   conrelid::regclass AS table, conkey AS columns,
+                   regexp_replace(conrelid::regclass::text,'"','','g') AS table, 
+                   conkey AS columns,
                    condeferrable AS deferrable, condeferred AS deferred,
                    amname AS access_method, spcname AS tablespace, c.oid,
                    indisclustered AS cluster, coninhcount > 0 AS inherited,
