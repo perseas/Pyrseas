@@ -217,6 +217,8 @@ class ForeignDataWrapperDict(DbObjectDict):
             for key in inobj:
                 if key.startswith('server '):
                     inservs.update({key: inobj[key]})
+                else:
+                    raise KeyError("Unrecognized object type: %s" % key)
             self[fdw] = ForeignDataWrapper.from_map(fdw, inobj)
             newdb.servers.from_map(self[fdw], inservs, newdb)
 

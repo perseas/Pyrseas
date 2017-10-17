@@ -182,7 +182,7 @@ class ForeignServerToSqlTestCase(InputMapToSqlTestCase):
         assert fix_indent(sql[0]) == "CREATE SERVER fs1 " \
             "FOREIGN DATA WRAPPER fdw1 OPTIONS (dbname 'test')"
 
-    def xtest_bad_map_server(self):
+    def test_bad_map_server(self):
         "Error creating a foreign server with a bad map"
         inmap = self.std_map()
         inmap.update({'foreign data wrapper fdw1': {'fs1': {}}})
