@@ -48,7 +48,7 @@ class Cast(DbObject):
         self.oid = oid
 
     @staticmethod
-    def query():
+    def query(dbversion=None):
         return """
             SELECT castsource::regtype AS source,
                    casttarget::regtype AS target,

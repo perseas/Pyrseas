@@ -38,7 +38,7 @@ class Language(DbObject):
         self.oid = oid
 
     @staticmethod
-    def query():
+    def query(dbversion=None):
         return """
             SELECT lanname AS name, lanpltrusted AS trusted, rolname AS owner,
                    array_to_string(lanacl, ',') AS privileges,

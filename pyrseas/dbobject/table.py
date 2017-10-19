@@ -84,7 +84,7 @@ class Sequence(DbClass):
         self.oid = oid
 
     @staticmethod
-    def query():
+    def query(dbversion=None):
         return """
             SELECT nspname AS schema, relname AS name, rolname AS owner,
                    array_to_string(relacl, ',') AS privileges,
@@ -333,7 +333,7 @@ class Table(DbClass):
         self.oid = oid
 
     @staticmethod
-    def query():
+    def query(dbversion=None):
         return """
             SELECT nspname AS schema, relname AS name, reloptions AS options,
                    spcname AS tablespace, relpersistence = 'u' AS unlogged,

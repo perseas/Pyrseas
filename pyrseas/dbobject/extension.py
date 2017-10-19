@@ -34,7 +34,7 @@ class Extension(DbObject):
         self.oid = oid
 
     @staticmethod
-    def query():
+    def query(dbversion=None):
         return """
             SELECT extname AS name, nspname AS schema, extversion AS version,
                    rolname AS owner,

@@ -48,7 +48,7 @@ class EventTrigger(DbObject):
         self.oid = oid
 
     @staticmethod
-    def query():
+    def query(dbversion=None):
         return """
             SELECT evtname AS name, evtevent AS event, rolname AS owner,
                    evtenabled AS enabled, evtfoid::regprocedure AS procedure,

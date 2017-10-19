@@ -131,7 +131,7 @@ class CheckConstraint(Constraint):
         self.oid = oid
 
     @staticmethod
-    def query():
+    def query(dbversion=None):
         return """
             SELECT conname AS name, nspname AS schema,
                    CASE WHEN contypid = 0 THEN conrelid::regclass::text
@@ -256,7 +256,7 @@ class PrimaryKey(Constraint):
         self.oid = oid
 
     @staticmethod
-    def query():
+    def query(dbversion=None):
         return """
             SELECT conname AS name, nspname AS schema,
                    conrelid::regclass AS table, conkey AS columns,
@@ -403,7 +403,7 @@ class ForeignKey(Constraint):
         self.oid = oid
 
     @staticmethod
-    def query():
+    def query(dbversion=None):
         return """
             SELECT conname AS name, nspname AS schema,
                    conrelid::regclass AS table, conkey AS columns,
@@ -620,7 +620,7 @@ class UniqueConstraint(Constraint):
         self.oid = oid
 
     @staticmethod
-    def query():
+    def query(dbversion=None):
         return """
             SELECT conname AS name, nspname AS schema,
                    conrelid::regclass AS table, conkey AS columns,

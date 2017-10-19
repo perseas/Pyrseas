@@ -40,7 +40,7 @@ class Conversion(DbSchemaObject):
         self.oid = oid
 
     @staticmethod
-    def query():
+    def query(dbversion=None):
         return """
             SELECT nspname AS schema, conname AS name, rolname AS owner,
                    pg_encoding_to_char(c.conforencoding) AS source_encoding,

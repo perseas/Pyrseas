@@ -33,7 +33,7 @@ class OperatorFamily(DbSchemaObject):
         self.oid = oid
 
     @staticmethod
-    def query():
+    def query(dbversion=None):
         return """
             SELECT nspname AS schema, opfname AS name, rolname AS owner,
                    amname AS index_method,

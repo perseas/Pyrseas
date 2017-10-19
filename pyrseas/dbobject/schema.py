@@ -42,7 +42,7 @@ class Schema(DbObject):
         self.oldname = None
 
     @staticmethod
-    def query():
+    def query(dbversion=None):
         return """
             SELECT nspname AS name, rolname AS owner,
                    array_to_string(nspacl, ',') AS privileges,

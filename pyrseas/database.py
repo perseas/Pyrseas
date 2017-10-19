@@ -72,6 +72,8 @@ class CatDbConnection(DbConnection):
     @property
     def version(self):
         "The server's version number"
+        if self.conn is None:
+            self.connect()
         return self._version
 
 

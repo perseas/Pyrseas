@@ -35,7 +35,7 @@ class Collation(DbSchemaObject):
         self.oid = oid
 
     @staticmethod
-    def query():
+    def query(dbversion=None):
         return """
             SELECT nspname AS schema, collname AS name, rolname AS owner,
                    collcollate AS lc_collate, collctype AS lc_ctype,

@@ -120,7 +120,7 @@ class Function(Proc):
         self.oid = oid
 
     @staticmethod
-    def query():
+    def query(dbversion=None):
         return """
             SELECT nspname AS schema, proname AS name,
                    pg_get_function_identity_arguments(p.oid) AS arguments,
@@ -347,38 +347,58 @@ class Aggregate(Proc):
     """An aggregate function"""
 
     def __init__(self, name, schema, description, owner, privileges,
-                 arguments, sfunc=None, stype=None, finalfunc=None,
-                 initcond=None, sortop=None,
+                 arguments, sfunc, stype, sspace=0, finalfunc=None,
+                 finalfunc_extra=False, initcond=None, sortop=None,
+                 msfunc=None, minvfunc=None, mstype=None, msspace=0,
+                 mfinalfunc=None, mfinalfunc_extra=False, minitcond=None,
                  oid=None):
         """Initialize the aggregate
 
         :param name-arguments: see Proc.__init__ params
         :param sfunc: state transition function (from aggtransfn)
         :param stype: state datatype (from aggtranstype)
+        :param sspace: transition state data size (from aggtransspace)
         :param finalfunc: final function (from aggfinalfn)
+        :param finalfunc_extra: extra args? (from aggfinalextra)
         :param initcond: initial value (from agginitval)
         :param sortop: sort operator (from aggsortop)
+        :param msfunc: state transition function (from aggmtransfn)
+        :param minvfunc: inverse transition function (from aggminvtransfn)
+        :param mstype: state datatype (from aggmtranstype)
+        :param msspace: transition state data size (from aggmtransspace)
+        :param mfinalfunc: final function (from aggfinalfn)
+        :param mfinalfunc_extra: extra args? (from aggmfinalextra)
+        :param minitcond: initial value (from aggminitval)
         """
         super(Aggregate, self).__init__(
             name, schema, description, owner, privileges, arguments)
         self.sfunc = sfunc
         self.stype = stype
+        self.sspace = sspace
         self.finalfunc = finalfunc if finalfunc != '-' else None
+        self.finalfunc_extra = finalfunc_extra
         self.initcond = initcond
         self.sortop = sortop if sortop != '0' else None
+        self.msfunc = msfunc if msfunc != '-' else None
+        self.minvfunc = minvfunc if minvfunc != '-' else None
+        self.mstype = mstype if mstype != '-' else None
+        self.msspace = msspace
+        self.mfinalfunc = mfinalfunc if mfinalfunc != '-' else None
+        self.mfinalfunc_extra = mfinalfunc_extra
+        self.minitcond = minitcond
         self.oid = oid
 
     @staticmethod
-    def query():
-        return """
+    def query(dbversion):
+        query = """
             SELECT nspname AS schema, proname AS name,
                    pg_get_function_identity_arguments(p.oid) AS arguments,
                    rolname AS owner,
                    array_to_string(proacl, ',') AS privileges,
                    aggtransfn::regproc AS sfunc,
-                   aggtranstype::regtype AS stype,
-                   aggfinalfn::regproc AS finalfunc,
-                   agginitval AS initcond, aggsortop::regoper AS sortop,
+                   aggtranstype::regtype AS stype, %s AS sspace,
+                   aggfinalfn::regproc AS finalfunc, %s AS finalfunc_extra,
+                   agginitval AS initcond, aggsortop::regoper AS sortop, %s,
                    obj_description(p.oid, 'pg_proc') AS description, p.oid
             FROM pg_proc p JOIN pg_roles r ON (r.oid = proowner)
                  JOIN pg_namespace n ON (pronamespace = n.oid)
@@ -389,6 +409,33 @@ class Aggregate(Proc):
                   SELECT objid FROM pg_depend WHERE deptype = 'e'
                                AND classid = 'pg_proc'::regclass)
             ORDER BY nspname, proname"""
+        if dbversion < 90400:
+            query = query % (
+                '0', 'false',
+                """'-' AS msfunc, '-' AS minvfunc, NULL AS mstype,
+                    0 AS msspace, '-' AS mfinalfunc, false AS mfinalfunc_extra,
+                    NULL AS minitcond""")
+        elif dbversion < 90600:
+            query = query % (
+                'aggtransspace', 'aggfinalextra',
+                """aggmtransfn::regproc AS msfunc,
+                   aggminvtransfn::regproc AS minvfunc,
+                   aggmtranstype::regtype AS mstype,
+                   aggmtransspace AS msspace,
+                   aggmfinalfn::regproc AS mfinalfunc,
+                   aggmfinalextra AS mfinalfunc_extra,
+                   aggminitval AS minitcond""")
+        else:
+            query = query % (
+                'aggtransspace', 'aggfinalextra',
+                """aggmtransfn::regproc AS msfunc,
+                   aggminvtransfn::regproc AS minvfunc,
+                   aggmtranstype::regtype AS mstype,
+                   aggmtransspace AS msspace,
+                   aggmfinalfn::regproc AS mfinalfunc,
+                   aggmfinalextra AS mfinalfunc_extra,
+                   aggminitval AS minitcond""")
+        return query
 
     @staticmethod
     def from_map(name, schema, arguments, inobj):
@@ -403,9 +450,14 @@ class Aggregate(Proc):
         obj = Aggregate(
             name, schema.name, inobj.pop('description', None),
             inobj.pop('owner', None), inobj.pop('privileges', []),
-            arguments, inobj.pop('sfunc', None),
-            inobj.pop('stype', None), inobj.pop('finalfunc', None),
-            inobj.pop('initcond', None), inobj.pop('sortop', None))
+            arguments, inobj.get('sfunc'), inobj.get('stype'),
+            inobj.pop('sspace', 0), inobj.pop('finalfunc', None),
+            inobj.pop('finalfunc_extra', False), inobj.pop('initcond', None),
+            inobj.pop('sortop', None), inobj.pop('msfunc', None),
+            inobj.pop('minvfunc', None), inobj.pop('mstype', None),
+            inobj.pop('msspace', 0), inobj.pop('mfinalfunc', None),
+            inobj.pop('mfinalfunc_extra', False),
+            inobj.pop('minitcond', None))
         obj.fix_privileges()
         return obj
 
@@ -417,8 +469,15 @@ class Aggregate(Proc):
         :return: dictionary
         """
         dct = super(Aggregate, self).to_map(db, no_owner, no_privs)
-        for attr in ('initcond', 'finalfunc', 'sortop'):
+        for attr in ('initcond', 'finalfunc', 'sortop', 'minitcond',
+                     'mfinalfunc', 'mstype', 'msfunc', 'minvfunc'):
             if getattr(self, attr) is None:
+                dct.pop(attr)
+        for attr in ('sspace', 'msspace'):
+            if getattr(self, attr) == 0:
+                dct.pop(attr)
+        for attr in ('finalfunc_extra', 'mfinalfunc_extra'):
+            if getattr(self, attr) is False:
                 dct.pop(attr)
         return dct
 

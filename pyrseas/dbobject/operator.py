@@ -52,7 +52,7 @@ class Operator(DbSchemaObject):
         self.oid = oid
 
     @staticmethod
-    def query():
+    def query(dbversion=None):
         return """
             SELECT nspname AS schema, oprname AS name, rolname AS owner,
                    oprleft::regtype AS leftarg, oprright::regtype AS rightarg,

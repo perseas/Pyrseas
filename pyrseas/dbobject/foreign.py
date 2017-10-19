@@ -122,7 +122,7 @@ class ForeignDataWrapper(DbObjectWithOptions):
         self.oid = oid
 
     @staticmethod
-    def query():
+    def query(dbversion=None):
         return """
             SELECT fdwname AS name, CASE WHEN fdwhandler = 0 THEN NULL
                        ELSE fdwhandler::regproc END AS handler,
@@ -264,7 +264,7 @@ class ForeignServer(DbObjectWithOptions):
         self.oid = oid
 
     @staticmethod
-    def query():
+    def query(dbversion=None):
         return """
             SELECT fdwname AS wrapper, srvname AS name, srvtype AS type,
                    srvversion AS version, srvoptions AS options,
@@ -426,7 +426,7 @@ class UserMapping(DbObjectWithOptions):
         self.oid = oid
 
     @staticmethod
-    def query():
+    def query(dbversion=None):
         return """
             SELECT fdwname AS wrapper, s.srvname AS server,
                    CASE umuser WHEN 0 THEN 'PUBLIC' ELSE
@@ -581,7 +581,7 @@ class ForeignTable(Table, DbObjectWithOptions):
         self.oid = oid
 
     @staticmethod
-    def query():
+    def query(dbversion=None):
         return """
             SELECT nspname AS schema, relname AS name, srvname AS server,
                    ftoptions AS options, rolname AS owner,

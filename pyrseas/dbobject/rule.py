@@ -53,7 +53,7 @@ class Rule(DbSchemaObject):
         self.oid = oid
 
     @staticmethod
-    def query():
+    def query(dbversion=None):
         """Returns query to fetch Rule instances from the catalogs"""
         return """
             SELECT nspname AS schema, relname AS table, rulename AS name,

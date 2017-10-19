@@ -88,7 +88,7 @@ class Trigger(DbSchemaObject):
         self.oid = oid
 
     @staticmethod
-    def query():
+    def query(dbversion=None):
         return """
             SELECT nspname AS schema, relname AS table, tgname AS name,
                    tgfoid::regprocedure AS procedure,

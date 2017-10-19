@@ -31,7 +31,7 @@ class View(DbClass):
         self.oid = oid
 
     @staticmethod
-    def query():
+    def query(dbversion=None):
         return """
             SELECT nspname AS schema, relname AS name, rolname AS owner,
                    array_to_string(relacl, ',') AS privileges,
@@ -137,7 +137,7 @@ class MaterializedView(View):
         self.oid = oid
 
     @staticmethod
-    def query():
+    def query(dbversion=None):
         return """
             SELECT nspname AS schema, relname AS name, rolname AS owner,
                    array_to_string(relacl, ',') AS privileges,

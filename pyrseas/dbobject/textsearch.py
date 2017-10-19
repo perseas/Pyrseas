@@ -35,7 +35,7 @@ class TSConfiguration(DbSchemaObject):
         self.oid = oid
 
     @staticmethod
-    def query():
+    def query(dbversion=None):
         return """
             SELECT nc.nspname AS schema, cfgname AS name,
                    rolname AS owner, np.nspname || '.' || prsname AS parser,
@@ -142,7 +142,7 @@ class TSDictionary(DbSchemaObject):
         self.oid = oid
 
     @staticmethod
-    def query():
+    def query(dbversion=None):
         return """
             SELECT nspname AS schema, dictname AS name, rolname AS owner,
                    tmplname AS template, dictinitoption AS options,
@@ -239,7 +239,7 @@ class TSParser(DbSchemaObject):
         self.oid = oid
 
     @staticmethod
-    def query():
+    def query(dbversion=None):
         return """
             SELECT nspname AS schema, prsname AS name,
                    prsstart::regproc AS start, prstoken::regproc AS gettoken,
@@ -329,7 +329,7 @@ class TSTemplate(DbSchemaObject):
         self.oid = oid
 
     @staticmethod
-    def query():
+    def query(dbversion=None):
         return """
             SELECT nspname AS schema, tmplname AS name, p.oid,
                    tmplinit::regproc AS init, tmpllexize::regproc AS lexize,

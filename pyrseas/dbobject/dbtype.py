@@ -94,7 +94,7 @@ class BaseType(DbType):
         self.oid = oid
 
     @staticmethod
-    def query():
+    def query(dbversion=None):
         return """
             SELECT nspname AS schema, typname AS name, rolname AS owner,
                    array_to_string(typacl, ',') AS privileges,
@@ -237,7 +237,7 @@ class Composite(DbType):
         self.oid = oid
 
     @staticmethod
-    def query():
+    def query(dbversion=None):
         return """
             SELECT nspname AS schema, typname AS name, rolname AS owner,
                    array_to_string(typacl, ',') AS privileges,
@@ -370,7 +370,7 @@ class Enum(DbType):
         self.oid = oid
 
     @staticmethod
-    def query():
+    def query(dbversion=None):
         return """
             SELECT nspname AS schema, typname AS name, rolname AS owner,
                    array_to_string(typacl, ',') AS privileges,
@@ -457,7 +457,7 @@ class Domain(DbType):
         self.oid = oid
 
     @staticmethod
-    def query():
+    def query(dbversion=None):
         return """
             SELECT nspname AS schema, typname AS name, rolname AS owner,
                    format_type(typbasetype, typtypmod) AS type,

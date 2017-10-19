@@ -590,7 +590,7 @@ class DbObjectDict(dict):
     """
 
     @staticmethod
-    def query():
+    def query(dbversion=None):
         """The SQL SELECT query to fetch object instances from the catalogs
 
         This is used by the method :meth:`fetch`.
@@ -657,7 +657,7 @@ class DbObjectDict(dict):
         :return: list of self.cls objects
         """
         if hasattr(self.cls, 'query'):
-            self.query = self.cls.query()
+            self.query = self.cls.query(self.dbconn.version)
         data = self.dbconn.fetchall(self.query)
         self.dbconn.rollback()
         return [self.cls(**dict(row)) for row in data]

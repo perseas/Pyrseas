@@ -50,7 +50,7 @@ class Column(DbSchemaObject):
         self._type = None
 
     @staticmethod
-    def query():
+    def query(dbversion=None):
         return """
             SELECT nspname AS schema, relname AS table, attname AS name,
                    attnum AS number, format_type(atttypid, atttypmod) AS type,
