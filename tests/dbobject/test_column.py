@@ -137,9 +137,13 @@ class ColumnToMapTestCase(DatabaseToMapTestCase):
             {'c2': {'type': 'numeric', 'default': '98.76'}},
             {'c3': {'type': 'real', 'default': '0.15'}},
             {'c4': {'type': 'text', 'default': "'Abc def'::text"}},
-            {'c5': {'type': 'date', 'default': "('now'::text)::date"}},
-            {'c6': {'type': 'timestamp with time zone', 'default': 'now()'}},
+            {'c5': {'type': 'date', 'default': "CURRENT_DATE"}},
+            {'c6': {'type': 'timestamp with time zone', 'default':
+                    "CURRENT_TIMESTAMP"}},
             {'c7': {'type': 'boolean', 'default': 'false'}}]}
+        if self.db.version <= 90600:
+            expmap['columns'][4]['c5']['default'] = "('now'::text)::date"
+            expmap['columns'][5]['c6']['default'] = 'now()'
         assert dbmap['schema public']['table t1'] == expmap
 
     def test_statistics(self):
