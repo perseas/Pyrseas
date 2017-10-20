@@ -127,15 +127,15 @@ class Sequence(DbClass):
         if dbconn.version < 100000:
             query = """SELECT start_value, increment_by, max_value, min_value,
                               cache_value
-                       FROM %s.%s"""
+                       FROM %s.%s""" % (
+                           quote_id(self.schema), quote_id(self.name))
         else:
             query = """SELECT start_value, increment_by, max_value, min_value,
                               cache_size AS cache_value
                        FROM pg_sequences
                        WHERE schemaname = '%s'
-                       AND sequencename = '%s'"""
-        data = dbconn.fetchone(query % (
-            quote_id(self.schema), quote_id(self.name)))
+                       AND sequencename = '%s'""" % (self.schema, self.name)
+        data = dbconn.fetchone(query)
 
         for key, val in list(data.items()):
             setattr(self, key, val)
