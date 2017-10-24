@@ -109,7 +109,7 @@ class Cast(DbObject):
         return dct
 
     @commentable
-    def create(self):
+    def create(self, dbversion=None):
         """Return SQL statements to CREATE the cast
 
         :return: SQL statements

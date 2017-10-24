@@ -80,7 +80,7 @@ class Language(DbObject):
             del dct['functions']
         return dct
 
-    def create(self):
+    def create(self, dbversion=None):
         """Return SQL statements to CREATE the language
 
         :return: SQL statements

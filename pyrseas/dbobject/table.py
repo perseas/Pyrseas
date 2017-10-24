@@ -58,8 +58,8 @@ class Sequence(DbClass):
 
     def __init__(self, name, schema, description, owner, privileges,
                  start_value=1, increment_by=1, max_value=MAX_BIGINT,
-                 min_value=1, cache_value=1, owner_table=None,
-                 owner_column=None,
+                 min_value=1, cache_value=1, data_type='bigint',
+                 owner_table=None, owner_column=None,
                  oid=None):
         """Initialize the sequence
 
@@ -68,7 +68,8 @@ class Sequence(DbClass):
         :param max_value: maximum value (from max_value)
         :param increment_by: value to add (from increment_by)
         :param min_value: minimum value (from min_value)
-        :param cache_value: cache value (from cache_value)
+        :param cache_value: cache value (from cache_value/cache_size)
+        :param data_type: data type (from data_type)
         :param owner_table: owner table
         :param owner_column: owner column
         """
@@ -79,6 +80,7 @@ class Sequence(DbClass):
         self.max_value = max_value
         self.min_value = min_value
         self.cache_value = cache_value
+        self.data_type = data_type
         self.owner_table = owner_table
         self.owner_column = owner_column
         self.oid = oid
@@ -109,8 +111,8 @@ class Sequence(DbClass):
             inobj.pop('owner', None), inobj.pop('privileges', []),
             inobj.pop('start_value', 1), inobj.pop('increment_by', 1),
             inobj.pop('max_value', MAX_BIGINT), inobj.pop('min_value', 1),
-            inobj.pop('cache_value', 1), inobj.pop('owner_table', None),
-            inobj.pop('owner_column', None))
+            inobj.pop('cache_value', 1), inobj.pop('data_type', 'bigint'),
+            inobj.pop('owner_table', None), inobj.pop('owner_column', None))
         obj.fix_privileges()
         obj.set_oldname(inobj)
         return obj
@@ -126,12 +128,12 @@ class Sequence(DbClass):
         """
         if dbconn.version < 100000:
             query = """SELECT start_value, increment_by, max_value, min_value,
-                              cache_value
+                              cache_value, 'bigint' AS data_type
                        FROM %s.%s""" % (
                            quote_id(self.schema), quote_id(self.name))
         else:
             query = """SELECT start_value, increment_by, max_value, min_value,
-                              cache_size AS cache_value
+                              cache_size AS cache_value, data_type
                        FROM pg_sequences
                        WHERE schemaname = '%s'
                        AND sequencename = '%s'""" % (self.schema, self.name)
@@ -195,6 +197,8 @@ class Sequence(DbClass):
             seq.pop('owner_table')
             seq.pop('owner_column')
         seq.pop('dependent_table', None)
+        if self.data_type == 'bigint':
+            seq.pop('data_type')
         for key, val in list(seq.items()):
             if key == 'max_value' and val == MAX_BIGINT:
                 seq[key] = None
@@ -219,17 +223,21 @@ class Sequence(DbClass):
     @commentable
     @grantable
     @ownable
-    def create(self):
+    def create(self, dbversion=None):
         """Return a SQL statement to CREATE the sequence
 
         :return: SQL statements
         """
-        return ["""CREATE SEQUENCE %s
+        if dbversion >= 100000 and self.data_type != 'bigint':
+            mod = "\n    AS %s" % self.data_type
+        else:
+            mod = ""
+        return ["""CREATE SEQUENCE %s%s
     START WITH %d
     INCREMENT BY %d
    %s
    %s
-    CACHE %d""" % (self.qualname(), self.start_value, self.increment_by,
+    CACHE %d""" % (self.qualname(), mod, self.start_value, self.increment_by,
                    seq_max_value(self), seq_min_value(self), self.cache_value)]
 
     def add_owner(self):
@@ -462,7 +470,7 @@ class Table(DbClass):
 
         return tbl
 
-    def create(self):
+    def create(self, dbversion=None):
         """Return SQL statements to CREATE the table
 
         :return: SQL statements

@@ -50,7 +50,7 @@ class Constraint(DbSchemaObject):
             self.columns = [self._table.columns[k - 1].name
                             for k in self.columns]
 
-    def create(self):
+    def create(self, dbversion=None):
         # TODO: is add really needed?
         return self.add()
 

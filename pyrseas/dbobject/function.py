@@ -218,7 +218,7 @@ class Function(Proc):
     @commentable
     @grantable
     @ownable
-    def create(self, newsrc=None, basetype=False):
+    def create(self, dbversion=None, newsrc=None, basetype=False):
         """Return SQL statements to CREATE or REPLACE the function
 
         :param newsrc: new source for a changed function
@@ -276,7 +276,7 @@ class Function(Proc):
                          strict, secdef, cost, rows, config, src))
         return stmts
 
-    def alter(self, infunction, no_owner=False):
+    def alter(self, infunction, dbversion=None, no_owner=False):
         """Generate SQL to transform an existing function
 
         :param infunction: a YAML map defining the new function
@@ -288,7 +288,7 @@ class Function(Proc):
         """
         stmts = []
         if self.source != infunction.source and infunction.source is not None:
-            stmts.append(self.create(infunction.source))
+            stmts.append(self.create(dbversion, infunction.source))
         if self.leakproof is True:
             if infunction.leakproof is True:
                 stmts.append("ALTER FUNCTION %s LEAKPROOF" % self.identifier())
@@ -484,7 +484,7 @@ class Aggregate(Proc):
     @commentable
     @grantable
     @ownable
-    def create(self):
+    def create(self, dbversion=None):
         """Return SQL statements to CREATE the aggregate
 
         :return: SQL statements

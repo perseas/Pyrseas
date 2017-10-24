@@ -545,7 +545,7 @@ class Database(object):
             if old is not None:
                 stmts.append(old.alter(new))
             else:
-                stmts.append(new.create_sql())
+                stmts.append(new.create_sql(self.dbconn.version))
 
                 # Check if the object just created was renamed, in which case
                 # don't try to delete the original one

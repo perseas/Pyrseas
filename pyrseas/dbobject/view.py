@@ -88,7 +88,7 @@ class View(DbClass):
     @commentable
     @grantable
     @ownable
-    def create(self, newdefn=None):
+    def create(self, dbversion=None, newdefn=None):
         """Return SQL statements to CREATE the view
 
         :return: SQL statements
@@ -99,7 +99,7 @@ class View(DbClass):
         return ["CREATE%s VIEW %s AS\n   %s" % (
                 newdefn and " OR REPLACE" or '', self.qualname(), defn)]
 
-    def alter(self, inview):
+    def alter(self, inview, dbversion=None):
         """Generate SQL to transform an existing view
 
         :param inview: a YAML map defining the new view
@@ -111,7 +111,7 @@ class View(DbClass):
         """
         stmts = []
         if self.definition != inview.definition:
-            stmts.append(self.create(inview.definition))
+            stmts.append(self.create(dbversion, inview.definition))
         stmts.append(super(View, self).alter(inview))
         return stmts
 
@@ -191,7 +191,7 @@ class MaterializedView(View):
     @commentable
     @grantable
     @ownable
-    def create(self, newdefn=None):
+    def create(self, dbversion=None, newdefn=None):
         """Return SQL statements to CREATE the materialized view
 
         :return: SQL statements

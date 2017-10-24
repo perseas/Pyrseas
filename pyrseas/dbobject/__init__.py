@@ -225,6 +225,14 @@ class DbObject(object):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    @staticmethod
+    def query(dbversion=None):
+        """The SQL SELECT query to fetch object instances from the catalogs
+
+        This is used by the method :meth:`fetch`.
+        """
+        return ""
+
     def extern_key(self):
         """Return the key to be used in external maps for this object
 
@@ -432,14 +440,14 @@ class DbObject(object):
         return "ALTER %s %s RENAME TO %s" % (
             self.objtype, quote_id(oldname), quote_id(self.name))
 
-    def create(self):
+    def create(self, dbversion=None):
         raise NotImplementedError
 
-    def create_sql(self):
+    def create_sql(self, dbversion=None):
         if hasattr(self, 'oldname') and self.oldname is not None:
             return self.rename(self.oldname)
         else:
-            return self.create()
+            return self.create(dbversion)
 
     def alter(self, inobj, no_owner=False):
         """Generate SQL to transform an existing database object
@@ -588,14 +596,6 @@ class DbObjectDict(dict):
     cls = DbObject
     """The class, derived from :class:`DbObject` that the objects belong to.
     """
-
-    @staticmethod
-    def query(dbversion=None):
-        """The SQL SELECT query to fetch object instances from the catalogs
-
-        This is used by the method :meth:`fetch`.
-        """
-        return ""
 
     def __init__(self, dbconn=None):
         """Initialize the dictionary

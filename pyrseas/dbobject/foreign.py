@@ -181,7 +181,7 @@ class ForeignDataWrapper(DbObjectWithOptions):
     @commentable
     @grantable
     @ownable
-    def create(self):
+    def create(self, dbversion=None):
         """Return SQL statements to CREATE the data wrapper
 
         :return: SQL statements
@@ -332,7 +332,7 @@ class ForeignServer(DbObjectWithOptions):
     @commentable
     @grantable
     @ownable
-    def create(self):
+    def create(self, dbversion=None):
         """Return SQL statements to CREATE the server
 
         :return: SQL statements
@@ -470,7 +470,7 @@ class UserMapping(DbObjectWithOptions):
             self.name == 'PUBLIC' and 'PUBLIC' or quote_id(self.name),
             quote_id(self.server))
 
-    def create(self):
+    def create(self, dbversion=None):
         """Return SQL statements to CREATE the user mapping
 
         :return: SQL statements
@@ -644,7 +644,7 @@ class ForeignTable(Table, DbObjectWithOptions):
         return tbl
 
     @grantable
-    def create(self):
+    def create(self, dbversion=None):
         """Return SQL statements to CREATE the foreign table
 
         :return: SQL statements

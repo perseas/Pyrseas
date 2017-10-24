@@ -357,7 +357,7 @@ class AggregateToMapTestCase(DatabaseToMapTestCase):
 class AggregateToSqlTestCase(InputMapToSqlTestCase):
     """Test SQL generation from input aggregates"""
 
-    def test_create_aggregate1(self):
+    def test_create_aggregate_simple(self):
         "Create a simple aggregate"
         inmap = self.std_map()
         inmap['schema public'].update({'function f1(integer, integer)': {

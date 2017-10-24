@@ -180,7 +180,7 @@ class Schema(DbObject):
     @commentable
     @grantable
     @ownable
-    def create(self):
+    def create(self, dbversion=None):
         """Return SQL statements to CREATE the schema
 
         :return: SQL statements

@@ -64,7 +64,7 @@ class Collation(DbSchemaObject):
 
     @commentable
     @ownable
-    def create(self):
+    def create(self, dbversion=None):
         """Return SQL statements to CREATE the collation
 
         :return: SQL statements

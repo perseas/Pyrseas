@@ -72,7 +72,7 @@ class Extension(DbObject):
         return deps
 
     @commentable
-    def create(self):
+    def create(self, dbversion=None):
         """Return SQL statements to CREATE the extension
 
         :return: SQL statements

@@ -7,7 +7,7 @@ from pyrseas.testutils import DatabaseToMapTestCase
 from pyrseas.testutils import InputMapToSqlTestCase, fix_indent
 
 CREATE_STMT = "CREATE SEQUENCE seq1"
-CREATE_STMT_FULL = "CREATE SEQUENCE seq1 START WITH 1 INCREMENT BY 1 " \
+CREATE_STMT_FULL = "CREATE SEQUENCE seq1 %sSTART WITH 1 INCREMENT BY 1 " \
     "NO MAXVALUE NO MINVALUE CACHE 1"
 COMMENT_STMT = "COMMENT ON SEQUENCE seq1 IS 'Test sequence seq1'"
 
@@ -37,9 +37,10 @@ class SequenceToSqlTestCase(InputMapToSqlTestCase):
         inmap = self.std_map()
         inmap['schema public'].update({'sequence seq1': {
             'start_value': 1, 'increment_by': 1, 'max_value': None,
-            'min_value': None, 'cache_value': 1}})
+            'min_value': None, 'cache_value': 1, 'data_type': 'integer'}})
         sql = self.to_sql(inmap)
-        assert fix_indent(sql[0]) == CREATE_STMT_FULL
+        mod = 'AS integer ' if self.db.version >= 100000 else ''
+        assert fix_indent(sql[0]) == CREATE_STMT_FULL % mod
 
     def test_create_sequence_in_schema(self):
         "Create a sequence within a non-public schema"
@@ -107,7 +108,7 @@ class SequenceToSqlTestCase(InputMapToSqlTestCase):
             'min_value': None, 'cache_value': 1,
             'description': "Test sequence seq1"}})
         sql = self.to_sql(inmap)
-        assert fix_indent(sql[0]) == CREATE_STMT_FULL
+        assert fix_indent(sql[0]) == CREATE_STMT_FULL % ''
         assert sql[1] == COMMENT_STMT
 
     def test_comment_on_sequence(self):
@@ -166,7 +167,7 @@ class SequenceUndoSqlTestCase(InputMapToSqlTestCase):
     def test_undo_drop_sequence(self):
         "Revert dropping a sequence"
         sql = self.to_sql(self.std_map(), [CREATE_STMT], revert=True)
-        assert fix_indent(sql[0]) == CREATE_STMT_FULL
+        assert fix_indent(sql[0]) == CREATE_STMT_FULL % ''
 
     def test_undo_change_sequence(self):
         "Revert changing sequence attributes"

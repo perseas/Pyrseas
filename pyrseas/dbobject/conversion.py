@@ -82,7 +82,7 @@ class Conversion(DbSchemaObject):
 
     @commentable
     @ownable
-    def create(self):
+    def create(self, dbversion=None):
         """Return SQL statements to CREATE the conversion
 
         :return: SQL statements

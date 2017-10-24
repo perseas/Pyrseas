@@ -81,7 +81,7 @@ class TSConfiguration(DbSchemaObject):
 
     @commentable
     @ownable
-    def create(self):
+    def create(self, dbversion=None):
         """Return SQL statements to CREATE the configuration
 
         :return: SQL statements
@@ -175,7 +175,7 @@ class TSDictionary(DbSchemaObject):
 
     @commentable
     @ownable
-    def create(self):
+    def create(self, dbversion=None):
         """Return SQL statements to CREATE the dictionary
 
         :return: SQL statements
@@ -272,7 +272,7 @@ class TSParser(DbSchemaObject):
 
     @commentable
     @ownable
-    def create(self):
+    def create(self, dbversion=None):
         """Return SQL statements to CREATE the parser
 
         :return: SQL statements
@@ -358,7 +358,7 @@ class TSTemplate(DbSchemaObject):
         return "TEXT SEARCH TEMPLATE"
 
     @commentable
-    def create(self):
+    def create(self, dbversion=None):
         """Return SQL statements to CREATE the template
 
         :return: SQL statements

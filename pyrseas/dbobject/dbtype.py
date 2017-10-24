@@ -162,7 +162,7 @@ class BaseType(DbType):
 
     @commentable
     @ownable
-    def create(self):
+    def create(self, dbversion=None):
         """Return SQL statements to CREATE the base type
 
         :return: SQL statements
@@ -288,7 +288,7 @@ class Composite(DbType):
 
     @commentable
     @ownable
-    def create(self):
+    def create(self, dbversion=None):
         """Return SQL statements to CREATE the composite type
 
         :return: SQL statements
@@ -408,7 +408,7 @@ class Enum(DbType):
 
     @commentable
     @ownable
-    def create(self):
+    def create(self, dbversion=None):
         """Return SQL statements to CREATE the enum
 
         :return: SQL statements
@@ -519,7 +519,7 @@ class Domain(DbType):
 
     @commentable
     @ownable
-    def create(self):
+    def create(self, dbversion=None):
         """Return SQL statements to CREATE the domain
 
         :return: SQL statements

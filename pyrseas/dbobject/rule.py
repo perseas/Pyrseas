@@ -101,7 +101,7 @@ class Rule(DbSchemaObject):
         return {self.name: dct}
 
     @commentable
-    def create(self):
+    def create(self, dbversion=None):
         """Return SQL statements to CREATE the rule
 
         :return: SQL statements

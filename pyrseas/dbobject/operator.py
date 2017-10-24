@@ -135,7 +135,7 @@ class Operator(DbSchemaObject):
 
     @commentable
     @ownable
-    def create(self):
+    def create(self, dbversion=None):
         """Return SQL statements to CREATE or REPLACE the operator
 
         :return: SQL statements

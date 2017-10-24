@@ -236,7 +236,7 @@ class Index(DbSchemaObject):
         return {self.name: dct}
 
     @commentable
-    def create(self):
+    def create(self, dbversion=None):
         """Return a SQL statement to CREATE the index
 
         :return: SQL statements

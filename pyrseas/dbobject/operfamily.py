@@ -84,7 +84,7 @@ class OperatorFamily(DbSchemaObject):
 
     @commentable
     @ownable
-    def create(self):
+    def create(self, dbversion=None):
         """Return SQL statements to CREATE the operator family
 
         :return: SQL statements

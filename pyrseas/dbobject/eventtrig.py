@@ -90,7 +90,7 @@ class EventTrigger(DbObject):
         return dct
 
     @commentable
-    def create(self):
+    def create(self, dbversion=None):
         """Return SQL statements to CREATE the event trigger
 
         :return: SQL statements
