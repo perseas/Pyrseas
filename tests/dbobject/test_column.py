@@ -141,7 +141,7 @@ class ColumnToMapTestCase(DatabaseToMapTestCase):
             {'c6': {'type': 'timestamp with time zone', 'default':
                     "CURRENT_TIMESTAMP"}},
             {'c7': {'type': 'boolean', 'default': 'false'}}]}
-        if self.db.version <= 90600:
+        if self.db.version < 100000:
             expmap['columns'][4]['c5']['default'] = "('now'::text)::date"
             expmap['columns'][5]['c6']['default'] = 'now()'
         assert dbmap['schema public']['table t1'] == expmap
