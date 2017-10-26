@@ -22,8 +22,12 @@ CREATE_STMT3 = "CREATE FUNCTION f2(integer, integer) RETURNS SETOF integer " \
     "ROWS 20 LANGUAGE sql IMMUTABLE AS $_$%s$_$" % SOURCE3
 
 SOURCE4 = "SELECT $1 + $2"
-CREATE_STMT4 = "CREATE FUNCTION f1(integer, integer) RETURNS integer " \
-    "LANGUAGE sql IMMUTABLE LEAKPROOF AS $_$%s$_$" % SOURCE4
+CREATE_STMT4 = "CREATE FUNCTION fadd(integer, integer) RETURNS integer " \
+    "LANGUAGE sql IMMUTABLE AS $_$%s$_$" % SOURCE4
+
+SOURCE5 = "SELECT $1 - $2"
+CREATE_STMT5 = "CREATE FUNCTION fsub(integer, integer) RETURNS integer " \
+    "LANGUAGE sql IMMUTABLE AS $_$%s$_$" % SOURCE5
 
 
 class FunctionToMapTestCase(DatabaseToMapTestCase):
@@ -116,10 +120,11 @@ class FunctionToMapTestCase(DatabaseToMapTestCase):
 
     def test_map_function_leakproof(self):
         "Map a function with LEAKPROOF qualifier"
-        dbmap = self.to_map([CREATE_STMT4], superuser=True)
+        stmt = CREATE_STMT4.replace("IMMUTABLE", "IMMUTABLE LEAKPROOF")
+        dbmap = self.to_map([stmt], superuser=True)
         expmap = {'language': 'sql', 'returns': 'integer', 'leakproof': True,
                   'source': SOURCE4, 'volatility': 'immutable'}
-        assert dbmap['schema public']['function f1(integer, integer)'] == \
+        assert dbmap['schema public']['function fadd(integer, integer)'] == \
             expmap
 
 
@@ -304,12 +309,13 @@ class FunctionToSqlTestCase(InputMapToSqlTestCase):
         "Change a function with LEAKPROOF qualifier"
         inmap = self.std_map()
         inmap['schema public'].update({
-            'function f1(integer, integer)': {
+            'function fadd(integer, integer)': {
                 'language': 'sql', 'returns': 'integer',
                 'source': SOURCE4, 'volatility': 'immutable'}})
-        sql = self.to_sql(inmap, [CREATE_STMT4], superuser=True)
+        stmt = CREATE_STMT4.replace("IMMUTABLE", "IMMUTABLE LEAKPROOF")
+        sql = self.to_sql(inmap, [stmt], superuser=True)
         assert fix_indent(sql[0]) == \
-            "ALTER FUNCTION f1(integer, integer) NOT LEAKPROOF"
+            "ALTER FUNCTION fadd(integer, integer) NOT LEAKPROOF"
 
 
 class AggregateToMapTestCase(DatabaseToMapTestCase):
@@ -353,6 +359,19 @@ class AggregateToMapTestCase(DatabaseToMapTestCase):
                   'sortop': 'pg_catalog.>'}
         assert dbmap['schema public']['aggregate a1(integer)'] == expmap
 
+    def test_map_moving_aggregate(self):
+        "Map a moving-aggregate mode function"
+        if self.db.version < 90400:
+            self.skipTest('Only available on PG 9.4 and later')
+        stmts = [CREATE_STMT4, CREATE_STMT5,
+                 "CREATE AGGREGATE a1 (integer) (sfunc = fadd, "
+                 "stype = integer, initcond = '0', msfunc = fadd, "
+                 "minvfunc = fsub, mstype = integer, minitcond = '0')"]
+        dbmap = self.to_map(stmts)
+        expmap = {'sfunc': 'fadd', 'stype': 'integer', 'initcond': '0',
+                  'msfunc': 'fadd', 'minvfunc': 'fsub', 'mstype': 'integer',
+                  'minitcond': '0'}
+        assert dbmap['schema public']['aggregate a1(integer)'] == expmap
 
 class AggregateToSqlTestCase(InputMapToSqlTestCase):
     """Test SQL generation from input aggregates"""
@@ -369,6 +388,18 @@ class AggregateToSqlTestCase(InputMapToSqlTestCase):
         assert fix_indent(sql[1]) == CREATE_STMT2
         assert fix_indent(sql[2]) == "CREATE AGGREGATE a1(integer) " \
             "(SFUNC = f1, STYPE = integer)"
+
+    def test_create_aggregate_sortop(self):
+        "Create an aggregate that specifies a sort operator"
+        inmap = self.std_map()
+        inmap['schema public'].update({'function f1(float, float)': {
+            'language': 'sql', 'returns': 'float', 'source': SOURCE2,
+            'volatility': 'immutable'}})
+        inmap['schema public'].update({'aggregate a1(float)': {
+            'sfunc': 'f1', 'stype': 'float', 'sortop': 'pg_catalog.>'}})
+        sql = self.to_sql(inmap)
+        assert fix_indent(sql[2]) == "CREATE AGGREGATE a1(float) " \
+            "(SFUNC = f1, STYPE = float, SORTOP = OPERATOR(pg_catalog.>))"
 
     def test_create_aggregate_init_final(self):
         "Create an aggregate with an INITCOND and a FINALFUNC"
@@ -398,3 +429,24 @@ class AggregateToSqlTestCase(InputMapToSqlTestCase):
         sql = self.to_sql(self.std_map(), stmts)
         assert sql[0] == "DROP AGGREGATE agg1(integer)"
         assert sql[1] == "DROP FUNCTION f1(integer, integer)"
+
+    def test_create_moving_aggregate(self):
+        "Create a moving-aggregate mode function"
+        if self.db.version < 90400:
+            self.skipTest('Only available on PG 9.4 and later')
+        inmap = self.std_map()
+        inmap['schema public'].update(
+            {'function fadd(integer, integer)': {
+                'language': 'sql', 'returns': 'integer', 'source': SOURCE4,
+                'volatility': 'immutable'},
+             'function fsub(integer, integer)': {
+                 'language': 'sql', 'returns': 'integer', 'source': SOURCE5,
+                 'volatility': 'immutable'},
+             'aggregate a1(integer)': {
+                 'sfunc': 'fadd', 'stype': 'integer', 'initcond': '0',
+                 'msfunc': 'fadd', 'minvfunc': 'fsub', 'mstype': 'integer',
+                 'minitcond': '0'}})
+        sql = self.to_sql(inmap, [CREATE_STMT4, CREATE_STMT5])
+        assert fix_indent(sql[0]) == "CREATE AGGREGATE a1(integer) (" \
+            "SFUNC = fadd, STYPE = integer, INITCOND = '0', MSFUNC = fadd, " \
+            "MINVFUNC = fsub, MSTYPE = integer, MINITCOND = '0')"

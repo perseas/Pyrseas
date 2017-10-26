@@ -487,6 +487,7 @@ class Aggregate(Proc):
     def create(self, dbversion=None):
         """Return SQL statements to CREATE the aggregate
 
+        :param dbversion: Posgres version
         :return: SQL statements
         """
         opt_clauses = []
@@ -494,8 +495,30 @@ class Aggregate(Proc):
             opt_clauses.append("FINALFUNC = %s" % self.finalfunc)
         if self.initcond is not None:
             opt_clauses.append("INITCOND = '%s'" % self.initcond)
+        if dbversion >= 90400:
+            if self.sspace > 0:
+                opt_clauses.append("SSPACE = %d" % self.sspace)
+            if self.finalfunc_extra:
+                opt_clauses.append("FINALFUNC_EXTRA")
+            if self.msfunc is not None:
+                opt_clauses.append("MSFUNC = %s" % self.msfunc)
+            if self.minvfunc is not None:
+                opt_clauses.append("MINVFUNC = %s" % self.minvfunc)
+            if self.mstype is not None:
+                opt_clauses.append("MSTYPE = %s" % self.mstype)
+            if self.msspace > 0:
+                opt_clauses.append("MSSPACE = %d" % self.msspace)
+            if self.mfinalfunc is not None:
+                opt_clauses.append("MFINALFUNC = %s" % self.mfinalfunc)
+            if self.mfinalfunc_extra:
+                opt_clauses.append("MFINALFUNC_EXTRA")
+            if self.minitcond is not None:
+                opt_clauses.append("MINITCOND = '%s'" % self.minitcond)
         if self.sortop is not None:
-            opt_clauses.append("SORTOP = %s" % self.sortop)
+            clause = self.sortop
+            if not clause.startswith('OPERATOR'):
+                clause = "OPERATOR(%s)" % clause
+            opt_clauses.append("SORTOP = %s" % clause)
         return ["CREATE AGGREGATE %s(%s) (\n    SFUNC = %s,"
                 "\n    STYPE = %s%s%s)" % (
                     self.qualname(), self.arguments, self.sfunc, self.stype,
@@ -509,9 +532,16 @@ class Aggregate(Proc):
         sch, fnc = split_schema_obj(self.sfunc)
         args = self.stype + ', ' + self.arguments
         deps.add(db.functions[sch, fnc, args])
-        if self.finalfunc is not None:
-            sch, fnc = split_schema_obj(self.finalfunc)
-            deps.add(db.functions[sch, fnc, self.stype])
+        for fn in ('finalfunc', 'mfinalfunc'):
+            if getattr(self, fn) is not None:
+                sch, fnc = split_schema_obj(getattr(self, fn))
+                deps.add(db.functions[sch, fnc, self.mstype
+                                      if fn[0] == 'm' else self.stype])
+        for fn in ('msfunc', 'minvfunc'):
+            if getattr(self, fn) is not None:
+                sch, fnc = split_schema_obj(getattr(self, fn))
+                args = self.mstype + ", " + self.arguments
+                deps.add(db.functions[sch, fnc, args])
 
         return deps
 
