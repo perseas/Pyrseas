@@ -373,6 +373,17 @@ class AggregateToMapTestCase(DatabaseToMapTestCase):
                   'minitcond': '0'}
         assert dbmap['schema public']['aggregate a1(integer)'] == expmap
 
+    def test_map_ordered_set_aggregate(self):
+        "Map an ordered-set aggregate"
+        if self.db.version < 90400:
+            self.skipTest('Only available on PG 9.4 and later')
+        stmts = [CREATE_STMT2, "CREATE AGGREGATE a1 (integer ORDER BY "
+                 "integer) (sfunc = f1, stype = integer)"]
+        dbmap = self.to_map(stmts)
+        expmap = {'sfunc': 'f1', 'stype': 'integer', 'kind': 'ordered'}
+        assert dbmap['schema public'][
+            'aggregate a1(integer ORDER BY integer)'] == expmap
+
 class AggregateToSqlTestCase(InputMapToSqlTestCase):
     """Test SQL generation from input aggregates"""
 
@@ -450,3 +461,18 @@ class AggregateToSqlTestCase(InputMapToSqlTestCase):
         assert fix_indent(sql[0]) == "CREATE AGGREGATE a1(integer) (" \
             "SFUNC = fadd, STYPE = integer, INITCOND = '0', MSFUNC = fadd, " \
             "MINVFUNC = fsub, MSTYPE = integer, MINITCOND = '0')"
+
+    def test_create_hypothetical_set_aggregate(self):
+        "Create a hypothetical-set aggregate"
+        if self.db.version < 90400:
+            self.skipTest('Only available on PG 9.4 and later')
+        inmap = self.std_map()
+        inmap['schema public'].update({
+            'function f1(integer, integer)': {
+                'language': 'sql', 'returns': 'integer', 'source': SOURCE2,
+                'volatility': 'immutable'},
+            'aggregate a1(integer ORDER BY integer)': {
+                'kind': 'hypothetical', 'sfunc': 'f1', 'stype': 'integer'}})
+        sql = self.to_sql(inmap, [CREATE_STMT2])
+        assert fix_indent(sql[0]) == "CREATE AGGREGATE a1(integer " \
+            "ORDER BY integer) (SFUNC = f1, STYPE = integer, HYPOTHETICAL)"

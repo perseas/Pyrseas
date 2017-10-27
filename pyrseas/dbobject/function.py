@@ -343,6 +343,9 @@ class Function(Proc):
             return super(Function, self).drop()
 
 
+AGGREGATE_KINDS = {'n': 'normal', 'o': 'ordered', 'h': 'hypothetical'}
+
+
 class Aggregate(Proc):
     """An aggregate function"""
 
@@ -351,6 +354,7 @@ class Aggregate(Proc):
                  finalfunc_extra=False, initcond=None, sortop=None,
                  msfunc=None, minvfunc=None, mstype=None, msspace=0,
                  mfinalfunc=None, mfinalfunc_extra=False, minitcond=None,
+                 kind='normal',
                  oid=None):
         """Initialize the aggregate
 
@@ -369,6 +373,7 @@ class Aggregate(Proc):
         :param mfinalfunc: final function (from aggfinalfn)
         :param mfinalfunc_extra: extra args? (from aggmfinalextra)
         :param minitcond: initial value (from aggminitval)
+        :param kind: aggregate kind (from aggkind)
         """
         super(Aggregate, self).__init__(
             name, schema, description, owner, privileges, arguments)
@@ -386,6 +391,13 @@ class Aggregate(Proc):
         self.mfinalfunc = mfinalfunc if mfinalfunc != '-' else None
         self.mfinalfunc_extra = mfinalfunc_extra
         self.minitcond = minitcond
+        if kind is None:
+            self.kind = 'normal'
+        elif len(kind) == 1:
+            self.kind = AGGREGATE_KINDS[kind]
+        else:
+            self.kind = kind
+        assert self.kind in AGGREGATE_KINDS.values()
         self.oid = oid
 
     @staticmethod
@@ -424,7 +436,7 @@ class Aggregate(Proc):
                    aggmtransspace AS msspace,
                    aggmfinalfn::regproc AS mfinalfunc,
                    aggmfinalextra AS mfinalfunc_extra,
-                   aggminitval AS minitcond""")
+                   aggminitval AS minitcond, aggkind AS kind""")
         else:
             query = query % (
                 'aggtransspace', 'aggfinalextra',
@@ -434,7 +446,7 @@ class Aggregate(Proc):
                    aggmtransspace AS msspace,
                    aggmfinalfn::regproc AS mfinalfunc,
                    aggmfinalextra AS mfinalfunc_extra,
-                   aggminitval AS minitcond""")
+                   aggminitval AS minitcond, aggkind AS kind""")
         return query
 
     @staticmethod
@@ -457,7 +469,7 @@ class Aggregate(Proc):
             inobj.pop('minvfunc', None), inobj.pop('mstype', None),
             inobj.pop('msspace', 0), inobj.pop('mfinalfunc', None),
             inobj.pop('mfinalfunc_extra', False),
-            inobj.pop('minitcond', None))
+            inobj.pop('minitcond', None), inobj.pop('kind', 'normal'))
         obj.fix_privileges()
         return obj
 
@@ -479,6 +491,8 @@ class Aggregate(Proc):
         for attr in ('finalfunc_extra', 'mfinalfunc_extra'):
             if getattr(self, attr) is False:
                 dct.pop(attr)
+        if self.kind == 'normal':
+            dct.pop('kind')
         return dct
 
     @commentable
@@ -514,6 +528,8 @@ class Aggregate(Proc):
                 opt_clauses.append("MFINALFUNC_EXTRA")
             if self.minitcond is not None:
                 opt_clauses.append("MINITCOND = '%s'" % self.minitcond)
+        if self.kind == 'hypothetical':
+            opt_clauses.append("HYPOTHETICAL")
         if self.sortop is not None:
             clause = self.sortop
             if not clause.startswith('OPERATOR'):
@@ -530,7 +546,10 @@ class Aggregate(Proc):
         deps = super(Aggregate, self).get_implied_deps(db)
 
         sch, fnc = split_schema_obj(self.sfunc)
-        args = self.stype + ', ' + self.arguments
+        if 'ORDER BY' in self.arguments:
+            args = self.arguments.replace(' ORDER BY', ',')
+        else:
+            args = self.stype + ', ' + self.arguments
         deps.add(db.functions[sch, fnc, args])
         for fn in ('finalfunc', 'mfinalfunc'):
             if getattr(self, fn) is not None:
