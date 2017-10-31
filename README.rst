@@ -21,7 +21,7 @@ Features
 Requirements
 ------------
 
-- PostgreSQL 9.2 or higher
+- PostgreSQL 9.3 or higher
 
 - Python 2.7 or higher
 

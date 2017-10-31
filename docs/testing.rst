@@ -65,7 +65,7 @@ test failures.  See `this blog post
 <http://pyrseas.wordpress.com/2012/10/17/testing-python-and-postgresql-on-windows-part-5/>`_
 for more details.
 
-The COLLATION tests, run under PostgreSQL 9.2 and later, require the
+The COLLATION tests, run under PostgreSQL 9.3 and later, require the
 ``fr_FR.utf8`` locale (or ``French.France.1252`` language on Windows)
 to be installed.
 
@@ -85,10 +85,10 @@ privileges, at either the operating system or PostgreSQL level.
 
  - ``git clone git://github.com/perseas/Pyrseas.git``
 
- - Install Python 2.7 and 3.4 or 3.5, using package manager or from
+ - Install Python 2.7 and 3.6 or 3.5, using package manager or from
    installers at http://www.python.org/download/.
 
- - Install PostgreSQL 9.5, 9.4, 9.3 and 9.2, using package manager or
+ - Install PostgreSQL 10, 9.6, 9.5, 9.4 and 9.3, using package manager or
    binary installers at http://www.postgresql.org/download/
 
    .. note:: On Linux, make sure you install the contrib and plperl
@@ -119,7 +119,7 @@ privileges, at either the operating system or PostgreSQL level.
  - Install Tox, from PyPI (http://pypi.python.org/pypi/tox)
 
    .. note:: Psycopg2, PyYAML and Tox all have to be installed twice,
-             i.e., once under Python 2.7 and another under 3.4 or 3.5.
+             i.e., once under Python 2.7 and another under 3.6 or 3.5.
 
  - On Windows, install Perl (see discussion above under
    "Restrictions"). On Linux, usually Perl is already available.
@@ -173,7 +173,7 @@ privileges, at either the operating system or PostgreSQL level.
      PostgreSQL ports.
 
  - Invoke ``tox``. This will create two virtualenvs in a ``.tox``
-   subdirectory--one for Python 2.7 and another for 3.5 or 3.4,
+   subdirectory--one for Python 2.7 and another for 3.6 or 3.5,
    install Pyrseas and its prerequisites (Psycopg2 and PyYAML) into
    each virtualenv and run the unit tests for each combination of
    PostgreSQL and Python.
