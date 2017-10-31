@@ -11,6 +11,7 @@ from . import DbObjectDict, DbSchemaObject
 from . import commentable, ownable, grantable, split_schema_obj
 
 VOLATILITY_TYPES = {'i': 'immutable', 's': 'stable', 'v': 'volatile'}
+PARALLEL_SAFETY = {'r': 'restricted', 's': 'safe', 'u': 'unsafe'}
 
 
 class Proc(DbSchemaObject):
@@ -354,7 +355,8 @@ class Aggregate(Proc):
                  finalfunc_extra=False, initcond=None, sortop=None,
                  msfunc=None, minvfunc=None, mstype=None, msspace=0,
                  mfinalfunc=None, mfinalfunc_extra=False, minitcond=None,
-                 kind='normal',
+                 kind='normal', combinefunc=None, serialfunc=None,
+                 deserialfunc=None, parallel='unsafe',
                  oid=None):
         """Initialize the aggregate
 
@@ -374,6 +376,10 @@ class Aggregate(Proc):
         :param mfinalfunc_extra: extra args? (from aggmfinalextra)
         :param minitcond: initial value (from aggminitval)
         :param kind: aggregate kind (from aggkind)
+        :param combinefunc: combine function (from aggcombinefn)
+        :param serialfunc: serialization function (from aggserialfn)
+        :param deserialfunc: deserialization function (from aggdeserialfn)
+        :param parallel: parallel safety indicator (from proparallel)
         """
         super(Aggregate, self).__init__(
             name, schema, description, owner, privileges, arguments)
@@ -398,6 +404,16 @@ class Aggregate(Proc):
         else:
             self.kind = kind
         assert self.kind in AGGREGATE_KINDS.values()
+        self.combinefunc = combinefunc if combinefunc != '-' else None
+        self.serialfunc = serialfunc if serialfunc != '-' else None
+        self.deserialfunc = deserialfunc if deserialfunc != '-' else None
+        if parallel is None:
+            self.parallel = 'unsafe'
+        elif len(parallel) == 1:
+            self.parallel = PARALLEL_SAFETY[parallel]
+        else:
+            self.parallel = parallel
+        assert self.parallel in PARALLEL_SAFETY.values()
         self.oid = oid
 
     @staticmethod
@@ -446,7 +462,9 @@ class Aggregate(Proc):
                    aggmtransspace AS msspace,
                    aggmfinalfn::regproc AS mfinalfunc,
                    aggmfinalextra AS mfinalfunc_extra,
-                   aggminitval AS minitcond, aggkind AS kind""")
+                   aggminitval AS minitcond, aggkind AS kind,
+                   aggcombinefn AS combinefunc, aggserialfn AS serialfunc,
+                   aggdeserialfn AS deserialfunc, proparallel AS parallel""")
         return query
 
     @staticmethod
@@ -469,7 +487,9 @@ class Aggregate(Proc):
             inobj.pop('minvfunc', None), inobj.pop('mstype', None),
             inobj.pop('msspace', 0), inobj.pop('mfinalfunc', None),
             inobj.pop('mfinalfunc_extra', False),
-            inobj.pop('minitcond', None), inobj.pop('kind', 'normal'))
+            inobj.pop('minitcond', None), inobj.pop('kind', 'normal'),
+            inobj.pop('combinefunc', None), inobj.pop('serialfunc', None),
+            inobj.pop('deseriafunc', None), inobj.pop('parallel', 'unsafe'))
         obj.fix_privileges()
         return obj
 
@@ -482,7 +502,8 @@ class Aggregate(Proc):
         """
         dct = super(Aggregate, self).to_map(db, no_owner, no_privs)
         for attr in ('initcond', 'finalfunc', 'sortop', 'minitcond',
-                     'mfinalfunc', 'mstype', 'msfunc', 'minvfunc'):
+                     'mfinalfunc', 'mstype', 'msfunc', 'minvfunc',
+                     'combinefunc', 'serialfunc', 'deserialfunc'):
             if getattr(self, attr) is None:
                 dct.pop(attr)
         for attr in ('sspace', 'msspace'):
@@ -493,6 +514,8 @@ class Aggregate(Proc):
                 dct.pop(attr)
         if self.kind == 'normal':
             dct.pop('kind')
+        if self.parallel == 'unsafe':
+            dct.pop('parallel')
         return dct
 
     @commentable
@@ -509,6 +532,13 @@ class Aggregate(Proc):
             opt_clauses.append("FINALFUNC = %s" % self.finalfunc)
         if self.initcond is not None:
             opt_clauses.append("INITCOND = '%s'" % self.initcond)
+        if dbversion >= 90600:
+            if self.combinefunc is not None:
+                opt_clauses.append("COMBINEFUNC = %s" % self.combinefunc)
+            if self.serialfunc is not None:
+                opt_clauses.append("SERIALFUNC = %s" % self.serialfunc)
+            if self.deserialfunc is not None:
+                opt_clauses.append("DESERIALFUNC = %s" % self.deserialfunc)
         if dbversion >= 90400:
             if self.sspace > 0:
                 opt_clauses.append("SSPACE = %d" % self.sspace)
@@ -535,6 +565,9 @@ class Aggregate(Proc):
             if not clause.startswith('OPERATOR'):
                 clause = "OPERATOR(%s)" % clause
             opt_clauses.append("SORTOP = %s" % clause)
+        if dbversion >= 90600:
+            if self.parallel != 'unsafe':
+                opt_clauses.append("PARALLEL = %s" % self.parallel.upper())
         return ["CREATE AGGREGATE %s(%s) (\n    SFUNC = %s,"
                 "\n    STYPE = %s%s%s)" % (
                     self.qualname(), self.arguments, self.sfunc, self.stype,

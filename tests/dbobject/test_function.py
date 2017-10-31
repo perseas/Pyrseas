@@ -384,6 +384,16 @@ class AggregateToMapTestCase(DatabaseToMapTestCase):
         assert dbmap['schema public'][
             'aggregate a1(integer ORDER BY integer)'] == expmap
 
+    def test_map_aggregate_restricted(self):
+        "Map an aggregate with restricted parallel safety"
+        if self.db.version < 90600:
+            self.skipTest('Only available on PG 9.6 and later')
+        stmts = [CREATE_STMT2, "CREATE AGGREGATE a1 (integer) ("
+                 "SFUNC = f1, STYPE = integer, PARALLEL = RESTRICTED)"]
+        dbmap = self.to_map(stmts)
+        expmap = {'sfunc': 'f1', 'stype': 'integer', 'parallel': 'restricted'}
+        assert dbmap['schema public']['aggregate a1(integer)'] == expmap
+
 class AggregateToSqlTestCase(InputMapToSqlTestCase):
     """Test SQL generation from input aggregates"""
 
@@ -476,3 +486,18 @@ class AggregateToSqlTestCase(InputMapToSqlTestCase):
         sql = self.to_sql(inmap, [CREATE_STMT2])
         assert fix_indent(sql[0]) == "CREATE AGGREGATE a1(integer " \
             "ORDER BY integer) (SFUNC = f1, STYPE = integer, HYPOTHETICAL)"
+
+    def test_create_aggregate_parallel_safe(self):
+        "Create an aggregate with parallel safety"
+        if self.db.version < 90600:
+            self.skipTest('Only available on PG 9.6 and later')
+        inmap = self.std_map()
+        inmap['schema public'].update({
+            'function f1(integer, integer)': {
+                'language': 'sql', 'returns': 'integer', 'source': SOURCE2,
+                'volatility': 'immutable'},
+            'aggregate a1(integer ORDER BY integer)': {
+                'sfunc': 'f1', 'stype': 'integer', 'parallel': 'safe'}})
+        sql = self.to_sql(inmap, [CREATE_STMT2])
+        assert fix_indent(sql[0]) == "CREATE AGGREGATE a1(integer " \
+            "ORDER BY integer) (SFUNC = f1, STYPE = integer, PARALLEL = SAFE)"
