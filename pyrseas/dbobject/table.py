@@ -306,6 +306,9 @@ class Sequence(DbClass):
         return stmts
 
 
+PARTITIONING_STRATEGIES = {'l': 'list', 'r': 'range'}
+
+
 class Table(DbClass):
     """A database table definition
 
@@ -316,6 +319,8 @@ class Table(DbClass):
     """
     def __init__(self, name, schema, description, owner, privileges,
                  tablespace=None, unlogged=False, options=None,
+                 partition_bound_spec=None, partition_by=None,
+                 partition_cols=None, partition_exprs=None,
                  oid=None):
         """Initialize the table
 
@@ -323,12 +328,36 @@ class Table(DbClass):
         :param tablespace: storage tablespace (from reltablespace)
         :param unlogged: unlogged indicator (from relpersistence = 'u')
         :param options: access method options (from reloptions)
+        :param partition_bound_spec: partition bound (from relpartbound)
+        :param partition_by: partitioning strategy (from partstrat)
         """
         super(Table, self).__init__(name, schema, description, owner,
                                     privileges)
         self.tablespace = tablespace
         self.unlogged = unlogged
         self.options = options
+        if partition_bound_spec is None:
+            self.partition_bound_spec = None
+        elif partition_bound_spec.startswith("FOR VALUES "):
+            self.partition_bound_spec = partition_bound_spec[11:]
+        else:
+            self.partition_bound_spec = partition_bound_spec
+        if partition_by is None:
+            self.partition_by = None
+        elif isinstance(partition_by, dict):
+            partby = list(partition_by.keys())[0]
+            self.partition_by = partby
+            self.partition_cols = partition_by[partby]
+        elif len(partition_by) == 1:
+            self.partition_by = PARTITIONING_STRATEGIES[partition_by]
+        else:
+            assert partition_by in PARTITIONING_STRATEGIES.values()
+            self.partition_by = partition_by
+        if partition_cols is not None and len(partition_cols) > 0:
+            self.partition_cols = [int(n) for n in partition_cols.split(' ')]
+        elif partition_cols is None and partition_by is None:
+            self.partition_cols = partition_cols
+        self.partition_exprs = partition_exprs
         self.columns = []
         self.inherits = []
         self.check_constraints = {}
@@ -342,18 +371,28 @@ class Table(DbClass):
 
     @staticmethod
     def query(dbversion=None):
-        return """
+        qry = """
             SELECT nspname AS schema, relname AS name, reloptions AS options,
                    spcname AS tablespace, relpersistence = 'u' AS unlogged,
                    rolname AS owner,
                    array_to_string(relacl, ',') AS privileges,
+                   %s AS partition_bound_spec, %s AS partition_by,
+                   %s AS partition_cols, %s AS partition_exprs,
                    obj_description(c.oid, 'pg_class') AS description, c.oid
             FROM pg_class c JOIN pg_roles r ON (r.oid = relowner)
                  JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
-                 LEFT JOIN pg_tablespace t ON (reltablespace = t.oid)
-            WHERE relkind = 'r' AND relpersistence != 't'
+                 LEFT JOIN pg_tablespace t ON (reltablespace = t.oid)%s
+            WHERE relkind %s AND relpersistence != 't'
               AND nspname != 'pg_catalog' AND nspname != 'information_schema'
             ORDER BY nspname, relname"""
+        if dbversion < 100000:
+            return qry % ("NULL", "NULL", "NULL", "NULL", "", "= 'r'")
+        else:
+            return qry % (
+                "pg_get_expr(relpartbound, c.oid)", "partstrat", "partattrs",
+                "pg_get_expr(partexprs, pt.partrelid)",
+                " LEFT JOIN pg_partitioned_table pt ON c.oid = pt.partrelid",
+                "IN ('r', 'p')")
 
     @staticmethod
     def inhquery():
@@ -375,7 +414,11 @@ class Table(DbClass):
             name, schema.name, inobj.pop('description', None),
             inobj.pop('owner', None), inobj.pop('privileges', []),
             inobj.pop('tablespace', None), inobj.pop('unlogged', False),
-            inobj.pop('options', None))
+            inobj.pop('options', None),
+            inobj.pop('partition_bound_spec', None),
+            inobj.pop('partition_by', None))
+        if obj.partition_bound_spec is not None:
+            obj.inherits = [inobj.get('partition_of')]
         obj.fix_privileges()
         obj.set_oldname(inobj)
         return obj
@@ -383,6 +426,12 @@ class Table(DbClass):
     @property
     def allprivs(self):
         return 'arwdDxt'
+
+    def _normalize_partcols(self):
+        "Replace integer column numbers by column names"
+        if isinstance(self.partition_cols[0], int):
+            self.partition_cols = [self.columns[k - 1].name
+                                   for k in self.partition_cols]
 
     def column_names(self):
         """Return a list of column names in the table
@@ -403,7 +452,8 @@ class Table(DbClass):
             return None
 
         tbl = super(Table, self).to_map(db, opts.no_owner, opts.no_privs)
-        for attr in ['tablespace', 'options']:
+
+        for attr in ('tablespace', 'options', 'partition_bound_spec'):
             if tbl[attr] is None:
                 tbl.pop(attr)
         if self.unlogged is False:
@@ -411,12 +461,27 @@ class Table(DbClass):
         if len(self.inherits) == 0:
             tbl.pop('inherits')
 
-        cols = []
-        for column in self.columns:
-            col = column.to_map(db, opts.no_privs)
-            if col:
-                cols.append(col)
-        tbl['columns'] = cols
+        if self.partition_bound_spec is None:
+            cols = []
+            for column in self.columns:
+                col = column.to_map(db, opts.no_privs)
+                if col:
+                    cols.append(col)
+            tbl['columns'] = cols
+        else:
+            tbl.pop('columns')
+            assert len(self.inherits) == 1
+            tbl.update(partition_of=self.inherits[0])
+            tbl.pop('inherits')
+
+        if self.partition_by is not None:
+            assert self.partition_cols is not None
+            self._normalize_partcols()
+            tbl.update(partition_by={self.partition_by: self.partition_cols})
+        else:
+            tbl.pop('partition_by')
+        tbl.pop('partition_cols')
+        tbl.pop('partition_exprs')
 
         if len(self.check_constraints) > 0:
             for k in list(self.check_constraints.values()):
@@ -483,18 +548,29 @@ class Table(DbClass):
                 cols.append("    " + col.add()[0])
             colprivs.append(col.add_privs())
         unlogged = 'UNLOGGED ' if self.unlogged else ''
-        inhclause = ''
-        if len(self.inherits) > 0:
+
+        partbyclause = partofclause = inhclause = collist = ""
+        if self.partition_by is not None:
+            partbyclause = " PARTITION BY %s (%s)" % (
+                self.partition_by.upper(), ", ".join(self.partition_cols))
+        elif len(self.inherits) > 0:
             inhclause = " INHERITS (%s)" % ", ".join(t for t in self.inherits)
+        if self.partition_bound_spec is None:
+            collist = "(\n%s)" % ",\n".join(cols)
+        else:
+            partofclause = "PARTITION OF %s FOR VALUES %s" % (
+                self.inherits[0], self.partition_bound_spec)
+            inhclause = ""
+
         opts = ''
         if self.options is not None:
             opts = " WITH (%s)" % ', '.join(self.options)
         tblspc = ''
         if self.tablespace is not None:
             tblspc = " TABLESPACE %s" % self.tablespace
-        stmts.append("CREATE %sTABLE %s (\n%s)%s%s%s" % (
-            unlogged, self.qualname(), ",\n".join(cols), inhclause, opts,
-            tblspc))
+        stmts.append("CREATE %sTABLE %s %s%s%s%s%s%s" % (
+            unlogged, self.qualname(), collist, partbyclause, partofclause,
+            inhclause, opts, tblspc))
         if self.owner is not None:
             stmts.append(self.alter_owner())
         for priv in self.privileges:
@@ -768,8 +844,9 @@ class ClassDict(DbObjectDict):
                 try:
                     newdb.columns.from_map(table, inobj['columns'])
                 except KeyError as exc:
-                    exc.args = ("Table '%s' has no columns" % key, )
-                    raise
+                    if table.partition_by is not None:
+                        exc.args = ("Table '%s' has no columns" % key, )
+                        raise
                 newdb.constraints.from_map(table, inobj, rtables=inobjs)
                 if 'indexes' in inobj:
                     newdb.indexes.from_map(table, inobj['indexes'])

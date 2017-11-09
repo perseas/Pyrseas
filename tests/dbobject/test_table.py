@@ -126,6 +126,42 @@ class TableToMapTestCase(DatabaseToMapTestCase):
         assert 'sequence seq1' in dbmap['schema public']
         assert 'sequence seq2' not in dbmap['schema public']
 
+    def test_map_partition_range(self):
+        "Map a partitioned table with two partitions by range"
+        if self.db.version < 100000:
+            self.skipTest('Only available on PG 10 and later')
+        spec1 = "FROM ('2015-01-01', MINVALUE) TO ('2016-12-31', 5)"
+        stmts = ["CREATE TABLE t1 (c1 date, c2 integer, c3 text) "
+                 "PARTITION BY RANGE (c1, c2)",
+                 "CREATE TABLE t1a PARTITION OF t1 FOR VALUES %s" % spec1,
+                 "CREATE TABLE t1b PARTITION OF t1 FOR VALUES "
+                 "FROM ('2017-01-01', 11) TO ('2020-12-31', 15)"]
+        dbmap = self.to_map(stmts)
+        expmap = {'columns': [{'c1': {'type': 'date'}},
+                              {'c2': {'type': 'integer'}},
+                              {'c3': {'type': 'text'}}],
+                  'partition_by': {'range': ['c1', 'c2']}}
+        assert dbmap['schema public']['table t1'] == expmap
+        expmap2 = {'partition_bound_spec': spec1, 'partition_of': 't1'}
+        assert dbmap['schema public']['table t1a'] == expmap2
+
+    def test_map_partition_list(self):
+        "Map a partitioned table with two partitions by list"
+        if self.db.version < 100000:
+            self.skipTest('Only available on PG 10 and later')
+        spec1 = "IN (1, 3, 5, 7)"
+        stmts = ["CREATE TABLE t1 (c1 integer, c2 text) "
+                 "PARTITION BY LIST (c1)",
+                 "CREATE TABLE t1a PARTITION OF t1 FOR VALUES %s" % spec1,
+                 "CREATE TABLE t1b PARTITION OF t1 FOR VALUES IN (2, 4, 6)"]
+        dbmap = self.to_map(stmts)
+        expmap = {'columns': [{'c1': {'type': 'integer'}},
+                              {'c2': {'type': 'text'}}],
+                  'partition_by': {'list': ['c1']}}
+        assert dbmap['schema public']['table t1'] == expmap
+        expmap2 = {'partition_bound_spec': spec1, 'partition_of': 't1'}
+        assert dbmap['schema public']['table t1a'] == expmap2
+
 
 class TableToSqlTestCase(InputMapToSqlTestCase):
     """Test SQL generation of table statements from input schemas"""
@@ -235,6 +271,26 @@ class TableToSqlTestCase(InputMapToSqlTestCase):
                 'owner_table': 't1', 'owner_column': 'c1'}})
         sql = self.to_sql(inmap, [CREATE_STMT, "CREATE SEQUENCE seq1"])
         assert sql[0] == "ALTER SEQUENCE seq1 OWNED BY t1.c1"
+
+    def test_create_partitioned_tables(self):
+        "Create a partitioned table and two partitions"
+        inmap = self.std_map()
+        spec1 = "FROM ('2015-01-01', MINVALUE) TO ('2016-12-31', 5)"
+        spec2 = "FROM ('2017-01-01', 11) TO ('2020-12-31', 15)"
+        inmap['schema public'].update({'table t1': {
+            'columns': [{'c1': {'type': 'date'}}, {'c2': {'type': 'integer'}},
+                        {'c3': {'type': 'text'}}],
+            'partition_by': {'range': ['c1', 'c2']}}, 'table t1a': {
+                'partition_bound_spec': spec1, 'partition_of': 't1'},
+                'table t1b': {'partition_bound_spec': spec2,
+                              'partition_of': 't1'}})
+        sql = self.to_sql(inmap)
+        assert fix_indent(sql[0]) == "CREATE TABLE t1 (c1 date, c2 integer," \
+            " c3 text) PARTITION BY RANGE (c1, c2)"
+        assert fix_indent(sql[1]) == (
+            "CREATE TABLE t1a PARTITION OF t1 FOR VALUES %s" % spec1)
+        assert fix_indent(sql[2]) == (
+            "CREATE TABLE t1b PARTITION OF t1 FOR VALUES %s" % spec2)
 
 
 class TableCommentToSqlTestCase(InputMapToSqlTestCase):

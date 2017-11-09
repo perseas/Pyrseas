@@ -91,7 +91,7 @@ class PgTestDb(PostgresDb):
             self.conn,
             """SELECT relname, relkind FROM pg_class
                       JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
-               WHERE relkind in ('r', 'S', 'v', 'f', 'm')
+               WHERE relkind in ('r', 'p', 'S', 'v', 'f', 'm')
                      AND nspname NOT IN ('pg_catalog', 'information_schema')
                ORDER BY relkind DESC""")
         objs = curs.fetchall()
