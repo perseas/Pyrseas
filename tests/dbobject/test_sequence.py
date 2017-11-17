@@ -8,7 +8,7 @@ from pyrseas.testutils import InputMapToSqlTestCase, fix_indent
 
 CREATE_STMT = "CREATE SEQUENCE seq1"
 CREATE_STMT_FULL = "CREATE SEQUENCE seq1 %sSTART WITH 1 INCREMENT BY 1 " \
-    "NO MAXVALUE NO MINVALUE CACHE 1"
+    "NO MINVALUE NO MAXVALUE CACHE 1"
 COMMENT_STMT = "COMMENT ON SEQUENCE seq1 IS 'Test sequence seq1'"
 
 
@@ -50,7 +50,7 @@ class SequenceToSqlTestCase(InputMapToSqlTestCase):
             'min_value': None, 'cache_value': 1}}})
         sql = self.to_sql(inmap, ["CREATE SCHEMA s1"])
         assert fix_indent(sql[0]) == "CREATE SEQUENCE s1.seq1 START WITH 1 " \
-            "INCREMENT BY 1 NO MAXVALUE NO MINVALUE CACHE 1"
+            "INCREMENT BY 1 NO MINVALUE NO MAXVALUE CACHE 1"
 
     def test_bad_sequence_map(self):
         "Error creating a sequence with a bad map"
@@ -177,4 +177,4 @@ class SequenceUndoSqlTestCase(InputMapToSqlTestCase):
             'min_value': None, 'cache_value': 30}})
         sql = self.to_sql(inmap, [CREATE_STMT], revert=True)
         assert fix_indent(sql[0]) == "ALTER SEQUENCE seq1 START WITH 1 " \
-            "INCREMENT BY 1 NO MAXVALUE NO MINVALUE CACHE 1"
+            "INCREMENT BY 1 NO MINVALUE NO MAXVALUE CACHE 1"

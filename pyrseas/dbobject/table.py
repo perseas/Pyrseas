@@ -220,6 +220,14 @@ class Sequence(DbClass):
 
         return seq
 
+    def _common_create_spec(self):
+        return """    START WITH %d
+    INCREMENT BY %d
+   %s
+   %s
+    CACHE %d""" % (self.start_value, self.increment_by, seq_min_value(self),
+                   seq_max_value(self), self.cache_value)
+
     @commentable
     @grantable
     @ownable
@@ -228,17 +236,22 @@ class Sequence(DbClass):
 
         :return: SQL statements
         """
-        if dbversion >= 100000 and self.data_type != 'bigint':
-            mod = "\n    AS %s" % self.data_type
-        else:
-            mod = ""
-        return ["""CREATE SEQUENCE %s%s
-    START WITH %d
-    INCREMENT BY %d
-   %s
-   %s
-    CACHE %d""" % (self.qualname(), mod, self.start_value, self.increment_by,
-                   seq_max_value(self), seq_min_value(self), self.cache_value)]
+        mod = ""
+        if dbversion >= 100000:
+            if self.data_type != 'bigint':
+                mod = "\n    AS %s" % self.data_type
+            if hasattr(self, '_owner_col'):
+                if self._owner_col.identity is not None:
+                    return []
+        return ["CREATE SEQUENCE %s%s%s" % (self.qualname(), mod,
+                                            self._common_create_spec())]
+
+    def add_inline(self):
+        """Return statement to create the sequence inline as part of a
+           GENERATED AS IDENTITY clause
+        """
+        return "SEQUENCE NAME %s%s" % (self.qualname(),
+                                       self._common_create_spec())
 
     def add_owner(self):
         """Return statement to ALTER the sequence to indicate its owner table
@@ -267,16 +280,16 @@ class Sequence(DbClass):
             stmt += " START WITH %d" % inseq.start_value
         if self.increment_by != inseq.increment_by:
             stmt += " INCREMENT BY %d" % inseq.increment_by
-        maxval = self.max_value
-        if maxval == MAX_BIGINT:
-            maxval = None
-        if maxval != inseq.max_value:
-            stmt += seq_max_value(inseq)
         minval = self.min_value
         if minval == 1:
             minval = None
         if minval != inseq.min_value:
             stmt += seq_min_value(inseq)
+        maxval = self.max_value
+        if maxval == MAX_BIGINT:
+            maxval = None
+        if maxval != inseq.max_value:
+            stmt += seq_max_value(inseq)
         if self.cache_value != inseq.cache_value:
             stmt += " CACHE %d" % inseq.cache_value
         if stmt:
@@ -761,9 +774,8 @@ class Table(DbClass):
 
             # Check if the column depends on a sequence to avoid stating the
             # dependency explicitly.
-            d = getattr(col, 'default', None)
-            if d:
-                m = re.match(r"nextval\('(.*)'::regclass\)", d)
+            if col.default is not None:
+                m = re.match(r"nextval\('(.*)'::regclass\)", col.default)
                 if m:
                     seq = db.tables.find(m.group(1), self.schema)
                     if seq:
@@ -900,12 +912,20 @@ class ClassDict(DbObjectDict):
         `dbtriggers` dictionaries, which are keyed by schema, table
         and constraint, index or trigger name.
         """
+        seqs = [self[t] for t in self if isinstance(self[t], Sequence)]
         for (sch, tbl) in dbcolumns:
             if (sch, tbl) in self:
                 assert isinstance(self[(sch, tbl)], Table)
                 self[(sch, tbl)].columns = dbcolumns[(sch, tbl)]
                 for col in dbcolumns[(sch, tbl)]:
                     col._table = self[(sch, tbl)]
+                    if col.identity is not None:
+                        for seq in seqs:
+                            if col.table == seq.owner_table and \
+                               col.name == seq.owner_column:
+                                col._owner_seq = seq
+                                seq._owner_col = col
+
         for (sch, tbl) in self:
             table = self[(sch, tbl)]
             if isinstance(table, Sequence) and table.owner_table is not None:

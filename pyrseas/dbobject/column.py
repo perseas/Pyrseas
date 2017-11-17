@@ -10,6 +10,9 @@ from . import DbObjectDict, DbSchemaObject, quote_id
 from .privileges import privileges_from_map, add_grant, diff_privs
 
 
+IDENTITY_TYPES = {'a': 'always', 'd': 'by default'}
+
+
 class Column(DbSchemaObject):
     "A table column or attribute of a composite type"
 
@@ -17,8 +20,9 @@ class Column(DbSchemaObject):
     allprivs = 'arwx'
 
     def __init__(self, name, schema, table, number, type, description=None,
-                 privileges=[], not_null=True, default=None, collation=None,
-                 statistics=None, inherited=False, dropped=False):
+                 privileges=[], not_null=True, default=None, identity=None,
+                 collation=None, statistics=None, inherited=False,
+                 dropped=False):
         """Initialize the column
 
         :param name: column/attribute name (from attname)
@@ -30,6 +34,7 @@ class Column(DbSchemaObject):
         :param type: data type (from atttypid/atttypmod)
         :param not_null: not null constraint (from attnotnull)
         :param default: default value expression (from pg_attrdef.adbin)
+        :param identity: type of identity column (from attidentity)
         :param collation: collation name (from collname via attcollation)
         :param statistics: statistics detail level (from attstattarget)
         :param inherited: inherited indicator (from attinhcount)
@@ -42,6 +47,14 @@ class Column(DbSchemaObject):
         self.type = type
         self.not_null = not_null
         self.default = default
+        if identity == '' or identity is None:
+            self.identity = None
+        elif identity is not None and len(identity) == 1:
+            self.identity = IDENTITY_TYPES[identity]
+        else:
+            self.identity = identity
+        assert self.identity is None or \
+            self.identity in IDENTITY_TYPES.values()
         self.collation = collation
         self.statistics = statistics
         self.inherited = inherited
@@ -51,11 +64,11 @@ class Column(DbSchemaObject):
 
     @staticmethod
     def query(dbversion=None):
-        return """
+        qry = """
             SELECT nspname AS schema, relname AS table, attname AS name,
                    attnum AS number, format_type(atttypid, atttypmod) AS type,
                    attnotnull AS not_null, attinhcount > 0 AS inherited,
-                   pg_get_expr(adbin, adrelid) AS default,
+                   pg_get_expr(adbin, adrelid) AS default, %s AS identity,
                    attstattarget AS statistics,
                    collname AS collation, attisdropped AS dropped,
                    array_to_string(attacl, ',') AS privileges,
@@ -69,6 +82,10 @@ class Column(DbSchemaObject):
               AND (nspname != 'pg_catalog' AND nspname != 'information_schema')
               AND attnum > 0
            ORDER BY nspname, relname, attnum"""
+        if dbversion < 100000:
+            return qry % ("NULL")
+        else:
+            return qry % ("attidentity")
 
     @staticmethod
     def from_map(name, table, num, inobj):
@@ -84,8 +101,9 @@ class Column(DbSchemaObject):
             name, table.schema, table.name, num, inobj.pop('type', None),
             inobj.pop('description', None), inobj.pop('privileges', []),
             inobj.pop('not_null', False), inobj.pop('default', None),
-            inobj.pop('collation', None), inobj.pop('statistics', None),
-            inobj.pop('inherited', False), inobj.pop('dropped', False))
+            inobj.pop('identity', None), inobj.pop('collation', None),
+            inobj.pop('statistics', None), inobj.pop('inherited', False),
+            inobj.pop('dropped', False))
         obj.set_oldname(inobj)
         if len(obj.privileges) > 0:
             if table.owner is None:
@@ -109,6 +127,8 @@ class Column(DbSchemaObject):
             dct.pop('not_null')
         if self.default is None:
             dct.pop('default')
+        if self.identity is None:
+            dct.pop('identity')
         if self.collation is None or self.collation == 'default':
             dct.pop('collation')
         if not self.inherited:
@@ -127,6 +147,9 @@ class Column(DbSchemaObject):
             stmt += ' NOT NULL'
         if self.default is not None:
             stmt += ' DEFAULT ' + self.default
+        if self.identity is not None:
+            stmt += " GENERATED %s AS IDENTITY" % self.identity.upper()
+            stmt += " (%s)" % self._owner_seq.add_inline()
         if self.collation is not None and self.collation != 'default':
             stmt += ' COLLATE "%s"' % self.collation
         return (stmt, '' if self.description is None else self.comment())
@@ -192,16 +215,6 @@ class Column(DbSchemaObject):
             comptype, compname, objtype, self.name, newname)
         self.name = newname
         return stmt
-
-    def set_sequence_default(self):
-        """Return SQL statements to set a nextval() DEFAULT
-
-        :return: list of SQL statements
-        """
-        stmts = []
-        stmts.append("ALTER TABLE %s ALTER COLUMN %s SET DEFAULT %s" % (
-            self.qualname(self.table), quote_id(self.name), self.default))
-        return stmts
 
     def alter(self, incol):
         """Generate SQL to transform an existing column
