@@ -7,6 +7,7 @@ from pyrseas.testutils import InputMapToSqlTestCase, fix_indent
 CREATE_COMPOSITE_STMT = "CREATE TYPE t1 AS (x integer, y integer, z integer)"
 CREATE_ENUM_STMT = "CREATE TYPE t1 AS ENUM ('red', 'green', 'blue')"
 CREATE_SHELL_STMT = "CREATE TYPE t1"
+CREATE_RANGE_STMT = "CREATE TYPE t1 AS RANGE (SUBTYPE = smallint)"
 CREATE_FUNC_IN = "CREATE FUNCTION t1textin(cstring) RETURNS t1 " \
     "LANGUAGE internal IMMUTABLE STRICT AS $$textin$$"
 CREATE_FUNC_OUT = "CREATE FUNCTION t1textout(t1) RETURNS cstring " \
@@ -218,3 +219,40 @@ class BaseTypeToSqlTestCase(InputMapToSqlTestCase):
                  CREATE_TYPE_STMT]
         sql = self.to_sql(self.std_map(), stmts, superuser=True)
         assert sql == ["DROP TYPE t1 CASCADE"]
+
+
+class RangeToMapTestCase(DatabaseToMapTestCase):
+    """Test mapping of created RANGE types"""
+
+    def test_range_simple(self):
+        "Map a simple range type"
+        dbmap = self.to_map([CREATE_RANGE_STMT])
+        assert dbmap['schema public']['type t1'] == {'subtype': 'int2'}
+
+    def test_range_subtypediff(self):
+        "Map a range type with a subtype difference function"
+        stmts = ["CREATE TYPE t1 AS RANGE (SUBTYPE = float8, "
+                 "SUBTYPE_DIFF = float8mi)"]
+        dbmap = self.to_map(stmts)
+        assert dbmap['schema public']['type t1'] == {
+            'subtype': 'float8', 'subtype_diff': 'float8mi'}
+
+class RangeToSqlTestCase(InputMapToSqlTestCase):
+    """Test SQL generation from input range types"""
+
+    def test_create_range_simple(self):
+        "Create a range type"
+        inmap = self.std_map()
+        inmap['schema public'].update({'type t1': {'subtype': 'smallint'}})
+        sql = self.to_sql(inmap)
+        assert fix_indent(sql[0]) == CREATE_RANGE_STMT
+
+    def test_create_range_subtype_diff(self):
+        "Create a range with a subtype diff function"
+        inmap = self.std_map()
+        inmap['schema public'].update({'type t1': {
+            'subtype': 'float8', 'subtype_diff': 'float8mi'}})
+        sql = self.to_sql(inmap)
+        assert fix_indent(sql[0]) == (
+            "CREATE TYPE t1 AS RANGE (SUBTYPE = float8, "
+            "SUBTYPE_DIFF = float8mi)")

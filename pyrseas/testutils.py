@@ -120,7 +120,7 @@ class PgTestDb(PostgresDb):
             self.conn,
             """SELECT typname, typtype FROM pg_type t
                       JOIN pg_namespace n ON (typnamespace = n.oid)
-               WHERE typtype IN ('b', 'c', 'd', 'e')
+               WHERE typtype IN ('b', 'c', 'd', 'e', 'r')
                  AND NOT (typtype = 'b' AND typarray = 0)
                  AND nspname NOT IN ('pg_catalog', 'pg_toast',
                      'information_schema')""")

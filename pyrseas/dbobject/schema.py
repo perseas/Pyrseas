@@ -11,7 +11,7 @@ import os
 from pyrseas.yamlutil import yamldump
 from . import DbObjectDict, DbObject
 from . import quote_id, commentable, ownable, grantable
-from .dbtype import BaseType, Composite, Domain, Enum
+from .dbtype import BaseType, Composite, Domain, Enum, Range
 from .table import Table, Sequence
 from .view import View, MaterializedView
 
@@ -303,7 +303,7 @@ class SchemaDict(DbObjectDict):
             if isinstance(dbtype, Domain):
                 link_one(targ, 'types', keys, 'domains')
             elif isinstance(dbtype, Enum) or isinstance(dbtype, Composite) \
-                    or isinstance(dbtype, BaseType):
+                 or isinstance(dbtype, BaseType) or isinstance(dbtype, Range):
                 link_one(targ, 'types', keys)
         targ = db.tables
         for keys in targ:

@@ -3,9 +3,9 @@
     pyrseas.dbobject.dbtype
     ~~~~~~~~~~~~~~~~~~~~~~~
 
-    This module defines six classes: DbType derived from
-    DbSchemaObject, BaseType, Composite, Domain and Enum derived from
-    DbType, and TypeDict derived from DbObjectDict.
+    This module defines seven classes: DbType derived from
+    DbSchemaObject, BaseType, Composite, Domain, Enum and Range derived
+    from DbType, and TypeDict derived from DbObjectDict.
 """
 
 from . import DbObjectDict, DbSchemaObject
@@ -17,7 +17,7 @@ STORAGE_TYPES = {'p': 'plain', 'e': 'external', 'm': 'main', 'x': 'extended'}
 
 
 class DbType(DbSchemaObject):
-    """A composite, domain or enum type"""
+    """A user-defined type, such as a composite, domain or enum"""
 
     keylist = ['schema', 'name']
     catalog = 'pg_type'
@@ -551,8 +551,107 @@ class Domain(DbType):
         return deps
 
 
+class Range(DbType):
+    "A range type definition"
+
+    def __init__(self, name, schema, description, owner, privileges,
+                 subtype, canonical=None, subtype_diff=None,
+                 oid=None):
+        """Initialize the range type
+
+        :param name-privileges: see DbType.__init__ params
+        :param subtype: type of range elements (from rngsubtype)
+        """
+        super(Range, self).__init__(name, schema, description, owner,
+                                   privileges)
+        self.subtype = subtype
+        self.canonical = canonical if canonical != '-' else None
+        self.subtype_diff = subtype_diff if subtype_diff != '-' else None
+        self.oid = oid
+
+    @staticmethod
+    def query(dbversion=None):
+        return """
+            SELECT nspname AS schema, t.typname AS name, rolname AS owner,
+                   st.typname AS subtype, rn.rngcanonical AS canonical,
+                   rn.rngsubdiff AS subtype_diff,
+                   array_to_string(t.typacl, ',') AS privileges,
+                   obj_description(t.oid, 'pg_type') AS description, t.oid
+            FROM pg_type t JOIN pg_range rn ON rngtypid = t.oid
+                 JOIN pg_type st ON rngsubtype = st.oid
+                 JOIN pg_roles r ON (r.oid = t.typowner)
+                 JOIN pg_namespace n ON (t.typnamespace = n.oid)
+            WHERE t.typisdefined AND t.typtype = 'r'
+              AND nspname NOT IN ('pg_catalog', 'pg_toast',
+                                  'information_schema')
+              AND t.oid NOT IN (
+                  SELECT objid FROM pg_depend WHERE deptype = 'e'
+                               AND classid = 'pg_type'::regclass)
+            ORDER BY nspname, t.typname"""
+
+    @staticmethod
+    def from_map(name, schema, inobj):
+        """Initialize a Range instance from a YAML map
+
+        :param name: Range name
+        :param schema: schema map
+        :param inobj: YAML map of the Range
+        :return: Range instance
+        """
+        obj = Range(
+            name, schema.name, inobj.pop('description', None),
+            inobj.pop('owner', None), inobj.pop('privileges', []),
+            inobj.pop('subtype', None), inobj.pop('canonical', None),
+            inobj.pop('subtype_diff', None))
+        obj.fix_privileges()
+        obj.set_oldname(inobj)
+        return obj
+
+    def to_map(self, db, no_owner, no_privs):
+        """Convert a range type to a YAML-suitable format
+
+        :param no_owner: exclude type owner information
+        :return: dictionary
+        """
+        dct = super(Range, self).to_map(db, no_owner, no_privs)
+        for attr in ('canonical', 'subtype_diff'):
+            if getattr(self, attr) is None:
+                dct.pop(attr)
+        return dct
+
+    @commentable
+    @ownable
+    def create(self, dbversion=None):
+        """Return SQL statements to CREATE the range
+
+        :return: SQL statements
+        """
+        clauses = []
+        if self.canonical is not None:
+            clauses.append("CANONICAL = %s" % self.canonical)
+        if self.subtype_diff is not None:
+            clauses.append("SUBTYPE_DIFF = %s" % self.subtype_diff)
+        return ["CREATE TYPE %s AS RANGE (SUBTYPE = %s%s%s)" % (
+            self.qualname(), self.subtype,
+            clauses and ",\n    " or "", ",\n    ".join(clauses))]
+
+    def alter(self, intype, no_owner=False):
+        """Generate SQL to transform an existing range type
+
+        :param intype: the new range type
+        :return: list of SQL statements
+
+        Compares the range to an input range and generates SQL
+        statements to transform it into the one represented by the
+        input.
+        """
+        stmts = []
+        stmts.append(super(Range, self).alter(intype, no_owner))
+        return stmts
+
+
 class TypeDict(DbObjectDict):
-    "The collection of domains and enums in a database"
+    "The collection of user-defined types in a database"
 
     cls = DbType
     # TODO: consider to fetch all the objects belonging to extensions:
@@ -560,7 +659,7 @@ class TypeDict(DbObjectDict):
 
     def _from_catalog(self):
         """Initialize the dictionary of types by querying the catalogs"""
-        for cls in (BaseType, Composite, Domain, Enum):
+        for cls in (BaseType, Composite, Domain, Enum, Range):
             self.cls = cls
             for obj in self.fetch():
                 self[obj.key()] = obj
@@ -597,6 +696,9 @@ class TypeDict(DbObjectDict):
                         raise
                 elif 'labels' in inobj:
                     self[(schema.name, key)] = obj = Enum.from_map(
+                        key, schema, inobj)
+                elif 'subtype' in inobj:
+                    self[(schema.name, key)] = obj = Range.from_map(
                         key, schema, inobj)
             else:
                 raise KeyError("Unrecognized object type: %s" % k)
