@@ -26,7 +26,7 @@ setup(
     name='Pyrseas',
     version='0.8.dev0',
     packages=['pyrseas', 'pyrseas.dbobject', 'pyrseas.lib', 'pyrseas.augment',
-              'pyrseas.relation'],
+             ],
     package_data={'pyrseas': ['config.yaml']},
     entry_points={
         'console_scripts': [
