@@ -11,9 +11,9 @@ Rule
 ----
 
 :class:`Rule` is derived from
-:class:`~pyrseas.dbobject.DbSchemaObject` and represents a `PostgreSQL
+:class:`~pyrseas.dbobject.DbSchemaObject` and represents a `Postgres
 rewrite rule
-<http://www.postgresql.org/docs/current/static/rules.html>`_.
+<https://www.postgresql.org/docs/current/static/rules.html>`_.
 
 .. autoclass:: Rule
 

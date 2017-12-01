@@ -29,7 +29,7 @@ def main():
     parser.add_argument('-u', '--update', action='store_true',
                         help="apply changes to database (implies -1)")
     parser.add_argument('--revert', action='store_true',
-                        help="generate SQL to revert changes")
+                        help="generate SQL to revert changes (experimental)")
     parser.add_argument('-n', '--schema', metavar='SCHEMA', dest='schemas',
                         action='append', default=[],
                         help="process only named schema(s) (default all)")

@@ -11,8 +11,8 @@ Operator Class
 --------------
 
 :class:`OperatorClass` is derived from :class:`DbSchemaObject` and
-represents a `PostgreSQL operator class
-<http://www.postgresql.org/docs/current/static/sql-createopclass.html>`_.
+represents a `Postgres operator class
+<https://www.postgresql.org/docs/current/static/sql-createopclass.html>`_.
 
 .. autoclass:: OperatorClass
 

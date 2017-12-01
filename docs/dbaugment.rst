@@ -4,7 +4,7 @@ dbaugment - Augment a database
 Name
 ----
 
-dbaugment -- Augment a PostgreSQL database in predefined ways
+dbaugment -- Augment a Postgres database in predefined ways
 
 Synopsys
 --------
@@ -16,12 +16,12 @@ Synopsys
 Description
 -----------
 
-:program:`dbaugment` is a utility for augmenting a PostgreSQL database
+:program:`dbaugment` is a utility for augmenting a Postgres database
 with various standard attributes and procedures, such as automatically
 maintained audit columns.  The augmentations are defined in a
 YAML-formatted ``spec`` file.
 
-The specification file format is as follows::
+The following is an example of a specification file::
 
  augmenter:
    columns:
@@ -35,7 +35,8 @@ The specification file format is as follows::
      audit_columns: modified_only
 
 The specification file lists each schema, and within it, each table to
-be augmented.  Under each table the following values are recognized:
+be augmented.  Under each table the following values are currently
+recognized:
 
  - audit_columns: This indicates that audit trail columns are to be
    added to the table, e.g., a timestamp column recording when a row
@@ -74,9 +75,9 @@ Examples
 --------
 
 To augment a database called ``moviesdb`` according to the
-specifications in the file ``moviesbl.yaml``::
+specifications in the file ``movies.yaml``::
 
-  dbaugment moviesdb moviesbl.yaml
+  dbaugment moviesdb movies.yaml
 
 To add a column named ``updated`` to table ``public.film`` to hold the
 date and time each row was inserted or updated, create a YAML
@@ -89,6 +90,11 @@ specification file, say ``film.yaml`` as follows::
  schema public:
    table film:
      audit_columns: modified_only
+
+The first four lines configure the predefined ``modified_timestamp``
+audit column to use the name ``updated`` instead.  The last three
+lines direct ``dbaugment`` to apply the predefined ``modified_only``
+audit column to the ``film`` table.
 
 Then run the following command to generate the resulting database
 specification, alter the table and create the needed trigger and

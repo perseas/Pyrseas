@@ -16,14 +16,14 @@ overriden in user or repository configuration files.
   triggers to be added to tables.  Both columns and triggers are
   specified as YAML lists (to be consistent with :program:`dbtoyaml`
   YAML output), although normally a single trigger will be necessary
-  for column combination.  The columns and triggers should reference
+  per column combination.  The columns and triggers should reference
   previously defined items in the ``columns`` and ``triggers``
   sections (see below).  See :doc:`predefaug` for audit columns
   defined in the system ``config.yaml``.
 
 - columns: This section defines prototype columns to be added to a
   table by Augmenter.  For each column, a valid `Postgres data type
-  <http://www.postgresql.org/docs/current/static/datatype.html>`_
+  <https://www.postgresql.org/docs/current/static/datatype.html>`_
   should be included.
 
   You can also add a ``not_null`` constraint and a ``default``
@@ -50,7 +50,7 @@ overriden in user or repository configuration files.
   items can be specified for each function:
 
   - description: Text for a `COMMENT
-    <http://www.postgresql.org/docs/current/static/sql-comment.html>`_
+    <https://www.postgresql.org/docs/current/static/sql-comment.html>`_
     statement on the function.
 
   - language: Procedural language, e.g., ``plpgsql``, in which the
@@ -119,17 +119,17 @@ using the command line options (see :doc:`cmdargs`):
 
 - host: Name of the host to connect. Please refer to the `Postgres
   connection host documentation
-  <http://www.postgresql.org/docs/current/static/libpq-connect.html#LIBPQ-CONNECT-HOST>`_
+  <https://www.postgresql.org/docs/current/static/libpq-connect.html#LIBPQ-CONNECT-HOST>`_
   for details and defaults.
 
 - port: Port number to connect to.  See the `Postgres connection port
   documentation
-  <http://www.postgresql.org/docs/current/static/libpq-connect.html#LIBPQ-CONNECT-PORT>`_
+  <https://www.postgresql.org/docs/current/static/libpq-connect.html#LIBPQ-CONNECT-PORT>`_
   for more.
 
 - username: Name of the user to connect as.  View the `Postgres
   connection user documentation
-  <http://www.postgresql.org/docs/current/static/libpq-connect.html#LIBPQ-CONNECT-USER>`_
+  <https://www.postgresql.org/docs/current/static/libpq-connect.html#LIBPQ-CONNECT-USER>`_
   for more.
 
 Datacopy

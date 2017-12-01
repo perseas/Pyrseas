@@ -13,9 +13,9 @@ The Pyrseas utilities support the following command line options:
 .. cmdoption:: -H <host>
                --host <host>
 
-    Specifies the `host name` of the machine on which the PostgreSQL
+    Specifies the `host name` of the machine on which the Postgres
     server is running.  The default host name is determined by
-    PostgreSQL (normally, a Unix-domain socket or ``localhost``).
+    Postgres (normally, a Unix-domain socket or ``localhost``).
 
 .. cmdoption:: -h, --help
 
@@ -30,9 +30,9 @@ The Pyrseas utilities support the following command line options:
 .. cmdoption:: -p <port>
                --port <port>
 
-    Specifies the `port` on which the PostgreSQL server is listening
+    Specifies the `port` on which the Postgres server is listening
     for connections.  The default port number is determined by
-    PostgreSQL (normally, 5432).
+    Postgres (normally, 5432).
 
 .. cmdoption:: -r <path>
                --repository <path>
@@ -48,7 +48,7 @@ The Pyrseas utilities support the following command line options:
                --user <username>
 
     `User name` to connect as.  The default user name is determined by
-    PostgreSQL (normally, the name of the user running the program).
+    Postgres (normally, the name of the user running the program).
 
 .. cmdoption:: --version
 
@@ -60,9 +60,9 @@ The Pyrseas utilities support the following command line options:
     database.  If this option is not specified and password
     authentication is required, the program will resort to libpq
     defaults, i.e., `password file
-    <http://www.postgresql.org/docs/current/static/libpq-pgpass.html>`_
+    <https://www.postgresql.org/docs/current/static/libpq-pgpass.html>`_
     or `PGPASSWORD environment variable
-    <http://www.postgresql.org/docs/current/static/libpq-envars.html>`_.
+    <https://www.postgresql.org/docs/current/static/libpq-envars.html>`_.
 
 Short options (those only one character long) can be concatenated with
 their value arguments, e.g.::

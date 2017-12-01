@@ -11,10 +11,10 @@ Collation
 ---------
 
 :class:`Collation` is derived from
-:class:`~pyrseas.dbobject.DbSchemaObject` and represents a `PostgreSQL
+:class:`~pyrseas.dbobject.DbSchemaObject` and represents a `Postgres
 collation
-<http://www.postgresql.org/docs/current/static/collation.html>`_
-(available on PostgreSQL 9.1 or later).
+<https://www.postgresql.org/docs/current/static/collation.html>`_
+(available on Postgres 9.1 or later).
 
 .. autoclass:: Collation
 

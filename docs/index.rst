@@ -1,8 +1,10 @@
 Pyrseas
 =======
 
-Pyrseas provides a framework and utilities to upgrade and maintain a
-PostgreSQL database.
+Pyrseas provides utilities to describe a PostgreSQL database schema as
+YAML, to verify the schema against the same or a different database
+and to generate SQL that will modify the schema to match the YAML
+description.
 
 Features
 --------
@@ -20,7 +22,7 @@ Features
 Requirements
 ------------
 
-- `PostgreSQL <http://www.postgresql.org/>`_ 9.3 or higher
+- `PostgreSQL <https://www.postgresql.org/>`_ 9.3 or higher
 
 - `Python <http://www.python.org/>`_ 2.7 or higher
 

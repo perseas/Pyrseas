@@ -25,8 +25,8 @@ Function
 --------
 
 :class:`Function` is derived from :class:`Proc` and represents a
-`PostgreSQL user-defined function
-<http://www.postgresql.org/docs/current/static/xfunc.html>`_.
+`Postgres user-defined function
+<https://www.postgresql.org/docs/current/static/xfunc.html>`_.
 
 
 .. autoclass:: Function
@@ -45,8 +45,8 @@ Aggregate Function
 ------------------
 
 :class:`Aggregate` is derived from :class:`Proc` and represents a
-`PostgreSQL user-defined aggregate function
-<http://www.postgresql.org/docs/current/static/sql-createaggregate.html>`_.
+`Postgres user-defined aggregate function
+<https://www.postgresql.org/docs/current/static/sql-createaggregate.html>`_.
 
 .. autoclass:: Aggregate
 

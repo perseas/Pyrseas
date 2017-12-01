@@ -14,7 +14,7 @@ Database Class
 
 Class :class:`DbClass` is derived from
 :class:`~pyrseas.dbobject.DbSchemaObject` and represents a table, view
-or sequence as defined in the PostgreSQL `pg_class` catalog.
+or sequence as defined in the Postgres `pg_class` catalog.
 
 .. autoclass:: DbClass
 
@@ -173,8 +173,8 @@ Materialized View
 
 Class :class:`MaterializedView` is derived from :class:`View` and
 represents a `materialized view
-<http://www.postgresql.org/docs/9.3/static/sql-creatematerializedview.html>`_,
-available from PostgreSQL 9.3 onwards. Its :attr:`keylist` attributes
+<https://www.postgresql.org/docs/9.3/static/sql-creatematerializedview.html>`_,
+available from Postgres 9.3 onwards. Its :attr:`keylist` attributes
 are the schema name and the view name.
 
 .. autoclass:: MaterializedView

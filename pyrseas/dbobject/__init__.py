@@ -652,7 +652,7 @@ class DbObjectDict(dict):
         return objdict
 
     def fetch(self):
-        """Fetch all objects from the catalogs using the class :attr:`query`
+        """Fetch all objects from the catalogs using the :meth:`query`
 
         :return: list of self.cls objects
         """

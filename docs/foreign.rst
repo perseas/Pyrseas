@@ -34,13 +34,13 @@ Foreign Data Wrapper
 --------------------
 
 :class:`ForeignDataWrapper` is derived from
-:class:`DbObjectWithOptions` and represents a `PostgreSQL foreign data
+:class:`DbObjectWithOptions` and represents a `Postgres foreign data
 wrapper
-<http://www.postgresql.org/docs/current/static/sql-createcreateforeigndatawrapper.html>`_.
-For PostgreSQL versions 9.1 and later see also `Foreign Data
-<http://www.postgresql.org/docs/current/static/ddl-foreign-data.html>`_
+<https://www.postgresql.org/docs/current/static/sql-createcreateforeigndatawrapper.html>`_.
+For Postgres versions 9.1 and later see also `Foreign Data
+<https://www.postgresql.org/docs/current/static/ddl-foreign-data.html>`_
 and `Writing A Foreign Data Wrapper
-<http://www.postgresql.org/docs/current/static/fdwhandler.html>`_.
+<https://www.postgresql.org/docs/current/static/fdwhandler.html>`_.
 
 .. autoclass:: ForeignDataWrapper
 
@@ -65,8 +65,8 @@ Foreign Server
 --------------
 
 :class:`ForeignServer` is derived from :class:`DbObjectWithOptions`
-and represents a `PostgreSQL foreign server
-<http://www.postgresql.org/docs/current/static/sql-createserver.html>`_.
+and represents a `Postgres foreign server
+<https://www.postgresql.org/docs/current/static/sql-createserver.html>`_.
 
 .. autoclass:: ForeignServer
 
@@ -95,8 +95,8 @@ User Mapping
 ------------
 
 :class:`UserMapping` is derived from :class:`DbObjectWithOptions` and
-represents a `PostgreSQL user mapping of a user to a foreign server
-<http://www.postgresql.org/docs/current/static/sql-createusermapping.html>`_.
+represents a `Postgres user mapping of a user to a foreign server
+<https://www.postgresql.org/docs/current/static/sql-createusermapping.html>`_.
 
 .. autoclass:: UserMapping
 
@@ -127,10 +127,10 @@ Foreign Table
 -------------
 
 :class:`ForeignTable` is derived from :class:`DbObjectWithOptions` and
-:class:`~pyrseas.dbobject.table.Table`.  It represents a `PostgreSQL foreign
+:class:`~pyrseas.dbobject.table.Table`.  It represents a `Postgres foreign
 table
-<http://www.postgresql.org/docs/current/static/sql-createforeigntable.html>`_
-(available on PostgreSQL 9.1 or later).
+<https://www.postgresql.org/docs/current/static/sql-createforeigntable.html>`_
+(available on Postgres 9.1 or later).
 
 .. autoclass:: ForeignTable
 

@@ -12,8 +12,8 @@ Event Trigger
 
 :class:`EventTrigger` is derived from
 :class:`~pyrseas.dbobject.DbObject` and represents an `event trigger
-<http://www.postgresql.org/docs/9.3/static/event-triggers.html>`_
-available from PostgreSQL 9.3 onwards.
+<https://www.postgresql.org/docs/9.3/static/event-triggers.html>`_
+available from Postgres 9.3 onwards.
 
 .. autoclass:: EventTrigger
 

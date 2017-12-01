@@ -11,9 +11,9 @@ Conversion
 ----------
 
 :class:`Conversion` is derived from
-:class:`~pyrseas.dbobject.DbSchemaObject` and represents a `PostgreSQL
+:class:`~pyrseas.dbobject.DbSchemaObject` and represents a `Postgres
 conversion between character set encodings
-<http://www.postgresql.org/docs/current/static/sql-createconversion.html>`_.
+<https://www.postgresql.org/docs/current/static/sql-createconversion.html>`_.
 
 .. autoclass:: Conversion
 

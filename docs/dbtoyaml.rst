@@ -4,7 +4,7 @@ dbtoyaml - Database to YAML
 Name
 ----
 
-dbtoyaml -- extract the schema of a PostgreSQL database in YAML format
+dbtoyaml -- extract the schema of a Postgres database in YAML format
 
 Synopsys
 --------
@@ -17,18 +17,18 @@ Description
 -----------
 
 :program:`dbtoyaml` is a utility for extracting the schema of a
-PostgreSQL database to a `YAML <http://yaml.org>`_ formatted
+Postgres database to a `YAML <http://yaml.org>`_ formatted
 specification.  By default, the specification is output as a single
 output stream, which can be redirected or explicitly sent to a file.
 As an alternative, the ``--multiple-files`` option allows you to break
-down the specification into multiple files, one for each object (see
-`Multiple File Output`_).
+down the specification into multiple files, in general, one for each
+object (see `Multiple File Output`_).
 
 Note that `JSON <http://json.org/>`_ is an official
 subset of YAML version 1.2, so the :program:`dbtoyaml` output should
 also be compatible with JSON tools.
 
-The output format is as follows::
+A sample of the output format is as follows::
 
  schema public:
    owner: postgres
@@ -109,7 +109,7 @@ two tables, named ``t1`` and ``t2``, the first --owned by user
 'alice'-- in the ``public`` schema and the second --owned by user
 'bob'-- in a schema named ``s1`` (also owned by 'bob').
 The ``columns:`` specifications directly under each table list each
-column in that table, in the same order as shown by PostgreSQL. The
+column in that table, in the same order as shown by Postgres. The
 specifications ``primary_key:``, ``foreign_keys:`` and
 ``check_constraints:`` define PRIMARY KEY, FOREIGN KEY and CHECK
 constraints for a given table. Additional specifications (not shown)
@@ -121,8 +121,13 @@ DELETE to 'alice' with GRANT OPTION; and she has in turn granted
 INSERT to user 'carol'.
 
 :program:`dbtoyaml` currently supports extracting information about
-nearly all types of PostgreSQL database objects.  See :ref:`api-ref`
+nearly all types of Postgres database objects.  See :ref:`api-ref`
 for a list of supported objects.
+
+The behavior and options of ``dbtoyaml`` are patterned after the
+`pg_dump utility
+<https://www.postgresql.org/docs/current/static/app-pgdump.html>`_
+since it is most analogous to using ``pg_dump --schema-only``.
 
 Multiple File Output
 --------------------
@@ -141,7 +146,7 @@ The first level contains ``schema.<name>`` subdirectories,
 ``schema.<name>.yaml`` files and ``<objtype>.<name>.yaml`` files,
 where ``<name>`` is the name of the corresponding objects and
 ``<objtype>`` is the type of top-level (non-schema) object.  Note that
-non-schema refers to PostgreSQL extensions, casts, languages or
+non-schema refers to Postgres extensions, casts, languages or
 foreign data wrappers.
 
 The second level, i.e., the ``schema.<name>`` subdirectories contain
@@ -151,7 +156,7 @@ schema (but see below for caveats).
 Object Name Conflicts
 ~~~~~~~~~~~~~~~~~~~~~
 
-The names of PostgreSQL objects can include characters that are not
+The names of Postgres objects can include characters that are not
 allowed in filesystem object names.  The most common example is the
 division operator ('/'), but even table names can include
 non-alphanumeric characters, if the identifiers are quoted.
@@ -189,9 +194,9 @@ update the files in the same directory tree.  However, if an object is
 dropped from the database ``dbtoyaml`` would normally only output
 files for new or changed objects--and thus keep the dropped object
 file under version control.  To deal with dropped objects, ``dbtoyaml
--d`` outputs a special YAML "index" file, named
+-m`` outputs a special YAML "index" file, named
 ``database.<dbname>.yaml`` in the root directory.  When ``dbtoyaml
--d`` is run a second time, it looks for this "index" file and if
+-m`` is run a second time, it looks for this "index" file and if
 found, proceeds to delete the previous run's ``.yaml`` files before
 outputting new ones.
 
@@ -203,7 +208,7 @@ addition to the :doc:`cmdargs`):
 
 dbname
 
-    Specifies the name of the database whose schema is to extracted.
+    Specifies the name of the database whose schema is to be extracted.
 
 .. cmdoption:: -m, --multiple-files
 
@@ -284,4 +289,4 @@ To extract objects, to standard output, except those in schemas
 
 To extract objects to a directory under version control::
 
-  dbtoyaml moviesdb -d movies/dbspec
+  dbtoyaml moviesdb -m movies/dbspec

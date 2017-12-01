@@ -4,7 +4,7 @@ yamltodb - YAML to Database
 Name
 ----
 
-yamltodb -- generate SQL statements to update a PostgreSQL database to
+yamltodb -- generate SQL statements to update a Postgres database to
 match the schema specified in a YAML file
 
 Synopsys
@@ -18,7 +18,7 @@ Description
 -----------
 
 :program:`yamltodb` is a utility for generating SQL statements to
-update a PostgreSQL database so that it will match the schema
+update a Postgres database so that it will match the schema
 specified in an input `YAML <http://yaml.org>`_ formatted
 specification file.
 
@@ -90,6 +90,9 @@ addition to the :doc:`cmdargs`):
     the SQL would be a ``DROP TABLE``, the :option:`--revert` option
     generates a ``CREATE TABLE`` with all the columns, constraints and
     other objects associated with the table being dropped.
+
+    This option is experimental and currently has only been
+    implemented for schemas and sequences.
 
 Examples
 --------

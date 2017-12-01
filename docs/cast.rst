@@ -11,8 +11,8 @@ Cast
 ----
 
 :class:`Cast` is derived from :class:`~pyrseas.dbobject.DbObject` and
-represents a `PostgreSQL cast
-<http://www.postgresql.org/docs/current/static/sql-createcast.html>`_.
+represents a `Postgres cast
+<https://www.postgresql.org/docs/current/static/sql-createcast.html>`_.
 
 .. autoclass:: Cast
 

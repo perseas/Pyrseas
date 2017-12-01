@@ -63,8 +63,8 @@ In addition, the following helper functions are defined in schema
 A variant of ``get_session_variable`` is invoked by the ``audit_full``
 function to retrieve the actual (logged-on) user and IP address.  In
 web applications, the user that connects to the database is typically
-the system user running the web server, rather than the web
-application user.  The application can invoke the
+the system user running the web server, rather than the application
+(logged on) user.  The application can invoke the
 ``pyrseas.set_session_variable`` function to supply the application
 user and IP address so that the audit trail will reflect the
 application context corrrectly.
@@ -85,7 +85,7 @@ invoked to maintain the column values.
 
 - default: This is the default for audit columns.  It adds the columns
   ``modified_by_user`` and ``modified_timestamp`` and a trigger named
-  `table_name`\_20_aud_default to fill in the columns.
+  `table_name`\_20_audit_default to fill in the columns.
 
 - full: This is the most extensive audit trail combination.  It adds
   ``created_`` and ``modified_`` columns for user, IP address and

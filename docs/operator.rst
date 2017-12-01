@@ -11,8 +11,8 @@ Operator
 ---------
 
 :class:`Operator` is derived from :class:`DbSchemaObject` and
-represents a `PostgreSQL user-defined operator
-<http://www.postgresql.org/docs/current/static/xoper.html>`_.
+represents a `Postgres user-defined operator
+<https://www.postgresql.org/docs/current/static/xoper.html>`_.
 
 .. autoclass:: Operator
 

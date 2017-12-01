@@ -17,25 +17,26 @@ For development::
 Requirements
 ------------
 
-Pyrseas provides tools for `PostgreSQL <http://www.postgresql.org>`_,
-so obviously you need **PostgreSQL** to start with.  Pyrseas has been
-tested with PG 9.3, 9.4, 9.5, 9.6 and 10, and we'll certainly keep up with
-future releases.  Please refer to section III, `Server Administration
-<http://www.postgresql.org/docs/current/interactive/admin.html>`_ of
-the PostgreSQL documentation for details on installation, setup and
-the various Linux, Unix and Windows platforms supported.
+Pyrseas provides tools for `Postgres <https://www.postgresql.org>`_,
+so obviously you need **Postgres** to start with.  Pyrseas has been
+tested with PG 9.3, 9.4, 9.5, 9.6 and 10, and we'll certainly keep up
+with future releases.  Please refer to the `Postgres download page
+<https://www.postgresql.org/download>`_ to find a distribution for the
+various Linux, Unix and Windows platforms supported.
 
-You will also need **Python**.  Pyrseas has been tested with `Python
-<http://www.python.org>`_ 2.7, but should also work with 2.6.  It has
-also been ported to Python 3 and tested against versions from 3.2
-through 3.6.  On Linux or \*BSD, Python may already be part of your
-distribution or may be available as a package.  For Windows and Mac OS
-please refer to the `Python download page
-<http://www.python.org/download/>`_ for installers and instructions.
+You will also need **Python**.  Pyrseas was originally developed using
+Python 2 and been tested with `Python <http://www.python.org>`_ 2.7,
+but may also work under 2.6.  It has been ported to Python 3 and
+tested against versions from 3.2 through 3.6.  Python 3 is the
+preferred usage and development environment.  On Linux or \*BSD,
+Python may already be part of your distribution or may be available as
+a package.  For Windows and Mac OS please refer to the `Python
+download page <http://www.python.org/downloads/>`_ for installers and
+instructions.
 
-Pyrseas talks to the PostgreSQL DBMS via the **Psycopg2 adapter**.
+Pyrseas talks to the Postgres DBMS via the **Psycopg2 adapter**.
 Pyrseas has been tested with `psycopg2 <http://initd.org/psycopg/>`_
-2.2 and 2.4.  Psycopg2 is available as a package on most Linux or
+2.5 through 2.7.  Psycopg2 is available as a package on most Linux or
 \*BSD distributions and can also be downloaded or installed from PyPI.
 Please refer to the `Psycopg download page
 <http://initd.org/psycopg/download/>`_ for more details.
@@ -43,14 +44,19 @@ Please refer to the `Psycopg download page
 .. note:: If you install Pyrseas using ``pip`` (see below) and you
    have not already installed Psycopg2, e.g., when installing into a
    ``virtualenv`` environment created with ``--no-site-packages``, you
-   will need to have installed the PostgreSQL and Python development
-   packages, and a C compiler, as ``pip`` will download and attempt to
+   may need to have installed the Postgres and Python development
+   packages, and a C compiler, as ``pip`` may download and attempt to
    build and install psycopg2 before installing Pyrseas.
 
 The Pyrseas utilities rely on **PyYAML**, a `YAML <http://yaml.org>`_
 library.  This may be available as a package for your operating system
-or it can be downloaded from the `Python Package Index
-<http://pypi.python.org/pypi/PyYAML/>`_.
+or it can be downloaded from the `Python Package Index (PyPI)
+<https://pypi.org/project/PyYAML/>`_.
+
+The utilities also rely on **PgDbConn**, an offshoot of the project
+that generalizes the Postgres database connection code used in the
+utilities.  It can be downloaded from `PyPI
+<https://pypi.org/project/pgdbconn/>`_.
 
 .. _download:
 
@@ -59,29 +65,23 @@ Downloading
 
 Pyrseas is available at the following locations:
 
- - `Python Package Index (PyPI) <http://pypi.python.org/pypi/Pyrseas>`_
- - `PostgreSQL Extension Network (PGXN) <http://pgxn.org/dist/pyrseas/>`_
- - `PgFoundry <http://pgfoundry.org/projects/pyrseas/>`_
+ - `Python Package Index <https://pypi.org/project/Pyrseas>`_
+ - `Postgres Extension Network (PGXN) <https://pgxn.org/dist/pyrseas/>`_
  - `GitHub repository <https://github.com/perseas/Pyrseas>`_
 
 You can download the distribution from PyPI in gzip-compressed tar or
-ZIP archive format, but you can download *and* install it using either
-``Pip`` or ``Easy Install``.  See `Python Installers`_ below for
-details.
+ZIP archive format, but you can download *and* install it using
+``Pip``.  See `Python Installer`_ below for details.
 
 PGXN provides a ZIP archive which you can download or you can download
 *and* install using the PGXN client (see `PGXN Client`_ below).
 
-PgFoundry offers the distribution in gzip-compressed tar or ZIP
-archive format, which can be downloaded and then installed as
-described `below <#id1>`_.
-
 The GitHub repository holds the Pyrseas source code, tagged according
-to the various releases, e.g., v0.2.0, and including unreleased
-modifications.  To access it, you need `Git <http://git-scm.com/>`_
+to the various releases, e.g., v0.8.0, and including unreleased
+modifications.  To access it, you need `Git <https://git-scm.com/>`_
 which is available as a package in most OS distributions or can be
 downloaded from the `Git download page
-<http://git-scm.com/download>`_.  You can fetch the Pyrseas sources by
+<https://git-scm.com/download>`_.  You can fetch the Pyrseas sources by
 issuing one of the following commands::
 
  git clone git://github.com/perseas/Pyrseas.git
@@ -109,8 +109,8 @@ Installation
 Extracting Sources
 ~~~~~~~~~~~~~~~~~~
 
-Once you have downloaded an archive from PyPI, PGXN or PgFoundry, you
-need to extract the sources. For a gzip-compressed tar file, use::
+Once you have downloaded an archive from PyPI or PGXN, you need to
+extract the sources. For a gzip-compressed tar file, use::
 
  tar xzf Pyrseas-n.n.n.tar.gz
 
@@ -137,7 +137,7 @@ That will install the :doc:`dbtoyaml </dbtoyaml>` and :doc:`yamltodb
 ``/usr/local/bin``.  The library sources and bytecode files will be
 placed in a ``pyrseas`` subdirectory under ``site-packages`` or
 ``dist-packages``, e.g.,
-``/usr/local/lib/python2.7/dist-packages/pyrseas``.
+``/usr/local/lib/python3.6/dist-packages/pyrseas``.
 
 On Windows, from an account with Administrator privileges, you can
 use::
@@ -147,23 +147,17 @@ use::
 That will install the Pyrseas utilities in the ``Scripts`` folder of
 your Python installation.  The source and bytecode files will go in
 the ``site-packages`` folder, e.g.,
-``C:\Python27\Lib\site-packages\pyrseas``.
+``C:\Python36\Lib\site-packages\pyrseas``.
 
-.. _installers:
+.. _installer:
 
-Python Installers
-~~~~~~~~~~~~~~~~~
+Python Installer
+~~~~~~~~~~~~~~~~
 
 You can also download and install Pyrseas using `pip
-<http://www.pip-installer.org/en/latest/>`_ or `easy_install
-<http://packages.python.org/distribute/easy_install.html>`_. For
-example, on Linux do::
+<https://pypi.org/project/pip/>`_. For example, on Linux do::
 
  sudo pip install Pyrseas
-
-or::
-
- sudo easy_install Pyrseas
 
 If this is the first time you are installing a Python package, please
 do yourself a favor and read and follow the instructions in the
@@ -174,18 +168,17 @@ section for your platform of the `The Hitchhiker’s Guide to Python!
 .. note:: On FreeBSD, it has been reported that it is necessary to
           install the Python ``distribute`` package, prior to
           installing Pyrseas with ``pip``.  This may also be necessary
-          on other BSD variants.  See the *Hitchhiker's Guide* above
-          for further details.
+          on other BSD variants.
 
 .. note:: On Windows 64-bit, it has been reported that it is necessary
           to obtain unofficial versions of the ``distribute`` and
           ``PyYAML`` packages, available at `University of California,
-          Irvine <http://www.lfd.uci.edu/~gohlke/pythonlibs/>`_. For a
-          detailed tutorial, see `this post
+          Irvine <https://www.lfd.uci.edu/~gohlke/pythonlibs/>`_. For
+          a detailed tutorial, see `this post
           <http://dbadailystuff.com/2012/07/04/install-pyrseas-in-windows/>`_.
 
-``Pip`` and ``easy_install`` can also be used in a Python `virtualenv
-<http://www.virtualenv.org/en/latest/>`_ environment, in which case
+``Pip`` can also be used in a Python `virtualenv
+<http://virtualenv.pypa.io/en/latest/>`_ environment, in which case
 you *don't* need to prefix the commands with ``sudo``.
 
 ``Pip`` also provides the ability to uninstall Pyrseas.
@@ -193,7 +186,7 @@ you *don't* need to prefix the commands with ``sudo``.
 PGXN Client
 ~~~~~~~~~~~
 
-The PGXN `client <http://pypi.python.org/pypi/pgxnclient>`_ (available
+The PGXN `client <https://pypi.org/project/pgxnclient/>`_ (available
 at PyPI) can be used to download and install Pyrseas from PGXN.  Usage
 is::
 

@@ -11,11 +11,11 @@ Trigger
 -------
 
 :class:`Trigger` is derived from
-:class:`~pyrseas.dbobject.DbSchemaObject` and represents a PostgreSQL
+:class:`~pyrseas.dbobject.DbSchemaObject` and represents a Postgres
 regular `trigger
-<http://www.postgresql.org/docs/current/static/sql-createtrigger.html>`_
+<https://www.postgresql.org/docs/current/static/sql-createtrigger.html>`_
 or `constraint trigger
-<http://www.postgresql.org/docs/current/static/sql-createconstraint.html>`_.
+<https://www.postgresql.org/docs/current/static/sql-createconstraint.html>`_.
 
 
 .. autoclass:: Trigger

@@ -11,9 +11,9 @@ Extension
 ---------
 
 :class:`Extension` is derived from
-:class:`~pyrseas.dbobject.DbObject` and represents a `PostgreSQL
+:class:`~pyrseas.dbobject.DbObject` and represents a `Postgres
 extension
-<http://www.postgresql.org/docs/current/static/extend-extensions.html>`_.
+<https://www.postgresql.org/docs/current/static/extend-extensions.html>`_.
 
 .. autoclass:: Extension
 

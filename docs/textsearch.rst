@@ -14,8 +14,8 @@ Text Search Configuration
 -------------------------
 
 :class:`TSConfiguration` is derived from :class:`DbSchemaObject` and
-represents a `PostgreSQL text search configuration
-<http://www.postgresql.org/docs/current/static/sql-createtsconfig.html>`_.
+represents a `Postgres text search configuration
+<https://www.postgresql.org/docs/current/static/sql-createtsconfig.html>`_.
 
 .. autoclass:: TSConfiguration
 
@@ -40,8 +40,8 @@ Text Search Dictionary
 ----------------------
 
 :class:`TSDictionary` is derived from :class:`DbSchemaObject` and
-represents a `PostgreSQL text search dictionary
-<http://www.postgresql.org/docs/current/static/textsearch-dictionaries.html>`_.
+represents a `Postgres text search dictionary
+<https://www.postgresql.org/docs/current/static/textsearch-dictionaries.html>`_.
 
 .. autoclass:: TSDictionary
 
@@ -65,8 +65,8 @@ Text Search Parser
 ------------------
 
 :class:`TSParser` is derived from :class:`DbSchemaObject` and
-represents a `PostgreSQL text search parser
-<http://www.postgresql.org/docs/current/static/sql-createtsparser.html>`_.
+represents a `Postgres text search parser
+<https://www.postgresql.org/docs/current/static/sql-createtsparser.html>`_.
 
 .. autoclass:: TSParser
 
@@ -89,8 +89,8 @@ Text Search Template
 --------------------
 
 :class:`TSTemplate` is derived from :class:`DbSchemaObject` and
-represents a `PostgreSQL text search template
-<http://www.postgresql.org/docs/current/static/sql-createtstemplate.html>`_.
+represents a `Postgres text search template
+<https://www.postgresql.org/docs/current/static/sql-createtstemplate.html>`_.
 
 .. autoclass:: TSTemplate
 
