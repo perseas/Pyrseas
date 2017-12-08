@@ -12,12 +12,10 @@ Event Trigger
 
 :class:`EventTrigger` is derived from
 :class:`~pyrseas.dbobject.DbObject` and represents an `event trigger
-<https://www.postgresql.org/docs/9.3/static/event-triggers.html>`_
+<https://www.postgresql.org/docs/current/static/event-triggers.html>`_
 available from Postgres 9.3 onwards.
 
 .. autoclass:: EventTrigger
-
-.. automethod:: EventTrigger.from_map
 
 .. automethod:: EventTrigger.to_map
 

@@ -11,17 +11,16 @@ Column
 ------
 
 :class:`Column` is derived from
-:class:`~pyrseas.dbobject.DbSchemaObject` and represents a column in a
-table, or an attribute in a composite type.  Its :attr:`keylist`
+:class:`~pyrseas.dbobject.DbSchemaObject` and represents a column of a
+table, or an attribute of a composite type.  Its :attr:`keylist`
 attributes are the schema name and the table name.
 
 A :class:`Column` has the following attributes: :attr:`name`,
-:attr:`type`, :attr:`not_null` and :attr:`default`. The :attr:`number`
-attribute is also present but is not made visible externally.
+:attr:`type`, :attr:`not_null`, :attr:`default` and
+:attr:`collation`. The :attr:`number` attribute is also present but is
+not made visible externally.
 
 .. autoclass:: Column
-
-.. automethod:: Column.from_map
 
 .. automethod:: Column.to_map
 

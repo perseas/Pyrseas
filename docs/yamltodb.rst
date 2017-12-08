@@ -23,19 +23,30 @@ specified in an input `YAML <http://yaml.org>`_ formatted
 specification file.
 
 For example, given the input file shown under :doc:`dbtoyaml`,
-:program:`yamltodb` outputs the following SQL statements::
+:program:`yamltodb`, when run against a newly-created database,
+outputs the following SQL statements::
 
  CREATE SCHEMA s1;
+ ALTER SCHEMA s1 OWNER TO bob;
+ GRANT ALL ON SCHEMA s1 TO bob;
+ GRANT ALL ON SCHEMA s1 TO alice;
  CREATE TABLE t1 (
      c1 integer NOT NULL,
      c2 smallint,
      c3 boolean DEFAULT false,
      c4 text);
+ ALTER TABLE t1 OWNER TO alice;
  CREATE TABLE s1.t2 (
      c21 integer NOT NULL,
      c22 character varying(16));
- ALTER TABLE s1.t2 ADD CONSTRAINT t2_pkey PRIMARY KEY (c21);
+ ALTER TABLE s1.t2 OWNER TO bob;
+ GRANT ALL ON TABLE s1.t2 TO bob;
+ GRANT SELECT ON TABLE s1.t2 TO PUBLIC;
+ GRANT INSERT, DELETE, UPDATE ON TABLE s1.t2 TO alice WITH GRANT OPTION;
+ GRANT INSERT ON TABLE s1.t2 TO carol;
+ ALTER TABLE t1 ADD CONSTRAINT t1_c2_check CHECK (c2 > 123);
  ALTER TABLE t1 ADD CONSTRAINT t1_pkey PRIMARY KEY (c1);
+ ALTER TABLE s1.t2 ADD CONSTRAINT t2_pkey PRIMARY KEY (c21);
  ALTER TABLE t1 ADD CONSTRAINT t1_c2_fkey FOREIGN KEY (c2) REFERENCES s1.t2 (c21);
 
 Options

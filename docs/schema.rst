@@ -11,18 +11,15 @@ Schema
 ------
 
 :class:`Schema` is derived from :class:`~pyrseas.dbobject.DbObject`
-and represents a database schema, i.e., a collection of tables and
-other objects. The 'public' schema is special as in most contexts an
-unqualified object is assumed to be part of it, e.g., table "t" is
-usually shorthand for table "public.t."
-
-For now, the schema :attr:`name` is the only attribute and is of
-course the identifying attribute in the :class:`Schema`
-:attr:`keylist`.
+and represents a database schema or Postgres namespace, i.e., a
+collection of tables and other objects. The 'public' schema is
+currently treated specially as in most contexts an unqualified object
+is assumed to be part of it, e.g., table "t" is usually shorthand for
+table "public.t."  The 'pyrseas' schema, if present, is excluded as it
+is only intended for use by :program:`dbaugment` or other Pyrseas
+internal purposes.
 
 .. autoclass:: Schema
-
-.. automethod:: Schema.from_map
 
 .. automethod:: Schema.extern_dir
 

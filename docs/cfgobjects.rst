@@ -1,18 +1,19 @@
 Augmenter Configuration Objects
 ===============================
 
-These configuration objects are predefined in the Augmenter modules
-or can be defined or overriden by configuration elements in the
-augmenter map.
+These configuration objects are predefined in the Augmenter modules or
+can be defined or overriden by configuration elements in the
+``augmenter`` map.  Please see also :doc:`configitems` and
+:doc:`predefaug`.
 
 .. module:: pyrseas.augment.function
 
 Configuration Functions
 -----------------------
 
-A :class:`CfgFunction` class specifies a function to be used by other
-augmenter objects.  For example, this includes procedures to be
-invoked by triggers used to maintain audit columns.  The
+A :class:`CfgFunction` class specifies a Postgres function to be used
+by other augmenter objects.  For example, this includes procedures to
+be invoked by triggers used to maintain audit columns.  The
 :class:`CfgFunctionDict` class holds all the :class:`CfgFunction`
 objects, indexed by the function name and its arguments.  A
 :class:`CfgFunctionSource` class represents the source code for a

@@ -39,9 +39,10 @@ A sample of the output format is as follows::
      - all
    table t1:
      check_constraints:
-       check_expr: (c2 > 123)
-       columns:
-       - c2
+       t1_c2_check:
+         columns:
+         - c2
+         expression: (c2 > 123)
      columns:
      - c1:
          not_null: true

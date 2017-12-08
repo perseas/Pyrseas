@@ -337,6 +337,8 @@ class Database(object):
     def from_catalog(self, single_db=False):
         """Populate the database objects by querying the catalogs
 
+        :param single_db: populating only this database?
+
         The `db` holder is populated by various DbObjectDict-derived
         classes by querying the catalogs.  A dependency graph is
         constructed by querying the pg_depend catalog.  The objects in
@@ -394,7 +396,7 @@ class Database(object):
         self._link_refs(self.ndb)
 
     def map_from_dir(self):
-        """Read the database maps starting from metadata directory
+        """Read the database maps starting from the metadata directory
 
         :return: dictionary
         """
@@ -434,7 +436,7 @@ class Database(object):
     def to_map(self):
         """Convert the db maps to a single hierarchy suitable for YAML
 
-        :return: a YAML-suitable dictionary (without Python objects)
+        :return: a YAML-suitable dictionary (without any Python objects)
         """
         if not self.db:
             self.from_catalog(True)

@@ -17,8 +17,6 @@ extension
 
 .. autoclass:: Extension
 
-.. automethod:: Extension.from_map
-
 .. automethod:: Extension.create
 
 .. automethod:: Extension.alter

@@ -48,8 +48,8 @@ class Index(DbSchemaObject):
     An index is identified by its schema name and index name.  However,
     at this time, Pyrseas uses the triple schema-table-index names as the
     identifier.
-    TODO:  This should be fixed in this or a subsequent release.
     """
+    # TODO:  This should be fixed in this or a subsequent release.
 
     keylist = ['schema', 'table', 'name']
     catalog = 'pg_index'

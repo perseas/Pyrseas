@@ -13,9 +13,8 @@ Procedural Language
 :class:`Language` is derived from :class:`~pyrseas.dbobject.DbObject`
 and represents a procedural language.
 
-.. autoclass:: Language
 
-.. automethod:: Language.from_map
+.. autoclass:: Language
 
 .. automethod:: Language.to_map
 

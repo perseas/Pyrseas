@@ -15,7 +15,7 @@ METHODS = {'f': 'function', 'i': 'inout', 'b': 'binary coercible'}
 
 
 class Cast(DbObject):
-    """A cast"""
+    """A cast from a source type to a target type"""
 
     keylist = ['source', 'target']
     single_extern_file = True

@@ -229,7 +229,11 @@ class DbObject(object):
     def query(dbversion=None):
         """The SQL SELECT query to fetch object instances from the catalogs
 
-        This is used by the method :meth:`fetch`.
+        :param dbversion: Postgres version identifier
+
+        This is used by the method :meth:`fetch`.  The `dbversion`
+        parameter is used in descendant classes to customize the
+        queries according to the target Postgres version.
         """
         return ""
 
@@ -240,18 +244,19 @@ class DbObject(object):
 
         This is used for the first two levels of external maps.  The
         first level is the one that includes schemas, as well as
-        extensions, languages, casts and FDWs.  The second level
-        includes all schema-owned objects, i.e., tables, functions,
-        operators, etc.  All subsequent levels, e.g., primary keys,
-        indexes, etc., currently use the object name as the external
-        identifier, appearing in the map after an object grouping
-        header, such as ``primary_key``.
+        extensions, languages, casts and foreign data wrappers.  The
+        second level includes all schema-owned objects, i.e., tables,
+        functions, operators, etc.  All subsequent levels, e.g.,
+        primary keys, indexes, etc., currently use the object name as
+        the external identifier, appearing in the map after an object
+        grouping header, such as ``primary_key``.
 
         The common format for an external key is `object-type
         non-schema-qualified-name`, where `object-type` is the
         lowercase version of :attr:`objtype`, e.g., ``table
         tablename``.  Some object types require more, e.g., functions
         need the signature, so they override this implementation.
+
         """
         return '%s %s' % (self.objtype.lower(), self.name)
 
@@ -262,16 +267,17 @@ class DbObject(object):
         :param truncate: truncate filename to MAX_IDENT_LEN
         :return: filename string
 
-        This is used for the first two levels of external maps.  The
-        first level is the one that includes schemas, as well as
-        extensions, languages, casts and FDWs.  The second level
-        includes all schema-owned objects, i.e., tables, functions,
-        operators, etc.
+        This is used for the first two levels of external (metadata)
+        files.  The first level is the one that includes schemas, as
+        well as extensions, languages, casts and FDWs.  The second
+        level includes all schema-owned objects, i.e., tables,
+        functions, operators, etc.
 
         The common format for the filename is `objtype.objname.yaml`,
         e.g., for a table `t1` the filename is "table.t1.yaml".  For
         an object name that has characters not allowed in filesystems,
         the characters are replaced by underscores.
+
         """
         max_len = MAX_IDENT_LEN if truncate else MAX_PG_IDENT_LEN
 
@@ -338,6 +344,9 @@ class DbObject(object):
         :param no_owner: exclude object owner information
         :param no_privs: exclude privilege information
         :return: dictionary
+
+        The return value, a Python dictionary, is equivalent to a YAML
+        or JSON object.
         """
         dct = self.__dict__.copy()
         for key in self.keylist:
@@ -574,6 +583,11 @@ class DbSchemaObject(DbObject):
         return super(DbSchemaObject, self).extern_filename(ext, True)
 
     def rename(self, oldname):
+        """Return SQL statement to RENAME the schema object
+
+        :param oldname: the old name for the schema object
+        :return: SQL statement
+        """
         return "ALTER %s %s.%s RENAME TO %s" % (
             self.objtype, quote_id(self.schema), quote_id(oldname),
             quote_id(self.name))
@@ -591,10 +605,17 @@ class DbSchemaObject(DbObject):
 
 
 class DbObjectDict(dict):
-    """A dictionary of database objects, all of the same type"""
+    """A dictionary of database objects, all of the same type.
+
+    However, note that "type" sometimes refers to a polymorphic class.
+    For example, a :class:`ConstraintDict` holds objects of type
+    :class:`Constraint`, but the actual objects may be of class
+    :class:`CheckConstraint`, :class:`PrimaryKey`, etc.
+    """
 
     cls = DbObject
-    """The class, derived from :class:`DbObject` that the objects belong to.
+    """The possibly-polymorphic class, derived from :class:`DbObject` that
+    the objects belong to.
     """
 
     def __init__(self, dbconn=None):
@@ -632,7 +653,7 @@ class DbObjectDict(dict):
         :return: dictionary
 
         Invokes the `to_map` method of each object to construct the
-        dictionary.  If opts specifies a directory, the objects are
+        dictionary.  If `opts` specifies a directory, the objects are
         written to files in that directory.
         """
         objdict = {}
@@ -652,12 +673,13 @@ class DbObjectDict(dict):
         return objdict
 
     def fetch(self):
-        """Fetch all objects from the catalogs using the :meth:`query`
+        """Fetch all objects from the catalogs using the associated
+        :meth:`query` methods.
 
-        :return: list of self.cls objects
+        :return: list of self.cls (polymorphic) objects
+
         """
-        if hasattr(self.cls, 'query'):
-            self.query = self.cls.query(self.dbconn.version)
+        self.query = self.cls.query(self.dbconn.version)
         data = self.dbconn.fetchall(self.query)
         self.dbconn.rollback()
         return [self.cls(**dict(row)) for row in data]

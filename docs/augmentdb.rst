@@ -3,7 +3,7 @@ Augmenter Databases
 
 .. module:: pyrseas.augmentdb
 
-The :mod:`augmentdb` module defines :class:`AugmentDatabase`.
+The :mod:`augmentdb` module defines the class :class:`AugmentDatabase`.
 
 Augmenter Database
 ------------------
@@ -19,8 +19,9 @@ other objects, by querying the system catalogs.
 The second container is an :class:`AugDicts` object.  The `adb`
 AugDicts object specifies the schemas to be augmented and the
 augmenter configuration objects.  The latter objects may be supplied
-either by other Augmenter modules or from the 'augmenter'
-configuration tree on the `aug_map` supplied to the `apply` method.
+either by other Augmenter modules or from the ``augmenter``
+configuration tree on the `aug_map` supplied to the :meth:`apply`
+method.
 
 .. autoclass:: AugmentDatabase
 

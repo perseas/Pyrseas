@@ -35,7 +35,11 @@ def seq_min_value(seq):
 
 
 class DbClass(DbSchemaObject):
-    """A table, sequence, index or view"""
+    """A table, sequence or view
+
+    The `pg_class` catalog also includes Postgres indexes, but for now,
+    indexes have not been implemented as part of the `DbClass` hierarchy.
+    """
 
     keylist = ['schema', 'name']
     catalog = 'pg_class'
@@ -329,6 +333,11 @@ class Table(DbClass):
     have a list of columns.  It may have a primary_key, zero or more
     foreign_keys, zero or more unique_constraints, and zero or more
     indexes.
+
+    A :class:`Table` can also represent a partitioned table or a
+    partition of a partitioned table.  The latter's columns are all
+    inherited from the parent (partitioned) table, so they are not
+    shown in an output map (or expected on input).
     """
     def __init__(self, name, schema, description, owner, privileges,
                  tablespace=None, unlogged=False, options=None,
@@ -859,7 +868,7 @@ class ClassDict(DbObjectDict):
                     if table.partition_by is not None:
                         exc.args = ("Table '%s' has no columns" % key, )
                         raise
-                newdb.constraints.from_map(table, inobj, rtables=inobjs)
+                newdb.constraints.from_map(table, inobj)
                 if 'indexes' in inobj:
                     newdb.indexes.from_map(table, inobj['indexes'])
                 if 'rules' in inobj:

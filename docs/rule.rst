@@ -17,8 +17,6 @@ rewrite rule
 
 .. autoclass:: Rule
 
-.. automethod:: Rule.from_map
-
 .. automethod:: Rule.identifier
 
 .. automethod:: Rule.to_map

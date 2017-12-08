@@ -70,27 +70,50 @@ classes and methods are documented mainly for developer use.
 
    dbobject
    database
-   cast
-   language
    schema
-   collation
-   conversion
+
+Non-schema Objects
+~~~~~~~~~~~~~~~~~~
+.. toctree::
+   :maxdepth: 2
+
+   cast
    eventtrig
    extension
-   function
-   operator
-   operfamily
-   operclass
-   type
+   foreign
+   language
+
+Tables and Related Objects
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. toctree::
+   :maxdepth: 2
+
    table
    column
    constraint
    indexes
    rule
-   trigger
-   textsearch
-   foreign
 
+Functions, Operators and Triggers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. toctree::
+   :maxdepth: 2
+
+   function
+   operator
+   operfamily
+   operclass
+   trigger
+
+Types and Other Schema Objects
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+.. toctree::
+   :maxdepth: 2
+
+   collation
+   conversion
+   textsearch
+   type
 
 Augmenter API Reference
 -----------------------

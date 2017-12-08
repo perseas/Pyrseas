@@ -3,21 +3,21 @@ Foreign Data Objects
 
 .. module:: pyrseas.dbobject.foreign
 
-The :mod:`foreign` module defines nine classes:
-:class:`DbObjectWithOptions` derived from :class:`DbObject`, classes
-:class:`ForeignDataWrapper`, :class:`ForeignServer` and
-:class:`UserMapping` derived from :class:`DbObjectWithOptions`,
-:class:`ForeignTable` derived from :class:`DbObjectWithOptions` and
-:class:`Table`, classes :class:`ForeignDataWrapperDict`,
-:class:`ForeignServerDict` and :class:`UserMappingDict` derived from
-:class:`DbObjectDict`, and :class:`ForeignTableDict` derived from
-:class:`ClassDict`.
+The :mod:`foreign` module defines nine classes related to Postgres
+foreign data wrappers (FDWs), namely: :class:`DbObjectWithOptions`
+derived from :class:`DbObject`, classes :class:`ForeignDataWrapper`,
+:class:`ForeignServer` and :class:`UserMapping` derived from
+:class:`DbObjectWithOptions`, :class:`ForeignTable` derived from
+:class:`DbObjectWithOptions` and :class:`Table`, classes
+:class:`ForeignDataWrapperDict`, :class:`ForeignServerDict` and
+:class:`UserMappingDict` derived from :class:`DbObjectDict`, and
+:class:`ForeignTableDict` derived from :class:`ClassDict`.
 
 Database Object With Options
 ----------------------------
 
 :class:`DbObjectWithOptions` is derived from
-:class:`~pyrseas.dbobject.DbObject`.  It is a helper function dealing
+:class:`~pyrseas.dbobject.DbObject`.  It is a helper class for dealing
 with the OPTIONS clauses common to the foreign data objects.
 
 .. autoclass:: DbObjectWithOptions
@@ -33,18 +33,15 @@ with the OPTIONS clauses common to the foreign data objects.
 Foreign Data Wrapper
 --------------------
 
-:class:`ForeignDataWrapper` is derived from
-:class:`DbObjectWithOptions` and represents a `Postgres foreign data
-wrapper
-<https://www.postgresql.org/docs/current/static/sql-createcreateforeigndatawrapper.html>`_.
-For Postgres versions 9.1 and later see also `Foreign Data
+:class:`ForeignDataWrapper` is derived from `DbObjectWithOptions` and
+represents a `Postgres foreign data wrapper
+<https://www.postgresql.org/docs/current/static/sql-createforeigndatawrapper.html>`_.
+See also `Foreign Data
 <https://www.postgresql.org/docs/current/static/ddl-foreign-data.html>`_
 and `Writing A Foreign Data Wrapper
 <https://www.postgresql.org/docs/current/static/fdwhandler.html>`_.
 
 .. autoclass:: ForeignDataWrapper
-
-.. automethod:: ForeignDataWrapper.from_map
 
 .. automethod:: ForeignDataWrapper.to_map
 
@@ -70,8 +67,6 @@ and represents a `Postgres foreign server
 
 .. autoclass:: ForeignServer
 
-.. automethod:: ForeignServer.from_map
-
 .. automethod:: ForeignServer.identifier
 
 .. automethod:: ForeignServer.to_map
@@ -95,12 +90,10 @@ User Mapping
 ------------
 
 :class:`UserMapping` is derived from :class:`DbObjectWithOptions` and
-represents a `Postgres user mapping of a user to a foreign server
+represents a `mapping of a Postgres user to a foreign server
 <https://www.postgresql.org/docs/current/static/sql-createusermapping.html>`_.
 
 .. autoclass:: UserMapping
-
-.. automethod:: UserMapping.from_map
 
 .. automethod:: UserMapping.extern_key
 
@@ -121,20 +114,15 @@ represents the collection of user mappings in a database.
 
 .. automethod:: UserMappingDict.to_map
 
-.. automethod:: UserMappingDict.alter
-
 Foreign Table
 -------------
 
 :class:`ForeignTable` is derived from :class:`DbObjectWithOptions` and
-:class:`~pyrseas.dbobject.table.Table`.  It represents a `Postgres foreign
-table
-<https://www.postgresql.org/docs/current/static/sql-createforeigntable.html>`_
-(available on Postgres 9.1 or later).
+:class:`~pyrseas.dbobject.table.Table`.  It represents a `Postgres
+foreign table
+<https://www.postgresql.org/docs/current/static/sql-createforeigntable.html>`_.
 
 .. autoclass:: ForeignTable
-
-.. automethod:: ForeignTable.from_map
 
 .. automethod:: ForeignTable.to_map
 

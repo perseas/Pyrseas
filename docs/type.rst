@@ -14,8 +14,7 @@ Database Type
 
 Class :class:`DbType` is derived from
 :class:`~pyrseas.dbobject.DbSchemaObject` and represents a SQL type or
-domain as defined in the Postgres `pg_type` catalog. Note: Only
-enumerated types are implemented currently.
+domain as defined in the Postgres `pg_type` catalog.
 
 .. autoclass:: DbType
 
@@ -27,15 +26,18 @@ and represents a Postgres `user-defined base type
 <https://www.postgresql.org/docs/current/static/xtypes.html>`_.
 
 The map returned by :meth:`to_map` and expected as argument by
-:meth:`diff_map` has the following structure (not all fields need be
-present)::
+:meth:`TypeDict.from_map` has the following structure (not all fields
+need be present)::
 
   {'type t1':
       {'alignment': 'double',
        'analyze': 'analyze_func',
+       'category': 'U',
+       'delimiter': ',',
        'input': 'input_func',
        'internallength': 'variable',
        'output': 'output_func',
+       'preferred': 'true',
        'receive': 'receive_func',
        'send': 'send_func',
        'storage': 'plain'
@@ -45,8 +47,6 @@ present)::
   }
 
 .. autoclass:: BaseType
-
-.. automethod:: BaseType.to_map
 
 .. automethod:: BaseType.to_map
 
@@ -63,8 +63,6 @@ and represents a standalone `composite type
 
 .. autoclass:: Composite
 
-.. automethod:: Composite.from_map
-
 .. automethod:: Composite.to_map
 
 .. automethod:: Composite.create
@@ -80,23 +78,35 @@ represents an `enumerated type
 
 .. autoclass:: Enum
 
-.. automethod:: Enum.from_map
-
 .. automethod:: Enum.create
 
 Domain
 ------
 
 :class:`Domain` is derived from :class:`~pyrseas.dbobject.DbType` and
-represents a domain.
+represents a `domain
+<https://www.postgresql.org/docs/current/static/sql-createdomain.html>`_.
 
 .. autoclass:: Domain
-
-.. automethod:: Domain.from_map
 
 .. automethod:: Domain.to_map
 
 .. automethod:: Domain.create
+
+Range
+-----
+
+:class:`Range` is derived from :class:`~pyrseas.dbobject.DbType` and
+represents a `Postgres range type
+<https://www.postgresql.org/docs/current/static/rangetypes.html>`_.
+
+.. autoclass:: Range
+
+.. automethod:: Range.to_map
+
+.. automethod:: Range.create
+
+.. automethod:: Range.alter
 
 Type Dictionary
 ---------------

@@ -12,11 +12,10 @@ Operator Family
 
 :class:`OperatorFamily` is derived from :class:`DbSchemaObject` and
 represents a `Postgres operator family
-<https://www.postgresql.org/docs/current/static/sql-createopfamily.html>`_.
+<https://www.postgresql.org/docs/current/static/sql-createopfamily.html>`_,
+a grouping of related operator classes.
 
 .. autoclass:: OperatorFamily
-
-.. automethod:: OperatorFamily.from_map
 
 .. automethod:: OperatorFamily.extern_key
 

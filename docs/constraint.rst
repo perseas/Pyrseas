@@ -35,8 +35,6 @@ a CHECK constraint.
 
 .. autoclass:: CheckConstraint
 
-.. automethod:: CheckConstraint.from_map
-
 .. automethod:: CheckConstraint.to_map
 
 .. automethod:: CheckConstraint.add
@@ -53,8 +51,6 @@ a primary key constraint.
 
 .. autoclass:: PrimaryKey
 
-.. automethod:: PrimaryKey.from_map
-
 .. automethod:: PrimaryKey.to_map
 
 .. automethod:: PrimaryKey.alter
@@ -67,7 +63,7 @@ a foreign key constraint.
 
 The following shows a foreign key segment of a map returned by
 :meth:`to_map` and expected as argument by
-:meth:`ConstraintDict.diff_map` exemplifying various possibilities::
+:meth:`ConstraintDict.from_map` exemplifying various possibilities::
 
  {'t1_fgn_key1':
      {
@@ -80,8 +76,6 @@ The following shows a foreign key segment of a map returned by
  }
 
 .. autoclass:: ForeignKey
-
-.. automethod:: ForeignKey.from_map
 
 .. automethod:: ForeignKey.ref_columns
 
@@ -98,8 +92,6 @@ Unique Constraint
 represents a UNIQUE, non-primary key constraint.
 
 .. autoclass:: UniqueConstraint
-
-.. automethod:: UniqueConstraint.from_map
 
 .. automethod:: UniqueConstraint.to_map
 

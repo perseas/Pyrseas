@@ -19,8 +19,6 @@ represents a `Postgres text search configuration
 
 .. autoclass:: TSConfiguration
 
-.. automethod:: TSConfiguration.from_map
-
 .. automethod:: TSConfiguration.to_map
 
 .. automethod:: TSConfiguration.create
@@ -45,8 +43,6 @@ represents a `Postgres text search dictionary
 
 .. autoclass:: TSDictionary
 
-.. automethod:: TSDictionary.from_map
-
 .. automethod:: TSDictionary.create
 
 Text Search Dictionary Dictionary
@@ -70,8 +66,6 @@ represents a `Postgres text search parser
 
 .. autoclass:: TSParser
 
-.. automethod:: TSParser.from_map
-
 .. automethod:: TSParser.create
 
 Text Search Parser Dictionary
@@ -93,8 +87,6 @@ represents a `Postgres text search template
 <https://www.postgresql.org/docs/current/static/sql-createtstemplate.html>`_.
 
 .. autoclass:: TSTemplate
-
-.. automethod:: TSTemplate.from_map
 
 .. automethod:: TSTemplate.create
 

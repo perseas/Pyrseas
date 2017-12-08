@@ -211,14 +211,14 @@ class BaseType(DbType):
         return rv
 
     def drop(self):
-        """Generate SQL to drop the type
+        """Generate SQL to drop the type (and related functions)
 
         :return: list of SQL statements
-
-        The CASCADE thing is mandatory to drop the functions too. There is
-        a cyclic dependency so the dependency graph cannot be used. The
-        functions will not be explicitly dropped.
         """
+        # The CASCADE clause is required to also drop the related
+        # functions.  There is a cyclic dependency so the dependency
+        # graph cannot be used. The functions will not be explicitly
+        # dropped.
         return ["DROP %s %s CASCADE" % (self.objtype, self.identifier())]
 
 

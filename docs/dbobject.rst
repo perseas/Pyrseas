@@ -87,7 +87,8 @@ Schema Object
 A :class:`DbSchemaObject` is derived from :class:`DbObject`. It is
 used as a base class for objects owned by a schema and to define
 certain common methods. This is different from the
-:class:`~pyrseas.schema.Schema` that represents the schema itself.
+:class:`~pyrseas.schema.Schema` that represents the schema (Postgres
+namespace) itself.
 
 .. autoclass:: DbSchemaObject
 
@@ -96,7 +97,5 @@ certain common methods. This is different from the
 .. automethod:: DbSchemaObject.qualname
 
 .. automethod:: DbSchemaObject.unqualify
-
-.. automethod:: DbSchemaObject.drop
 
 .. automethod:: DbSchemaObject.rename

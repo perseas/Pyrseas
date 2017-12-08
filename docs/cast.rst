@@ -14,9 +14,10 @@ Cast
 represents a `Postgres cast
 <https://www.postgresql.org/docs/current/static/sql-createcast.html>`_.
 
-.. autoclass:: Cast
+A cast is identified externally as ``cast (<source_type> AS
+<target_type>)``.
 
-.. automethod:: Cast.from_map
+.. autoclass:: Cast
 
 .. automethod:: Cast.extern_key
 

@@ -13,12 +13,9 @@ Collation
 :class:`Collation` is derived from
 :class:`~pyrseas.dbobject.DbSchemaObject` and represents a `Postgres
 collation
-<https://www.postgresql.org/docs/current/static/collation.html>`_
-(available on Postgres 9.1 or later).
+<https://www.postgresql.org/docs/current/static/collation.html>`_.
 
 .. autoclass:: Collation
-
-.. automethod:: Collation.from_map
 
 .. automethod:: Collation.create
 

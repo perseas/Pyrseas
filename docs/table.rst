@@ -3,11 +3,12 @@ Tables, Views and Sequences
 
 .. module:: pyrseas.dbobject.table
 
-The :mod:`table` module defines six classes, :class:`DbClass` derived
-from :class:`DbSchemaObject`, classes :class:`Sequence`,
-:class:`Table` and :class:`View` derived from :class:`DbClass`,
-:class:`MaterializedView` derived from :class:`View`, and
-:class:`ClassDict`, derived from :class:`DbObjectDict`.
+The :mod:`table` and :mod:`view` modules define six classes,
+:class:`DbClass` derived from :class:`DbSchemaObject`, classes
+:class:`Sequence`, :class:`Table` and :class:`View` derived from
+:class:`DbClass`, :class:`MaterializedView` derived from
+:class:`View`, and :class:`ClassDict`, derived from
+:class:`DbObjectDict`.
 
 Database Class
 --------------
@@ -22,31 +23,27 @@ Sequence
 --------
 
 Class :class:`Sequence` is derived from :class:`DbClass` and
-represents a sequence generator. Its :attr:`keylist` attributes are
-the schema name and the sequence name.
-
-A :class:`Sequence` has the following attributes: :attr:`start_value`,
-:attr:`increment_by`, :attr:`max_value`, :attr:`min_value` and
-:attr:`cache_value`.
+represents a `sequence generator
+<https://www.postgresql.org/docs/current/static/sql-createsequence.html>`_.
+Its :attr:`keylist` attributes are the schema name and the sequence
+name.
 
 The map returned by :meth:`to_map` and expected as argument by
-:meth:`diff_map` has the following structure::
+:meth:`ClassDict.from_map` has the following structure::
 
   {'sequence seq1':
-      {'start_value': 1,
+      {'cache_value': 1,
+       'data_type': 'integer',
        'increment_by': 1,
        'max_value': None,
        'min_value': None,
-       'cache_value': 1
+       'owner_column': 'c1',
+       'owner_table': 't1',
+       'start_value': 1
       }
   }
 
-Only the inner dictionary is passed to :meth:`diff_map`.  The values
-are defaults so in practice an empty dictionary is also acceptable.
-
 .. autoclass:: Sequence
-
-.. automethod:: Sequence.from_map
 
 .. automethod:: Sequence.get_attrs
 
@@ -70,7 +67,7 @@ database table. Its :attr:`keylist` attributes are the schema name and
 the table name.
 
 The map returned by :meth:`to_map` and expected as argument by
-:meth:`diff_map` has a structure similar to the following::
+:meth:`ClassDict.from_map` has a structure similar to the following::
 
  {'table t1':
      {'columns':
@@ -106,8 +103,6 @@ pattern similar to :obj:`primary_key`, but there can be more than one
 such specification.
 
 .. autoclass:: Table
-
-.. automethod:: Table.from_map
 
 .. automethod:: Table.column_names
 
@@ -149,7 +144,7 @@ database view. Its :attr:`keylist` attributes are the schema name and
 the view name.
 
 The map returned by :meth:`to_map` and expected as argument by
-:meth:`diff_map` has a structure similar to the following::
+:meth:`ClassDict.from_map` has a structure similar to the following::
 
   {'view v1':
       {'definition': " SELECT ...;",
@@ -159,8 +154,6 @@ The map returned by :meth:`to_map` and expected as argument by
 
 
 .. autoclass:: View
-
-.. automethod:: View.from_map
 
 .. automethod:: View.to_map
 
@@ -173,13 +166,10 @@ Materialized View
 
 Class :class:`MaterializedView` is derived from :class:`View` and
 represents a `materialized view
-<https://www.postgresql.org/docs/9.3/static/sql-creatematerializedview.html>`_,
-available from Postgres 9.3 onwards. Its :attr:`keylist` attributes
-are the schema name and the view name.
+<https://www.postgresql.org/docs/current/static/sql-creatematerializedview.html>`_. Its
+:attr:`keylist` attributes are the schema name and the view name.
 
 .. autoclass:: MaterializedView
-
-.. automethod:: MaterializedView.from_map
 
 .. automethod:: MaterializedView.to_map
 

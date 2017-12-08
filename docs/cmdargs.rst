@@ -47,12 +47,13 @@ The Pyrseas utilities support the following command line options:
 .. cmdoption:: -U <username>
                --user <username>
 
-    `User name` to connect as.  The default user name is determined by
-    Postgres (normally, the name of the user running the program).
+    Postgres `user name` to connect as.  The default user name is
+    determined by Postgres (normally, the name of the operating system
+    user running the program).
 
 .. cmdoption:: --version
 
-    Print the program version and exit.
+    Print the program name and version identifier and exit.
 
 .. cmdoption:: -W, --password
 

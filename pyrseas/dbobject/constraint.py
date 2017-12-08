@@ -726,11 +726,12 @@ class ConstraintDict(DbObjectDict):
                 self[obj.key()] = obj
                 self.by_oid[obj.oid] = obj
 
-    def from_map(self, table, inconstrs, target='', rtables=None):
+    def from_map(self, table, inconstrs, target=''):
         """Initialize the dictionary of constraints by converting the input map
 
         :param table: table affected by the constraints
         :param inconstrs: YAML map defining the constraints
+        :param target: column or domain indicator
         """
         if 'check_constraints' in inconstrs:
             chks = inconstrs['check_constraints']

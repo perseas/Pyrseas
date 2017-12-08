@@ -6,7 +6,7 @@ Functions
 The :mod:`function` module defines four classes: class :class:`Proc`
 derived from :class:`DbSchemaObject`, classes :class:`Function` and
 :class:`Aggregate` derived from :class:`Proc`, and class
-:class:`ProcDict` derived from :class:`DbObject`.
+:class:`ProcDict` derived from :class:`DbObjectDict`.
 
 Procedure
 ---------
@@ -31,8 +31,6 @@ Function
 
 .. autoclass:: Function
 
-.. automethod:: Function.from_map
-
 .. automethod:: Function.to_map
 
 .. automethod:: Function.create
@@ -49,8 +47,6 @@ Aggregate Function
 <https://www.postgresql.org/docs/current/static/sql-createaggregate.html>`_.
 
 .. autoclass:: Aggregate
-
-.. automethod:: Aggregate.from_map
 
 .. automethod:: Aggregate.to_map
 

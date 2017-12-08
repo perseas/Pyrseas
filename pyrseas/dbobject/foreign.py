@@ -79,7 +79,7 @@ class DbObjectWithOptions(DbObject):
         return clauses and "OPTIONS (%s)" % ', '.join(clauses) or ''
 
     def alter(self, inobj):
-        """Generate SQL to transform an existing object
+        """Generate SQL to transform an existing object with options
 
         :param inobj: a YAML map defining the new object
         :return: list of SQL statements
@@ -517,45 +517,6 @@ class UserMappingDict(DbObjectDict):
         for um in self:
             usermaps.update(self[um].to_map(db))
         return usermaps
-
-    def alter(self, inusermaps):
-        """Generate SQL to transform existing user mappings
-
-        :param input_map: a YAML map defining the new user mappings
-        :return: list of SQL statements
-
-        Compares the existing user mapping definitions, as fetched from the
-        catalogs, to the input map and generates SQL statements to
-        transform the user mappings accordingly.
-        """
-        stmts = []
-        # check input user mappings
-        for (fdw, srv, usr) in inusermaps:
-            inump = inusermaps[(fdw, srv, usr)]
-            # does it exist in the database?
-            if (fdw, srv, usr) in self:
-                stmts.append(self[(fdw, srv, usr)].alter(inump))
-            else:
-                # check for possible RENAME
-                if hasattr(inump, 'oldname'):
-                    oldname = inump.oldname
-                    try:
-                        stmts.append(self[(fdw, srv, oldname)].rename(
-                            inump.name))
-                        del self[(fdw, srv, oldname)]
-                    except KeyError as exc:
-                        exc.args = ("Previous name '%s' for user mapping '%s' "
-                                    "not found" % (oldname, inump.name), )
-                        raise
-                else:
-                    # create new user mapping
-                    stmts.append(inump.create())
-        # check database user mappings
-        for (fdw, srv, usr) in self:
-            # if missing, drop it
-            if (fdw, srv, usr) not in inusermaps:
-                stmts.append(self[(fdw, srv, usr)].drop())
-        return stmts
 
 
 class ForeignTable(Table, DbObjectWithOptions):

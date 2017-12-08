@@ -16,8 +16,6 @@ represents a `Postgres operator class
 
 .. autoclass:: OperatorClass
 
-.. automethod:: OperatorClass.from_map
-
 .. automethod:: OperatorClass.extern_key
 
 .. automethod:: OperatorClass.identifier
