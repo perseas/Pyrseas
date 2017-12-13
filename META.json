@@ -18,7 +18,7 @@
        "docfile": "docs/augmentdb.rst",
        "version": "0.8.0",
        "abstract": "Generates an augmented YAML description of a Postgres database from its catalogs and an augmentation specification"
-     }
+     },
      "dbtoyaml": {
        "file": "pyrseas/dbtoyaml.py",
        "docfile": "docs/dbtoyaml.rst",
