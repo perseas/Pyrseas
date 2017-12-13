@@ -11,6 +11,7 @@ all:
 
 build:
 	$(PYTHON) setup.py sdist --format=gztar,zip
+	$(PYTHON) setup.py bdist_wheel
 
 docs:
 	$(MAKE) -C docs html

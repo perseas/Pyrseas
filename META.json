@@ -1,29 +1,35 @@
 {
    "name": "Pyrseas",
-   "abstract": "Framework and utilities to upgrade and maintain databases",
-   "description": "Pyrseas provides a framework and utilities to upgrade and maintain a PostgreSQL database.  Its utilities output a database schema in YAML format suitable for committing to a version control system and read this format to generate SQL to sync to another database.  Supports PostgreSQL 9.0, 9.1, 9.2, 9.3 and 9.4.",
-   "version": "0.7.2",
+   "abstract": "Utilities to assist in database schema versioning",
+   "description": "Pyrseas provides utilities to describe a PostgreSQL database schema as YAML, to verify the schema against the same or a different database and to generate SQL that will modify the schema to match the YAML description.  Supports PostgreSQL 9.3, 9.4, 9.5, 9.6 and 10.",
+   "version": "0.8.0",
    "maintainer": "Joe Abbate <jma@freedomcircle.com>",
    "license": "bsd",
    "prereqs": {
       "runtime": {
          "requires": {
-            "PostgreSQL": "9.0.0"
+            "PostgreSQL": "9.3.0"
          }
       }
    },
    "provides": {
+     "augmentdb": {
+       "file": "pyrseas/augmentdb.py",
+       "docfile": "docs/augmentdb.rst",
+       "version": "0.8.0",
+       "abstract": "Generates an augmented YAML description of a Postgres database from its catalogs and an augmentation specification"
+     }
      "dbtoyaml": {
        "file": "pyrseas/dbtoyaml.py",
        "docfile": "docs/dbtoyaml.rst",
-       "version": "0.7.2",
-       "abstract": "Output PostgreSQL schemas in YAML format"
+       "version": "0.8.0",
+       "abstract": "Outputs a YAML description of a Postgres database's tables and other objects (metadata), suitable for storing in a version control repository"
      },
      "yamltodb": {
        "file": "pyrseas/yamltodb.py",
        "docfile": "docs/yamltodb.rst",
-       "version": "0.7.2",
-       "abstract": "Generate SQL to sync a database with a YAML schema spec"
+       "version": "0.8.0",
+       "abstract": "Generates SQL statements to modify a database so that it will match an input YAML/JSON specification"
      }
    },
    "resources": {

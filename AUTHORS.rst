@@ -4,6 +4,7 @@ The PRIMARY AUTHORS are or have been:
 
     * Joe Abbate
     * Ronan Dunklau
+    * Mark Goldfinch
     * Andjelko Horvat
     * Roger Hunwicks
     * Ghislain Leveque
@@ -12,8 +13,10 @@ The PRIMARY AUTHORS are or have been:
     * Andrey Popp
     * Ross J. Reedstrom
     * github.com/shirkey
+    * Denis Smirnov
     * Paulo Tioseco
     * Daniele Varrazzo
+    * Vasiliy Yeremeyev
 
 A big THANK YOU goes to the following individuals that provided
 inspiration for some of the features and design of Pyrseas:

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-Pyrseas - Framework and utilities to upgrade and maintain databases.
+Pyrseas - Utilities to assist with database schema versioning.
 """
 import sys
 
@@ -24,7 +24,7 @@ class PyTest(TestCommand):
 
 setup(
     name='Pyrseas',
-    version='0.8.dev0',
+    version='0.8.0',
     packages=['pyrseas', 'pyrseas.dbobject', 'pyrseas.lib', 'pyrseas.augment',
              ],
     package_data={'pyrseas': ['config.yaml']},
@@ -36,7 +36,7 @@ setup(
 
     install_requires=[
         'psycopg2 >= 2.5',
-        'pgdbconn >= 0.8.dev0',
+        'pgdbconn >= 0.8.0',
         'PyYAML >= 3.10'],
 
     tests_require=['pytest'],
@@ -44,7 +44,7 @@ setup(
 
     author='Joe Abbate',
     author_email='jma@freedomcircle.com',
-    description='Framework and utilities to upgrade and maintain databases',
+    description='Utilities to assist in database schema versioning',
     long_description=open('README.rst').read(),
     url='https://perseas.github.io/',
     classifiers=[
@@ -60,8 +60,6 @@ setup(
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.2',
-        'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',

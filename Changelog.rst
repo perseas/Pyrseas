@@ -1,3 +1,25 @@
+0.8.0 (12-Dec-2017)
+
+Significant rearchitecture of methods to generate SQL.
+
+  * An object dependency graph is built and traversed to generate SQL
+    in correct order (#72, #86, #100)
+
+Added support for Postgres 10, specifically:
+
+  * Table partitioning syntax (#163)
+
+  * Column specification GENERATED AS IDENTITY (#164)
+
+Added support for other Postgres features:
+
+  * Parallel safe functions and partial aggregation (#161)
+
+  * RANGE types (#173)
+
+  * ALTER TYPE ADD VALUE for changes to ENUM types (#87)
+
+
 0.7.2 (23-Jan-2015)
 
   Fixed various issues, including:
