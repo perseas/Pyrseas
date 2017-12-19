@@ -13,7 +13,7 @@ import string
 from functools import wraps
 
 from pyrseas.lib.pycompat import PY2, strtypes
-from pyrseas.yamlutil import MultiLineStr, yamldump
+from pyrseas.yamlutil import yamldump
 from .privileges import privileges_to_map, add_grant, diff_privs
 from .privileges import privileges_from_map
 
@@ -173,26 +173,10 @@ class DbObject(object):
         """
         self.name = name
         self.description = description
-        self._init_own_privs(attrs.pop('owner', None),
-                             attrs.pop('privileges', []))
         self.depends_on = []
+        self.owner = None
+        self.privileges = []
         self._objtype = None
-
-        for key, val in list(attrs.items()):
-            if val or key in self.keylist:
-                if key in ['definition', 'source'] and \
-                        isinstance(val, strtypes) and '\n' in val:
-                    newval = []
-                    for line in val.split('\n'):
-                        if line and line[-1] in (' ', '\t'):
-                            line = line.rstrip()
-                        newval.append(line)
-                    strval = '\n'.join(newval)
-                    if PY2:
-                        val = strval.encode('utf_8').decode('utf_8')
-                    else:
-                        val = MultiLineStr(strval)
-                setattr(self, key, val)
 
     def _init_own_privs(self, owner=None, privileges=[]):
         """Initialize owner and privileges attributes
