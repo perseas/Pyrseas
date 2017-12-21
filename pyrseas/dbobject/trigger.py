@@ -183,6 +183,20 @@ class Trigger(DbSchemaObject):
                     self._table.qualname(), defer,
                     self.level.upper(), cond, self.procedure)]
 
+    def alter(self, inobj):
+        """Generate SQL to transform an existing trigger
+
+        :param inobj: a YAML map defining the new trigger
+        :return: list of SQL statements
+        """
+        stmts = []
+        if self.procedure != inobj.procedure or self.events != inobj.events \
+           or self.level != inobj.level or self.timing != inobj.timing:
+            stmts.append(self.drop())
+            stmts.append(inobj.create())
+        stmts.append(self.diff_description(inobj))
+        return stmts
+
     def get_implied_deps(self, db):
         deps = super(Trigger, self).get_implied_deps(db)
 

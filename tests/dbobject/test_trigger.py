@@ -9,6 +9,8 @@ FUNC_INSTEAD_SRC = "BEGIN INSERT INTO t1 VALUES (NEW.c1, NEW.c2, now()); " \
     "RETURN NULL; END"
 CREATE_TABLE_STMT = "CREATE TABLE t1 (c1 integer, c2 text, " \
     "c3 timestamp with time zone)"
+CREATE_TABLE_STMT2 = "CREATE TABLE t1 (c1 integer, c2 text, " \
+    "c3 text, tsidx tsvector)"
 CREATE_FUNC_STMT = "CREATE FUNCTION f1() RETURNS trigger LANGUAGE plpgsql " \
     "AS $_$%s$_$" % FUNC_SRC
 CREATE_STMT = "CREATE TRIGGER tr1 BEFORE INSERT OR UPDATE ON t1 " \
@@ -215,6 +217,44 @@ class TriggerToSqlTestCase(InputMapToSqlTestCase):
             "trigger LANGUAGE plpgsql AS $_$%s$_$" % FUNC_INSTEAD_SRC
         assert fix_indent(sql[3]) == "CREATE TRIGGER tr1 INSTEAD OF INSERT " \
             "ON v1 FOR EACH ROW EXECUTE PROCEDURE f1()"
+
+    def test_add_tsvector_trigger(self):
+        "Add a text search (tsvector) trigger"
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+            'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}},
+                        {'c3': {'type': 'text'}},
+                        {'tsidx': {'type': 'tsvector'}}],
+            'triggers': {'t1_tsidx_update': {'timing': 'before',
+                    'events': ['insert', 'update'], 'level': 'row',
+                    'procedure': "tsvector_update_trigger('tsidx', "
+                                "'pg_catalog.english', 'c2')"}}}})
+        sql = self.to_sql(inmap, [CREATE_TABLE_STMT2])
+        assert fix_indent(sql[0]) == "CREATE TRIGGER t1_tsidx_update BEFORE" \
+            " INSERT OR UPDATE ON t1 FOR EACH ROW EXECUTE PROCEDURE " \
+            "tsvector_update_trigger('tsidx', 'pg_catalog.english', 'c2')"
+
+    def test_change_tsvector_trigger(self):
+        "Change a text search (tsvector) trigger"
+        inmap = self.std_map()
+        inmap['schema public'].update({'table t1': {
+            'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}},
+                        {'c3': {'type': 'text'}},
+                        {'tsidx': {'type': 'tsvector'}}],
+            'triggers': {'t1_tsidx_update': {'timing': 'before',
+                    'events': ['insert', 'update'], 'level': 'row',
+                    'procedure': "tsvector_update_trigger('tsidx', "
+                        "'pg_catalog.english', 'c2', 'c3')"}}}})
+        stmts = [CREATE_TABLE_STMT2,
+                 "CREATE TRIGGER t1_tsidx_update BEFORE INSERT OR UPDATE ON "
+                 "t1 FOR EACH ROW EXECUTE PROCEDURE tsvector_update_trigger"
+                 "('tsidx', 'pg_catalog.english', 'c2')"]
+        sql = self.to_sql(inmap, stmts)
+        assert sql[0] == "DROP TRIGGER t1_tsidx_update ON t1"
+        assert fix_indent(sql[1]) == "CREATE TRIGGER t1_tsidx_update BEFORE" \
+            " INSERT OR UPDATE ON t1 FOR EACH ROW EXECUTE PROCEDURE " \
+            "tsvector_update_trigger('tsidx', 'pg_catalog.english', " \
+            "'c2', 'c3')"
 
     def test_create_trigger_in_schema(self):
         "Create a trigger within a non-public schema"
