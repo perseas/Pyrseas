@@ -11,7 +11,6 @@ from unittest import TestCase
 
 import yaml
 
-from pgdbconn.dbconn import DbConnection
 from pyrseas.config import Config
 from pyrseas.database import Database
 from pyrseas.augmentdb import AugmentDatabase
@@ -55,13 +54,13 @@ class PgTestDb(PostgresDb):
     """A PostgreSQL database connection for testing."""
 
     def clear(self):
-        "Drop tables and other objects"
+        "Drop schemas and other objects"
         STD_DROP = 'DROP %s IF EXISTS "%s" CASCADE'
-        # Schemas other than 'public'
+        # Schemas
         curs = pgexecute(
             self.conn,
             """SELECT nspname FROM pg_namespace
-               WHERE nspname NOT IN ('public', 'information_schema')
+               WHERE nspname != 'information_schema'
                      AND substring(nspname for 3) != 'pg_'
                ORDER BY nspname""")
         objs = curs.fetchall()
@@ -72,158 +71,18 @@ class PgTestDb(PostgresDb):
         self.conn.commit()
 
         # Extensions
-        if self.version >= 90100:
-            curs = pgexecute(
-                self.conn,
-                """SELECT extname FROM pg_extension
-                          JOIN pg_namespace n ON (extnamespace = n.oid)
-                   WHERE nspname NOT IN ('information_schema')
-                     AND extname != 'plpgsql'""")
-            exts = curs.fetchall()
-            curs.close()
-            self.conn.rollback()
-            for ext in exts:
-                self.execute(STD_DROP % ('EXTENSION', ext[0]))
-            self.conn.commit()
-
-        # Tables, sequences and views
         curs = pgexecute(
             self.conn,
-            """SELECT relname, relkind FROM pg_class
-                      JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
-               WHERE relkind in ('r', 'p', 'S', 'v', 'f', 'm')
-                     AND nspname NOT IN ('pg_catalog', 'information_schema')
-               ORDER BY relkind DESC""")
-        objs = curs.fetchall()
+            """SELECT extname FROM pg_extension
+                      JOIN pg_namespace n ON (extnamespace = n.oid)
+               WHERE nspname != 'information_schema'
+               AND extname != 'plpgsql'""")
+        exts = curs.fetchall()
         curs.close()
         self.conn.rollback()
-        for obj in objs:
-            if obj['relkind'] == 'r':
-                objtype = 'TABLE'
-            elif obj['relkind'] == 'S':
-                objtype = 'SEQUENCE'
-            elif obj['relkind'] == 'v':
-                objtype = 'VIEW'
-            elif obj['relkind'] == 'f':
-                objtype = 'FOREIGN TABLE'
-            elif obj['relkind'] == 'm':
-                objtype = 'MATERIALIZED VIEW'
-            self.execute(STD_DROP % (objtype, obj[0]))
+        for ext in exts:
+            self.execute(STD_DROP % ('EXTENSION', ext[0]))
         self.conn.commit()
-
-        # Types (base, composite and enums) and domains
-        #
-        # TYPEs have to be done before FUNCTIONs because base types depend
-        # on functions, and we're using CASCADE. Also, exclude base array
-        # types because they depend on the scalar types.
-        curs = pgexecute(
-            self.conn,
-            """SELECT typname, typtype FROM pg_type t
-                      JOIN pg_namespace n ON (typnamespace = n.oid)
-               WHERE typtype IN ('b', 'c', 'd', 'e', 'r')
-                 AND NOT (typtype = 'b' AND typarray = 0)
-                 AND nspname NOT IN ('pg_catalog', 'pg_toast',
-                     'information_schema')""")
-        types = curs.fetchall()
-        curs.close()
-        self.conn.rollback()
-        for typ in types:
-            self.execute(STD_DROP % ('DOMAIN' if typ['typtype'] == 'd'
-                                     else 'TYPE', typ[0]))
-        self.conn.commit()
-
-        # Functions
-        curs = pgexecute(
-            self.conn,
-            """SELECT proisagg, p.oid::regprocedure AS proc
-               FROM pg_proc p JOIN pg_namespace n ON (pronamespace = n.oid)
-               WHERE nspname NOT IN ('pg_catalog', 'information_schema')
-               ORDER BY 1, 2""")
-        funcs = curs.fetchall()
-        curs.close()
-        self.conn.rollback()
-        for func in funcs:
-            self.execute('DROP %s IF EXISTS %s CASCADE' % (
-                'AGGREGATE' if func['proisagg'] else 'FUNCTION', func['proc']))
-        self.conn.commit()
-
-        # Languages
-        if self.version < 90000:
-            if self.is_plpgsql_installed():
-                self.execute_commit("DROP LANGUAGE plpgsql")
-
-        # Operators
-        curs = pgexecute(
-            self.conn,
-            """SELECT o.oid::regoperator
-               FROM pg_operator o JOIN pg_namespace n ON (oprnamespace = n.oid)
-               WHERE nspname NOT IN ('pg_catalog', 'information_schema')""")
-        opers = curs.fetchall()
-        curs.close()
-        self.conn.rollback()
-        for oper in opers:
-            self.execute("DROP OPERATOR IF EXISTS %s CASCADE" % (oper[0]))
-        self.conn.commit()
-
-        # Operator families
-        curs = pgexecute(
-            self.conn,
-            """SELECT opfname, amname
-               FROM pg_opfamily o JOIN pg_am a ON (opfmethod = a.oid)
-                    JOIN pg_namespace n ON (opfnamespace = n.oid)
-               WHERE nspname NOT IN ('pg_catalog', 'information_schema')""")
-        opfams = curs.fetchall()
-        curs.close()
-        self.conn.rollback()
-        for opfam in opfams:
-            self.execute(
-                'DROP OPERATOR FAMILY IF EXISTS "%s" USING "%s" CASCADE' % (
-                    opfam[0], opfam[1]))
-        self.conn.commit()
-
-        # Operator classes
-        curs = pgexecute(
-            self.conn,
-            """SELECT opcname, amname
-               FROM pg_opclass o JOIN pg_am a ON (opcmethod = a.oid)
-                    JOIN pg_namespace n ON (opcnamespace = n.oid)
-               WHERE nspname NOT IN ('pg_catalog', 'information_schema')""")
-        opcls = curs.fetchall()
-        curs.close()
-        self.conn.rollback()
-        for opcl in opcls:
-            self.execute(
-                'DROP OPERATOR CLASS IF EXISTS "%s" USING "%s" CASCADE' % (
-                    opcl[0], opcl[1]))
-        self.conn.commit()
-
-        # Conversions
-        curs = pgexecute(
-            self.conn,
-            """SELECT conname FROM pg_conversion c
-                      JOIN pg_namespace n ON (connamespace = n.oid)
-               WHERE nspname NOT IN ('pg_catalog', 'information_schema')""")
-        convs = curs.fetchall()
-        curs.close()
-        self.conn.rollback()
-        for cnv in convs:
-            self.execute(STD_DROP % ('CONVERSION', cnv[0]))
-        self.conn.commit()
-
-        # Collations
-        if self.version >= 90100:
-            curs = pgexecute(
-                self.conn,
-                """SELECT collname FROM pg_collation c
-                          JOIN pg_namespace n ON (collnamespace = n.oid)
-                   WHERE nspname NOT IN (
-                         'pg_catalog', 'information_schema')""")
-            colls = curs.fetchall()
-            curs.close()
-            self.conn.rollback()
-            for coll in colls:
-                self.execute(STD_DROP % ('COLLATION', coll[0]))
-            self.conn.commit()
 
         # User mappings
         curs = pgexecute(
@@ -257,6 +116,11 @@ class PgTestDb(PostgresDb):
         self.conn.rollback()
         for fdw in fdws:
             self.execute(STD_DROP % ('FOREIGN DATA WRAPPER', fdw[0]))
+        self.conn.commit()
+
+        # Create default schema
+        self.execute("CREATE SCHEMA sd")
+        self.execute("set search_path='sd', 'pg_catalog'")
         self.conn.commit()
 
     def is_plpgsql_installed(self):
@@ -410,14 +274,9 @@ class InputMapToSqlTestCase(PyrseasTestCase):
 
     def std_map(self, plpgsql_installed=False):
         "Return a standard schema map for the default database"
-        base = {'schema public': {
-                'owner': PG_OWNER,
-                'privileges': [{PG_OWNER: ['all']}, {'PUBLIC': ['all']}],
-                'description': 'standard public schema'}}
-        if (self.db._version >= 90000 or plpgsql_installed) \
-                and self.db._version < 90100:
-            base.update({'language plpgsql': {'trusted': True,
-                                              'owner': PG_OWNER}})
+        base = {'schema sd': {
+                'owner': self.db.user,
+                'privileges': []}}
         base.update({'extension plpgsql': {
             'schema': 'pg_catalog', 'owner': PG_OWNER,
             'description': "PL/pgSQL procedural language"}})
@@ -539,17 +398,3 @@ class AugmentToMapTestCase(PyrseasTestCase):
                             no_privs=True, multiple_files=False)
         db = AugmentDatabase(self.cfg)
         return db.apply(augmap)
-
-
-class RelationTestCase(object):
-
-    @classmethod
-    def setup_class(cls):
-        cls.pgdb = PostgresDb(TEST_DBNAME, TEST_USER, TEST_HOST, TEST_PORT)
-        cls.pgdb.connect()
-        cls.db = DbConnection(TEST_DBNAME, TEST_USER, None, TEST_HOST,
-                              TEST_PORT)
-
-    @classmethod
-    def teardown_class(cls):
-        cls.pgdb.close()

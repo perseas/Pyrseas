@@ -153,7 +153,7 @@ class Sequence(DbClass):
         """
 
         def split_table(obj, sch):
-            schema = sch or 'public'
+            schema = sch
             tbl = obj
             quoted = '"%s".' % schema
             if obj.startswith(schema + '.'):
@@ -170,7 +170,7 @@ class Sequence(DbClass):
             """SELECT refobjid::regclass, refobjsubid
                FROM pg_depend
                WHERE objid = '%s'::regclass
-                 AND refclassid = 'pg_class'::regclass""" % self.qualname())
+                 AND refclassid = 'pg_class'::regclass""" % self.identifier())
         if data:
             self.owner_table = split_table(data[0], self.schema)
             self.owner_column = data[1]
@@ -196,33 +196,33 @@ class Sequence(DbClass):
                      hasattr(opts, 'excl_tables') and opts.excl_tables and
                      self.name in opts.excl_tables):
             return None
-        seq = super(Sequence, self).to_map(db, opts.no_owner, opts.no_privs)
+        dct = super(Sequence, self).to_map(db, opts.no_owner, opts.no_privs)
         if self.owner_table is None and self.owner_column is None:
-            seq.pop('owner_table')
-            seq.pop('owner_column')
-        seq.pop('dependent_table', None)
+            dct.pop('owner_table')
+            dct.pop('owner_column')
+        dct.pop('dependent_table', None)
         if self.data_type == 'bigint':
-            seq.pop('data_type')
-        for key, val in list(seq.items()):
+            dct.pop('data_type')
+        for key, val in list(dct.items()):
             if key == 'max_value' and val == MAX_BIGINT:
-                seq[key] = None
+                dct[key] = None
             elif key == 'min_value' and val == 1:
-                seq[key] = None
+                dct[key] = None
             elif key == 'privileges':
-                seq[key] = val
+                dct[key] = val
             else:
                 if PY2:
                     if isinstance(val, (int, long)) and val <= sys.maxsize:
-                        seq[key] = int(val)
+                        dct[key] = int(val)
                     else:
-                        seq[key] = str(val)
+                        dct[key] = str(val)
                 else:
                     if isinstance(val, int):
-                        seq[key] = int(val)
+                        dct[key] = int(val)
                     else:
-                        seq[key] = str(val)
+                        dct[key] = str(val)
 
-        return seq
+        return dct
 
     def _common_create_spec(self):
         return """    START WITH %d
@@ -264,7 +264,7 @@ class Sequence(DbClass):
         """
         stmts = []
         stmts.append("ALTER SEQUENCE %s OWNED BY %s.%s" % (
-            self.qualname(), self.qualname(self.owner_table),
+            self.qualname(), self.qualname(self.schema, self.owner_table),
             quote_id(self.owner_column)))
         return stmts
 
@@ -473,15 +473,15 @@ class Table(DbClass):
                 and self.name in opts.excl_tables or len(self.columns) == 0:
             return None
 
-        tbl = super(Table, self).to_map(db, opts.no_owner, opts.no_privs)
+        dct = super(Table, self).to_map(db, opts.no_owner, opts.no_privs)
 
         for attr in ('tablespace', 'options', 'partition_bound_spec'):
-            if tbl[attr] is None:
-                tbl.pop(attr)
+            if dct[attr] is None:
+                dct.pop(attr)
         if self.unlogged is False:
-            tbl.pop('unlogged')
+            dct.pop('unlogged')
         if len(self.inherits) == 0:
-            tbl.pop('inherits')
+            dct.pop('inherits')
 
         if self.partition_bound_spec is None:
             cols = []
@@ -489,49 +489,49 @@ class Table(DbClass):
                 col = column.to_map(db, opts.no_privs)
                 if col:
                     cols.append(col)
-            tbl['columns'] = cols
+            dct['columns'] = cols
         else:
-            tbl.pop('columns')
+            dct.pop('columns')
             assert len(self.inherits) == 1
-            tbl.update(partition_of=self.inherits[0])
-            tbl.pop('inherits')
+            dct.update(partition_of=self.inherits[0])
+            dct.pop('inherits')
 
         if self.partition_by is not None:
             assert self.partition_cols is not None
             self._normalize_partcols()
-            tbl.update(partition_by={self.partition_by: self.partition_cols})
+            dct.update(partition_by={self.partition_by: self.partition_cols})
         else:
-            tbl.pop('partition_by')
-        tbl.pop('partition_cols')
-        tbl.pop('partition_exprs')
+            dct.pop('partition_by')
+        dct.pop('partition_cols')
+        dct.pop('partition_exprs')
 
         if len(self.check_constraints) > 0:
             for k in list(self.check_constraints.values()):
-                tbl['check_constraints'].update(
+                dct['check_constraints'].update(
                     self.check_constraints[k.name].to_map(
                         db, self.column_names()))
         else:
-            tbl.pop('check_constraints')
+            dct.pop('check_constraints')
         if self.primary_key is not None:
-            tbl['primary_key'] = self.primary_key.to_map(
+            dct['primary_key'] = self.primary_key.to_map(
                 db, self.column_names())
         else:
-            tbl.pop('primary_key')
+            dct.pop('primary_key')
         if len(self.foreign_keys) > 0:
             for k in list(self.foreign_keys.values()):
                 tbls = dbschemas[k.ref_schema].tables
-                tbl['foreign_keys'].update(self.foreign_keys[k.name].to_map(
+                dct['foreign_keys'].update(self.foreign_keys[k.name].to_map(
                     db, self.column_names(),
                     tbls[self.foreign_keys[k.name].ref_table].column_names()))
         else:
-            tbl.pop('foreign_keys')
+            dct.pop('foreign_keys')
         if len(self.unique_constraints) > 0:
             for k in list(self.unique_constraints.values()):
-                tbl['unique_constraints'].update(
+                dct['unique_constraints'].update(
                     self.unique_constraints[k.name].to_map(
                         db, self.column_names()))
         else:
-            tbl.pop('unique_constraints')
+            dct.pop('unique_constraints')
         if len(self.indexes) > 0:
             idxs = {}
             for idx in self.indexes.values():
@@ -539,23 +539,23 @@ class Table(DbClass):
                     idxs.update(idx.to_map(db))
             if idxs:
                 # we may have only indexes not to dump, e.g. the pkey one
-                tbl['indexes'] = idxs
+                dct['indexes'] = idxs
             else:
-                tbl.pop('indexes', None)
+                dct.pop('indexes', None)
         else:
-            tbl.pop('indexes')
+            dct.pop('indexes')
         if len(self.rules) > 0:
             for k in list(self.rules.values()):
-                tbl['rules'].update(self.rules[k.name].to_map(db))
+                dct['rules'].update(self.rules[k.name].to_map(db))
         else:
-            tbl.pop('rules')
+            dct.pop('rules')
         if len(self.triggers) > 0:
             for k in list(self.triggers.values()):
-                tbl['triggers'].update(self.triggers[k.name].to_map(db))
+                dct['triggers'].update(self.triggers[k.name].to_map(db))
         else:
-            tbl.pop('triggers')
+            dct.pop('triggers')
 
-        return tbl
+        return dct
 
     def create(self, dbversion=None):
         """Return SQL statements to CREATE the table
@@ -821,6 +821,9 @@ class ClassDict(DbObjectDict):
         for (tbl, partbl, num) in inhtbls:
             (sch, tbl) = split_schema_obj(tbl)
             table = self[(sch, tbl)]
+            (sch, tbl) = split_schema_obj(partbl)
+            if table.schema == sch:
+                partbl = tbl
             table.inherits.append(partbl)
         self.cls = Sequence
         for obj in self.fetch():
@@ -935,20 +938,14 @@ class ClassDict(DbObjectDict):
                                 col._owner_seq = seq
                                 seq._owner_col = col
 
+        # Normalize owner_column's to column names
         for (sch, tbl) in self:
             table = self[(sch, tbl)]
             if isinstance(table, Sequence) and table.owner_table is not None:
                 if isinstance(table.owner_column, int):
                     table.owner_column = self[(sch, table.owner_table)]. \
                         column_names()[table.owner_column - 1]
-            elif isinstance(table, Table):
-                for partbl in table.inherits:
-                    (parsch, partbl) = split_schema_obj(partbl)
-                    assert self[(parsch, partbl)]
-                    parent = self[(parsch, partbl)]
-                    if not hasattr(parent, '_descendants'):
-                        parent._descendants = []
-                    parent._descendants.append(table)
+
         for (sch, tbl, cns) in dbconstrs:
             constr = dbconstrs[(sch, tbl, cns)]
             if isinstance(constr, CheckConstraint) and constr.is_domain_check:

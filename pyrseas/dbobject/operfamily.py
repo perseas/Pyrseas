@@ -114,6 +114,6 @@ class OperatorFamilyDict(DbObjectDict):
             self[(schema.name, opf, idx)] = OperatorFamily.from_map(
                 opf, schema, idx, inobj)
 
-    def find(self, obj, meth):
-        schema, name = split_schema_obj(obj)
+    def find(self, sch, obj, meth):
+        schema, name = split_schema_obj(obj, sch)
         return self.get((schema, name, meth))

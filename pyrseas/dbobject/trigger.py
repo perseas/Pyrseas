@@ -6,8 +6,10 @@
     This module defines two classes: Trigger derived from
     DbSchemaObject, and TriggerDict derived from DbObjectDict.
 """
+from pyrseas.lib.pycompat import strtypes
 from . import DbObjectDict, DbSchemaObject
-from . import quote_id, commentable, split_schema_obj
+from . import quote_id, commentable
+from .function import split_schema_func, join_schema_func
 
 EXEC_PROC = 'EXECUTE PROCEDURE '
 EVENT_TYPES = ['insert', 'delete', 'update', 'truncate']
@@ -45,16 +47,13 @@ class Trigger(DbSchemaObject):
         self._init_own_privs(None, [])
         self.table = table
         if procedure[-2:] == '()':
-            if arguments and '\\000' in arguments:
-                args = ["'%s'" % a for a in arguments.split('\\000')[:-1]]
-                self.procedure = "%s(%s)" % (procedure[:-2], ", ".join(args))
-            else:
-                self.procedure = procedure
-        elif procedure[-1:] == ')':
-            assert '(' in procedure, "No left parentheses in '%s'" % procedure
-            self.procedure = procedure
+            procedure = procedure[:-2]
+        self.procedure = split_schema_func(self.schema, procedure)
+        if arguments and '\\000' in arguments:
+            self.arguments = ", ".join(["'%s'" % a for a in
+                                        arguments.split('\\000')[:-1]])
         else:
-            self.procedure = procedure + "()"
+            self.arguments = arguments if len(arguments) > 0 else None
         # see Postgres include/catalog/pg_trigger.h
         if isinstance(timing, int):
             if timing == (1 << 1):
@@ -120,13 +119,23 @@ class Trigger(DbSchemaObject):
         :param inobj: YAML map of the trigger
         :return: trigger instance
         """
+        proc = inobj.pop("procedure")
+        args = ""
+        if isinstance(proc, strtypes):
+            if proc[-2:] == "()":
+                proc = proc[:-2]
+            elif proc[-1:] == ')':
+                proc, args = proc[:-1].split('(')
+        else:  # should be a dict
+            proc = proc.pop("name")
+            args = proc.pop("arguments", None)
         obj = Trigger(
             name, table.schema, table.name, inobj.pop('description', None),
-            inobj.pop('procedure', None), inobj.pop('timing', None),
-            inobj.pop('level', 'statement'), inobj.pop('events', []),
-            inobj.pop('constraint', False), inobj.pop('deferrable', False),
+            proc, inobj.pop('timing', None), inobj.pop('level', 'statement'),
+            inobj.pop('events', []), inobj.pop('constraint', False),
+            inobj.pop('deferrable', False),
             inobj.pop('initially_deferred', False), inobj.pop('columns', []),
-            inobj.pop('condition', None))
+            inobj.pop('condition', None), args)
         obj.set_oldname(inobj)
         return obj
 
@@ -143,6 +152,12 @@ class Trigger(DbSchemaObject):
         :return: dictionary
         """
         dct = super(Trigger, self).to_map(db)
+        schfunc = join_schema_func(self.procedure)
+        if self.arguments is not None:
+            dct["procedure"] = {"name": schfunc, "arguments": self.arguments}
+        else:
+            dct["procedure"] = schfunc
+        dct.pop("arguments")
         for attr in ['constraint', 'deferrable', 'initially_deferred']:
             if dct[attr] is False:
                 del dct[attr]
@@ -177,11 +192,20 @@ class Trigger(DbSchemaObject):
         cond = ''
         if self.condition is not None:
             cond = "\n    WHEN (%s)" % self.condition
+        if isinstance(self.procedure, tuple):
+            sch, proc = self.procedure
+        else:
+            sch, proc = self.schema, self.procedure
+        if self.arguments is None:
+            args = "()"
+        else:
+            args = "(%s)" % self.arguments
         return ["CREATE %sTRIGGER %s\n    %s %s ON %s%s\n    FOR EACH %s"
-                "%s\n    EXECUTE PROCEDURE %s" % (
+                "%s\n    EXECUTE PROCEDURE %s%s" % (
                     constr, quote_id(self.name), self.timing.upper(), evts,
                     self._table.qualname(), defer,
-                    self.level.upper(), cond, self.procedure)]
+                    self.level.upper(), cond,
+                    self.qualname(sch, proc), args)]
 
     def alter(self, inobj):
         """Generate SQL to transform an existing trigger
@@ -208,20 +232,12 @@ class Trigger(DbSchemaObject):
 
         # the trigger procedure can have arguments, but the trigger definition
         # has always none (they are accessed through `tg_argv`).
-        # TODO: this breaks if a function name contains a '('
-        # (another case for a robust lookup function in db)
-        fschema, fullfname = split_schema_obj(self.procedure, self.schema)
-        fullfname, _ = fullfname.split('(', 1)  # implicitly assert there is a (
-        # workaround when trigger function lies in schema different from table
-        fullfname = fullfname.split(".")
-        if len(fullfname) == 2:
-            fschema = fullfname[0]
-            fname = fullfname[1]
+        if isinstance(self.procedure, tuple):
+            fschema, fname = self.procedure
         else:
-            fschema = 'public'
-            fname = fullfname[0]
+            fschema, fname = self.schema, self.procedure
         if not fname.startswith('tsvector_update_trigger'):
-            deps.add(db.functions[fschema, fname, ''])
+            deps.add(db.functions[fschema, fname, self.arguments or ''])
 
         return deps
 

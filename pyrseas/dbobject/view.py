@@ -60,6 +60,8 @@ class View(DbClass):
             name, schema.name, inobj.pop('description', None),
             inobj.pop('owner', None), inobj.pop('privileges', []),
             inobj.pop('definition', None))
+        if 'depends_on' in inobj:
+            obj.depends_on.extend(inobj['depends_on'])
         obj.fix_privileges()
         obj.set_oldname(inobj)
         return obj

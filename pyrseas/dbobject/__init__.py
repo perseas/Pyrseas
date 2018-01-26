@@ -62,12 +62,12 @@ def split_schema_obj(obj, sch=None):
     """Return a (schema, object) tuple given a possibly schema-qualified name
 
     :param obj: object name or schema.object
-    :param sch: schema name (defaults to 'public')
+    :param sch: schema name (defaults to 'pg_catalog')
     :return: tuple
     """
     qualsch = sch
     if sch is None:
-        qualsch = 'public'
+        qualsch = 'pg_catalog'
     if obj[0] == '"' and obj[-1] == '"':
         if '"."' in obj:
             (qualsch, obj) = obj.split('"."')
@@ -539,24 +539,31 @@ class DbSchemaObject(DbObject):
 
         :return: string
         """
-        return self.qualname()
+        return "%s.%s" % (quote_id(self.schema), quote_id(self.name))
 
-    def qualname(self, objname=None):
+    def qualname(self, schema=None, objname=None):
         """Return the schema-qualified name of self or a related object
 
         :return: string
-
-        No qualification is used if the schema is 'public'.
         """
+        if self.schema == schema and self.name == objname:
+            return self.identifier()
         if objname is None:
             objname = self.name
-        return self.schema == 'public' and quote_id(objname) \
-            or "%s.%s" % (quote_id(self.schema), quote_id(objname))
+        return "%s.%s" % (quote_id(schema or self.schema), quote_id(objname))
 
-    def unqualify(self):
-        """Adjust the schema and table name if the latter is qualified"""
-        if hasattr(self, 'table') and '.' in self.table:
-            (sch, self.table) = split_schema_obj(self.table, self.schema)
+    def unqualify(self, objname):
+        """Adjust the object name if it is qualified
+
+        :param objname: object name
+        :return: unqualified object name
+        """
+        if '.' in objname:
+            (sch, objname) = split_schema_obj(objname, self.schema)
+            assert sch == self.schema
+            return objname
+        else:
+            return objname
 
     def extern_filename(self, ext='yaml'):
         """Return a filename to be used to output external files

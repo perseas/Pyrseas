@@ -61,11 +61,7 @@ class CatDbConnection(DbConnection):
     def connect(self):
         """Connect to the database"""
         super(CatDbConnection, self).connect()
-        try:
-            self.execute("set search_path to public, pg_catalog")
-        except:
-            self.rollback()
-            self.execute("set search_path to pg_catalog")
+        self.execute("set search_path to pg_catalog")
         self.commit()
         self._version = self.conn.server_version
 
@@ -221,7 +217,7 @@ class Database(object):
         db.schemas.link_refs(db, copycfg)
         db.tables.link_refs(db.columns, db.constraints, db.indexes, db.rules,
                             db.triggers)
-        db.functions.link_refs(db.types, db.eventtrigs)
+        db.functions.link_refs(db.types)
         db.fdwrappers.link_refs(db.servers)
         db.servers.link_refs(db.usermaps)
         db.ftables.link_refs(db.columns)

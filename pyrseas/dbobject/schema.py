@@ -302,8 +302,7 @@ class SchemaDict(DbObjectDict):
             dbtype = targ[keys]
             if isinstance(dbtype, Domain):
                 link_one(targ, 'types', keys, 'domains')
-            elif isinstance(dbtype, Enum) or isinstance(dbtype, Composite) \
-                 or isinstance(dbtype, BaseType) or isinstance(dbtype, Range):
+            elif isinstance(dbtype, (Enum, Composite, BaseType, Range)):
                 link_one(targ, 'types', keys)
         targ = db.tables
         for keys in targ:

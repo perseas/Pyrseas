@@ -90,7 +90,7 @@ class FilmTestCase(DbMigrateTestCase):
             f.write(yamldump({'repository': {'path': self.tempfile_path('')}}))
         os.environ["PYRSEAS_USER_CONFIG"] = usercfg
         with open(self.tempfile_path("config.yaml"), 'w') as f:
-            f.write(yamldump({'datacopy': {'schema public': ['genre']}}))
+            f.write(yamldump({'datacopy': {'schema sd': ['genre']}}))
         srcyaml = self.tempfile_path('film-0.3-src.yaml')
         self.create_yaml(srcyaml, True)
 

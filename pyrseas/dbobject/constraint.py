@@ -34,8 +34,7 @@ class Constraint(DbSchemaObject):
         """
         super(Constraint, self).__init__(name, schema, description)
         self._init_own_privs(None, [])
-        self.table = table
-        self.unqualify()
+        self.table = self.unqualify(table)
 
     def key_columns(self):
         """Return comma-separated list of key column names
@@ -546,9 +545,7 @@ class ForeignKey(Constraint):
         if infk.columns != self.columns or infk.ref_cols != self.ref_cols \
            or infk.match != self.match or infk.on_update != self.on_update \
                 or infk.on_delete != self.on_delete:
-            stmts.append(
-                "ALTER TABLE {tname} DROP CONSTRAINT {fkname}".format(
-                    tname=self._table.name, fkname=self.name))
+            stmts.append(self.drop())
             stmts.append(infk.add())
         stmts.append(self.diff_description(infk))
         return stmts
@@ -694,10 +691,7 @@ class UniqueConstraint(Constraint):
         self._normalize_columns()
         if inuc.columns != self.columns:
             stmts.append(self.drop())
-            stmts.append("ALTER TABLE {tname} ADD CONSTRAINT {conname} "
-                         "UNIQUE ({cols})".format(
-                             tname=inuc._table.name, conname=inuc.name,
-                             cols=', '.join(inuc.columns)))
+            stmts.append(inuc.add())
         if inuc.cluster:
             if not self.cluster:
                 stmts.append("CLUSTER %s USING %s" % (
