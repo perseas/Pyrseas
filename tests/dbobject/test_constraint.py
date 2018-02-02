@@ -95,7 +95,7 @@ class CheckConstraintToSqlTestCase(InputMapToSqlTestCase):
                                  'inherited': True}}, 'inherits': ['t1']}})
         sql = self.to_sql(inmap, stmts)
         assert fix_indent(sql[0]) == "CREATE TABLE sd.t2 (c2 text) " \
-            "INHERITS (t1)"
+            "INHERITS (sd.t1)"
         assert len(sql) == 1
 
     def test_change_check_constraint(self):

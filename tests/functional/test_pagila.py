@@ -18,10 +18,6 @@ class PagilaTestCase(DbMigrateTestCase):
 
     def test_pagila(self):
         # Create the source schema
-        if self.srcdb.version < 90000:
-            self.srcdb.execute("CREATE PROCEDURAL LANGUAGE plpgsql")
-            self.srcdb.execute_commit("ALTER PROCEDURAL LANGUAGE plpgsql "
-                                      "OWNER TO postgres")
         self.execute_script(__file__, 'pagila-schema.sql')
 
         # Run pg_dump against source database

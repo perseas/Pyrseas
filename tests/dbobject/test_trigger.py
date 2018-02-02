@@ -29,7 +29,7 @@ class TriggerToMapTestCase(DatabaseToMapTestCase):
         dbmap = self.to_map(stmts)
         assert dbmap['schema sd']['table t1']['triggers'] == {
             'tr1': {'timing': 'before', 'events': ['insert', 'update'],
-                    'level': 'row', 'procedure': 'f1'}}
+                    'level': 'row', 'procedure': 'sd.f1'}}
 
     def test_map_trigger2(self):
         "Map another simple trigger with different attributes"
@@ -39,7 +39,7 @@ class TriggerToMapTestCase(DatabaseToMapTestCase):
         dbmap = self.to_map(stmts)
         assert dbmap['schema sd']['table t1']['triggers'] == {
             'tr1': {'timing': 'after', 'events': ['delete', 'truncate'],
-                    'level': 'statement', 'procedure': 'f1'}}
+                    'level': 'statement', 'procedure': 'sd.f1'}}
 
     def test_map_trigger_update_cols(self):
         "Map trigger with UPDATE OF columns"
@@ -50,7 +50,7 @@ class TriggerToMapTestCase(DatabaseToMapTestCase):
         assert dbmap['schema sd']['table t1']['triggers'] == {
             'tr1': {'timing': 'after', 'events': ['insert', 'update'],
                     'columns': ['c1', 'c2'], 'level': 'row',
-                    'procedure': 'f1'}}
+                    'procedure': 'sd.f1'}}
 
     def test_map_trigger_conditional(self):
         "Map trigger with a WHEN qualification"
@@ -61,7 +61,7 @@ class TriggerToMapTestCase(DatabaseToMapTestCase):
         dbmap = self.to_map(stmts)
         assert dbmap['schema sd']['table t1']['triggers'] == {
             'tr1': {'timing': 'after', 'events': ['update'],
-                    'level': 'row', 'procedure': 'f1',
+                    'level': 'row', 'procedure': 'sd.f1',
                     'condition': '(old.c2 IS DISTINCT FROM new.c2)'}}
 
     def test_map_trigger_instead(self):
@@ -74,7 +74,7 @@ class TriggerToMapTestCase(DatabaseToMapTestCase):
         dbmap = self.to_map(stmts)
         assert dbmap['schema sd']['view v1']['triggers'] == {
             'tr1': {'timing': 'instead of', 'events': ['insert'],
-                    'level': 'row', 'procedure': 'f1'}}
+                    'level': 'row', 'procedure': 'sd.f1'}}
 
     def test_map_tsvector_trigger(self):
         "Map a text search (tsvector) trigger"
@@ -125,7 +125,7 @@ class ConstraintTriggerToMapTestCase(DatabaseToMapTestCase):
         assert dbmap['schema sd']['table t1']['triggers'] == {
             'tr1': {'constraint': True, 'timing': 'after',
                     'events': ['insert', 'update'], 'level': 'row',
-                    'procedure': 'f1'}}
+                    'procedure': 'sd.f1'}}
 
     def test_map_trigger_deferrable(self):
         "Map a deferrable, initially deferred constraint trigger"
@@ -138,7 +138,7 @@ class ConstraintTriggerToMapTestCase(DatabaseToMapTestCase):
             'tr1': {'constraint': True, 'deferrable': True,
                     'initially_deferred': True, 'timing': 'after',
                     'events': ['insert', 'update'], 'level': 'row',
-                    'procedure': 'f1'}}
+                    'procedure': 'sd.f1'}}
 
 
 class TriggerToSqlTestCase(InputMapToSqlTestCase):
@@ -154,7 +154,7 @@ class TriggerToSqlTestCase(InputMapToSqlTestCase):
                         {'c3': {'type': 'date'}}],
             'triggers': {'tr1': {
                 'timing': 'before', 'events': ['insert', 'update'],
-                'level': 'row', 'procedure': 'f1'}}}})
+                'level': 'row', 'procedure': 'sd.f1'}}}})
         sql = self.to_sql(inmap)
         crt0, crt1 = (0, 1) if 'TABLE' in sql[0] else (1, 0)
         assert fix_indent(sql[crt0]) == CREATE_TABLE_STMT
@@ -171,7 +171,7 @@ class TriggerToSqlTestCase(InputMapToSqlTestCase):
                         {'c3': {'type': 'date'}}],
             'triggers': {'tr1': {'timing': 'after',
                                  'events': ['delete', 'truncate'],
-                                 'procedure': 'f1'}}}})
+                                 'procedure': 'sd.f1'}}}})
         sql = self.to_sql(inmap)
         crt0, crt1 = (0, 1) if 'TABLE' in sql[0] else (1, 0)
         assert fix_indent(sql[crt0]) == CREATE_TABLE_STMT
@@ -189,7 +189,7 @@ class TriggerToSqlTestCase(InputMapToSqlTestCase):
                         {'c3': {'type': 'date'}}],
             'triggers': {'tr1': {'timing': 'before', 'events': [
                 'insert', 'update'], 'columns': ['c1', 'c2'], 'level': 'row',
-                'procedure': 'f1'}}}})
+                'procedure': 'sd.f1'}}}})
         sql = self.to_sql(inmap)
         crt0, crt1 = (0, 1) if 'TABLE' in sql[0] else (1, 0)
         assert fix_indent(sql[crt0]) == CREATE_TABLE_STMT
@@ -199,8 +199,6 @@ class TriggerToSqlTestCase(InputMapToSqlTestCase):
 
     def test_create_trigger_conditional(self):
         "Create a trigger with a WHEN qualification"
-        if self.db.version < 90000:
-            self.skipTest('Only available on PG 9.0')
         inmap = self.std_map()
         inmap['schema sd'].update({'function f1()': {
             'language': 'plpgsql', 'returns': 'trigger', 'source': FUNC_SRC}})
@@ -208,7 +206,7 @@ class TriggerToSqlTestCase(InputMapToSqlTestCase):
             'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}},
                         {'c3': {'type': 'date'}}],
             'triggers': {'tr1': {'timing': 'before', 'events': [
-                'update'], 'level': 'row', 'procedure': 'f1',
+                'update'], 'level': 'row', 'procedure': 'sd.f1',
                 'condition': '(old.c2 IS DISTINCT FROM new.c2)'}}}})
         sql = self.to_sql(inmap)
         crt0, crt1 = (0, 1) if 'TABLE' in sql[0] else (1, 0)
@@ -231,7 +229,7 @@ class TriggerToSqlTestCase(InputMapToSqlTestCase):
                         'triggers': {'tr1': {'timing': 'instead of',
                                              'events': ['insert'],
                                              'level': 'row',
-                                             'procedure': 'f1'}}}})
+                                             'procedure': 'sd.f1'}}}})
         sql = self.to_sql(inmap)
         assert fix_indent(sql[0]) == CREATE_TABLE_STMT
         cr1, cr2 = (1, 2) if 'VIEW' in sql[1] else (2, 1)
@@ -242,11 +240,8 @@ class TriggerToSqlTestCase(InputMapToSqlTestCase):
         assert fix_indent(sql[3]) == "CREATE TRIGGER tr1 INSTEAD OF INSERT " \
             "ON sd.v1 FOR EACH ROW EXECUTE PROCEDURE sd.f1()"
 
-    @pytest.mark.xfail
     def test_add_tsvector_trigger(self):
-        """Add a text search (tsvector) trigger
-        Disabled until we can decide how to handle pg_catalog functions
-        """
+        "Add a text search (tsvector) trigger"
         inmap = self.std_map()
         inmap['schema sd'].update({'table t1': {
             'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}},
@@ -255,18 +250,16 @@ class TriggerToSqlTestCase(InputMapToSqlTestCase):
             'triggers': {'t1_tsidx_update': {
                 'timing': 'before',
                 'events': ['insert', 'update'], 'level': 'row',
-                'procedure': "tsvector_update_trigger('tsidx', "
-                "'pg_catalog.english', 'c2')"}}}})
+                'procedure': {'name': 'tsvector_update_trigger',
+                              'arguments':
+                              "'tsidx', 'pg_catalog.english', 'c2'"}}}}})
         sql = self.to_sql(inmap, [CREATE_TABLE_STMT2])
         assert fix_indent(sql[0]) == "CREATE TRIGGER t1_tsidx_update BEFORE" \
             " INSERT OR UPDATE ON sd.t1 FOR EACH ROW EXECUTE PROCEDURE " \
             "tsvector_update_trigger('tsidx', 'pg_catalog.english', 'c2')"
 
-    @pytest.mark.xfail
     def test_change_tsvector_trigger(self):
-        """Change a text search (tsvector) trigger
-        Disabled until we can decide how to handle pg_catalog functions
-        """
+        "Change a text search (tsvector) trigger"
         inmap = self.std_map()
         inmap['schema sd'].update({'table t1': {
             'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}},
@@ -274,8 +267,10 @@ class TriggerToSqlTestCase(InputMapToSqlTestCase):
                         {'tsidx': {'type': 'tsvector'}}],
             'triggers': {'t1_tsidx_update': {
                 'timing': 'before', 'events': ['insert', 'update'],
-                'level': 'row', 'procedure': "tsvector_update_trigger("
-                "'tsidx', 'pg_catalog.english', 'c2', 'c3')"}}}})
+                'level': 'row',
+                'procedure': {'name': "tsvector_update_trigger",
+                              'arguments':
+                              "'tsidx', 'pg_catalog.english', 'c2', 'c3'"}}}}})
         stmts = [CREATE_TABLE_STMT2,
                  "CREATE TRIGGER t1_tsidx_update BEFORE INSERT OR UPDATE ON "
                  "t1 FOR EACH ROW EXECUTE PROCEDURE tsvector_update_trigger"
@@ -339,7 +334,7 @@ class TriggerToSqlTestCase(InputMapToSqlTestCase):
             'triggers': {'tr1': {
                 'description': 'Test trigger tr1',
                 'timing': 'before', 'events': ['insert', 'update'],
-                'level': 'row', 'procedure': 'f1'}}}})
+                'level': 'row', 'procedure': 'sd.f1'}}}})
         sql = self.to_sql(inmap)
         crt0, crt1 = (0, 1) if 'TABLE' in sql[0] else (1, 0)
         assert fix_indent(sql[crt0]) == CREATE_TABLE_STMT
@@ -359,7 +354,7 @@ class TriggerToSqlTestCase(InputMapToSqlTestCase):
             'triggers': {'tr1': {
                 'description': 'Test trigger tr1',
                 'timing': 'before', 'events': ['insert', 'update'],
-                'level': 'row', 'procedure': 'f1'}}}})
+                'level': 'row', 'procedure': 'sd.f1'}}}})
         sql = self.to_sql(inmap, stmts)
         assert sql == [COMMENT_STMT]
 
@@ -375,7 +370,7 @@ class TriggerToSqlTestCase(InputMapToSqlTestCase):
                         {'c3': {'type': 'date'}}],
             'triggers': {'tr1': {
                 'timing': 'before', 'events': ['insert', 'update'],
-                'level': 'row', 'procedure': 'f1'}}}})
+                'level': 'row', 'procedure': 'sd.f1'}}}})
         sql = self.to_sql(inmap, stmts)
         assert sql == ["COMMENT ON TRIGGER tr1 ON sd.t1 IS NULL"]
 
@@ -392,7 +387,7 @@ class TriggerToSqlTestCase(InputMapToSqlTestCase):
             'triggers': {'tr1': {
                 'description': 'Changed trigger tr1',
                 'timing': 'before', 'events': ['insert', 'update'],
-                'level': 'row', 'procedure': 'f1'}}}})
+                'level': 'row', 'procedure': 'sd.f1'}}}})
         sql = self.to_sql(inmap, stmts)
         assert sql == [
             "COMMENT ON TRIGGER tr1 ON sd.t1 IS 'Changed trigger tr1'"]
@@ -412,7 +407,7 @@ class ConstraintTriggerToSqlTestCase(InputMapToSqlTestCase):
             'triggers': {'tr1': {
                 'constraint': True, 'timing': 'after',
                 'events': ['insert', 'update'], 'level': 'row',
-                'procedure': 'f1'}}}})
+                'procedure': 'sd.f1'}}}})
         sql = self.to_sql(inmap)
         crt0, crt1 = (0, 1) if 'TABLE' in sql[0] else (1, 0)
         assert fix_indent(sql[crt0]) == CREATE_TABLE_STMT
@@ -432,7 +427,7 @@ class ConstraintTriggerToSqlTestCase(InputMapToSqlTestCase):
                 'constraint': True, 'deferrable': True,
                 'initially_deferred': True, 'timing': 'after',
                 'events': ['insert', 'update'], 'level': 'row',
-                'procedure': 'f1'}}}})
+                'procedure': 'sd.f1'}}}})
         sql = self.to_sql(inmap)
         crt0, crt1 = (0, 1) if 'TABLE' in sql[0] else (1, 0)
         assert fix_indent(sql[crt0]) == CREATE_TABLE_STMT

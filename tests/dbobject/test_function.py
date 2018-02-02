@@ -408,7 +408,7 @@ class AggregateToSqlTestCase(InputMapToSqlTestCase):
         sql = self.to_sql(inmap)
         assert fix_indent(sql[1]) == CREATE_STMT2
         assert fix_indent(sql[2]) == "CREATE AGGREGATE sd.a1(integer) " \
-            "(SFUNC = f1, STYPE = integer)"
+            "(SFUNC = sd.f1, STYPE = integer)"
 
     def test_create_aggregate_sortop(self):
         "Create an aggregate that specifies a sort operator"
@@ -420,7 +420,7 @@ class AggregateToSqlTestCase(InputMapToSqlTestCase):
             'sfunc': 'f1', 'stype': 'float', 'sortop': 'pg_catalog.>'}})
         sql = self.to_sql(inmap)
         assert fix_indent(sql[2]) == "CREATE AGGREGATE sd.a1(float) " \
-            "(SFUNC = f1, STYPE = float, SORTOP = OPERATOR(pg_catalog.>))"
+            "(SFUNC = sd.f1, STYPE = float, SORTOP = OPERATOR(pg_catalog.>))"
 
     def test_create_aggregate_init_final(self):
         "Create an aggregate with an INITCOND and a FINALFUNC"
@@ -441,7 +441,8 @@ class AggregateToSqlTestCase(InputMapToSqlTestCase):
             "RETURNS double precision LANGUAGE sql IMMUTABLE " \
             "AS $_$SELECT $1::float$_$"
         assert fix_indent(sql[3]) == "CREATE AGGREGATE sd.a1(integer) " \
-            "(SFUNC = f1, STYPE = integer, FINALFUNC = f2, INITCOND = '-1')"
+            "(SFUNC = sd.f1, STYPE = integer, FINALFUNC = sd.f2, " \
+            "INITCOND = '-1')"
 
     def test_drop_aggregate(self):
         "Drop an existing aggregate"
@@ -469,8 +470,9 @@ class AggregateToSqlTestCase(InputMapToSqlTestCase):
                  'minitcond': '0'}})
         sql = self.to_sql(inmap, [CREATE_STMT4, CREATE_STMT5])
         assert fix_indent(sql[0]) == "CREATE AGGREGATE sd.a1(integer) (" \
-            "SFUNC = fadd, STYPE = integer, INITCOND = '0', MSFUNC = fadd, " \
-            "MINVFUNC = fsub, MSTYPE = integer, MINITCOND = '0')"
+            "SFUNC = sd.fadd, STYPE = integer, INITCOND = '0', " \
+            "MSFUNC = sd.fadd, MINVFUNC = sd.fsub, MSTYPE = integer, " \
+            "MINITCOND = '0')"
 
     def test_create_hypothetical_set_aggregate(self):
         "Create a hypothetical-set aggregate"
@@ -485,7 +487,7 @@ class AggregateToSqlTestCase(InputMapToSqlTestCase):
                 'kind': 'hypothetical', 'sfunc': 'f1', 'stype': 'integer'}})
         sql = self.to_sql(inmap, [CREATE_STMT2])
         assert fix_indent(sql[0]) == "CREATE AGGREGATE sd.a1(integer " \
-            "ORDER BY integer) (SFUNC = f1, STYPE = integer, HYPOTHETICAL)"
+            "ORDER BY integer) (SFUNC = sd.f1, STYPE = integer, HYPOTHETICAL)"
 
     def test_create_aggregate_parallel_safe(self):
         "Create an aggregate with parallel safety"
@@ -500,4 +502,5 @@ class AggregateToSqlTestCase(InputMapToSqlTestCase):
                 'sfunc': 'f1', 'stype': 'integer', 'parallel': 'safe'}})
         sql = self.to_sql(inmap, [CREATE_STMT2])
         assert fix_indent(sql[0]) == "CREATE AGGREGATE sd.a1(integer " \
-            "ORDER BY integer) (SFUNC = f1, STYPE = integer, PARALLEL = SAFE)"
+            "ORDER BY integer) (SFUNC = sd.f1, STYPE = integer, " \
+            "PARALLEL = SAFE)"

@@ -576,7 +576,8 @@ class Table(DbClass):
             partbyclause = " PARTITION BY %s (%s)" % (
                 self.partition_by.upper(), ", ".join(self.partition_cols))
         elif len(self.inherits) > 0:
-            inhclause = " INHERITS (%s)" % ", ".join(t for t in self.inherits)
+            inhclause = " INHERITS (%s)" % ", ".join(
+                self.qualname(self.schema, t) for t in self.inherits)
         if self.partition_bound_spec is None:
             collist = "(\n%s)" % ",\n".join(cols)
         else:

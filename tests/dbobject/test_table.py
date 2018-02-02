@@ -402,7 +402,7 @@ class TableInheritToSqlTestCase(InputMapToSqlTestCase):
         sql = self.to_sql(inmap)
         assert fix_indent(sql[0]) == CREATE_STMT
         assert fix_indent(sql[1]) == "CREATE TABLE sd.t2 (c3 numeric) " \
-            "INHERITS (t1)"
+            "INHERITS (sd.t1)"
 
     def test_drop_inherited(self):
         "Drop tables that inherit from others"

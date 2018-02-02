@@ -427,22 +427,22 @@ class Aggregate(Proc):
         """
         super(Aggregate, self).__init__(
             name, schema, description, owner, privileges, arguments)
-        self.sfunc = split_schema_func(self.schema, sfunc)
+        self.sfunc = split_schema_obj(sfunc, self.schema)
         self.stype = self.unqualify(stype)
         self.sspace = sspace
         if finalfunc is not None and finalfunc != '-':
-            self.finalfunc = split_schema_func(self.schema, finalfunc)
+            self.finalfunc = split_schema_obj(finalfunc, self.schema)
         else:
             self.finalfunc = None
         self.finalfunc_extra = finalfunc_extra
         self.initcond = initcond
         self.sortop = sortop if sortop != '0' else None
         if msfunc is not None and msfunc != '-':
-            self.msfunc = split_schema_func(self.schema, msfunc)
+            self.msfunc = split_schema_obj(msfunc, self.schema)
         else:
             self.msfunc = None
         if minvfunc is not None and minvfunc != '-':
-            self.minvfunc = split_schema_func(self.schema, minvfunc)
+            self.minvfunc = split_schema_obj(minvfunc, self.schema)
         else:
             self.minvfunc = None
         if mstype is not None and mstype != '-':
@@ -451,7 +451,7 @@ class Aggregate(Proc):
             self.mstype = None
         self.msspace = msspace
         if mfinalfunc is not None and mfinalfunc != '-':
-            self.mfinalfunc = split_schema_func(self.schema, mfinalfunc)
+            self.mfinalfunc = split_schema_obj(mfinalfunc, self.schema)
         else:
             self.mfinalfunc = None
         self.mfinalfunc_extra = mfinalfunc_extra
@@ -560,12 +560,13 @@ class Aggregate(Proc):
         :return: dictionary
         """
         dct = super(Aggregate, self).to_map(db, no_owner, no_privs)
-        dct['sfunc'] = join_schema_func(self.sfunc)
+        dct['sfunc'] = self.unqualify(join_schema_func(self.sfunc))
         for attr in ('finalfunc', 'msfunc', 'minvfunc', 'mfinalfunc'):
             if getattr(self, attr) is None:
                 dct.pop(attr)
             else:
-                dct[attr] = join_schema_func(getattr(self, attr))
+                dct[attr] = self.unqualify(
+                    join_schema_func(getattr(self, attr)))
         for attr in ('initcond', 'sortop', 'minitcond', 'mstype',
                      'combinefunc', 'serialfunc', 'deserialfunc'):
             if getattr(self, attr) is None:
@@ -593,7 +594,8 @@ class Aggregate(Proc):
         """
         opt_clauses = []
         if self.finalfunc is not None:
-            opt_clauses.append("FINALFUNC = %s" % self.finalfunc)
+            opt_clauses.append("FINALFUNC = %s" %
+                               join_schema_func(self.finalfunc))
         if self.initcond is not None:
             opt_clauses.append("INITCOND = '%s'" % self.initcond)
         if dbversion >= 90600:
@@ -609,15 +611,18 @@ class Aggregate(Proc):
             if self.finalfunc_extra:
                 opt_clauses.append("FINALFUNC_EXTRA")
             if self.msfunc is not None:
-                opt_clauses.append("MSFUNC = %s" % self.msfunc)
+                opt_clauses.append("MSFUNC = %s" %
+                                   join_schema_func(self.msfunc))
             if self.minvfunc is not None:
-                opt_clauses.append("MINVFUNC = %s" % self.minvfunc)
+                opt_clauses.append("MINVFUNC = %s" %
+                                   join_schema_func(self.minvfunc))
             if self.mstype is not None:
                 opt_clauses.append("MSTYPE = %s" % self.mstype)
             if self.msspace > 0:
                 opt_clauses.append("MSSPACE = %d" % self.msspace)
             if self.mfinalfunc is not None:
-                opt_clauses.append("MFINALFUNC = %s" % self.mfinalfunc)
+                opt_clauses.append("MFINALFUNC = %s" %
+                                   join_schema_func(self.mfinalfunc))
             if self.mfinalfunc_extra:
                 opt_clauses.append("MFINALFUNC_EXTRA")
             if self.minitcond is not None:
@@ -634,7 +639,8 @@ class Aggregate(Proc):
                 opt_clauses.append("PARALLEL = %s" % self.parallel.upper())
         return ["CREATE AGGREGATE %s(%s) (\n    SFUNC = %s,"
                 "\n    STYPE = %s%s%s)" % (
-                    self.qualname(), self.arguments, self.sfunc, self.stype,
+                    self.qualname(), self.arguments,
+                    join_schema_func(self.sfunc), self.stype,
                     opt_clauses and ',\n    ' or '',
                     ',\n    '.join(opt_clauses))]
 
