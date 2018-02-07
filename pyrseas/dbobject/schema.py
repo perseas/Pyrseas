@@ -328,7 +328,10 @@ class SchemaDict(DbObjectDict):
         for key in datacopy:
             if not key.startswith('schema '):
                 raise KeyError("Unrecognized object type: %s" % key)
-            schema = self[key[7:]]
+            sch = key[7:]
+            if sch not in self:
+                continue
+            schema = self[sch]
             if not hasattr(schema, 'datacopy'):
                 schema.datacopy = []
             for tbl in datacopy[key]:

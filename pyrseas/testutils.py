@@ -299,6 +299,18 @@ class DbMigrateTestCase(TestCase):
         if not os.path.exists(cls.tmpdir):
             os.mkdir(cls.tmpdir)
 
+    def add_public_schema(self, db):
+        db.execute("CREATE SCHEMA IF NOT EXISTS public")
+        db.execute("ALTER SCHEMA public OWNER TO postgres")
+        db.execute("COMMENT ON SCHEMA public IS "
+                         "'standard public schema'")
+        db.execute("DROP SCHEMA IF EXISTS sd")
+        db.conn.commit()
+
+    def remove_public_schema(self, db):
+        db.execute("DROP SCHEMA IF EXISTS public CASCADE")
+        db.conn.commit()
+
     @classmethod
     def remove_tempfiles(cls, prefix):
         remove_temp_files(cls.tmpdir, prefix)

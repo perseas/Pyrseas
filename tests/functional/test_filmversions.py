@@ -11,9 +11,15 @@ from pyrseas.yamlutil import yamldump
 
 class FilmTestCase(DbMigrateTestCase):
 
+    def setUp(self):
+        self.remove_public_schema(self.srcdb)
+
     @classmethod
     def tearDownClass(cls):
         cls.remove_tempfiles('film-0.')
+        cls.remove_tempfiles('usercfg.yaml')
+        cls.remove_tempfiles('config.yaml')
+        cls.remove_tempfiles('metadata')
 
     def test_film_version_01(self):
         "Create schema version 0.1"

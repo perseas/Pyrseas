@@ -11,6 +11,11 @@ from pyrseas.testutils import DbMigrateTestCase
 
 class PagilaTestCase(DbMigrateTestCase):
 
+    def setUp(self):
+        super(DbMigrateTestCase, self).setUp()
+        self.add_public_schema(self.srcdb)
+        self.add_public_schema(self.db)
+
     @classmethod
     def tearDown(cls):
         cls.remove_tempfiles('pagila')
@@ -66,9 +71,14 @@ class PagilaTestCase(DbMigrateTestCase):
         # Undo the changes
         self.migrate_target(emptyyaml, targsql)
 
+        # Workaround problem with privileges on schema public
+        self.db.execute("GRANT ALL ON SCHEMA public TO postgres")
+        self.db.conn.commit()
         # Run pg_dump against target database
         self.run_pg_dump(targdump)
 
+        self.db.execute("REVOKE ALL ON SCHEMA public FROM postgres")
+        self.db.conn.commit()
         # Create target YAML file
         self.create_yaml(targyaml)
 
