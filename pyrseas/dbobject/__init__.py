@@ -332,7 +332,8 @@ class DbObject(object):
         The return value, a Python dictionary, is equivalent to a YAML
         or JSON object.
         """
-        dct = self.__dict__.copy()
+        import copy
+        dct = copy.deepcopy(self.__dict__)
         for key in self.keylist:
             del dct[key]
         if self.description is None:
