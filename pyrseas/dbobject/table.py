@@ -520,9 +520,10 @@ class Table(DbClass):
         if len(self.foreign_keys) > 0:
             for k in list(self.foreign_keys.values()):
                 tbls = dbschemas[k.ref_schema].tables
-                dct['foreign_keys'].update(self.foreign_keys[k.name].to_map(
+                ktable = self.foreign_keys[k.name]
+                dct['foreign_keys'].update(ktable.to_map(
                     db, self.column_names(),
-                    tbls[self.foreign_keys[k.name].ref_table].column_names()))
+                    tbls[ktable.ref_table].column_names()))
         else:
             dct.pop('foreign_keys')
         if len(self.unique_constraints) > 0:

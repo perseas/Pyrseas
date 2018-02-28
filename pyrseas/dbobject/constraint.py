@@ -482,6 +482,7 @@ class ForeignKey(Constraint):
         :param dbcols: dictionary of dbobject columns
         :return: dictionary
         """
+        self._normalize_columns()
         dct = super(ForeignKey, self).to_map(db)
         if '_table' in dct:
             del dct['_table']
@@ -495,14 +496,14 @@ class ForeignKey(Constraint):
                 dct.pop(attr)
         if self.match == 'simple':
             dct.pop('match')
-        dct['columns'] = [dbcols[k - 1] for k in self.columns]
-        ref_cols = [refcols[k - 1] for k in self.ref_cols]
-        dct['references'] = {'table': dct['ref_table'], 'columns': ref_cols}
+        dct['references'] = {'table': dct['ref_table'],
+                             'columns': self.ref_cols}
         if 'ref_schema' in dct:
             dct['references'].update(schema=self.ref_schema)
             dct.pop('ref_schema')
         dct.pop('ref_table')
         dct.pop('ref_cols')
+
         return {self.name: dct}
 
     @commentable
@@ -570,6 +571,7 @@ class ForeignKey(Constraint):
             return pkey
 
         for uc in list(ref_table.unique_constraints.values()):
+            uc._normalize_columns()
             if uc.columns == self.ref_cols:
                 return uc
 
@@ -666,6 +668,7 @@ class UniqueConstraint(Constraint):
         :param dbcols: dictionary of dbobject columns
         :return: dictionary
         """
+        self._normalize_columns()
         dct = super(UniqueConstraint, self).to_map(db)
         if self.access_method == 'btree':
             dct.pop('access_method')
@@ -674,7 +677,6 @@ class UniqueConstraint(Constraint):
                 dct.pop(attr)
         if self.tablespace is None:
             dct.pop('tablespace')
-        dct['columns'] = [dbcols[k - 1] for k in self.columns]
         return {self.name: dct}
 
     def alter(self, inuc):
