@@ -169,7 +169,8 @@ class OperatorClass(DbSchemaObject):
             clauses.append("STORAGE %s" % self.storage)
         return ["CREATE OPERATOR CLASS %s\n    %sFOR TYPE %s USING %s "
                 "AS\n    %s" % (
-                    self.qualname(), dflt, self.type, self.index_method,
+                    self.qualname(), dflt,
+                    self.qualname(self.schema, self.type), self.index_method,
                     ',\n    ' .join(clauses))]
 
     def get_implied_deps(self, db):

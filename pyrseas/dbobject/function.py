@@ -368,6 +368,10 @@ class Function(Proc):
             if isinstance(dep, DbType):
                 for attr in ('input', 'output', 'send', 'receive'):
                     fname = getattr(dep, attr, None)
+                    if isinstance(fname, tuple):
+                        fname = "%s.%s" % fname
+                    else:
+                        fname = "%s.%s" % (self.schema, fname)
                     if fname and fname == self.qualname():
                         deps.remove(dep)
                         self._defining = dep    # we may need a shell for this

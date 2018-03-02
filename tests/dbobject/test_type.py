@@ -214,7 +214,6 @@ class BaseTypeToSqlTestCase(InputMapToSqlTestCase):
             "OUTPUT = t1textout, INTERNALLENGTH = variable, " \
             "ALIGNMENT = int4, STORAGE = plain)"
 
-    @pytest.mark.xfail
     def test_drop_type(self):
         "Drop an existing base type"
         stmts = [CREATE_SHELL_STMT, CREATE_FUNC_IN, CREATE_FUNC_OUT,
