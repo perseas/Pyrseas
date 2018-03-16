@@ -81,15 +81,17 @@ class View(DbClass):
         if hasattr(opts, 'excl_tables') and opts.excl_tables \
                 and self.name in opts.excl_tables:
             return None
-        view = super(View, self).to_map(db, opts.no_owner, opts.no_privs)
-        if 'dependent_funcs' in view:
-            del view['dependent_funcs']
+        dct = super(View, self).to_map(db, opts.no_owner, opts.no_privs)
+        dct['columns'] = [col.to_map(db, opts.no_privs)
+                          for col in self.columns]
+        if 'dependent_funcs' in dct:
+             dct.pop('dependent_funcs')
         if len(self.triggers) > 0:
             for key in list(self.triggers.values()):
-                view['triggers'].update(self.triggers[key.name].to_map(db))
+                dct['triggers'].update(self.triggers[key.name].to_map(db))
         else:
-            view.pop('triggers')
-        return view
+            dct.pop('triggers')
+        return dct
 
     @commentable
     @grantable

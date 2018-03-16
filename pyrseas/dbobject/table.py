@@ -929,7 +929,7 @@ class ClassDict(DbObjectDict):
         seqs = [self[t] for t in self if isinstance(self[t], Sequence)]
         for (sch, tbl) in dbcolumns:
             if (sch, tbl) in self:
-                assert isinstance(self[(sch, tbl)], Table)
+                #assert isinstance(self[(sch, tbl)], Table)
                 self[(sch, tbl)].columns = dbcolumns[(sch, tbl)]
                 for col in dbcolumns[(sch, tbl)]:
                     col._table = self[(sch, tbl)]

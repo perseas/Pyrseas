@@ -27,8 +27,23 @@ class ViewToMapTestCase(DatabaseToMapTestCase):
         dbmap = self.to_map(stmts)
         fmt = "%s%s" if (self.db.version < 90300) else "%s\n   %s"
         expmap = {'depends_on': ['table t1'],
-                  'definition': fmt % (" SELECT t1.c1,",
-                                       " t1.c3 * 2\n   FROM sd.t1;")}
+                  'definition': " SELECT t1.c1,"
+                  "\n    t1.c3 * 2\n   FROM sd.t1;"}
+        assert dbmap['schema sd']['view v1'] == expmap
+
+    def test_map_view_columns(self):
+        "Map a complex view's columns in addition to its definition"
+        stmts = ["CREATE TABLE t1 (c1 INTEGER UNIQUE)",
+                 "CREATE TABLE t2 (c2 INTEGER PRIMARY KEY REFERENCES t1(c1))",
+                 "CREATE VIEW v1 AS SELECT (ROW(t1.*)::t2).*, t1, 5 AS const "
+                 "FROM t1"]
+        dbmap = self.to_map(stmts)
+        expmap = {'columns': [{'c2': {'type': 'integer'}},
+                              {'t1': {'type': 'sd.t1'}},
+                              {'const': {'type': 'integer'}}],
+                  'definition': " SELECT (ROW(t1.c1)::sd.t2).c2 AS c2,"
+                  "\n    t1.*::sd.t1 AS t1,\n    5 AS const\n   FROM sd.t1;",
+                  'depends_on': ['table t1']}
         assert dbmap['schema sd']['view v1'] == expmap
 
     def test_map_view_comment(self):
