@@ -17,18 +17,21 @@ class ViewToMapTestCase(DatabaseToMapTestCase):
     def test_map_view_no_table(self):
         "Map a created view without a table dependency"
         dbmap = self.to_map([CREATE_STMT])
-        expmap = {'definition': VIEW_DEFN}
+        expmap = {'columns': [{'today': {'type': 'date'}}],
+                  'definition': VIEW_DEFN}
         assert dbmap['schema sd']['view v1'] == expmap
 
     def test_map_view_table(self):
         "Map a created view with a table dependency"
         stmts = ["CREATE TABLE t1 (c1 INTEGER, c2 TEXT, c3 INTEGER)",
-                 "CREATE VIEW v1 AS SELECT c1, c3 * 2 FROM t1"]
+                 "CREATE VIEW v1 AS SELECT c1, c3 * 2 AS c2 FROM t1"]
         dbmap = self.to_map(stmts)
         fmt = "%s%s" if (self.db.version < 90300) else "%s\n   %s"
-        expmap = {'depends_on': ['table t1'],
+        expmap = {'columns': [{'c1': {'type': 'integer'}},
+                              {'c2': {'type': 'integer'}}],
+                  'depends_on': ['table t1'],
                   'definition': " SELECT t1.c1,"
-                  "\n    t1.c3 * 2\n   FROM sd.t1;"}
+                  "\n    t1.c3 * 2 AS c2\n   FROM sd.t1;"}
         assert dbmap['schema sd']['view v1'] == expmap
 
     def test_map_view_columns(self):

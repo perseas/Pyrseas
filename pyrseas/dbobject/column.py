@@ -78,7 +78,7 @@ class Column(DbSchemaObject):
                  LEFT JOIN pg_attrdef ON (attrelid = pg_attrdef.adrelid
                       AND attnum = pg_attrdef.adnum)
                  LEFT JOIN pg_collation l ON (attcollation = l.oid)
-            WHERE relkind in ('c', 'r', 'f', 'p', 'v')
+            WHERE relkind in ('c', 'r', 'f', 'p', 'v', 'm')
               AND (nspname != 'pg_catalog' AND nspname != 'information_schema')
               AND attnum > 0
            ORDER BY nspname, relname, attnum"""

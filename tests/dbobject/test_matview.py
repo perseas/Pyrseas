@@ -18,30 +18,28 @@ class MatViewToMapTestCase(DatabaseToMapTestCase):
 
     def test_map_view_simple(self):
         "Map a created materialized view"
-        if self.db.version < 90300:
-            self.skipTest('Only available on PG 9.3')
         stmts = [CREATE_TABLE, CREATE_STMT]
         dbmap = self.to_map(stmts)
-        expmap = {'definition': VIEW_DEFN, 'with_data': True,
+        expmap = {'columns': [{'c1': {'type': 'integer'}},
+                              {'mc3': {'type': 'integer'}}],
+                  'definition': VIEW_DEFN, 'with_data': True,
                   'depends_on': ['table t1']}
         assert dbmap['schema sd']['materialized view mv1'] == expmap
 
     def test_map_view_comment(self):
         "Map a materialized view with a comment"
-        if self.db.version < 90300:
-            self.skipTest('Only available on PG 9.3')
         dbmap = self.to_map([CREATE_TABLE, CREATE_STMT, COMMENT_STMT])
         assert dbmap['schema sd']['materialized view mv1'][
             'description'] == 'Test matview mv1'
 
     def test_map_view_index(self):
         "Map a materialized view with an index"
-        if self.db.version < 90300:
-            self.skipTest('Only available on PG 9.3')
         stmts = [CREATE_TABLE, CREATE_STMT,
                  "CREATE INDEX idx1 ON mv1 (mc3)"]
         dbmap = self.to_map(stmts)
-        expmap = {'definition': VIEW_DEFN, 'with_data': True,
+        expmap = {'columns': [{'c1': {'type': 'integer'}},
+                              {'mc3': {'type': 'integer'}}],
+                  'definition': VIEW_DEFN, 'with_data': True,
                   'indexes': {'idx1': {'keys': ['mc3']}},
                   'depends_on': ['table t1']}
         assert dbmap['schema sd']['materialized view mv1'] == expmap
@@ -52,13 +50,13 @@ class MatViewToSqlTestCase(InputMapToSqlTestCase):
 
     def test_create_view(self):
         "Create a materialized view"
-        if self.db.version < 90300:
-            self.skipTest('Only available on PG 9.3')
         inmap = self.std_map()
         inmap['schema sd'].update({'table t1': {
             'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}},
                         {'c3': {'type': 'integer'}}]}})
         inmap['schema sd'].update({'materialized view mv1': {
+            'columns': [{'c1': {'type': 'integer'}},
+                        {'mc3': {'type': 'integer'}}],
             'definition': "SELECT c1, c3 * 2 AS mc3 FROM sd.t1",
             'depends_on': ['table t1']}})
         sql = self.to_sql(inmap)
@@ -69,8 +67,6 @@ class MatViewToSqlTestCase(InputMapToSqlTestCase):
 
     def test_bad_view_map(self):
         "Error creating a materialized view with a bad map"
-        if self.db.version < 90300:
-            self.skipTest('Only available on PG 9.3')
         inmap = self.std_map()
         inmap['schema sd'].update({'mv1': {'definition': VIEW_DEFN}})
         with pytest.raises(KeyError):
@@ -78,8 +74,6 @@ class MatViewToSqlTestCase(InputMapToSqlTestCase):
 
     def test_drop_view(self):
         "Drop an existing materialized view with table dependencies"
-        if self.db.version < 90300:
-            self.skipTest('Only available on PG 9.3')
         stmts = ["CREATE TABLE t1 (c1 INTEGER, c2 TEXT)",
                  "CREATE TABLE t2 (c1 INTEGER, c3 TEXT)",
                  "CREATE MATERIALIZED VIEW mv1 AS SELECT t1.c1, c2, c3 "
@@ -97,10 +91,10 @@ class MatViewToSqlTestCase(InputMapToSqlTestCase):
 
     def test_view_with_comment(self):
         "Create a materialized view with a comment"
-        if self.db.version < 90300:
-            self.skipTest('Only available on PG 9.3')
         inmap = self.std_map()
         inmap['schema sd'].update({'materialized view mv1': {
+            'columns': [{'c1': {'type': 'integer'}},
+                        {'mc3': {'type': 'integer'}}],
             'definition': VIEW_STMT, 'description': "Test matview mv1"}})
         sql = self.to_sql(inmap)
         assert fix_indent(sql[0]) == CREATE_STMT
@@ -108,14 +102,14 @@ class MatViewToSqlTestCase(InputMapToSqlTestCase):
 
     def test_view_index(self):
         "Create an index on a materialized view"
-        if self.db.version < 90300:
-            self.skipTest('Only available on PG 9.3')
         stmts = [CREATE_TABLE, CREATE_STMT]
         inmap = self.std_map()
         inmap['schema sd'].update({'table t1': {
             'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}},
                         {'c3': {'type': 'integer'}}]}})
         inmap['schema sd'].update({'materialized view mv1': {
+            'columns': [{'c1': {'type': 'integer'}},
+                        {'mc3': {'type': 'integer'}}],
             'definition': VIEW_DEFN, 'indexes': {'idx1': {'keys': ['mc3']}}}})
         sql = self.to_sql(inmap, stmts)
         assert sql == ["CREATE INDEX idx1 ON sd.mv1 (mc3)"]

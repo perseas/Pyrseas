@@ -94,12 +94,12 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
                  "GRANT SELECT ON v1 TO PUBLIC",
                  "GRANT REFERENCES ON v1 TO user1"]
         dbmap = self.to_map(stmts, no_privs=False)
-        expmap = self.sort_privileges({'definition':
-                                       " SELECT now()::date AS today;",
-                                       'privileges': [
-                                           {self.db.user: ['all']},
-                                           {'PUBLIC': ['select']},
-                                           {'user1': ['references']}]})
+        expmap = self.sort_privileges(
+            {'columns': [{'today': {'type': 'date'}}],
+             'definition': " SELECT now()::date AS today;",
+             'privileges': [{self.db.user: ['all']},
+                            {'PUBLIC': ['select']},
+                            {'user1': ['references']}]})
         assert dbmap['schema sd']['view v1'] == expmap
 
     def test_map_function(self):
