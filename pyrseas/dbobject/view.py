@@ -10,6 +10,7 @@ from pyrseas.lib.pycompat import PY2
 from pyrseas.yamlutil import MultiLineStr
 from . import commentable, ownable, grantable
 from .table import DbClass
+from .column import Column
 
 
 class View(DbClass):
@@ -32,6 +33,7 @@ class View(DbClass):
         else:
             self.definition = MultiLineStr(definition)
         self.triggers = {}
+        self.columns = []
         self.oid = oid
 
     @staticmethod
@@ -60,6 +62,11 @@ class View(DbClass):
             name, schema.name, inobj.pop('description', None),
             inobj.pop('owner', None), inobj.pop('privileges', []),
             inobj.pop('definition', None))
+        if "columns" in inobj:
+            obj.columns = [Column(list(col.keys())[0], schema.name, name,
+                                  i + 1,
+                                  list(col.values())[0].get("type", None))
+                           for i, col in enumerate(inobj.get("columns"))]
         if 'depends_on' in inobj:
             obj.depends_on.extend(inobj['depends_on'])
         obj.fix_privileges()
@@ -118,6 +125,13 @@ class View(DbClass):
         input.
         """
         stmts = []
+        for col in self.columns:
+            if col.name != inview.columns[col.number - 1].name:
+                raise KeyError("Cannot change name of view column '%s'"
+                                % col.name)
+            if col.type != inview.columns[col.number - 1].type:
+                raise TypeError("Cannot change datatype of view column '%s'"
+                                % col.name)
         if self.definition != inview.definition:
             stmts.append(self.create(dbversion, inview.definition))
         stmts.append(super(View, self).alter(inview))
@@ -171,6 +185,11 @@ class MaterializedView(View):
             name, schema.name, inobj.pop('description', None),
             inobj.pop('owner', None), inobj.pop('privileges', []),
             inobj.pop('definition', None))
+        if "columns" in inobj:
+            obj.columns = [Column(list(col.keys())[0], schema.name, name,
+                                  i + 1,
+                                  list(col.values())[0].get("type", None))
+                           for i, col in enumerate(inobj.get("columns"))]
         obj.fix_privileges()
         obj.set_oldname(inobj)
         return obj

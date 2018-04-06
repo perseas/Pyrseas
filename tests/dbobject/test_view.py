@@ -7,6 +7,8 @@ from pyrseas.testutils import DatabaseToMapTestCase
 from pyrseas.testutils import InputMapToSqlTestCase, fix_indent
 
 CREATE_STMT = "CREATE VIEW sd.v1 AS SELECT now()::date AS today"
+CREATE_TBL = "CREATE TABLE sd.t1 (c1 integer, c2 text, c3 integer)"
+CREATE_STMT2 = "CREATE VIEW sd.v1 AS SELECT c1, c3 * 2 AS c2 FROM t1"
 COMMENT_STMT = "COMMENT ON VIEW sd.v1 IS 'Test view v1'"
 VIEW_DEFN = " SELECT now()::date AS today;"
 
@@ -23,10 +25,8 @@ class ViewToMapTestCase(DatabaseToMapTestCase):
 
     def test_map_view_table(self):
         "Map a created view with a table dependency"
-        stmts = ["CREATE TABLE t1 (c1 INTEGER, c2 TEXT, c3 INTEGER)",
-                 "CREATE VIEW v1 AS SELECT c1, c3 * 2 AS c2 FROM t1"]
+        stmts = [CREATE_TBL, CREATE_STMT2]
         dbmap = self.to_map(stmts)
-        fmt = "%s%s" if (self.db.version < 90300) else "%s\n   %s"
         expmap = {'columns': [{'c1': {'type': 'integer'}},
                               {'c2': {'type': 'integer'}}],
                   'depends_on': ['table t1'],
@@ -73,12 +73,10 @@ class ViewToSqlTestCase(InputMapToSqlTestCase):
             'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}},
                         {'c3': {'type': 'integer'}}]}})
         inmap['schema sd'].update({'view v1': {
-            'definition': "SELECT c1, c3 * 2 FROM t1"}})
+            'definition': "SELECT c1, c3 * 2 AS c2 FROM t1"}})
         sql = self.to_sql(inmap)
-        assert fix_indent(sql[0]) == "CREATE TABLE sd.t1 (c1 integer, " \
-            "c2 text, c3 integer)"
-        assert fix_indent(sql[1]) == \
-            "CREATE VIEW sd.v1 AS SELECT c1, c3 * 2 FROM t1"
+        assert fix_indent(sql[0]) == CREATE_TBL
+        assert fix_indent(sql[1]) == CREATE_STMT2
 
     def test_create_view_in_schema(self):
         "Create a view within a non-default schema"
@@ -137,10 +135,30 @@ class ViewToSqlTestCase(InputMapToSqlTestCase):
         "Change view definition"
         inmap = self.std_map()
         inmap['schema sd'].update({'view v1': {
-            'definition': " SELECT now()::date AS todays_date;"}})
+            'columns': [{'today': {'type': 'date'}}],
+            'definition': " SELECT 'now'::text::date AS today;"}})
         sql = self.to_sql(inmap, [CREATE_STMT])
         assert fix_indent(sql[0]) == "CREATE OR REPLACE VIEW sd.v1 AS " \
-            "SELECT now()::date AS todays_date"
+            "SELECT 'now'::text::date AS today"
+
+    def test_change_column_name(self):
+        "Attempt rename view column name (disallowed)"
+        inmap = self.std_map()
+        inmap['schema sd'].update({'view v1': {
+            'columns': [{'todays_date': {'type': 'date'}}],
+            'definition': " SELECT now()::date AS todays_date;"}})
+        with pytest.raises(KeyError):
+            sql = self.to_sql(inmap, [CREATE_STMT])
+
+    def test_change_column_type(self):
+        "Change view column type to different type (disallowed)"
+        inmap = self.std_map()
+        inmap['schema sd'].update({'view v1': {
+            'columns': [{'c1': {'type': 'integer'}},
+                        {'c2': {'type': 'numeric'}}],
+            'definition': " SELECT c1, c3 * 2.0 AS c2 FROM t1;"}})
+        with pytest.raises(TypeError):
+            sql = self.to_sql(inmap, [CREATE_TBL, CREATE_STMT2])
 
     def test_view_depend_pk(self):
         "Create a view that depends on a primary key.  See issue #72"
@@ -173,6 +191,7 @@ class ViewToSqlTestCase(InputMapToSqlTestCase):
         "Create a comment for an existing view"
         inmap = self.std_map()
         inmap['schema sd'].update({'view v1': {
+            'columns': [{'today': {'type': 'date'}}],
             'definition': VIEW_DEFN, 'description': "Test view v1"}})
         sql = self.to_sql(inmap, [CREATE_STMT])
         assert sql == [COMMENT_STMT]
@@ -181,7 +200,9 @@ class ViewToSqlTestCase(InputMapToSqlTestCase):
         "Drop the comment on an existing view"
         stmts = [CREATE_STMT, COMMENT_STMT]
         inmap = self.std_map()
-        inmap['schema sd'].update({'view v1': {'definition': VIEW_DEFN}})
+        inmap['schema sd'].update({'view v1': {
+            'columns': [{'today': {'type': 'date'}}],
+            'definition': VIEW_DEFN}})
         sql = self.to_sql(inmap, stmts)
         assert sql == ["COMMENT ON VIEW sd.v1 IS NULL"]
 
@@ -190,6 +211,7 @@ class ViewToSqlTestCase(InputMapToSqlTestCase):
         stmts = [CREATE_STMT, COMMENT_STMT]
         inmap = self.std_map()
         inmap['schema sd'].update({'view v1': {
+            'columns': [{'today': {'type': 'date'}}],
             'definition': VIEW_DEFN, 'description': "Changed view v1"}})
         sql = self.to_sql(inmap, stmts)
         assert sql == ["COMMENT ON VIEW sd.v1 IS 'Changed view v1'"]

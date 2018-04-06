@@ -333,6 +333,7 @@ class PrivilegeToSqlTestCase(InputMapToSqlTestCase):
         "Grant privileges on an existing view"
         inmap = self.std_map()
         inmap['schema sd'].update({'view v1': {
+            'columns': [{'today': {'type': 'date'}}],
             'definition': " SELECT now()::date AS today;",
             'owner': self.db.user,
             'privileges': [{self.db.user: ['all']}, {'user1': ['select']}]}})
