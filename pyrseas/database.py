@@ -61,7 +61,12 @@ class CatDbConnection(DbConnection):
     def connect(self):
         """Connect to the database"""
         super(CatDbConnection, self).connect()
-        self.execute("set search_path to pg_catalog")
+        schs = self.fetchall("SELECT current_schemas(false)")
+        addschs = [sch for sch in schs[0][0] if sch != 'public']
+        srch_path = "pg_catalog"
+        if addschs:
+            srch_path += ", " + ", ".join(addschs)
+        self.execute("set search_path to %s" % srch_path)
         self.commit()
         self._version = self.conn.server_version
 
