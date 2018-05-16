@@ -321,7 +321,7 @@ class DbObject(object):
         """
         return quote_id(self.__dict__[self.keylist[0]])
 
-    def to_map(self, db, no_owner=False, no_privs=False):
+    def to_map(self, db, no_owner=False, no_privs=False, deepcopy=True):
         """Convert an object to a YAML-suitable format
 
         :param db: db used to tie the objects together
@@ -333,7 +333,10 @@ class DbObject(object):
         or JSON object.
         """
         import copy
-        dct = copy.deepcopy(self.__dict__)
+        if deepcopy:
+            dct = copy.deepcopy(self.__dict__)
+        else:
+            dct = self.__dict__.copy()
         for key in self.keylist:
             del dct[key]
         if self.description is None:
