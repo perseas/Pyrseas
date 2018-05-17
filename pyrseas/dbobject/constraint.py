@@ -181,7 +181,7 @@ class CheckConstraint(Constraint):
         dct.pop('is_domain_check')
         if not self.inherited:
             dct.pop('inherited')
-        if dbcols is not None:
+        if dbcols is not None and self.columns is not None:
             dct['columns'] = [dbcols[k - 1] for k in self.columns]
         else:
             dct.pop('columns')
