@@ -35,3 +35,9 @@ License
 
 Pyrseas is free (libre) software and is distributed under the BSD
 license.  Please see the LICENSE file for details.
+
+Documentation
+-------------
+
+Please visit `Read the Docs <https://pyrseas.readthedocs.io/en/latest/>`_
+for the latest documentation.
