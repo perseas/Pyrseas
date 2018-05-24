@@ -197,9 +197,13 @@ class CheckConstraint(Constraint):
         if self.inherited:
             return []
 
+        if self.expression[0] != '(':
+            expr = "(%s)" % self.expression
+        else:
+            expr = self.expression
         return ["ALTER %s %s ADD CONSTRAINT %s %s %s" % (
             self._table.objtype, self._table.qualname(), quote_id(self.name),
-            self.objtype, self.expression)]
+            self.objtype, expr)]
 
     def drop(self):
         if self.inherited:

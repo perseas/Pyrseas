@@ -32,6 +32,16 @@ class CheckConstraintToMapTestCase(DatabaseToMapTestCase):
                       'expression': '(((c2 * 100) / c1) <= 50)'}}}
         assert dbmap['schema sd']['table t1'] == expmap
 
+    def test_check_constraint_no_columns(self):
+        "Map a table with a check constraint without any columns"
+        stmts = ["CREATE TABLE t1 (c1 INTEGER, "
+                 "CONSTRAINT t1_empty CHECK (false))"]
+        dbmap = self.to_map(stmts)
+        expmap = {'columns': [{'c1': {'type': 'integer'}}],
+                  'check_constraints': {'t1_empty': {
+                      'expression': 'false'}}}
+        assert dbmap['schema sd']['table t1'] == expmap
+
     def test_check_constraint_inherited(self):
         "Map a table with an inherited CHECK constraint"
         stmts = ["CREATE TABLE t1 (c1 INTEGER, CONSTRAINT t1_c1_check "
@@ -78,6 +88,18 @@ class CheckConstraintToSqlTestCase(InputMapToSqlTestCase):
         sql = self.to_sql(inmap, stmts)
         assert fix_indent(sql[0]) == "ALTER TABLE sd.t1 ADD CONSTRAINT " \
             "t1_check_2_1 CHECK (c2 != c1)"
+
+    def test_add_check_constraint_no_columns(self):
+        "Add a CHECK constraint with no column"
+        stmts = ["CREATE TABLE t1 (c1 INTEGER)"]
+        inmap = self.std_map()
+        inmap['schema sd'].update({'table t1': {
+            'columns': [{'c1': {'type': 'integer'}}],
+            'check_constraints': {
+                't1_empty': {'expression': 'false'}}}})
+        sql = self.to_sql(inmap, stmts)
+        assert fix_indent(sql[0]) == "ALTER TABLE sd.t1 ADD CONSTRAINT " \
+                                  "t1_empty CHECK (false)"
 
     def test_add_check_inherited(self):
         "Add a table with an inherited CHECK constraint"
