@@ -136,7 +136,8 @@ class CheckConstraint(Constraint):
                    CASE WHEN contypid = 0 THEN conrelid::regclass::text
                         ELSE contypid::regtype::text END AS table,
                    contypid != 0 AS is_domain_check, conkey AS columns,
-                   consrc AS expression, coninhcount > 0 AS inherited, c.oid,
+                   pg_get_expr(conbin, conrelid) AS expression,
+                   coninhcount > 0 AS inherited, c.oid,
                    obj_description(c.oid, 'pg_constraint') AS description
             FROM pg_constraint c
                  JOIN pg_namespace ON (connamespace = pg_namespace.oid)

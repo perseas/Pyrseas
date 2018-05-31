@@ -47,7 +47,7 @@ class DomainToMapTestCase(DatabaseToMapTestCase):
         expmap = {'type': 'integer',
                   'check_constraints': {
                       'd1_check': {
-                          'expression': 'dc1(VALUE)',
+                          'expression': 'sd.dc1(VALUE)',
                           'depends_on': ['function dc1(integer)']}}}
         assert dbmap['schema sd']['domain d1'] == expmap
 
