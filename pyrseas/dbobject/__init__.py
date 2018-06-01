@@ -65,6 +65,11 @@ def split_schema_obj(obj, sch=None):
     :param sch: schema name (defaults to 'pg_catalog')
     :return: tuple
     """
+    def undelim(ident):
+        if ident[0] == '"' and ident[-1] == '"':
+            ident = ident[1:-1]
+        return ident
+
     qualsch = sch
     if sch is None:
         qualsch = 'pg_catalog'
@@ -81,7 +86,7 @@ def split_schema_obj(obj, sch=None):
             (qualsch, obj) = obj.split('.')
     if sch != qualsch:
         sch = qualsch
-    return (sch, obj)
+    return (undelim(sch), undelim(obj))
 
 
 def split_func_args(obj):
