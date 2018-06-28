@@ -103,3 +103,15 @@ class OwnerToSqlTestCase(InputMapToSqlTestCase):
             'owner': 'someuser'}})
         sql = self.to_sql(inmap, [CREATE_TABLE])
         assert sql[0] == "ALTER TABLE sd.t1 OWNER TO someuser"
+
+    def test_change_table_owner_delim(self):
+        "Change the owner of a table with delimited identifiers"
+        inmap = self.std_map()
+        inmap.update({'schema a-schema': {'table a-table': {
+            'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}],
+            'owner': 'someuser'}}})
+        sql = self.to_sql(inmap, ["CREATE SCHEMA \"a-schema\"",
+                                  "CREATE TABLE \"a-schema\".\"a-table\" ("
+                                  "c1 integer, c2 text)"])
+        assert sql[0] == "ALTER TABLE \"a-schema\".\"a-table\" OWNER TO " \
+                          "someuser"
