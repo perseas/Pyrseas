@@ -69,6 +69,18 @@ class TableToMapTestCase(DatabaseToMapTestCase):
                   'inherits': ['t1', 't2']}
         assert dbmap['schema sd']['table t3'] == expmap
 
+    def test_map_inherit_delim(self):
+        "Map a table that inherits from two other tables (delim identifiers)"
+        stmts = [CREATE_STMT, "CREATE TABLE \"t-2\" (c3 integer)",
+                 "CREATE TABLE \"t-3\" (c4 text) INHERITS (t1, \"t-2\")"]
+        dbmap = self.to_map(stmts)
+        expmap = {'columns': [{'c1': {'type': 'integer', 'inherited': True}},
+                              {'c2': {'type': 'text', 'inherited': True}},
+                              {'c3': {'type': 'integer', 'inherited': True}},
+                              {'c4': {'type': 'text'}}],
+                  "inherits": ["t1", "t-2"]}
+        assert dbmap["schema sd"]["table t-3"] == expmap
+
     def test_map_unlogged_table(self):
         "Map an unlogged table"
         if self.db.version < 90100:
@@ -403,6 +415,23 @@ class TableInheritToSqlTestCase(InputMapToSqlTestCase):
         assert fix_indent(sql[0]) == CREATE_STMT
         assert fix_indent(sql[1]) == "CREATE TABLE sd.t2 (c3 numeric) " \
             "INHERITS (sd.t1)"
+
+    def test_table_inherit_delim(self):
+        "Create a table that inherits from another (delimited identifiers)"
+        inmap = self.std_map()
+        inmap.update({'schema s-d': {'table t-1': {
+            'columns': [{'c-1': {'type': 'integer'}},
+                        {'c2': {'type': 'text'}}]}}})
+        inmap['schema s-d'].update({'table t-2': {
+            'columns': [{'c-1': {'type': 'integer', 'inherited': True}},
+                        {'c2': {'type': 'text', 'inherited': True}},
+                        {'c3': {'type': 'numeric'}}], 'inherits': ['t-1']}})
+        sql = self.to_sql(inmap, ["CREATE SCHEMA \"s-d\""])
+        print(sql)
+        assert fix_indent(sql[0]) == "CREATE TABLE \"s-d\".\"t-1\" " \
+            "(\"c-1\" integer, c2 text)"
+        assert fix_indent(sql[1]) == "CREATE TABLE \"s-d\".\"t-2\" " \
+            "(c3 numeric) INHERITS (\"s-d\".\"t-1\")"
 
     def test_drop_inherited(self):
         "Drop tables that inherit from others"
