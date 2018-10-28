@@ -40,90 +40,13 @@ Contents
 
    overview
    install
-   config
-   configitems
-   devel
-   testing
    issues
-   predefaug
+   user/index
 .. toctree::
    :maxdepth: 1
 
-   dbaugment
-   dbtoyaml
-   yamltodb
-   cmdargs
+   devel/index
 
-.. _api-ref:
-
-API Reference
--------------
-
-Currently, the only external APIs are the class
-:class:`~pyrseas.database.Database` and the methods
-:meth:`~pyrseas.database.Database.to_map` and
-:meth:`~pyrseas.database.Database.diff_map` of the latter. Other
-classes and methods are documented mainly for developer use.
-
-.. toctree::
-   :maxdepth: 2
-
-   dbobject
-   database
-   schema
-
-Non-schema Objects
-~~~~~~~~~~~~~~~~~~
-.. toctree::
-   :maxdepth: 2
-
-   cast
-   eventtrig
-   extension
-   foreign
-   language
-
-Tables and Related Objects
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. toctree::
-   :maxdepth: 2
-
-   table
-   column
-   constraint
-   indexes
-   rule
-
-Functions, Operators and Triggers
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. toctree::
-   :maxdepth: 2
-
-   function
-   operator
-   operfamily
-   operclass
-   trigger
-
-Types and Other Schema Objects
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-.. toctree::
-   :maxdepth: 2
-
-   collation
-   conversion
-   textsearch
-   type
-
-Augmenter API Reference
------------------------
-
-.. toctree::
-   :maxdepth: 2
-
-   augmentdb
-   cfgobjects
-   augobjects
 
 
 Indices and tables
