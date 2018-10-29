@@ -39,6 +39,7 @@ Contents
    :maxdepth: 2
 
    overview
+   gettingstarted
    install
    issues
    user/index
