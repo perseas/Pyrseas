@@ -115,7 +115,7 @@ are *not* the Postgres defaults, adding corresponding entries to your
 user configuration file allows you to automatically override the
 defaults.  If for a given invocation you need to connect to or as a
 different host, port or user, you can still override the configuration
-using the command line options (see :doc:`cmdargs`):
+using the command line options (see :doc:`../cmdargs`):
 
 - host: Name of the host to connect. Please refer to the `Postgres
   connection host documentation

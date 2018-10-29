@@ -76,12 +76,12 @@ In many instances, a database schema needs to be supplemented by
 rarely-modified data kept in certain tables, e.g., a
 codes-descriptions table.  The data import and export features,
 controlled by `datacopy` configuration parameter (see
-:doc:`user/configitems` for details) facilitates this need.
+:doc:`user/advanced/configitems` for details) facilitates this need.
 
 In other cases, DBAs may want to standardize certain additional table
 columns or processing.  For example, they may want to capture the user
 and time of modification of a certain set of tables using a common
-procedure.  The :doc:`user/dbaugment` utility was introduced to support
+procedure.  The :doc:`user/advanced/dbaugment` utility was introduced to support
 these needs.
 
 Generating SQL by determining what changed between one schema version

@@ -63,7 +63,7 @@ Create a text file called pyrseas-sample.yaml::
  schema public:
    owner: postgres
    privileges:
-     - posgres:
+     - postgres:
        - all
    table pyrseas:
      columns:

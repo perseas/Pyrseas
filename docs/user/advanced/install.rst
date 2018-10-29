@@ -132,8 +132,8 @@ and other Unix-flavored systems, you can install from the extracted
 
  sudo python setup.py install
 
-That will install the :doc:`dbtoyaml <dbtoyaml>` and :doc:`yamltodb
-<yamltodb>` utility scripts in a directory such as
+That will install the :doc:`dbtoyaml <../dbtoyaml>` and :doc:`yamltodb
+<../yamltodb>` utility scripts in a directory such as
 ``/usr/local/bin``.  The library sources and bytecode files will be
 placed in a ``pyrseas`` subdirectory under ``site-packages`` or
 ``dist-packages``, e.g.,

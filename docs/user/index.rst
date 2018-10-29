@@ -7,11 +7,4 @@ User Docs
    dbtoyaml
    yamltodb
    cmdargs
-.. toctree::
-   :maxdepth: 1
-
-   config
-   configitems
-   dbaugment
-   predefaug
-   install
+   advanced/index
