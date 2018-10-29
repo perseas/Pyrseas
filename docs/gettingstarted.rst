@@ -81,7 +81,7 @@ Create a text file called pyrseas-sample.yaml::
 Run yamltodb
 ------------
 
-Run the following command to create the schema::
+Run the following command to deploy the schema::
 
  yamltodb -U postgres -W -u pyrseas_sample pyrseas-sample.yaml
 
