@@ -14,3 +14,4 @@ User Docs
    configitems
    dbaugment
    predefaug
+   install

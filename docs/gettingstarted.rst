@@ -5,8 +5,8 @@ Getting Started
 Requirements
 ------------
 
-Postgres
-~~~~~~~~
+Install Postgres
+~~~~~~~~~~~~~~~~
 
 Pyrseas provides tools for `Postgres <https://www.postgresql.org>`_,
 so you need **Postgres** to start with.  Pyrseas has been
@@ -15,8 +15,8 @@ with future releases.  Please refer to the `Postgres download page
 <https://www.postgresql.org/download>`_ to find a distribution for the
 various Linux, Unix and Windows platforms supported.
 
-Python
-~~~~~~
+Install Python
+~~~~~~~~~~~~~~
 
 You will also need **Python**.  Pyrseas was originally developed using
 Python 2 and been tested with `Python <http://www.python.org>`_ 2.7,
@@ -45,7 +45,7 @@ run::
 
 It should print the version you have installed, for example::
 
- C:\Users\name\Desktop>yamltodb --version
+ $ yamltodb --version
  yamltodb 0.8.0
 
 Create an empty Postgres database
@@ -87,7 +87,7 @@ Run the following command to deploy the schema::
 
 The output should look like::
 
- C:\Users\name\Desktop>yamltodb -U postgres -W -u pyrseas_sample pyrseas-sample.yaml
+ $ yamltodb -U postgres -W -u pyrseas_sample pyrseas-sample.yaml
  Password:
  BEGIN;
  COMMENT ON SCHEMA public IS NULL;

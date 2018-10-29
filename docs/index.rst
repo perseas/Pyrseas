@@ -40,12 +40,11 @@ Contents
 
    overview
    gettingstarted
-   install
-   issues
    user/index
 .. toctree::
    :maxdepth: 1
 
+   issues
    devel/index
 
 
