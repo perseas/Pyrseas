@@ -13,9 +13,9 @@ Folder Structure
 yamltodb requires the following --multiple-files folder stucture:
 
 * metadata folder\*
-* any number of \*.yaml files in the metadata folder
+* \*.yaml files in the metadata folder
 * schema.<name> sub folders (and matching schema.<name>.yaml files in the metadata folder)
-* any number of \*.yaml files in the schema.<name> folder
+* \*.yaml files in the schema.<name> folder
 
 \* It is possible to rename the metadata folder, see :doc:`configitems` for more information.
 
@@ -124,7 +124,7 @@ Run the following in a terminal window::
  $ ls
  metadata
  $ yamltodb --multiple-files -u -U postgres -W pyrseas_sample
- 
+
 
 Single File Structure
 ~~~~~~~~~~~~~~~~~~~~~~~
