@@ -140,7 +140,7 @@ multiple files under a given root directory.  The root is created if
 it does not exist.  The root directory name defaults to ``metadata``
 in the system configuration file.  The location of the root directory
 defaults to the configuration item ``repository.path`` or can be
-specified using the `--repository` option (see :doc:`advanced/config`
+specified using the `--repository` option (see :doc:`../advanced/config`
 and :doc:`cmdargs` for further details).
 
 The first level contains ``schema.<name>`` subdirectories,

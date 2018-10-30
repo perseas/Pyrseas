@@ -2,9 +2,12 @@ User Docs
 =========
 
 .. toctree::
+   :maxdepth: 3
+
+   spec-reference/index
+   
+.. toctree::
    :maxdepth: 2
 
-   dbtoyaml
-   yamltodb
-   cmdargs
+   command-line/index
    advanced/index

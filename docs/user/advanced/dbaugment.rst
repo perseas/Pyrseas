@@ -59,7 +59,7 @@ Options
 -------
 
 :program:`dbaugment` accepts the following command-line arguments (in
-addition to the :doc:`../cmdargs`):
+addition to the :doc:`../command-line/cmdargs`):
 
 **dbname**
 

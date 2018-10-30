@@ -55,7 +55,7 @@ single YAML file, by using the `--multiple-files` option to
 :program:`dbtoyaml`, the specification can be broken down into files
 corresponding, generally, to a single database object.  This allows a
 VCS **diff** facility to easily highlight database changes.  Please
-refer to the :doc:`user/dbtoyaml` and :doc:`user/yamltodb` utilities for further
+refer to the :doc:`user/command-line/dbtoyaml` and :doc:`user/command-line/yamltodb` utilities for further
 details.
 
 The Pyrseas version control tools are not designed to be the ultimate

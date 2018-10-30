@@ -8,7 +8,7 @@ The Pyrseas utilities support the following command line options:
 
     Specifies an additional `configuration file` to be read and merged
     with configuration information from other sources.  See
-    :doc:`advanced/config` for more details.
+    :doc:`../advanced/config` for more details.
 
 .. cmdoption:: -H <host>
                --host <host>

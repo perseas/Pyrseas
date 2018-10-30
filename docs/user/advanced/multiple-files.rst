@@ -38,9 +38,9 @@ Below is a sample folder structure
 
 The non-schema files in the metadata folder (rootfile1.yaml, rootfile2.yaml) are concatenated together. Initially schema.*.yaml files are ignored.
 
-When a folder is found starting with "schema.*, then yamltodb will require a matching schema.<name>.yaml file and concatenate it with the other files.  For example, when the folder "schema.public" is found, yamltodb will read the schema.public.yaml file.
+When a folder is found starting with "schema.*, then yamltodb will require a matching schema.<name>.yaml file and concatenate it with the other files.  For example, when the folder "schema.public" is found, yamltodb will read the "schema.public.yaml" file.
 
-All the files under schema.<name> are added under the "schema <name>" yaml node.
+All \*.yaml files under schema.<name> are added under the "schema <name>" yaml node.
 
 No other subdirectories besides "schema.*" are allowed.
 
