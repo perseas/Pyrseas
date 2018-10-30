@@ -55,7 +55,7 @@ single YAML file, by using the `--multiple-files` option to
 :program:`dbtoyaml`, the specification can be broken down into files
 corresponding, generally, to a single database object.  This allows a
 VCS **diff** facility to easily highlight database changes.  Please
-refer to the :doc:`dbtoyaml` and :doc:`yamltodb` utilities for further
+refer to the :doc:`user/command-line/dbtoyaml` and :doc:`user/command-line/yamltodb` utilities for further
 details.
 
 The Pyrseas version control tools are not designed to be the ultimate
@@ -76,12 +76,12 @@ In many instances, a database schema needs to be supplemented by
 rarely-modified data kept in certain tables, e.g., a
 codes-descriptions table.  The data import and export features,
 controlled by `datacopy` configuration parameter (see
-:doc:`configitems` for details) facilitates this need.
+:doc:`user/advanced/configitems` for details) facilitates this need.
 
 In other cases, DBAs may want to standardize certain additional table
 columns or processing.  For example, they may want to capture the user
 and time of modification of a certain set of tables using a common
-procedure.  The :doc:`dbaugment` utility was introduced to support
+procedure.  The :doc:`user/advanced/dbaugment` utility was introduced to support
 these needs.
 
 Generating SQL by determining what changed between one schema version

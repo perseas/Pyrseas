@@ -3,8 +3,8 @@ Augmenter Configuration Objects
 
 These configuration objects are predefined in the Augmenter modules or
 can be defined or overriden by configuration elements in the
-``augmenter`` map.  Please see also :doc:`configitems` and
-:doc:`predefaug`.
+``augmenter`` map.  Please see also :doc:`../user/advanced/configitems` and
+:doc:`../user/advanced/predefaug`.
 
 .. module:: pyrseas.augment.function
 

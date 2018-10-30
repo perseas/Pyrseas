@@ -592,7 +592,7 @@ class Aggregate(Proc):
     def create(self, dbversion=None):
         """Return SQL statements to CREATE the aggregate
 
-        :param dbversion: Posgres version
+        :param dbversion: Postgres version
         :return: SQL statements
         """
         opt_clauses = []
