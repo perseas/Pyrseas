@@ -15,10 +15,10 @@ type (string)
 The data type of the column. This can include array specifiers. For more information on the data types supported by PostgreSQL, refer to https://www.postgresql.org/docs/current/static/datatype.html
 
 description (string)
-~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~
 Used to "COMMENT ON COLUMN..." https://www.postgresql.org/docs/current/static/sql-comment.html
 
-privileges (node)
+privileges (map)
 ~~~~~~~~~~~~~~~~~
 TODO
 GRANT ... ON ... TO ... https://www.postgresql.org/docs/current/static/sql-grant.html
@@ -35,11 +35,17 @@ identity (string)
 ~~~~~~~~~~~~~~~~~
 Must by either "always" or "by default" and is used "GENERATED { ALWAYS | BY DEFAULT } AS IDENTITY"
 
-Example YAML::
+Example YAML
+
+.. code-block:: YAML
+  :emphasize-lines: 6
 
   table mytable:
     columns:
-      - mytable_id:      {not_null: true, type: integer, identity: by default}
+      - mytable_id:      
+        not_null: true
+        type: integer
+        identity: by default
 
 Example generated SQL::
 
