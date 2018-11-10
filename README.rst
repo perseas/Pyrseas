@@ -18,7 +18,7 @@ Features
   control repository
 
 - Generates SQL statements to modify a database so that it will match
-  an input YAML/JSON specification
+  an input YAML specification
 
 - Generates an augmented YAML description of a Postgres database
   from its catalogs and an augmentation specification.
