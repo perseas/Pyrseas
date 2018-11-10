@@ -41,6 +41,7 @@ Contents
    :maxdepth: 2
 
    overview
+   benefits
    user/index
 .. toctree::
    :maxdepth: 1
