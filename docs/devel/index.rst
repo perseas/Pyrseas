@@ -1,7 +1,7 @@
 .. _development:
 
-Development
-===========
+For Developers
+==============
 
 The following details the tools needed to contribute to the
 development of Pyrseas.  If you have any doubts or questions, please

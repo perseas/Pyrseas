@@ -26,11 +26,13 @@ Requirements
 
 - `Python <http://www.python.org/>`_ 2.7 or higher
 
-- `Psycopg2 <http://initd.org/psycopg>`_ 2.5 or higher
+Installation
+------------
 
-- `PyYAML <http://pyyaml.org/>`_ 3.10 or higher
+For the latest release, use::
 
-- `PgDbConn <https://github.com/perseas/pgdbconn>`_ 0.8 or higher
+ pip install Pyrseas
+
 
 Contents
 --------
@@ -39,12 +41,10 @@ Contents
    :maxdepth: 2
 
    overview
-   gettingstarted
    user/index
 .. toctree::
    :maxdepth: 1
 
-   issues
    devel/index
 
 
