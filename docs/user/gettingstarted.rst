@@ -48,7 +48,7 @@ In Postgres, run::
 
  CREATE DATABASE pyrseas_sample;
 
-Then in the database run::
+Then in the pyrseas_sample database run::
 
   CREATE TABLE public.sample (column1 integer primary key);
 
@@ -57,12 +57,12 @@ Export the schema to YAML
 
 dbtoyaml will export the dataschema to a yaml file.
 
-run::
+run dbtoyaml::
 
   $ dbtoyaml -U postgres -W pyrseas_sample -o mydatabase.yaml
   Password:
 
-A new file called mydatabase.yaml will be created with the following contents::
+A new file called *mydatabase.yaml* will be created with the following contents::
 
   extension plpgsql:
     description: PL/pgSQL procedural language
@@ -101,7 +101,7 @@ In Postgres, run::
 Deploy schema to target database
 --------------------------------
 
-run::
+run yamltodb::
 
   $ yamltodb -U postgres -W -u pyrseas_target mydatabase.yaml
   Password:
@@ -119,7 +119,7 @@ run::
 The above SQL statements have been executed on pyrseas_target and you will see 
 the sample table in the pyrseas_target database.  
 
-TODO put image here
+.. image:: gettingstarted_pyrseas_target.png
 
 More information about the
 command line parameters can be found on the :doc:`command-line/yamltodb` page.
@@ -144,7 +144,7 @@ run dbtoyaml::
   $ dbtoyaml -U postgres -W pyrseas_sample -o mydatabase.yaml
   Password:
 
-This will overwrite mydatabase.yaml and the file will now contain:
+This will overwrite *mydatabase.yaml* and the file will now contain:
 
 .. code-block:: YAML
   :emphasize-lines: 19-20
@@ -175,7 +175,7 @@ This will overwrite mydatabase.yaml and the file will now contain:
           columns:
           - column1
 
-run::
+run yamltodb::
 
   $ yamltodb -U postgres -W -u pyrseas_target mydatabase.yaml
   Password:
@@ -188,4 +188,4 @@ run::
 
 The new column has been incrementally added to the target database.
 
-TODO image to show column2
+.. image:: gettingstarted_pyrseas_target_column2.png

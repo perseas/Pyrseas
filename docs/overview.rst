@@ -3,32 +3,32 @@
 Overview
 ========
 
-Main Tools
-----------
 
 Pyrseas provides utilities to maintain a `PostgreSQL
 <https://www.postgresql.org/>`_ database schema by incrementally 
 upgrading the schema.
 
-:program:`dbtoyaml` is used to export the database structure (tables, functions, etc) to a yaml file.*
-
-:program:`yamltodb` is used to incrementally upgrade the target database using 
-the desired schema in the yaml file.
-
 See :doc:`user/gettingstarted` for a concrete example of how this might work.
 
+Tools
+----------
+
+:doc:`user/command-line/dbtoyaml`
+    Exports the database structure (tables, functions, etc) to a yaml file.*
+
+:doc:`user/command-line/yamltodb`
+    Incrementally upgrades the target database using the desired schema in the yaml file.
+
+:doc:`user/advanced/dbaugment` 
+    Modifies the \*.yaml files to add the same column/trigger/etc to every table.
+
+:doc:`user/advanced/datacopy` 
+   Populates tables in the database from your \*.csv files.
+
+:doc:`user/advanced/preactions` 
+    Runs SQL files in a folder for complex migration scenarios.
+
 \* Multiple yaml files is also supported, see `--multiple-files` in :doc:`user/command-line/dbtoyaml`
-
-Additional Tools
--------------------
-
-:doc:`user/advanced/dbaugment` is used to add the same column/trigger/etc to every table.
-
-:doc:`user/advanced/datacopy` is used to populate tables with static data rows.
-
-:doc:`user/advanced/preactions` is a folder of SQL files for complex migration
-scenarios.
-
 
 
 Naming

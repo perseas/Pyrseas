@@ -155,6 +155,8 @@ The second level, i.e., the ``schema.<name>`` subdirectories contain
 ``<objtype>.<name>.yaml`` files for each object in the particular
 schema (but see below for caveats).
 
+See :doc:`../advanced/multiple-files` for a more detailed explanation
+
 Object Name Conflicts
 ~~~~~~~~~~~~~~~~~~~~~
 
