@@ -10,6 +10,9 @@ addons:
     - postgresql-client-10
     - postgresql-plperl-10
     - postgresql-plpython-10
+  env:
+    global:
+      PGPORT=5433
 before_install:
   - export PATH=/usr/lib/postgresql/10/bin:$PATH
   - sudo locale-gen --no-archive fr_FR.UTF-8
