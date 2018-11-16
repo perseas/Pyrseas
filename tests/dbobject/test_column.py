@@ -205,9 +205,9 @@ class ColumnToSqlTestCase(InputMapToSqlTestCase):
         inmap = self.std_map()
         inmap['schema sd'].update({'table t1': {
             'columns': [{'c1': {'type': 'integer', 'not_null': True,
-                                'identity': 'by default'},
-                         'c2': {'type': 'text'}}]},
-                                       'sequence t1_c1_seq': {
+                                'identity': 'by default'}},
+                        {'c2': {'type': 'text'}}]},
+                                   'sequence t1_c1_seq': {
             'cache_value': 1, 'data_type': 'integer', 'increment_by': 1,
             'max_value': None, 'min_value': None, 'start_value': 1,
             'owner_table': 't1', 'owner_column': 'c1'}})
