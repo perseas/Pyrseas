@@ -6,5 +6,6 @@ For Users
 
    gettingstarted
    command-line/index
+   processes/index
    advanced/index
    issues
