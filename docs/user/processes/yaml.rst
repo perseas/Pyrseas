@@ -88,7 +88,7 @@ properties of the column, like type and not_null.
 
 .. image:: yaml_sample.png
 
-The file might looks like this
+Add the age column highlighted below
 
 .. code-block:: YAML
   :emphasize-lines: 18
