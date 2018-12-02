@@ -106,3 +106,4 @@ Run yamltodb to modify the target database::
     COMMIT;
     Changes applied
 
+The target database now has the new set of records.
