@@ -48,6 +48,7 @@ You will have the following file structure::
     ├── metadata
     │   └── schema.public
     │       └── table.status.data
+    ├── config.yaml
     └── pyrseas_datacopy.yaml
 
 table.status.data contains the table data in CVS format.
