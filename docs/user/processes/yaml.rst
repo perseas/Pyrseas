@@ -19,7 +19,7 @@ In your project folder, edit (or create) the file .vscode/settings.json with the
 
     {
         "yaml.schemas": {
-            "./pyrseas-0.8.json": [
+            "http://json.schemastore.org/pyrseas-0.8": [
                 "*.yaml"
             ]
         }
