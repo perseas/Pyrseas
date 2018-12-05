@@ -53,7 +53,10 @@ You will have the following file structure::
 
 table.status.data contains the table data in CVS format.
 
-Now let's deploy this to the target database, pyrseas_datacopy_target::
+Now let's deploy this to the target database, pyrseas_datacopy_target
+
+.. code-block:: Bash
+  :emphasize-lines: 12-14
 
     $ yamltodb -H localhost -U postgres -W -u pyrseas_datacopy_target pyrseas_datacopy.yaml
     Password:
