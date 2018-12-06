@@ -9,12 +9,12 @@ description.
 Features
 --------
 
-- Outputs a YAML/JSON description of a PostgreSQL database's tables
+- Outputs a YAML description of a PostgreSQL database's tables
   and other objects (metadata), suitable for storing in a version
   control repository
 
 - Generates SQL statements to modify a database so that it willl match
-  an input YAML/JSON specification
+  an input YAML specification
 
 - Generates an augmented YAML description of a PostgreSQL database
   from its catalogs and an augmentation specification.
@@ -26,11 +26,13 @@ Requirements
 
 - `Python <http://www.python.org/>`_ 2.7 or higher
 
-- `Psycopg2 <http://initd.org/psycopg>`_ 2.5 or higher
+Installation
+------------
 
-- `PyYAML <http://pyyaml.org/>`_ 3.10 or higher
+For the latest release, use::
 
-- `PgDbConn <https://github.com/perseas/pgdbconn>`_ 0.8 or higher
+ pip install Pyrseas
+
 
 Contents
 --------
@@ -39,12 +41,11 @@ Contents
    :maxdepth: 2
 
    overview
-   gettingstarted
+   benefits
    user/index
 .. toctree::
    :maxdepth: 1
 
-   issues
    devel/index
 
 

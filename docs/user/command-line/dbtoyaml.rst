@@ -25,8 +25,9 @@ down the specification into multiple files, in general, one for each
 object (see `Multiple File Output`_).
 
 Note that `JSON <http://json.org/>`_ is an official
-subset of YAML version 1.2, so the :program:`dbtoyaml` output should
-also be compatible with JSON tools.
+subset of YAML version 1.2, so the :program:`yamltodb` should 
+be able to read your JSON files as long as you rename your \*.json files
+to \*.yaml.
 
 A sample of the output format is as follows::
 
@@ -153,6 +154,8 @@ foreign data wrappers.
 The second level, i.e., the ``schema.<name>`` subdirectories contain
 ``<objtype>.<name>.yaml`` files for each object in the particular
 schema (but see below for caveats).
+
+See :doc:`../advanced/multiple-files` for a more detailed explanation
 
 Object Name Conflicts
 ~~~~~~~~~~~~~~~~~~~~~

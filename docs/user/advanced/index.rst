@@ -8,6 +8,7 @@ Advanced Topics
    config
    configitems
    dbaugment
+   datacopy
    predefaug
    install
    multiple-files
