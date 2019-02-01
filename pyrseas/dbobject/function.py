@@ -264,7 +264,7 @@ class Function(Proc):
     @commentable
     @grantable
     @ownable
-    def create(self, dbversion=None, newsrc=None, basetype=False):
+    def create(self, dbversion=None, newsrc=None, basetype=False, returns=None):
         """Return SQL statements to CREATE or REPLACE the function
 
         :param newsrc: new source for a changed function
@@ -318,7 +318,7 @@ class Function(Proc):
         stmts.append("CREATE%s FUNCTION %s(%s) RETURNS %s\n    LANGUAGE %s"
                      "%s%s%s%s%s%s%s\n    AS %s" % (
                          newsrc and " OR REPLACE" or '', self.qualname(),
-                         args, self.returns, self.language, volat, leakproof,
+                         args, returns or self.returns, self.language, volat, leakproof,
                          strict, secdef, cost, rows, config, src))
         return stmts
 
@@ -334,7 +334,11 @@ class Function(Proc):
         """
         stmts = []
         if self.source != infunction.source and infunction.source is not None:
-            stmts.append(self.create(dbversion, infunction.source))
+            stmts.append(self.create(
+                dbversion=dbversion,
+                returns=infunction.returns,
+                newsrc=infunction.source,
+            ))
         if self.leakproof is True:
             if infunction.leakproof is True:
                 stmts.append("ALTER FUNCTION %s LEAKPROOF" % self.identifier())
