@@ -3,6 +3,8 @@
 
 import pytest
 
+from inspect import cleandoc
+
 from pyrseas.testutils import DatabaseToMapTestCase
 from pyrseas.testutils import InputMapToSqlTestCase, fix_indent
 
@@ -315,6 +317,32 @@ class FunctionToSqlTestCase(InputMapToSqlTestCase):
         sql = self.to_sql(inmap, [stmt], superuser=True)
         assert fix_indent(sql[0]) == \
             "ALTER FUNCTION sd.fadd(integer, integer) NOT LEAKPROOF"
+
+    def test_change_function_return_type(self):
+        source = lambda rtype: "SELECT '127.0.0.1'::{}".format(rtype)
+        old_type = 'text'
+        new_type = 'inet'
+        statement = lambda rtype: cleandoc("""
+            CREATE OR REPLACE FUNCTION sd.fget_addr()
+            RETURNS {rtype}
+            LANGUAGE sql
+            IMMUTABLE
+            AS $_${body}$_$"""
+        ).format(
+            rtype=rtype,
+            body=source(rtype),
+        ).replace('\n', ' ')
+
+        inmap = self.std_map()
+        inmap['schema sd'].update({
+            'function fget_addr()': {
+                'language': 'sql',
+                'returns': new_type,
+                'source': source(new_type),
+            }
+        })
+        sql = self.to_sql(inmap, [statement(old_type)])
+        assert statement(new_type) == fix_indent(sql[1])
 
 
 class AggregateToMapTestCase(DatabaseToMapTestCase):
