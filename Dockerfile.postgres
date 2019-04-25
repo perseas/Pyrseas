@@ -1,0 +1,16 @@
+FROM circleci/postgres:9.6
+
+# Needed for tablespace creation
+RUN mkdir -p /extra/pg/ts1 /extra/pg/ts2
+RUN chown postgres:postgres /extra/pg/ts1 /extra/pg/ts2
+
+# Needed to test extensions
+RUN apt-get update -qq && apt-get install -qq postgresql-plperl-9.6 postgresql-plpython-9.6
+
+# Needed to test collations
+RUN sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
+    sed -i -e 's/# fr_FR.UTF-8 UTF-8/fr_FR.UTF-8 UTF-8/' /etc/locale.gen && \
+    locale-gen
+ENV LANG en_US.UTF-8  
+ENV LANGUAGE en_US:en  
+ENV LC_ALL en_US.UTF-8   

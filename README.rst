@@ -2,9 +2,9 @@
 Pyrseas
 =======
 
-.. image:: https://api.travis-ci.org/perseas/Pyrseas.png?branch=master
-           :target: https://travis-ci.org/perseas/Pyrseas
-
+.. image:: https://circleci.com/gh/DevotedHealth/Pyrseas/tree/master.svg?style=svg
+    :target: https://circleci.com/gh/DevotedHealth/Pyrseas/tree/master
+    
 Pyrseas provides utilities to describe a PostgreSQL database schema as
 YAML, to verify the schema against the same or a different database
 and to generate SQL that will modify the schema to match the YAML
