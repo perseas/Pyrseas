@@ -663,7 +663,8 @@ class Aggregate(Proc):
             args = self.arguments.replace(' ORDER BY', ',')
         else:
             args = self.stype + ', ' + self.arguments
-        deps.add(db.functions[sch, fnc, args])
+        if (sch, fnc, args) in db.functions:
+            deps.add(db.functions[sch, fnc, args])
         for fn in ('finalfunc', 'mfinalfunc'):
             if getattr(self, fn) is not None:
                 func = getattr(self, fn)
