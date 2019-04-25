@@ -1,0 +1,38 @@
+---
+
+version: 2
+jobs:
+  build:  # runs not using Workflows must have a `build` job as entry point
+    working_directory: ~/pyrseas
+    docker:  # run the steps with Docker
+      # CircleCI Python images available at: https://hub.docker.com/r/circleci/python/
+      - image: circleci/python:3.6
+        environment:
+          TRAVIS: true # Not actually travis, but need to trigger the appropriate test code
+          PIPENV_VENV_IN_PROJECT: true
+          DATABASE_URL: postgresql://postgres@localhost/test?sslmode=disable
+          PYRSEAS_TEST_DB: test
+          PYRSEAS_TEST_USER: postgres
+          PYRSEAS_TEST_HOST: localhost
+          PYRSEAS_TEST_PORT: 5432
+      # There are a bunch of specific settings we need in Postgres to run tests so we had to create a new docker image
+      # See docker.md, Dockerfile.postgres, and docs/testing.rst for more information
+      - image: dchangdevoted/pyrseas-postgres:1.0.2
+        environment:
+          POSTGRES_USER: postgres
+          POSTGRES_DB: test
+    steps:
+      - checkout
+      - run: sudo chown -R circleci:circleci /usr/local/bin
+      - run: sudo chown -R circleci:circleci /usr/local/lib/python3.6/site-packages
+      - run:
+          command: |
+            sudo pip install pipenv pgdbconn
+            pipenv install
+            sudo apt-get update -qq && sudo apt-get install -qq postgresql-client
+            psql -U postgres -h localhost -c "CREATE TABLESPACE ts1 LOCATION '/extra/pg/ts1'"
+            psql -U postgres -h localhost -c "CREATE TABLESPACE ts2 LOCATION '/extra/pg/ts2'"
+      - run:
+          command: |
+            python setup.py test
+
