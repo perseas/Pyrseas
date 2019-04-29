@@ -24,6 +24,8 @@ def main():
                         help='input from multiple files (metadata directory)')
     parser.add_argument('spec', nargs='?', type=FileType('r'),
                         default=sys.stdin, help='YAML specification')
+    parser.add_argument('--db-spec', type=FileType('r'),
+                        help='YAML specification of the current database instead of --dbname')
     parser.add_argument('-1', '--single-transaction', action='store_true',
                         dest='onetrans', help="wrap commands in BEGIN/COMMIT")
     parser.add_argument('-u', '--update', action='store_true',
@@ -47,7 +49,11 @@ def main():
             print("Error is '%s'" % exc)
             return 1
 
-    stmts = db.diff_map(inmap)
+    if options.db_spec:
+        dbmap = yaml.safe_load(options.db_spec)
+        stmts = db.diff_two_map(dbmap, inmap, quote_reserved=False)
+    else:
+        stmts = db.diff_map(inmap)
     if stmts:
         fd = output or sys.stdout
         if options.onetrans or options.update:

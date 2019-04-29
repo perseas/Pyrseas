@@ -208,8 +208,8 @@ class Database(object):
 
     def _link_refs(self, db):
         """Link related objects"""
-        langs = []
-        if self.dbconn.version >= 90100:
+        langs = self.db.languages if self.db else []
+        if self.dbconn and self.dbconn.version >= 90100:
             langs = [lang[0] for lang in self.dbconn.fetchall(
                 """SELECT lanname FROM pg_language l
                      JOIN pg_depend p ON (l.oid = p.objid)
@@ -387,6 +387,13 @@ class Database(object):
                 input_evttrigs.update({key: input_map[key]})
             else:
                 raise KeyError("Expected typed object, found '%s'" % key)
+        if not langs:
+            langs = [k[len('language '):] if k.startswith('language ') else k for k in input_langs.keys()] or []
+            possible_extension_langs = [ "plpgsql", "pltcl", "pltclu", "plperl", "plperlu", "plpythonu", "plpython2u", "plpython3u"]
+            extensions = [k[len('extension '):] if k.startswith('extension ') else k for k in input_extens.keys()] or []
+            extension_langs = [e for e in extensions if e in possible_extension_langs]
+            langs = list(set(langs + extension_langs))
+
         self.ndb.extensions.from_map(input_extens, langs, self.ndb)
         self.ndb.languages.from_map(input_langs)
         self.ndb.schemas.from_map(input_schemas, self.ndb)
@@ -492,6 +499,12 @@ class Database(object):
 
         return dbmap
 
+    def diff_two_map(self, a, b, quote_reserved=True):
+        self.dbconn = None
+        self.from_map(a)
+        self.db = self.ndb
+        return self.diff_map(b, quote_reserved=quote_reserved)
+
     def diff_map(self, input_map, quote_reserved=True):
         """Generate SQL to transform an existing database
 
@@ -520,8 +533,10 @@ class Database(object):
         if quote_reserved:
             fetch_reserved_words(self.dbconn)
 
-        langs = [lang[0] for lang in self.dbconn.fetchall(
-            "SELECT tmplname FROM pg_pltemplate")]
+        langs = self.db.languages if self.db else []
+        if self.dbconn:
+            langs = [lang[0] for lang in self.dbconn.fetchall(
+                "SELECT tmplname FROM pg_pltemplate")]
         self.from_map(input_map, langs)
         if opts.revert:
             (self.db, self.ndb) = (self.ndb, self.db)
@@ -547,7 +562,11 @@ class Database(object):
             if old is not None:
                 stmts.append(old.alter(new))
             else:
-                stmts.append(new.create_sql(self.dbconn.version))
+                if self.dbconn:
+                    stmts.append(new.create_sql(self.dbconn.version))
+                else:
+                    # TODO: just assume 9.6 if we don't know the version
+                    stmts.append(new.create_sql(90600))
 
                 # Check if the object just created was renamed, in which case
                 # don't try to delete the original one

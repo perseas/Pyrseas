@@ -50,7 +50,7 @@ def test_cmd_parser(tmpdir):
     "Test parsing a configuration file specified on the command line"
     f = tmpdir.join(CFG_FILE)
     f.write(yamldump(CFG_DATA))
-    sys.argv = ['testprog', 'testdb', '--config', f.strpath]
+    sys.argv = ['testprog', '--dbname', 'testdb', '--config', f.strpath]
     os.environ["PYRSEAS_USER_CONFIG"] = ''
     parser = cmd_parser("Test description", '0.0.1')
     cfg = parse_args(parser)
@@ -62,7 +62,7 @@ def test_parse_repo_config(tmpdir):
     f = tmpdir.join('config.yaml')
     f.write(yamldump(CFG_DATA))
     os.chdir(tmpdir.strpath)
-    sys.argv = ['testprog', 'testdb']
+    sys.argv = ['testprog', '--dbname', 'testdb']
     os.environ["PYRSEAS_USER_CONFIG"] = ''
     parser = cmd_parser("Test description", '0.0.1')
     cfg = parse_args(parser)

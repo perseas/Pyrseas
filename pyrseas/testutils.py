@@ -490,7 +490,7 @@ class DbMigrateTestCase(TestCase):
         args.extend(self._db_params())
         if not incldata:
             args.extend(['-s'])
-        args.extend(['-f', dumpfile, dbname])
+        args.extend(['-f', dumpfile, '--dbname', dbname])
         subprocess.check_call(args)
 
     def invoke(self, args):
@@ -507,19 +507,19 @@ class DbMigrateTestCase(TestCase):
         args = [self.dbtoyaml]
         args.extend(self._db_params())
         if yamlfile:
-            args.extend(['-o', yamlfile, dbname])
+            args.extend(['-o', yamlfile, '--dbname', dbname])
         else:
-            args.extend(['-r', TEST_DIR, '-m', dbname])
+            args.extend(['-r', TEST_DIR, '-m', '--dbname', dbname])
         self.invoke(args)
 
     def migrate_target(self, yamlfile, outfile):
         args = [self.yamltodb]
         args.extend(self._db_params())
         if yamlfile:
-            args.extend(['-u', '-o', outfile, self.db.name, yamlfile])
+            args.extend(['-u', '-o', outfile, '--dbname', self.db.name, yamlfile])
         else:
             args.extend(['-u', '-o', outfile, '-r', TEST_DIR, '-m',
-                         self.db.name])
+                         '--dbname', self.db.name])
         self.invoke(args)
 
 

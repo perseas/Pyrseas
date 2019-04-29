@@ -50,11 +50,11 @@ def cmd_parser(description, version):
     global _cfg
 
     parent = ArgumentParser(add_help=False)
-    parent.add_argument('dbname', help='database name')
     group = parent.add_argument_group('Connection options')
     if _cfg is None:
         _cfg = Config()
     dbcfg = _cfg['database'] if 'database' in _cfg else {}
+    group.add_argument('-d', '--dbname', help='database name')
     group.add_argument('-H', '--host', **_help_dflt('host', dbcfg))
     group.add_argument('-p', '--port', type=int, **_help_dflt('port', dbcfg))
     group.add_argument('-U', '--username', **_help_dflt('username', dbcfg))
