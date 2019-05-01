@@ -24,7 +24,7 @@ class PyTest(TestCommand):
 
 setup(
     name='Pyrseas',
-    version='0.8.0',
+    version='0.8.2',
     packages=['pyrseas', 'pyrseas.dbobject', 'pyrseas.lib', 'pyrseas.augment',
              ],
     package_data={'pyrseas': ['config.yaml']},
@@ -42,8 +42,8 @@ setup(
     tests_require=['pytest'],
     cmdclass={'test': PyTest},
 
-    author='Joe Abbate',
-    author_email='jma@freedomcircle.com',
+    author='David Chang',
+    author_email='dchang@devoted.com',
     description='Utilities to assist in database schema versioning',
     long_description=open('README.rst').read(),
     url='https://perseas.github.io/',

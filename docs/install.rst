@@ -77,7 +77,7 @@ PGXN provides a ZIP archive which you can download or you can download
 *and* install using the PGXN client (see `PGXN Client`_ below).
 
 The GitHub repository holds the Pyrseas source code, tagged according
-to the various releases, e.g., v0.8.0, and including unreleased
+to the various releases, e.g., v0.8.2, and including unreleased
 modifications.  To access it, you need `Git <https://git-scm.com/>`_
 which is available as a package in most OS distributions or can be
 downloaded from the `Git download page
