@@ -11,3 +11,4 @@ htmlcov
 .cache
 /*.egg
 .eggs/*
+venv/*

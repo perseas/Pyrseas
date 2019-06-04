@@ -35,3 +35,18 @@ License
 
 Pyrseas is free (libre) software and is distributed under the BSD
 license.  Please see the LICENSE file for details.
+
+Devoted Notes
+-------------
+
+We forked Pyrseas a while ago because we needed to calculate the diffs at CI time, not just against a db. After a brief discussion with the maintainer (https://github.com/perseas/Pyrseas/issues/204), they pointed us at the right entry point and suggested that we fork.
+
+It's best to use a virtualenv as installing this will impact other users on the dev server
+
+```bash
+> virtualenv venv
+> source venv/bin/activate
+> pip install . && ./venv/bin/yamltodb --db-spec <file> <file>
+```
+
+Most of their tests fail locally since it requires a db in order to run. We've created a new folder, in tests/unit that just takes two yaml dicts and runs the diff to make sure that our bug fixes remain fixed. You can test that those still run by cd'ing into that folder an running `pytest` (you might need to `pip install pytest` and be with in a virtualenv).

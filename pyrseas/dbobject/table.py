@@ -683,15 +683,16 @@ class Table(DbClass):
                 assert(self.columns[num].name == incol.oldname)
                 stmts.append(self.columns[num].rename(incol.name))
             # check existing columns
-            if num < dbcols and self.columns[num].name == incol.name:
-                (stmt, descr) = self.columns[num].alter(incol)
+            if incol.name in colnames:
+                col = [c for c in self.columns if c.name == incol.name][0]
+                (stmt, descr) = col.alter(incol)
                 if stmt:
                     stmts.append(base + stmt)
-                colprivs.append(self.columns[num].diff_privileges(incol))
+                colprivs.append(col.diff_privileges(incol))
                 if descr:
                     stmts.append(descr)
             # add new columns
-            elif incol.name not in colnames and not incol.inherited:
+            elif not incol.inherited:
                 (stmt, descr) = incol.add()
                 stmts.append(base + "ADD COLUMN %s" % stmt)
                 colprivs.append(incol.add_privs())

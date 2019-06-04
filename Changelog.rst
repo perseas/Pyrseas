@@ -1,3 +1,10 @@
+0.8.3 (04-June-2019)
+
+Fix columns not changing types
+
+  * Turns out that slight reorderings of the columns in a table would result in
+    alter statements not being generated at all
+
 0.8.2 (01-May-2019)
 
 DevotedHealth fork

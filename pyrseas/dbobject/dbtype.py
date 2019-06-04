@@ -322,14 +322,15 @@ class Composite(DbType):
                 assert(self.attributes[num].name == inattr.oldname)
                 stmts.append(self.attributes[num].rename(inattr.name))
             # check existing attributes
-            if num < dbattrs and self.attributes[num].name == inattr.name:
-                (stmt, descr) = self.attributes[num].alter(inattr)
+            if inattr.name in attrnames:
+                attr = [a for a in self.attributes if a.name == inattr.name][0]
+                (stmt, descr) = attr.alter(inattr)
                 if stmt:
                     stmts.append(base + stmt)
                 if descr:
                     stmts.append(descr)
             # add new attributes
-            elif inattr.name not in attrnames:
+            else:
                 (stmt, descr) = inattr.add()
                 stmts.append(base + "ADD ATTRIBUTE %s" % stmt)
                 if descr:
