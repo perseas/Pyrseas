@@ -7,7 +7,8 @@ def test_table():
     cfg = Config()
     cfg['database'] = {'dbname': '', 'host': '', 'username': '', 'password': '', 'port': 0}
     cfg['options'] = namedtuple('Options', ['schemas', 'revert'])(*[[], False])
-    del cfg['datacopy']
+    if 'datacopy' in cfg:
+        del cfg['datacopy']
     db = Database(cfg)
 
     test_cases = [
@@ -31,7 +32,7 @@ def test_table():
                         }
                     }
                 },
-            "expected": ["ALTER TABLE foo\n    ALTER COLUMN month SET NOT NULL, ALTER COLUMN month TYPE character varying, ALTER COLUMN month SET DEFAULT ''::character varying"]
+            "expected": ["ALTER TABLE foo\n    ALTER COLUMN month SET NOT NULL, ALTER COLUMN month DROP DEFAULT, ALTER COLUMN month TYPE character varying USING month::character varying, ALTER COLUMN month SET DEFAULT ''::character varying"]
         },
         {
             "name": "Reorder columns with type change",
@@ -53,7 +54,7 @@ def test_table():
                         }
                     }
                 },
-            "expected": ["ALTER TABLE foo\n    ALTER COLUMN month SET NOT NULL, ALTER COLUMN month TYPE character varying, ALTER COLUMN month SET DEFAULT ''::character varying"]
+            "expected": ["ALTER TABLE foo\n    ALTER COLUMN month SET NOT NULL, ALTER COLUMN month DROP DEFAULT, ALTER COLUMN month TYPE character varying USING month::character varying, ALTER COLUMN month SET DEFAULT ''::character varying"]
         },
     ]
 

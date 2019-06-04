@@ -247,9 +247,9 @@ class ColumnToSqlTestCase(InputMapToSqlTestCase):
                         {'c2': {'type': 'varchar(25)'}}]}})
         sql = self.to_sql(inmap, [CREATE_STMT1])
         assert fix_indent(sql[0]) == \
-            "ALTER TABLE t1 ALTER COLUMN c1 TYPE bigint"
+            "ALTER TABLE t1 ALTER COLUMN c1 TYPE bigint USING c1::bigint"
         assert fix_indent(sql[1]) == \
-            "ALTER TABLE t1 ALTER COLUMN c2 TYPE varchar(25)"
+                "ALTER TABLE t1 ALTER COLUMN c2 TYPE varchar(25) USING c2::varchar(25)"
 
     def test_add_column1(self):
         "Add new column to a table"

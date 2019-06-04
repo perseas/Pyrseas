@@ -240,15 +240,20 @@ class Column(DbSchemaObject):
             raise ValueError("Input column '%s' missing datatype" % incol.name)
         if self.type != incol.type:
             # validate type conversion?
-            stmts.append(base + "TYPE %s" % incol.type)
-        # check DEFAULTs
-        if self.default is None and incol.default is not None:
-            stmts.append(base + "SET DEFAULT %s" % incol.default)
-        if self.default is not None:
-            if incol.default is None:
+            if self.default is not None:
                 stmts.append(base + "DROP DEFAULT")
-            elif self.default != incol.default:
+            stmts.append(base + "TYPE %s USING %s::%s" % (incol.type, incol.name, incol.type))
+            if incol.default is not None:
                 stmts.append(base + "SET DEFAULT %s" % incol.default)
+        else:
+            # check DEFAULTs
+            if self.default is None and incol.default is not None:
+                stmts.append(base + "SET DEFAULT %s" % incol.default)
+            if self.default is not None:
+                if incol.default is None:
+                    stmts.append(base + "DROP DEFAULT")
+                elif self.default != incol.default:
+                    stmts.append(base + "SET DEFAULT %s" % incol.default)
         # check STATISTICS
         if self.statistics is not None:
             if self.statistics == -1 and (incol.statistics is not None
