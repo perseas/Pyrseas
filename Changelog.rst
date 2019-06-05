@@ -1,3 +1,12 @@
+0.8.4 (05-June-2019)
+
+Drop first before anything else
+
+  * We now order DROP statements before other statements. Motivating case is a
+    column type change where the column has an index that is only for a certain
+    type. We should drop that index before changing the column type.
+    Previously, drops happened last.
+
 0.8.3 (04-June-2019)
 
 Fix columns not changing types
