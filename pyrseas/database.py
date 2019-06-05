@@ -591,14 +591,24 @@ class Database(object):
         old_objs.reverse()
 
         # Drop the objects that don't appear in the new db
+        # The motiviating use case: changing the type of a column required that
+        # we drop an index for that column that was type specific This lead to
+        # the observation that all drops can happen before create/alters
+        # (except permissions which we don't expect to hit - and frankly if we
+        # were supposed to remove our own permissions, it's probably best that
+        # we fail fast) so we moved all drops before other statements
+        drop_stmts = []
         for old in old_objs:
             d = self.ndb.dbobjdict_from_catalog(old.catalog)
             if isinstance(old, Table):
                 new = d.get(old.key())
                 if new is not None:
-                    stmts.extend(old.alter_drop_columns(new))
+                    drop_stmts.extend(old.alter_drop_columns(new))
             if not getattr(old, '_nodrop', False) and old.key() not in d:
-                stmts.extend(old.drop())
+                drop_stmts.extend(old.drop())
+
+        # Make sure that drops happen before we do any creates, alters
+        stmts = drop_stmts + stmts
 
         if 'datacopy' in self.config:
             opts.data_dir = self.config['files']['data_path']

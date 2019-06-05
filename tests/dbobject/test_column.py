@@ -335,8 +335,8 @@ class ColumnToSqlTestCase(InputMapToSqlTestCase):
             'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}},
                         {'c4': {'type': 'date'}}]}})
         sql = self.to_sql(inmap, [CREATE_STMT2])
-        assert fix_indent(sql[0]) == "ALTER TABLE t1 ADD COLUMN c4 date"
-        assert sql[1] == "ALTER TABLE t1 DROP COLUMN c3"
+        assert sql[0] == "ALTER TABLE t1 DROP COLUMN c3"
+        assert fix_indent(sql[1]) == "ALTER TABLE t1 ADD COLUMN c4 date"
 
     def test_drop_add_column2(self):
         "Drop and re-add table column from the beginning"
@@ -345,8 +345,8 @@ class ColumnToSqlTestCase(InputMapToSqlTestCase):
             'columns': [{'c2': {'type': 'text'}}, {'c3': {'type': 'date'}},
                         {'c4': {'type': 'text'}}]}})
         sql = self.to_sql(inmap, [CREATE_STMT2])
-        assert fix_indent(sql[0]) == "ALTER TABLE t1 ADD COLUMN c4 text"
-        assert sql[1] == "ALTER TABLE t1 DROP COLUMN c1"
+        assert sql[0] == "ALTER TABLE t1 DROP COLUMN c1"
+        assert fix_indent(sql[1]) == "ALTER TABLE t1 ADD COLUMN c4 text"
 
     def test_drop_add_column3(self):
         "Drop and re-add table columns from table with dropped column"
@@ -356,9 +356,9 @@ class ColumnToSqlTestCase(InputMapToSqlTestCase):
             'columns': [{'c2': {'type': 'text'}}, {'c3': {'type': 'date'}},
                         {'c4': {'type': 'text'}}]}})
         sql = self.to_sql(inmap, stmts)
-        assert fix_indent(sql[0]) == "ALTER TABLE t1 ADD COLUMN c3 date"
-        assert fix_indent(sql[1]) == "ALTER TABLE t1 ADD COLUMN c4 text"
-        assert sql[2] == "ALTER TABLE t1 DROP COLUMN c1"
+        assert sql[0] == "ALTER TABLE t1 DROP COLUMN c1"
+        assert fix_indent(sql[1]) == "ALTER TABLE t1 ADD COLUMN c3 date"
+        assert fix_indent(sql[2]) == "ALTER TABLE t1 ADD COLUMN c4 text"
 
     def test_drop_column_in_schema(self):
         "Drop a column from a table in a non-public schema"

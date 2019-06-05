@@ -56,6 +56,38 @@ def test_table():
                 },
             "expected": ["ALTER TABLE foo\n    ALTER COLUMN month SET NOT NULL, ALTER COLUMN month DROP DEFAULT, ALTER COLUMN month TYPE character varying USING month::character varying, ALTER COLUMN month SET DEFAULT ''::character varying"]
         },
+        {
+            # The drop index should happen before while the creation should happen after
+            "name": "Reorder columns with changing indexes",
+            "a": {'schema public':
+                    {'table foo':
+                        {'columns': [
+                            {'year': {'default': "''::character varying", 'not_null': True, 'type': 'character varying'}},
+                            {'month': {'default': "''::character varying", 'not_null': True, 'type': 'character varying'}},
+                            ],
+                        'indexes' : {
+                            'indx_reference_mips_adjustments_month3': {
+                                'access_method': 'gin',
+                                'keys':[{"month": {'opclass': 'gin_trgm_ops'}}],
+                                },
+                            },
+                        },
+                    },
+                },
+            "b": {'schema public':
+                    {'table foo':
+                        {'columns': [
+                            {'month': {'not_null': False, 'type': 'integer', 'default': '0'}},
+                            {'year': {'default': "''::character varying", 'not_null': True, 'type': 'character varying'}},
+                            ],
+                        'indexes' : {
+                            'indx_reference_mips_adjustments_month': { 'keys':["month"] },
+                            },
+                        },
+                    }
+                },
+            "expected": ["DROP INDEX indx_reference_mips_adjustments_month3", "ALTER TABLE foo\n    ALTER COLUMN month DROP NOT NULL, ALTER COLUMN month DROP DEFAULT, ALTER COLUMN month TYPE integer USING month::integer, ALTER COLUMN month SET DEFAULT 0", "CREATE INDEX indx_reference_mips_adjustments_month ON foo (month)"]
+        },
     ]
 
     for test_case in test_cases:

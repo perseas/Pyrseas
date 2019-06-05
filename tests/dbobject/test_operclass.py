@@ -82,7 +82,14 @@ class OperatorClassToSqlTestCase(InputMapToSqlTestCase):
             'operators': {1: '<(myint,myint)', 3: '=(myint,myint)'},
             'functions': {1: 'btmyintcmp(myint,myint)'}}})
         sql = self.to_sql(inmap, [CREATE_TYPE_STMT], superuser=True)
-        assert fix_indent(sql[0]) == CREATE_STMT_LONG.replace(
+        # NOTE(David Chang): Frankly, not sure what this test does but had to modify it to pass it? This was a result of reordering the drop statements ahead of the other statements
+        assert sql[0] == "DROP OPERATOR <(myint, myint)"
+        assert sql[1] == "DROP OPERATOR =(myint, myint)"
+        assert sql[2] == "DROP FUNCTION myintlt(myint, myint)"
+        assert sql[3] == "DROP FUNCTION myinteq(myint, myint)"
+        assert sql[4] == "DROP FUNCTION btmyintcmp(myint, myint)"
+        assert sql[5] == "DROP TYPE myint CASCADE"
+        assert fix_indent(sql[6]) == CREATE_STMT_LONG.replace(
             ' FOR ', ' DEFAULT FOR ').replace('integer', 'myint').replace(
                 'int4', 'myint')
 
