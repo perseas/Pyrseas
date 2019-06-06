@@ -7,7 +7,7 @@ import pytest
 from pyrseas.lib.dbconn import DbConnection
 
 
-TEST_DBNAME = os.environ.get("PGDBCONN_TEST_DB", "pgdbconn_testdb")
+TEST_DBNAME = os.environ.get("PYRSEAS_TEST_DB", "pgdbconn_testdb")
 
 
 def test_create_dbconn():
