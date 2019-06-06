@@ -27,7 +27,7 @@ jobs:
       - run: sudo chown -R circleci:circleci /usr/local/lib/python3.6/site-packages
       - run:
           command: |
-            sudo pip install pipenv pgdbconn
+            sudo pip install pipenv
             pipenv install
             sudo apt-get update -qq && sudo apt-get install -qq postgresql-client
             psql -U postgres -h localhost -c "CREATE TABLESPACE ts1 LOCATION '/extra/pg/ts1'"

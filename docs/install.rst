@@ -53,11 +53,6 @@ library.  This may be available as a package for your operating system
 or it can be downloaded from the `Python Package Index (PyPI)
 <https://pypi.org/project/PyYAML/>`_.
 
-The utilities also rely on **PgDbConn**, an offshoot of the project
-that generalizes the Postgres database connection code used in the
-utilities.  It can be downloaded from `PyPI
-<https://pypi.org/project/pgdbconn/>`_.
-
 .. _download:
 
 Downloading

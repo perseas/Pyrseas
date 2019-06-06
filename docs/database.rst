@@ -28,7 +28,7 @@ links to constraints and indexes defined on it.
 
 A :class:`Database` is initialized from a
 :class:`~pyrseas.database.CatDbConnection` object (a specialized class
-derived from :class:`pgdbconn.dbconn.DbConnection`).  It consists of
+derived from :class:`pyrseas.lib.dbconn.DbConnection`).  It consists of
 one or two :class:`Dicts` (the main branches in the above
 discussion). A :class:`Dicts` object holds various dictionary objects
 derived from :class:`~pyrseas.dbobject.DbObjectDict`, e.g.,

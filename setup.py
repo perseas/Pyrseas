@@ -36,7 +36,6 @@ setup(
 
     install_requires=[
         'psycopg2-binary >= 2.8.0',
-        'pgdbconn >= 0.8.0',
         'PyYAML >= 3.10'],
 
     tests_require=['pytest'],

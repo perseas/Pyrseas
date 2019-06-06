@@ -22,8 +22,6 @@ Requirements
 
 - PyYAML
 
-- PgDbConn
-
 - Tox
 
 Version Control
@@ -99,11 +97,6 @@ The ``dbtoyaml`` and ``yamltodb`` utilities use the `PyYAML
 <http://pyyaml.org/wiki/PyYAML>`_ library.  You can install it from
 the PyYAML site, or possibly from your package management system.  For
 Windows 64-bit, please read the note under :ref:`installer`.
-
-The utilities also rely on `PgDbConn
-<https://github.com/perseas/pgdbconn>`_, an offshoot of the Perseas
-project that provides a thin, object-oriented layer over Psycopg2.
-You can install it from `PyPI <https://pypi.org/project/pgdbconn/>`_.
 
 To easily run the Pyrseas tests against various Python/Postgres
 version combinations, you will need `pytest

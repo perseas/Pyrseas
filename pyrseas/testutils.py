@@ -11,7 +11,7 @@ from unittest import TestCase
 
 import yaml
 
-from pgdbconn.dbconn import DbConnection
+from pyrseas.lib.dbconn import DbConnection
 from pyrseas.config import Config
 from pyrseas.database import Database
 from pyrseas.augmentdb import AugmentDatabase
