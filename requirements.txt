@@ -1,2 +1,2 @@
-PyYAML>=3.09
+PyYAML>=5.1.0
 psycopg2-binary>=2.8.0

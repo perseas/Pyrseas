@@ -36,7 +36,7 @@ setup(
 
     install_requires=[
         'psycopg2-binary >= 2.8.0',
-        'PyYAML >= 3.10'],
+        'PyYAML >= 5.1.0'],
 
     tests_require=['pytest'],
     cmdclass={'test': PyTest},
