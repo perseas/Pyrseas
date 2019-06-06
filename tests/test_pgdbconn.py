@@ -8,6 +8,11 @@ from pyrseas.lib.dbconn import DbConnection
 
 
 TEST_DBNAME = os.environ.get("PYRSEAS_TEST_DB", "pgdbconn_testdb")
+TEST_ARGS = {
+        "user": "postgres", 
+        "host": "localhost",
+        "port": 5432,
+        }
 
 
 def test_create_dbconn():
@@ -31,7 +36,7 @@ def test_create_with_args():
 
 def test_connect():
     "Connect to database and fetch the version number"
-    db = DbConnection('postgres')
+    db = DbConnection('postgres', **TEST_ARGS)
     vers = db.fetchone("SELECT * FROM version()")[0]
     assert db.conn is not None
     assert vers.startswith('PostgreSQL')
@@ -41,7 +46,7 @@ def test_connect():
 
 def test_connect_invalid():
     "Connect to a non-existent database"
-    db = DbConnection('a_non_existent_database')
+    db = DbConnection('a_non_existent_database', **TEST_ARGS)
     with pytest.raises(SystemExit):
         db.fetchone("SELECT * FROM version()")
     assert db.conn is None
@@ -49,7 +54,7 @@ def test_connect_invalid():
 
 def test_update_database():
     "Create a table, populate it, fetch from it and drop it"
-    db = DbConnection(TEST_DBNAME)
+    db = DbConnection(TEST_DBNAME, **TEST_ARGS)
     assert db.dbname == TEST_DBNAME
     db.execute("DROP TABLE IF EXISTS test_table")
     db.execute("CREATE TABLE test_table (c1 integer, c2 text)")
