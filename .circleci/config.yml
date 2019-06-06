@@ -34,5 +34,6 @@ jobs:
             psql -U postgres -h localhost -c "CREATE TABLESPACE ts2 LOCATION '/extra/pg/ts2'"
       - run:
           command: |
+            pip install -r requirements.txt
             python setup.py test
 
