@@ -1,3 +1,15 @@
+0.8.5 (01-June-2019)
+
+Pull in pgdbconn so we can fully replace Psycopg2 with Psycopg2-binary
+
+  * pgdbconn requires psycopg which requires postgres-client rather than just
+    needed psycopg-binary. Pyscopg requires postgres to be installed while the
+    binary version doesn't so this simplifies our life a bit
+
+    This is the reverse of dfa03cd, where pgdbconn was pulled out. It isn't
+    actually isn't being used as a module elsewhere and okay with some code
+    duplication even if it was
+
 0.8.4 (05-June-2019)
 
 Drop first before anything else
