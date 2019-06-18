@@ -43,7 +43,7 @@ class Schema(DbObject):
 
     @staticmethod
     def query(dbversion=None):
-        return """
+        return r"""
             SELECT nspname AS name, rolname AS owner,
                    array_to_string(nspacl, ',') AS privileges,
                    obj_description(n.oid, 'pg_namespace') AS description, n.oid

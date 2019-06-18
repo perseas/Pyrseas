@@ -263,7 +263,7 @@ class Database(object):
         # The dependencies across views is not in pg_depend. We have to
         # parse the rewrite rule.  "ev_class >= 16384" is to exclude
         # system views.
-        query = """SELECT DISTINCT 'pg_class' AS class_name, ev_class,
+        query = r"""SELECT DISTINCT 'pg_class' AS class_name, ev_class,
                           CASE WHEN depid[1] = 'relid' THEN 'pg_class'
                                WHEN depid[1] = 'funcid' THEN 'pg_proc'
                                END AS refclass, depid[2]::oid AS refobjid
@@ -552,6 +552,11 @@ class Database(object):
 
         new_objs = self.dep_sorted(new_objs, self.ndb)
 
+        # TODO: just assume 9.6 if we don't know the version
+        dbversion = 90600
+        if self.dbconn:
+            dbversion = self.dbconn.version
+
         # Then generate the sql for all the objects, walking in dependency
         # order over all the db objects
 
@@ -559,27 +564,22 @@ class Database(object):
         for new in new_objs:
             d = self.db.dbobjdict_from_catalog(new.catalog)
             old = d.get(new.key())
-            if old is not None:
-                stmts.append(old.alter(new))
-            else:
-                if self.dbconn:
-                    stmts.append(new.create_sql(self.dbconn.version))
-                else:
-                    # TODO: just assume 9.6 if we don't know the version
-                    stmts.append(new.create_sql(90600))
 
-                # Check if the object just created was renamed, in which case
-                # don't try to delete the original one
-                if getattr(new, 'oldname', None):
-                    try:
-                        origname, new.name = new.name, new.oldname
-                        oldkey = new.key()
-                    finally:
-                        new.name = origname
-                    # Intentionally raising KeyError as tested e.g. in
-                    # test_bad_rename_view -- ok Joe?
-                    old = d[oldkey]
-                    old._nodrop = True
+            if old is not None and type(old) is type(new):
+                # ALTER
+                stmts.append(old.alter(new))
+            elif hasattr(new, 'oldname') and new.oldname is not None:
+                # RENAME (actually an ALTER + RENAME)
+                old = d.get(new.key_oldname())
+                if old is not None and type(old) is type(new):
+                    stmts.append(old.alter(new))
+                else:
+                    raise KeyError("Unable to rename %s since no matching original object found" % (new.name))
+                stmts.append(new.rename(old.name))
+                old._nodrop = True
+            else:
+                # CREATE
+                stmts.append(new.create_sql(dbversion))
 
         # Order the old database objects in reverse dependency order
         old_objs = []
@@ -602,7 +602,7 @@ class Database(object):
             d = self.ndb.dbobjdict_from_catalog(old.catalog)
             if isinstance(old, Table):
                 new = d.get(old.key())
-                if new is not None:
+                if new is not None and type(new) is type(old):
                     drop_stmts.extend(old.alter_drop_columns(new))
             if not getattr(old, '_nodrop', False) and old.key() not in d:
                 drop_stmts.extend(old.drop())

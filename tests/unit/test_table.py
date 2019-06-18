@@ -92,3 +92,130 @@ def test_table():
 
     for test_case in test_cases:
         assert test_case["expected"] == db.diff_two_map(test_case["a"], test_case["b"], quote_reserved=False), test_case["name"]
+
+def test_table_rename():
+    cfg = Config()
+    cfg['database'] = {'dbname': '', 'host': '', 'username': '', 'password': '', 'port': 0}
+    cfg['options'] = namedtuple('Options', ['schemas', 'revert'])(*[[], False])
+    if 'datacopy' in cfg:
+        del cfg['datacopy']
+    db = Database(cfg)
+
+    test_cases = [
+        {
+            "name": "Renaming a table works the first time",
+            "a": {'schema public':
+                    {'table foo':
+                        {'columns': [
+                            {'year': {'default': "''::character varying", 'not_null': True, 'type': 'character varying'}},
+                            {'month': {'default': "''::character varying", 'not_null': True, 'type': 'character varying'}},
+                            ],
+                        'indexes' : {
+                            'indx_reference_mips_adjustments_month3': {
+                                'access_method': 'gin',
+                                'keys':[{"month": {'opclass': 'gin_trgm_ops'}}],
+                                },
+                            },
+                        },
+                    },
+                },
+            "b": {'schema public':
+                    {'table bar':
+                        {'oldname': 'foo',
+                        'columns': [
+                            {'year': {'default': "''::character varying", 'not_null': True, 'type': 'character varying'}},
+                            {'month': {'default': "''::character varying", 'not_null': True, 'type': 'character varying'}},
+                            ],
+                        'indexes' : {
+                            'indx_reference_mips_adjustments_month3': {
+                                'access_method': 'gin',
+                                'keys':[{"month": {'opclass': 'gin_trgm_ops'}}],
+                                },
+                            },
+                        },
+                    }
+                },
+            "expected": [
+                'DROP INDEX indx_reference_mips_adjustments_month3',
+                'ALTER TABLE public.foo RENAME TO bar',
+                'CREATE INDEX indx_reference_mips_adjustments_month3 ON bar USING gin (month gin_trgm_ops)',
+                ]
+        },
+        {
+            "name": "Renaming a table works even after the rename",
+            "a": {'schema public':
+                    {'table bar':
+                        {'columns': [
+                            {'year': {'default': "''::character varying", 'not_null': True, 'type': 'character varying'}},
+                            {'month': {'default': "''::character varying", 'not_null': True, 'type': 'character varying'}},
+                            ],
+                        'indexes' : {
+                            'indx_reference_mips_adjustments_month3': {
+                                'access_method': 'gin',
+                                'keys':[{"month": {'opclass': 'gin_trgm_ops'}}],
+                                },
+                            },
+                        },
+                    },
+                },
+            "b": {'schema public':
+                    {'table bar':
+                        {'oldname': 'foo',
+                        'columns': [
+                            {'year': {'default': "''::character varying", 'not_null': True, 'type': 'character varying'}},
+                            {'month': {'default': "''::character varying", 'not_null': True, 'type': 'character varying'}},
+                            ],
+                        'indexes' : {
+                            'indx_reference_mips_adjustments_month3': {
+                                'access_method': 'gin',
+                                'keys':[{"month": {'opclass': 'gin_trgm_ops'}}],
+                                },
+                            },
+                        },
+                    }
+                },
+            "expected": []
+        },
+        {
+            "name": "You can alter a table and rename",
+            "a": {'schema public':
+                    {
+                        'table foo':
+                        {'columns': [
+                            {'year': {'default': "''::character varying", 'not_null': True, 'type': 'character varying'}},
+                            {'month': {'default': "''::character varying", 'not_null': True, 'type': 'character varying'}},
+                            ],
+                        'indexes' : {
+                            'indx_reference_mips_adjustments_month3': {
+                                'access_method': 'gin',
+                                'keys':[{"month": {'opclass': 'gin_trgm_ops'}}],
+                                },
+                            },
+                        },
+                    },
+                },
+            "b": {'schema public':
+                    {'table bar':
+                        {'oldname': 'foo',
+                        'columns': [
+                            {'year': {'default': "''::character varying", 'not_null': True, 'type': 'character varying'}},
+                            {'month': {'not_null': False, 'type': 'integer', 'default': '0'}},
+                            ],
+                        'indexes' : {
+                            'indx_reference_mips_adjustments_month': { 'keys':["month"] },
+                            },
+                        },
+                    }
+                },
+            "expected": [
+                'DROP INDEX indx_reference_mips_adjustments_month3',
+                "ALTER TABLE foo\n    ALTER COLUMN month DROP NOT NULL, ALTER COLUMN month DROP DEFAULT, ALTER COLUMN month TYPE integer USING month::integer, ALTER COLUMN month SET DEFAULT 0",
+                'ALTER TABLE public.foo RENAME TO bar',
+
+                'CREATE INDEX indx_reference_mips_adjustments_month ON bar (month)',
+                ]
+        },
+    ]
+
+    for test_case in test_cases:
+        assert test_case["expected"] == db.diff_two_map(test_case["a"], test_case["b"], quote_reserved=False), test_case["name"]

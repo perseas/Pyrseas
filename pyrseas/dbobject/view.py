@@ -85,6 +85,19 @@ class View(DbClass):
             view.pop('triggers')
         return view
 
+    def create_definition(self, dbversion=None, newdefn=None):
+        """Needed to call this from alter without the decorators
+
+        :return: SQL statements
+
+        See self.create for more info
+        """
+        defn = newdefn or self.definition
+        if defn[-1:] == ';':
+            defn = defn[:-1]
+        return ["CREATE%s VIEW %s AS\n   %s" % (
+                newdefn and " OR REPLACE" or '', self.qualname(), defn)]
+
     @commentable
     @grantable
     @ownable
@@ -93,11 +106,7 @@ class View(DbClass):
 
         :return: SQL statements
         """
-        defn = newdefn or self.definition
-        if defn[-1:] == ';':
-            defn = defn[:-1]
-        return ["CREATE%s VIEW %s AS\n   %s" % (
-                newdefn and " OR REPLACE" or '', self.qualname(), defn)]
+        return self.create_definition(dbversion, newdefn)
 
     def alter(self, inview, dbversion=None):
         """Generate SQL to transform an existing view
@@ -111,7 +120,7 @@ class View(DbClass):
         """
         stmts = []
         if self.definition != inview.definition:
-            stmts.append(self.create(dbversion, inview.definition))
+            stmts.append(self.create_definition(dbversion, inview.definition))
         stmts.append(super(View, self).alter(inview))
         return stmts
 
