@@ -215,6 +215,38 @@ def test_table_rename():
                 'CREATE INDEX indx_reference_mips_adjustments_month ON bar (month)',
                 ]
         },
+        {
+            "name": "Keeps table if view overrides",
+            "a": {'schema public':
+                    {'table foo':
+                        {
+                            'columns': [
+                                {'month': {'not_null': False, 'type': 'integer', 'default': '0'}},
+                                {'year': {'default': "''::character varying", 'not_null': True, 'type': 'character varying'}}
+                            ]
+                        }
+                    },
+                },
+            "b": {'schema public':
+                    {'table bar':
+                        {
+                            'oldname': 'foo',
+                            'columns': [
+                                {'month': {'not_null': False, 'type': 'integer', 'default': '0'}},
+                                {'year': {'default': "''::character varying", 'not_null': True, 'type': 'character varying'}}
+                            ]
+                        },
+                    'view foo':
+                        {
+                            'definition': 'select * from bar',
+                        },
+                    },
+                },
+            "expected": [
+                'ALTER TABLE public.foo RENAME TO bar',
+                'CREATE VIEW foo AS\n   select * from bar',
+            ],
+        },
     ]
 
     for test_case in test_cases:

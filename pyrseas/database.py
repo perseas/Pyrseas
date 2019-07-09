@@ -604,8 +604,12 @@ class Database(object):
                 new = d.get(old.key())
                 if new is not None and type(new) is type(old):
                     drop_stmts.extend(old.alter_drop_columns(new))
-            if not getattr(old, '_nodrop', False) and old.key() not in d:
-                drop_stmts.extend(old.drop())
+
+            removed = old.key() not in d
+            retyped = old.key() in d and type(d.get(old.key())) is not type(old)
+            if removed or retyped:
+                if not getattr(old, '_nodrop', False):
+                    drop_stmts.extend(old.drop())
 
         # Make sure that drops happen before we do any creates, alters
         stmts = drop_stmts + stmts

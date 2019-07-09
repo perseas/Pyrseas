@@ -59,6 +59,31 @@ def test_view():
                 "COMMENT ON VIEW foo IS 'new comment on foo'",
             ],
         },
+        {
+            "name": "Drops view if table overrides it",
+            "a": {'schema public':
+                    {'view foo':
+                        {
+                            'definition': 'select * from t1',
+                            'description': 'comment on foo',
+                            'owner': 'oldowner',
+                        },
+                    },
+                },
+            "b": {'schema public':
+                    {'table foo':
+                        {'columns': [
+                            {'month': {'not_null': False, 'type': 'integer', 'default': '0'}},
+                            {'year': {'default': "''::character varying", 'not_null': True, 'type': 'character varying'}}
+                            ]
+                        }
+                    },
+                },
+            "expected": [
+                "DROP VIEW foo",
+                "CREATE TABLE foo (\n    month integer DEFAULT 0,\n    year character varying NOT NULL DEFAULT ''::character varying)",
+            ],
+        },
     ]
 
     for test_case in test_cases:
