@@ -1,3 +1,13 @@
+0.8.6 (09-July-2019)
+
+Support renaming of tables
+
+  * Setting oldname on a table will result in renaming of the table with
+    correct column changes if needed
+
+  * A view with the same name as an oldname table also works to support
+    backwards compatible renames
+
 0.8.5 (01-June-2019)
 
 Pull in pgdbconn so we can fully replace Psycopg2 with Psycopg2-binary
