@@ -14,6 +14,7 @@ The PRIMARY AUTHORS are or have been:
     * Ross J. Reedstrom
     * github.com/shirkey
     * Denis Smirnov
+    * Feike Steenbergen
     * Paulo Tioseco
     * Daniele Varrazzo
     * Vasiliy Yeremeyev
