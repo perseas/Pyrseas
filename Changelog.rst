@@ -1,3 +1,28 @@
+0.9.0 (22-Jul-2019)
+
+Schema 'public' is no longer treated as a special case (176)
+
+Yamltodb was changed to support Postgres 11, in particular due
+to changes to the 'pg_proc' catalog (#195)
+
+Dbtoyaml now outputs column information for views, both regular and
+materialized (184)
+
+Fixed various issues, including:
+
+  * Do not assume constraints always refer to columns (#188)
+
+  * Add non-'public' schemas to search_path to avoid problems with
+	some extensions (e.g., PostGIS) that need them to resolve
+	objects (#91)
+
+  * Prevent a view definition from changing a column type (#90)
+
+  * Inconsistent handling of FOREIGN KEY and UNIQUE constraints
+	leading to AttributeErrors (#182)
+
+  * Recreation of tsvector triggers when columns are added (#179)
+
 0.8.0 (12-Dec-2017)
 
 Significant rearchitecture of methods to generate SQL.

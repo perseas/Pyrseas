@@ -38,8 +38,7 @@ should eliminate most object dependency problems seen with the
 previous architecture.  However, certain issues still remain.
 Specifically, if an object depends on a Postgres internally-defined
 object, or on an object defined by a Postgres extension, the Pyrseas
-utilities may not behave as expected (see issues `91
-<https://github.com/perseas/Pyrseas/issues/91>`_ and `175
+utilities may not behave as expected (see issue `175
 <https://github.com/perseas/Pyrseas/issues/175>`_ for additional
 discussion).
 

@@ -26,9 +26,9 @@ Features
 Requirements
 ------------
 
-- PostgreSQL 9.3 or higher
+- PostgreSQL 9.4 or higher
 
-- Python 2.7 or higher
+- Python 2.7, 3.4 or higher
 
 License
 -------

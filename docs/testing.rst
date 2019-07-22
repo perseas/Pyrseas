@@ -66,7 +66,7 @@ failures.  See `this blog post
 <https://pyrseas.wordpress.com/2012/10/17/testing-python-and-postgresql-on-windows-part-5/>`_
 for more details.
 
-The COLLATION tests, run under Postgres 9.3 and later, require the
+The COLLATION tests require the
 ``fr_FR.utf8`` locale (or ``French.France.1252`` language on Windows)
 to be installed.
 
@@ -86,10 +86,10 @@ the operating system or Postgres level.
 
  - ``git clone git://github.com/perseas/Pyrseas.git``
 
- - Install Python 3.6 (or 3.5) and 2.7, using package manager or from
+ - Install Python 3.7 (or 3.6) and 2.7, using package manager or from
    installers at https://www.python.org/downloads/.
 
- - Install Postgres 10, 9.6, 9.5, 9.4 and 9.3, using package manager or
+ - Install Postgres 11, 10, 9.6, 9.5 and 9.4, using package manager or
    binary installers at https://www.postgresql.org/download/
 
    .. note:: On Linux, make sure you install the contrib and plperl
@@ -125,7 +125,7 @@ the operating system or Postgres level.
    (https://pypi.org/project/tox/)
 
    .. note:: Psycopg2, PyYAML, pytest and Tox all have to be installed
-             twice, i.e., once under Python 3.6 (or 3.5) and another
+             twice, i.e., once under Python 3.7 (or 3.6) and another
              under 2.7.
 
  - On Windows, install Perl (see discussion above under
@@ -139,21 +139,14 @@ the operating system or Postgres level.
  - Create a Postgres password file, e.g., on Linux: ``~/.pgpass``, on
    Windows: ``%APPDATA%\postgresql\pgpass.conf``.
 
- - Create directories to hold tablespaces, e.g., ``/extra/pg/9.6/ts1``
-   on Linux, ``C:\\extra\\pg\\9.6\\ts1`` on Windows.  The directories
+ - Create directories to hold tablespaces, e.g., ``/extra/pg/11.0/ts1``
+   on Linux, ``C:\\extra\\pg\\11.0\\ts1`` on Windows.  The directories
    need to be owned by the **postgres** user. This may be tricky on
    older Windows versions, but the command ``cacls <dir> /E /G
    postgres:F`` should suffice.  Using ``psql``, create tablespaces
    **ts1** and **ts2**, e.g., ``CREATE TABLESPACE ts1 LOCATION
    '<directory>'`` (on Windows, you'll have to use, e.g.,
    ``E'C:\\dir\\ts1'``, to specify the directory).
-
-   - On Windows, for Postgres 9.2, the default installation is owned
-     by the Network Service account, so the ``cacls`` command should
-     be ``cacls <dir> /E /G networkservices:F``.
-
-   .. note:: The creation of users/roles and tablespaces has to be
-             repeated for each Postgres version.
 
  - Install the locale ``fr_FR.utf8`` on Linux/Unix or the language
    ``French.France.1252`` on Windows.
@@ -175,12 +168,12 @@ the operating system or Postgres level.
      directory, e.g., on Linux, ``export PYTHONPATH=$PWD``, on
      Windows, ``set PYTHONPATH=%USERPROFILE%\somedir\Pyrseas``.
 
-   - Define the environment variables ``PG93_PORT``, ``PG94_PORT``,
-     ``PG95_PORT``, ``PG96_PORT`` and ``PG100_PORT`` to point to the
-     corresponding Postgres ports.
+   - Define the environment variables ``PG94_PORT``, ``PG95_PORT``,
+     ``PG96_PORT``, ``PG100_PORT`` and ``PG110_PORT`` to point to the
+     corresponding Postgres connection ports.
 
  - Invoke ``tox``. This will create two virtualenvs in a ``.tox``
-   subdirectory--one for Python 3.6 or 3.5 and another for 2.7,
+   subdirectory--one for Python 3.7 or 3.6 and another for 2.7,
    install Pyrseas and its prerequisites (Psycopg2 and PyYAML) into
    each virtualenv and run the unit tests for each combination of
    Postgres and Python.
