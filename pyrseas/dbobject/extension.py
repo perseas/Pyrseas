@@ -36,14 +36,14 @@ class Extension(DbObject):
     @staticmethod
     def query(dbversion=None):
         return """
-            SELECT extname AS name, nspname AS schema, extversion AS version,
-                   rolname AS owner,
-                   obj_description(e.oid, 'pg_extension') AS description, oid
+            SELECT e.extname AS name, n.nspname AS schema, e.extversion AS version,
+                   r.rolname AS owner,
+                   obj_description(e.oid, 'pg_extension') AS description, e.oid
             FROM pg_extension e
-                 JOIN pg_roles r ON (r.oid = extowner)
-                 JOIN pg_namespace n ON (extnamespace = n.oid)
-            WHERE nspname != 'information_schema'
-            ORDER BY extname"""
+                 JOIN pg_roles r ON (r.oid = e.extowner)
+                 JOIN pg_namespace n ON (e.extnamespace = n.oid)
+            WHERE n.nspname != 'information_schema'
+            ORDER BY e.extname"""
 
     @staticmethod
     def from_map(name, inobj):
