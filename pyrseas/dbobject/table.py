@@ -390,6 +390,7 @@ class Table(DbClass):
         self.triggers = {}
         self.rules = {}
         self.oid = oid
+        self._referred_by = []
 
     @staticmethod
     def query(dbversion=None):
@@ -767,13 +768,17 @@ class Table(DbClass):
         filepath = os.path.join(dirpath, self.extern_filename('data'))
         stmts = []
         if hasattr(self, '_referred_by'):
-            stmts.append("ALTER TABLE %s DROP CONSTRAINT %s" % (
-                self._referred_by._table.qualname(), self._referred_by.name))
+            for constr in self._referred_by:
+                stmts.append(
+                    "ALTER TABLE %s DROP CONSTRAINT %s"
+                    % (constr._table.qualname(), constr.name)
+                )
         stmts.append("TRUNCATE ONLY %s" % self.qualname())
         stmts.append(("\\copy ", self.qualname(), " from '", filepath,
                       "' csv"))
         if hasattr(self, '_referred_by'):
-            stmts.append(self._referred_by.add())
+            for constr in self._referred_by:
+                stmts.append(constr.add())
         return stmts
 
     def get_implied_deps(self, db):
@@ -962,9 +967,9 @@ class ClassDict(DbObjectDict):
                 # link referenced and referrer
                 constr._references = self[(
                     constr.ref_schema, constr.ref_table)]
-                # TODO: there can be more than one
-                self[(constr.ref_schema, constr.ref_table)]._referred_by = \
-                    constr
+                self[
+                    (constr.ref_schema, constr.ref_table)
+                ]._referred_by.append(constr)
                 table.foreign_keys.update({cns: constr})
             elif isinstance(constr, UniqueConstraint):
                 table.unique_constraints.update({cns: constr})
