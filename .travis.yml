@@ -1,18 +1,42 @@
 language: python
-python:
-  - "3.6"
-  - "2.7"
+
 addons:
-  postgresql: "9.6"
+  apt:
+    update: true
+    packages: postgresql-common
+    sources:
+    - sourceline: deb http://apt.postgresql.org/pub/repos/apt/ xenial-pgdg main
+
+jobs:
+  include:
+  - python: "2.7"
+    env: POSTGRES=9.6
+  - python: "3.6"
+    env: POSTGRES=10
+
+# Ensure the desired version of Postgres is installed and running
+# Most of this is normally handled by Travis automatically, but only for certain versions of Postgres
+# https://github.com/travis-ci/travis-build/blob/master/lib/travis/build/bash/travis_setup_postgresql.bash
 before_install:
-  - export PATH=/usr/lib/postgresql/9.6/bin:$PATH
+  - sudo systemctl stop postgresql
+  - aptInst() { sudo -E apt-get -yq --no-install-suggests --no-install-recommends $(travis_apt_get_options) install $*; }
+  - aptInst postgresql-$POSTGRES postgresql-plperl-$POSTGRES
+  - aptInst postgresql-plpython-$POSTGRES
+  # the port may have been auto-configured to use 5433 if it thought 5422 was already in use
+  - sudo sed -i -e 's/5433/5432/' /etc/postgresql/*/main/postgresql.conf
+  - sudo mkdir -p /var/ramfs/postgresql
+  - if [ ! -d /var/ramfs/postgresql/$POSTGRES ]; then sudo cp -rp /var/lib/postgresql/$POSTGRES /var/ramfs/postgresql/$POSTGRES; fi
+  - sudo systemctl start postgresql@$POSTGRES-main
+  - (cd /; sudo -u postgres createuser -e -s travis || echo failed createuser)
+  - (cd /; sudo -u postgres createdb -e -O travis travis || echo failed created)
+
+# Ensure Postgres is configured as described in docs/testing.rst
+before_script:
   - sudo locale-gen --no-archive fr_FR.UTF-8
   - sudo mkdir -p /extra/pg/ts1 /extra/pg/ts2
   - sudo chown postgres:postgres /extra/pg/ts1 /extra/pg/ts2
-  - sudo apt-get update -qq
-  - sudo apt-get install -qq postgresql-plperl-9.6 postgresql-plpython-9.6
-before_script:
   - psql -Upostgres -c "CREATE TABLESPACE ts1 LOCATION '/extra/pg/ts1'"
   - psql -Upostgres -c "CREATE TABLESPACE ts2 LOCATION '/extra/pg/ts2'"
+
 script:
   - python setup.py test
