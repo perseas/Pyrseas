@@ -13,6 +13,8 @@ jobs:
     env: POSTGRES=9.6
   - python: "3.6"
     env: POSTGRES=10
+  - python: "3.7"
+    env: POSTGRES=11
 
 # Ensure the desired version of Postgres is installed and running
 # Most of this is normally handled by Travis automatically, but only for certain versions of Postgres
@@ -24,6 +26,8 @@ before_install:
   - aptInst postgresql-plpython-$POSTGRES
   # the port may have been auto-configured to use 5433 if it thought 5422 was already in use
   - sudo sed -i -e 's/5433/5432/' /etc/postgresql/*/main/postgresql.conf
+  # postgresql-11+ default to "peer"
+  - sudo sed -i -E -e 's/^local\s+all\s+postgres\s+peer/local all postgres trust/' /etc/postgresql/*/main/pg_hba.conf
   - sudo mkdir -p /var/ramfs/postgresql
   - if [ ! -d /var/ramfs/postgresql/$POSTGRES ]; then sudo cp -rp /var/lib/postgresql/$POSTGRES /var/ramfs/postgresql/$POSTGRES; fi
   - sudo systemctl start postgresql@$POSTGRES-main
