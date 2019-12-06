@@ -10,6 +10,10 @@ addons:
 jobs:
   include:
   - python: "2.7"
+    env: POSTGRES=9.4
+  - python: "2.7"
+    env: POSTGRES=9.5
+  - python: "2.7"
     env: POSTGRES=9.6
   - python: "3.6"
     env: POSTGRES=10

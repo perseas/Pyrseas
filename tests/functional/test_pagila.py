@@ -22,6 +22,8 @@ class PagilaTestCase(DbMigrateTestCase):
         cls.remove_tempfiles('empty')
 
     def test_pagila(self):
+        if self.db.version < 90600:
+            self.skipTest('Only available on PG 9.6 and later')
         # Create the source schema
         self.execute_script(__file__, 'pagila-schema.sql')
 
