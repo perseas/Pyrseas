@@ -51,7 +51,7 @@ Most tests do not require installation of supporting Postgres
 packages.  However, a few tests rely on the availability of Postgres
 ``contrib`` modules such as the `spi module
 <https://www.postgresql.org/docs/current/static/contrib-spi.html>`_ or
-procedural languages such as ``plperl`` or ``plpythonu``.
+procedural languages such as ``plperl`` or ``plpython3u``.
 
 On Windows, it is necessary to install Perl in order to run some of
 the tests (most Linux or Unix variants already include it as part of

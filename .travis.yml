@@ -29,10 +29,7 @@ jobs:
 # https://github.com/travis-ci/travis-build/blob/master/lib/travis/build/bash/travis_setup_postgresql.bash
 before_install:
   - sudo systemctl stop postgresql
-  - aptInst() { sudo -E apt-get -yq --no-install-suggests --no-install-recommends $(travis_apt_get_options) install $*; }
-  - aptInst postgresql-$POSTGRES postgresql-plperl-$POSTGRES
-  # Postgres 12+ doesn't publish a plpython extension, only plpython3
-  - if [ "$POSTGRES" != "12" ]; then aptInst postgresql-plpython-$POSTGRES; fi
+  - sudo -E apt-get -yq --no-install-suggests --no-install-recommends $(travis_apt_get_options) install postgresql-$POSTGRES postgresql-plperl-$POSTGRES postgresql-plpython3-$POSTGRES
   # the port may have been auto-configured to use 5433 if it thought 5422 was already in use
   - sudo sed -i -e 's/5433/5432/' /etc/postgresql/*/main/postgresql.conf
   # postgresql-11+ default to "peer"

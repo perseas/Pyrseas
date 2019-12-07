@@ -53,13 +53,13 @@ class ExtensionToMapTestCase(DatabaseToMapTestCase):
         assert dbmap['extension pg_trgm'] == {
             'schema': 's1', 'version': VERS, 'description': TRGM_COMMENT}
 
-    def test_map_extension_plpythonu(self):
+    def test_map_extension_plpython3u(self):
         "Test a function created with extension other than plpgsql/plperl"
         # See issue #103
-        dbmap = self.to_map(["CREATE EXTENSION plpythonu",
+        dbmap = self.to_map(["CREATE EXTENSION plpython3u",
                              "CREATE FUNCTION test() RETURNS int AS "
-                             "'return 1' LANGUAGE plpythonu"])
-        assert 'extension plpythonu' in dbmap
+                             "'return 1' LANGUAGE plpython3u"])
+        assert 'extension plpython3u' in dbmap
 
 
 class ExtensionToSqlTestCase(InputMapToSqlTestCase):
