@@ -36,7 +36,7 @@ def fetch_reserved_words(db):
     if len(RESERVED_WORDS) == 0:
         RESERVED_WORDS = [word[0] for word in
                           db.fetchall("""SELECT word FROM pg_get_keywords()
-                                         WHERE catcode = 'R'""")]
+                                         WHERE catcode != 'U'""")]
 
 
 def quote_id(name):
