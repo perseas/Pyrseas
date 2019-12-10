@@ -103,7 +103,7 @@ class ViewToSqlTestCase(InputMapToSqlTestCase):
         "Rename an existing view"
         inmap = self.std_map()
         inmap['schema public'].update({'view v2': {
-            'owner': 'postgres', 'oldname': 'v1', 'definition': VIEW_DEFN}})
+            'oldname': 'v1', 'definition': VIEW_DEFN}})
         sql = self.to_sql(inmap, [CREATE_STMT])
         assert sql == ["ALTER VIEW public.v1 RENAME TO v2"]
 
@@ -155,7 +155,7 @@ class ViewToSqlTestCase(InputMapToSqlTestCase):
         "Create a comment for an existing view"
         inmap = self.std_map()
         inmap['schema public'].update({'view v1': {
-            'owner': 'postgres', 'definition': VIEW_DEFN, 'description': "Test view v1"}})
+            'definition': VIEW_DEFN, 'description': "Test view v1"}})
         sql = self.to_sql(inmap, [CREATE_STMT])
         assert sql == [COMMENT_STMT]
 
@@ -163,7 +163,7 @@ class ViewToSqlTestCase(InputMapToSqlTestCase):
         "Drop the comment on an existing view"
         stmts = [CREATE_STMT, COMMENT_STMT]
         inmap = self.std_map()
-        inmap['schema public'].update({'view v1': {'definition': VIEW_DEFN, 'owner': 'postgres'}})
+        inmap['schema public'].update({'view v1': {'definition': VIEW_DEFN}})
         sql = self.to_sql(inmap, stmts)
         assert sql == ["COMMENT ON VIEW v1 IS NULL"]
 
@@ -172,6 +172,6 @@ class ViewToSqlTestCase(InputMapToSqlTestCase):
         stmts = [CREATE_STMT, COMMENT_STMT]
         inmap = self.std_map()
         inmap['schema public'].update({'view v1': {
-            'owner': 'postgres', 'definition': VIEW_DEFN, 'description': "Changed view v1"}})
+            'definition': VIEW_DEFN, 'description': "Changed view v1"}})
         sql = self.to_sql(inmap, stmts)
         assert sql == ["COMMENT ON VIEW v1 IS 'Changed view v1'"]

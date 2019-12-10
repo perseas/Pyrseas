@@ -324,19 +324,6 @@ class DbObject(object):
         lst = [getattr(self, k) for k in self.keylist]
         return len(lst) == 1 and lst[0] or tuple(lst)
 
-    def key_oldname(self):
-        """See key(self) above for more info
-
-        :return: a single string or a tuple of strings
-
-        This is a slightly modified one that returns the oldname key
-        """
-        if hasattr(self, 'oldname') and self.oldname is not None:
-            keylist = [k for k in self.keylist[:-1]] + ['oldname']
-            lst = [getattr(self, k) for k in keylist]
-            return len(lst) == 1 and lst[0] or tuple(lst)
-        return None
-
     def identifier(self):
         """Returns a full identifier for the database object
 
@@ -467,7 +454,6 @@ class DbObject(object):
 
     def create_sql(self, dbversion=None):
         if hasattr(self, 'oldname') and self.oldname is not None:
-            # NOTE(devoted): I think this shouldn't be necessary anymore given how we properly case out the rename at higher levels, but not frankly sure
             return self.rename(self.oldname)
         else:
             return self.create(dbversion)

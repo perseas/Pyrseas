@@ -1,3 +1,13 @@
+0.8.8 (10-Dec-2019)
+
+Remove "Support renaming of tables"
+
+  * It's a feature that we don't need and we're just trying to get Postgres 11
+    working
+
+  * We never used 0.8.6 in production so while the changes are probably fine,
+    I'm just trying to reduce the amount of change at the moment
+
 0.8.7 (10-Dec-2019)
 
 Postgres 11 Support

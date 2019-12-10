@@ -2,7 +2,7 @@
   "name": "Pyrseas",
   "abstract": "Utilities to assist in database schema versioning",
   "description": "Pyrseas provides utilities to describe a PostgreSQL database schema as YAML, to verify the schema against the same or a different database and to generate SQL that will modify the schema to match the YAML description.  Supports PostgreSQL 9.3, 9.4, 9.5, 9.6 and 10. Thanks to Joe Abbate and everyone else who contributed to Pyrseas",
-  "version": "0.8.7",
+  "version": "0.8.8",
   "maintainer": "David Chang <dchang@devoted.com>",
   "license": "bsd",
   "prereqs": {
@@ -16,19 +16,19 @@
     "augmentdb": {
       "file": "pyrseas/augmentdb.py",
       "docfile": "docs/augmentdb.rst",
-      "version": "0.8.7",
+      "version": "0.8.8",
       "abstract": "Generates an augmented YAML description of a Postgres database from its catalogs and an augmentation specification"
     },
     "dbtoyaml": {
       "file": "pyrseas/dbtoyaml.py",
       "docfile": "docs/dbtoyaml.rst",
-      "version": "0.8.7",
+      "version": "0.8.8",
       "abstract": "Outputs a YAML description of a Postgres database's tables and other objects (metadata), suitable for storing in a version control repository"
     },
     "yamltodb": {
       "file": "pyrseas/yamltodb.py",
       "docfile": "docs/yamltodb.rst",
-      "version": "0.8.7",
+      "version": "0.8.8",
       "abstract": "Generates SQL statements to modify a database so that it will match an input YAML/JSON specification"
     }
   },
