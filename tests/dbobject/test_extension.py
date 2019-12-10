@@ -15,14 +15,18 @@ class ExtensionToMapTestCase(DatabaseToMapTestCase):
     """Test mapping of existing extensions"""
 
     superuser = True
+    def base_version(self):
+        if self.db.version < 90300:
+            return '1.0'
+        elif self.db.version < 90600:
+            return '1.1'
+        elif self.db.version < 110000:
+            return '1.3'
+        return '1.4'
 
     def test_map_extension(self):
         "Map an existing extension"
-        VERS = '1.3'
-        if self.db.version < 90600:
-            VERS = '1.1'
-        if self.db.version < 90300:
-            VERS = '1.0'
+        VERS = self.base_version()
         dbmap = self.to_map([CREATE_STMT])
         assert dbmap['extension pg_trgm'] == {
             'schema': 'public', 'version': VERS, 'description': TRGM_COMMENT}
@@ -44,11 +48,7 @@ class ExtensionToMapTestCase(DatabaseToMapTestCase):
 
     def test_map_extension_schema(self):
         "Map an existing extension"
-        VERS = '1.3'
-        if self.db.version < 90600:
-            VERS = '1.1'
-        if self.db.version < 90300:
-            VERS = '1.0'
+        VERS = self.base_version()
         dbmap = self.to_map(["CREATE SCHEMA s1", CREATE_STMT + " SCHEMA s1"])
         assert dbmap['extension pg_trgm'] == {
             'schema': 's1', 'version': VERS, 'description': TRGM_COMMENT}

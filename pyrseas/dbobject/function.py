@@ -122,7 +122,7 @@ class Function(Proc):
 
     @staticmethod
     def query(dbversion=None):
-        return """
+        query = """
             SELECT nspname AS schema, proname AS name,
                    pg_get_function_identity_arguments(p.oid) AS arguments,
                    pg_get_function_arguments(p.oid) AS allargs,
@@ -138,11 +138,16 @@ class Function(Proc):
                  JOIN pg_namespace n ON (pronamespace = n.oid)
                  JOIN pg_language l ON (prolang = l.oid)
             WHERE (nspname != 'pg_catalog' AND nspname != 'information_schema')
-              AND NOT proisagg
+              AND %s
               AND p.oid NOT IN (
                   SELECT objid FROM pg_depend WHERE deptype = 'e'
                                AND classid = 'pg_proc'::regclass)
             ORDER BY nspname, proname"""
+        if dbversion < 110000:
+            query = query % "NOT proisagg"
+        else:
+            query = query % "prokind = 'f'"
+        return query
 
     @staticmethod
     def from_map(name, schema, arguments, inobj):
@@ -436,40 +441,34 @@ class Aggregate(Proc):
                  JOIN pg_namespace n ON (pronamespace = n.oid)
                  LEFT JOIN pg_aggregate a ON (p.oid = aggfnoid)
             WHERE (nspname != 'pg_catalog' AND nspname != 'information_schema')
-              AND proisagg
+              AND %s
               AND p.oid NOT IN (
                   SELECT objid FROM pg_depend WHERE deptype = 'e'
                                AND classid = 'pg_proc'::regclass)
             ORDER BY nspname, proname"""
+        V94_COLS = """aggmtransfn::regproc AS msfunc,
+                   aggminvtransfn::regproc AS minvfunc,
+                   aggmtranstype::regtype AS mstype,
+                   aggmtransspace AS msspace,
+                   aggmfinalfn::regproc AS mfinalfunc,
+                   aggmfinalextra AS mfinalfunc_extra,
+                   aggminitval AS minitcond, aggkind AS kind"""
+        V96_COLS = V94_COLS + """,aggcombinefn AS combinefunc,
+                   aggserialfn AS serialfunc, aggdeserialfn AS deserialfunc,
+                   proparallel AS parallel"""
+        cols = ('aggtransspace', 'aggfinalextra')
         if dbversion < 90400:
-            query = query % (
-                '0', 'false',
-                """'-' AS msfunc, '-' AS minvfunc, NULL AS mstype,
+            cols = ('0', 'false',
+                    """'-' AS msfunc, '-' AS minvfunc, NULL AS mstype,
                     0 AS msspace, '-' AS mfinalfunc, false AS mfinalfunc_extra,
-                    NULL AS minitcond""")
+                    NULL AS minitcond""", "proisagg")
         elif dbversion < 90600:
-            query = query % (
-                'aggtransspace', 'aggfinalextra',
-                """aggmtransfn::regproc AS msfunc,
-                   aggminvtransfn::regproc AS minvfunc,
-                   aggmtranstype::regtype AS mstype,
-                   aggmtransspace AS msspace,
-                   aggmfinalfn::regproc AS mfinalfunc,
-                   aggmfinalextra AS mfinalfunc_extra,
-                   aggminitval AS minitcond, aggkind AS kind""")
+            cols += (V94_COLS, "proisagg")
+        elif dbversion < 110000:
+            cols += (V96_COLS, "proisagg")
         else:
-            query = query % (
-                'aggtransspace', 'aggfinalextra',
-                """aggmtransfn::regproc AS msfunc,
-                   aggminvtransfn::regproc AS minvfunc,
-                   aggmtranstype::regtype AS mstype,
-                   aggmtransspace AS msspace,
-                   aggmfinalfn::regproc AS mfinalfunc,
-                   aggmfinalextra AS mfinalfunc_extra,
-                   aggminitval AS minitcond, aggkind AS kind,
-                   aggcombinefn AS combinefunc, aggserialfn AS serialfunc,
-                   aggdeserialfn AS deserialfunc, proparallel AS parallel""")
-        return query
+            cols += (V96_COLS, "prokind = 'a'")
+        return query % cols
 
     @staticmethod
     def from_map(name, schema, arguments, inobj):

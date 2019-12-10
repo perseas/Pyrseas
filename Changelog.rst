@@ -1,3 +1,10 @@
+0.8.7 (10-Dec-2019)
+
+Postgres 11 Support
+
+  * Cherry-picked the commit from upstream that added Postgres 11 support
+    e082b0ad4aad8fdafb504bb20e9c0d95a2d3c92b
+
 0.8.6 (09-July-2019)
 
 Support renaming of tables
