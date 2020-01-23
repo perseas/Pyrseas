@@ -375,6 +375,17 @@ class ForeignKeyToMapTestCase(DatabaseToMapTestCase):
                          'schema': 'sd', 'table': 't2',
                          'columns': ['pc2', 'pc1', 'pc3']}}}}
 
+    # PG 12 uses all column names to generate the constraint's name
+    map_fkey2_12 = {'columns': [{'c1': {'type': 'integer'}},
+                             {'c2': {'type': 'character(5)'}},
+                             {'c3': {'type': 'integer'}},
+                             {'c4': {'type': 'date'}},
+                             {'c5': {'type': 'text'}}],
+                 'foreign_keys': {'t1_c2_c3_c4_fkey': {
+                     'columns': ['c2', 'c3', 'c4'], 'references': {
+                         'schema': 'sd', 'table': 't2',
+                         'columns': ['pc2', 'pc1', 'pc3']}}}}
+
     map_fkey3 = {'columns': [{'c1': {'type': 'integer'}},
                              {'c2': {'type': 'character(5)'}},
                              {'c3': {'type': 'integer'}},
@@ -428,7 +439,10 @@ class ForeignKeyToMapTestCase(DatabaseToMapTestCase):
                  "c4 DATE, c5 TEXT, "
                  "FOREIGN KEY (c2, c3, c4) REFERENCES t2 (pc2, pc1, pc3))"]
         dbmap = self.to_map(stmts)
-        assert dbmap['schema sd']['table t1'] == self.map_fkey2
+        if self.db.version < 120000:
+            assert dbmap['schema sd']['table t1'] == self.map_fkey2
+        else:
+            assert dbmap['schema sd']['table t1'] == self.map_fkey2_12
 
     def test_foreign_key_4(self):
         "Map a table with a named, three-column foreign key"
