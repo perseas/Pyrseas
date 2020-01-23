@@ -21,8 +21,6 @@ jobs:
     env: POSTGRES=11
   - python: "3.8"
     env: POSTGRES=12
-  allow_failures:
-    - env: POSTGRES=12
 
 # Ensure the desired version of Postgres is installed and running
 # Most of this is normally handled by Travis automatically, but only for certain versions of Postgres
