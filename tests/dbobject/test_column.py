@@ -108,7 +108,10 @@ class ColumnToMapTestCase(DatabaseToMapTestCase):
         for colnum, (coltype, maptype) in enumerate(TYPELIST):
             col = "c%d" % (colnum + 1)
             colstab.append("%s %s" % (col, coltype))
-            colsmap.append({col: {'type': maptype}})
+            if coltype == 'name' and self.db.version >= 120000:
+                colsmap.append({col: {'type': maptype, 'collation': 'C'}})
+            else:
+                colsmap.append({col: {'type': maptype}})
         dbmap = self.to_map(["CREATE TABLE t1 (%s)" % ", ".join(colstab)])
         expmap = {'columns': colsmap}
         assert dbmap['schema sd']['table t1'] == expmap
