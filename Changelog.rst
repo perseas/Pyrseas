@@ -1,3 +1,16 @@
+0.9.1 (14-apr-2020)
+
+Expanded the number of keywords that are quoted if they are present in
+generated SQL statements. (#212)
+
+Various changes to support Postgres 12.
+
+Fixed various issues, including:
+
+  * Handling of multiple foreign key constraints (#210)
+
+  * Column qualifications in Extensions query (#208)
+
 0.9.0 (22-Jul-2019)
 
 Schema 'public' is no longer treated as a special case (176)
@@ -13,13 +26,13 @@ Fixed various issues, including:
   * Do not assume constraints always refer to columns (#188)
 
   * Add non-'public' schemas to search_path to avoid problems with
-	some extensions (e.g., PostGIS) that need them to resolve
-	objects (#91)
+    some extensions (e.g., PostGIS) that need them to resolve
+    objects (#91)
 
   * Prevent a view definition from changing a column type (#90)
 
   * Inconsistent handling of FOREIGN KEY and UNIQUE constraints
-	leading to AttributeErrors (#182)
+    leading to AttributeErrors (#182)
 
   * Recreation of tsvector triggers when columns are added (#179)
 

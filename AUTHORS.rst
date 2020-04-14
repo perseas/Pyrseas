@@ -4,7 +4,9 @@ The PRIMARY AUTHORS are or have been:
 
     * Joe Abbate
     * Ronan Dunklau
+    * Douglas Fraser
     * Mark Goldfinch
+    * Ryan Graham
     * Andjelko Horvat
     * Roger Hunwicks
     * Ghislain Leveque
