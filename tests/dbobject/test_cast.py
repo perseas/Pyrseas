@@ -11,7 +11,7 @@ CREATE_FUNC = "CREATE FUNCTION int2_bool(smallint) RETURNS boolean " \
     "LANGUAGE sql IMMUTABLE AS $_$%s$_$" % SOURCE
 CREATE_DOMAIN = "CREATE DOMAIN d1 AS integer"
 CREATE_STMT1 = "CREATE CAST (smallint AS boolean) WITH FUNCTION " \
-    "int2_bool(smallint)"
+    "sd.int2_bool(smallint)"
 CREATE_STMT3 = "CREATE CAST (d1 AS integer) WITH INOUT AS IMPLICIT"
 DROP_STMT = "DROP CAST IF EXISTS (smallint AS boolean)"
 COMMENT_STMT = "COMMENT ON CAST (smallint AS boolean) IS 'Test cast 1'"
@@ -23,7 +23,7 @@ class CastToMapTestCase(DatabaseToMapTestCase):
     def test_map_cast_function(self):
         "Map a cast with a function"
         dbmap = self.to_map([CREATE_FUNC, CREATE_STMT1], superuser=True)
-        expmap = {'function': 'int2_bool(smallint)', 'context': 'explicit',
+        expmap = {'function': 'sd.int2_bool(smallint)', 'context': 'explicit',
                   'method': 'function'}
         assert dbmap['cast (smallint as boolean)'] == expmap
 
@@ -32,7 +32,7 @@ class CastToMapTestCase(DatabaseToMapTestCase):
         dbmap = self.to_map([CREATE_DOMAIN, CREATE_STMT3])
         expmap = {'context': 'implicit', 'method': 'inout',
                   'depends_on': ['domain d1']}
-        assert dbmap['cast (d1 as integer)'] == expmap
+        assert dbmap['cast (sd.d1 as integer)'] == expmap
 
     def test_map_cast_comment(self):
         "Map a cast comment"
@@ -50,7 +50,7 @@ class CastToSqlTestCase(InputMapToSqlTestCase):
         stmts = [DROP_STMT, CREATE_FUNC]
         inmap = self.std_map()
         inmap.update({'cast (smallint as boolean)': {
-            'function': 'int2_bool(smallint)', 'context': 'explicit',
+            'function': 'sd.int2_bool(smallint)', 'context': 'explicit',
             'method': 'function'}})
         sql = self.to_sql(inmap, stmts)
         # NOTE(David Chang): This is a hack to get this test to work. We reordered all drops to happen before any other statements because in theory you shouldn't be depending on a function that used to exist for your cast. If you need it, you need to have it defined in your db.yaml to use it (and thus won't be dropped). However, this test is odd in how it runs and I don't think you can hit this case in real usage
@@ -63,12 +63,12 @@ class CastToSqlTestCase(InputMapToSqlTestCase):
         inmap = self.std_map()
         inmap.update({'cast (d1 as integer)': {
             'context': 'implicit', 'method': 'inout'}})
-        inmap['schema public'].update({'domain d1': {'type': 'integer'}})
+        inmap['schema sd'].update({'domain d1': {'type': 'integer'}})
         sql = self.to_sql(inmap, stmts)
         assert fix_indent(sql[0]) == CREATE_STMT3
 
     def test_create_cast_schema(self):
-        "Create a cast using a type/domain in a non-public schema"
+        "Create a cast using a type/domain in a non-default schema"
         stmts = ["CREATE SCHEMA s1", "CREATE DOMAIN s1.d1 AS integer",
                  "DROP CAST IF EXISTS (integer AS s1.d1)"]
         inmap = self.std_map()
@@ -98,9 +98,9 @@ class CastToSqlTestCase(InputMapToSqlTestCase):
         "Create a cast with a comment"
         inmap = self.std_map()
         inmap.update({'cast (smallint as boolean)': {
-            'description': 'Test cast 1', 'function': 'int2_bool(smallint)',
+            'description': 'Test cast 1', 'function': 'sd.int2_bool(smallint)',
             'context': 'explicit', 'method': 'function'}})
-        inmap['schema public'].update({'function int2_bool(smallint)': {
+        inmap['schema sd'].update({'function int2_bool(smallint)': {
             'returns': 'boolean', 'language': 'sql', 'immutable': True,
             'source': SOURCE}})
         sql = self.to_sql(inmap, [DROP_STMT])
@@ -115,7 +115,7 @@ class CastToSqlTestCase(InputMapToSqlTestCase):
         inmap.update({'cast (smallint as boolean)': {
             'description': 'Test cast 1', 'function': 'int2_bool(smallint)',
             'context': 'explicit', 'method': 'function'}})
-        inmap['schema public'].update({'function int2_bool(smallint)': {
+        inmap['schema sd'].update({'function int2_bool(smallint)': {
             'returns': 'boolean', 'language': 'sql', 'immutable': True,
             'source': SOURCE}})
         sql = self.to_sql(inmap, stmts, superuser=True)
@@ -128,7 +128,7 @@ class CastToSqlTestCase(InputMapToSqlTestCase):
         inmap.update({'cast (smallint as boolean)': {
             'function': 'int2_bool(smallint)', 'context': 'explicit',
             'method': 'function'}})
-        inmap['schema public'].update({'function int2_bool(smallint)': {
+        inmap['schema sd'].update({'function int2_bool(smallint)': {
             'returns': 'boolean', 'language': 'sql', 'immutable': True,
             'source': SOURCE}})
         assert self.to_sql(inmap, stmts, superuser=True) == \
@@ -141,7 +141,7 @@ class CastToSqlTestCase(InputMapToSqlTestCase):
         inmap.update({'cast (smallint as boolean)': {
             'description': 'Changed cast 1', 'function': 'int2_bool(smallint)',
             'context': 'explicit', 'method': 'function'}})
-        inmap['schema public'].update({'function int2_bool(smallint)': {
+        inmap['schema sd'].update({'function int2_bool(smallint)': {
             'returns': 'boolean', 'language': 'sql', 'immutable': True,
             'source': SOURCE}})
         assert self.to_sql(inmap, stmts, superuser=True) == \
@@ -151,21 +151,23 @@ class CastToSqlTestCase(InputMapToSqlTestCase):
         "Cast that depends on a function that depends on a view.  See #86"
         stmts = ["CREATE TABLE t1 (id integer)"]
         inmap = self.std_map()
-        inmap.update({'cast (v1 as t1)': {
-            'context': 'explicit', 'function': 'v1_to_t1(v1)',
+        inmap.update({'cast (sd.v1 as sd.t1)': {
+            'context': 'explicit', 'function': 'sd.v1_to_t1(sd.v1)',
             'method': 'function'}})
-        inmap['schema public'].update({
-            'function v1_to_t1(v1)': {'returns': 't1', 'language': 'plpgsql',
-            'source': "\nDECLARE o t1;\nBEGIN o:= ROW($1.id)::t1;\n" \
-                                      "RETURN o;\nEND"},
+        inmap['schema sd'].update({
+            'function v1_to_t1(sd.v1)': {
+                'returns': 'sd.t1', 'language': 'plpgsql',
+                'source': "\nDECLARE o sd.t1;\nBEGIN o:= ROW($1.id)::t1;\n"
+                "RETURN o;\nEND"},
             'table t1': {'columns': [{'id': {'type': 'integer'}}]},
-            'view v1': {'definition': " SELECT t1.id\n    FROM t1;",
+            'view v1': {'definition': " SELECT t1.id\n    FROM sd.t1;",
                         'depends_on': ['table t1']}})
         sql = self.to_sql(inmap, stmts)
         assert len(sql) == 3
-        assert fix_indent(sql[0]) == "CREATE VIEW v1 AS SELECT t1.id FROM t1"
-        assert fix_indent(sql[1]) == "CREATE FUNCTION v1_to_t1(v1) " \
-            "RETURNS t1 LANGUAGE plpgsql AS $_$\nDECLARE o t1;\nBEGIN " \
-            "o:= ROW($1.id)::t1;\nRETURN o;\nEND$_$"
-        assert fix_indent(sql[2]) == "CREATE CAST (v1 AS t1) WITH " \
-            "FUNCTION v1_to_t1(v1)"
+        assert fix_indent(sql[0]) == \
+            "CREATE VIEW sd.v1 AS SELECT t1.id FROM sd.t1"
+        assert fix_indent(sql[1]) == "CREATE FUNCTION sd.v1_to_t1(sd.v1) " \
+            "RETURNS sd.t1 LANGUAGE plpgsql AS $_$\nDECLARE o sd.t1;\n" \
+            "BEGIN o:= ROW($1.id)::t1;\nRETURN o;\nEND$_$"
+        assert fix_indent(sql[2]) == "CREATE CAST (sd.v1 AS sd.t1) WITH " \
+            "FUNCTION sd.v1_to_t1(sd.v1)"

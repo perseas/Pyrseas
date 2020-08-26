@@ -26,15 +26,21 @@ Features
 Requirements
 ------------
 
-- PostgreSQL 9.3 or higher
+- PostgreSQL 9.4 or higher
 
-- Python 2.7 or higher
+- Python 2.7, 3.4 or higher
 
 License
 -------
 
 Pyrseas is free (libre) software and is distributed under the BSD
 license.  Please see the LICENSE file for details.
+
+Documentation
+-------------
+
+Please visit `Read the Docs <https://pyrseas.readthedocs.io/en/latest/>`_
+for the latest documentation.
 
 Devoted Notes
 -------------

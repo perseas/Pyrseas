@@ -10,8 +10,14 @@ from pyrseas.testutils import DbMigrateTestCase
 
 class AutodocTestCase(DbMigrateTestCase):
 
+    def setUp(self):
+        super(DbMigrateTestCase, self).setUp()
+        self.add_public_schema(self.srcdb)
+        self.add_public_schema(self.db)
+        self.remove_tempfiles('metadata')
+
     @classmethod
-    def tearDownClass(cls):
+    def tearDown(cls):
         cls.remove_tempfiles('autodoc')
         cls.remove_tempfiles('metadata')
 

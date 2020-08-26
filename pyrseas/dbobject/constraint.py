@@ -34,8 +34,7 @@ class Constraint(DbSchemaObject):
         """
         super(Constraint, self).__init__(name, schema, description)
         self._init_own_privs(None, [])
-        self.table = table
-        self.unqualify()
+        self.table = self.unqualify(table)
 
     def key_columns(self):
         """Return comma-separated list of key column names
@@ -137,7 +136,8 @@ class CheckConstraint(Constraint):
                    CASE WHEN contypid = 0 THEN conrelid::regclass::text
                         ELSE contypid::regtype::text END AS table,
                    contypid != 0 AS is_domain_check, conkey AS columns,
-                   consrc AS expression, coninhcount > 0 AS inherited, c.oid,
+                   pg_get_expr(conbin, conrelid) AS expression,
+                   coninhcount > 0 AS inherited, c.oid,
                    obj_description(c.oid, 'pg_constraint') AS description
             FROM pg_constraint c
                  JOIN pg_namespace ON (connamespace = pg_namespace.oid)
@@ -182,7 +182,7 @@ class CheckConstraint(Constraint):
         dct.pop('is_domain_check')
         if not self.inherited:
             dct.pop('inherited')
-        if dbcols is not None:
+        if dbcols is not None and self.columns is not None:
             dct['columns'] = [dbcols[k - 1] for k in self.columns]
         else:
             dct.pop('columns')
@@ -198,9 +198,13 @@ class CheckConstraint(Constraint):
         if self.inherited:
             return []
 
+        if self.expression[0] != '(':
+            expr = "(%s)" % self.expression
+        else:
+            expr = self.expression
         return ["ALTER %s %s ADD CONSTRAINT %s %s %s" % (
             self._table.objtype, self._table.qualname(), quote_id(self.name),
-            self.objtype, self.expression)]
+            self.objtype, expr)]
 
     def drop(self):
         if self.inherited:
@@ -483,6 +487,7 @@ class ForeignKey(Constraint):
         :param dbcols: dictionary of dbobject columns
         :return: dictionary
         """
+        self._normalize_columns()
         dct = super(ForeignKey, self).to_map(db)
         if '_table' in dct:
             del dct['_table']
@@ -496,14 +501,14 @@ class ForeignKey(Constraint):
                 dct.pop(attr)
         if self.match == 'simple':
             dct.pop('match')
-        dct['columns'] = [dbcols[k - 1] for k in self.columns]
-        ref_cols = [refcols[k - 1] for k in self.ref_cols]
-        dct['references'] = {'table': dct['ref_table'], 'columns': ref_cols}
+        dct['references'] = {'table': dct['ref_table'],
+                             'columns': self.ref_cols}
         if 'ref_schema' in dct:
             dct['references'].update(schema=self.ref_schema)
             dct.pop('ref_schema')
         dct.pop('ref_table')
         dct.pop('ref_cols')
+
         return {self.name: dct}
 
     @commentable
@@ -546,9 +551,7 @@ class ForeignKey(Constraint):
         if infk.columns != self.columns or infk.ref_cols != self.ref_cols \
            or infk.match != self.match or infk.on_update != self.on_update \
                 or infk.on_delete != self.on_delete:
-            stmts.append(
-                "ALTER TABLE {tname} DROP CONSTRAINT {fkname}".format(
-                    tname=self._table.name, fkname=self.name))
+            stmts.append(self.drop())
             stmts.append(infk.add())
         stmts.append(self.diff_description(infk))
         return stmts
@@ -573,6 +576,7 @@ class ForeignKey(Constraint):
             return pkey
 
         for uc in list(ref_table.unique_constraints.values()):
+            uc._normalize_columns()
             if uc.columns == self.ref_cols:
                 return uc
 
@@ -669,6 +673,7 @@ class UniqueConstraint(Constraint):
         :param dbcols: dictionary of dbobject columns
         :return: dictionary
         """
+        self._normalize_columns()
         dct = super(UniqueConstraint, self).to_map(db)
         if self.access_method == 'btree':
             dct.pop('access_method')
@@ -677,7 +682,6 @@ class UniqueConstraint(Constraint):
                 dct.pop(attr)
         if self.tablespace is None:
             dct.pop('tablespace')
-        dct['columns'] = [dbcols[k - 1] for k in self.columns]
         return {self.name: dct}
 
     def alter(self, inuc):
@@ -694,10 +698,7 @@ class UniqueConstraint(Constraint):
         self._normalize_columns()
         if inuc.columns != self.columns:
             stmts.append(self.drop())
-            stmts.append("ALTER TABLE {tname} ADD CONSTRAINT {conname} "
-                         "UNIQUE ({cols})".format(
-                             tname=inuc._table.name, conname=inuc.name,
-                             cols=', '.join(inuc.columns)))
+            stmts.append(inuc.add())
         if inuc.cluster:
             if not self.cluster:
                 stmts.append("CLUSTER %s USING %s" % (

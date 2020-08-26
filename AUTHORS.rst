@@ -4,7 +4,9 @@ The PRIMARY AUTHORS are or have been:
 
     * Joe Abbate
     * Ronan Dunklau
+    * Douglas Fraser
     * Mark Goldfinch
+    * Ryan Graham
     * Andjelko Horvat
     * Roger Hunwicks
     * Ghislain Leveque
@@ -14,6 +16,7 @@ The PRIMARY AUTHORS are or have been:
     * Ross J. Reedstrom
     * github.com/shirkey
     * Denis Smirnov
+    * Feike Steenbergen
     * Paulo Tioseco
     * Daniele Varrazzo
     * Vasiliy Yeremeyev

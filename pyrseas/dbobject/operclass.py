@@ -7,7 +7,7 @@
     DbSchemaObject and OperatorClassDict derived from DbObjectDict.
 """
 from . import DbObjectDict, DbSchemaObject
-from . import commentable, ownable, split_func_args
+from . import commentable, ownable, split_func_args, split_schema_obj
 
 
 class OperatorClass(DbSchemaObject):
@@ -35,7 +35,8 @@ class OperatorClass(DbSchemaObject):
         self._init_own_privs(owner, [])
         self.index_method = index_method
         self.family = family
-        self.type = type
+        (sch, typ) = split_schema_obj(type)
+        self.type = typ if self.schema == sch else type
         self.default = default
         self.storage = storage if storage != '-' else None
         self.operators = {}
@@ -168,7 +169,8 @@ class OperatorClass(DbSchemaObject):
             clauses.append("STORAGE %s" % self.storage)
         return ["CREATE OPERATOR CLASS %s\n    %sFOR TYPE %s USING %s "
                 "AS\n    %s" % (
-                    self.qualname(), dflt, self.type, self.index_method,
+                    self.qualname(), dflt,
+                    self.qualname(self.schema, self.type), self.index_method,
                     ',\n    ' .join(clauses))]
 
     def get_implied_deps(self, db):
@@ -194,7 +196,7 @@ class OperatorClass(DbSchemaObject):
                 deps.add(f)
 
         if self.family is not None:
-            f = db.operfams.find(self.family, self.index_method)
+            f = db.operfams.find(self.schema, self.family, self.index_method)
             if f is not None:
                 deps.add(f)
 

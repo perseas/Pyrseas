@@ -29,14 +29,14 @@ class ExtensionToMapTestCase(DatabaseToMapTestCase):
         VERS = self.base_version()
         dbmap = self.to_map([CREATE_STMT])
         assert dbmap['extension pg_trgm'] == {
-            'schema': 'public', 'version': VERS, 'description': TRGM_COMMENT}
+            'schema': 'sd', 'version': VERS, 'description': TRGM_COMMENT}
 
     def test_map_no_depends(self):
         "Ensure no dependencies are included when mapping an extension"
         dbmap = self.to_map([CREATE_STMT])
-        assert 'type gtrgm' not in dbmap['schema public']
-        assert 'operator %(text, text)' not in dbmap['schema public']
-        assert 'function show_trgm(text)' not in dbmap['schema public']
+        assert 'type gtrgm' not in dbmap['schema sd']
+        assert 'operator %(text, text)' not in dbmap['schema sd']
+        assert 'function show_trgm(text)' not in dbmap['schema sd']
 
     def test_map_lang_extension(self):
         "Map a procedural language as an extension"
@@ -53,13 +53,13 @@ class ExtensionToMapTestCase(DatabaseToMapTestCase):
         assert dbmap['extension pg_trgm'] == {
             'schema': 's1', 'version': VERS, 'description': TRGM_COMMENT}
 
-    def test_map_extension_plpythonu(self):
+    def test_map_extension_plpython3u(self):
         "Test a function created with extension other than plpgsql/plperl"
         # See issue #103
-        dbmap = self.to_map(["CREATE EXTENSION plpythonu",
+        dbmap = self.to_map(["CREATE EXTENSION plpython3u",
                              "CREATE FUNCTION test() RETURNS int AS "
-                             "'return 1' LANGUAGE plpythonu"])
-        assert 'extension plpythonu' in dbmap
+                             "'return 1' LANGUAGE plpython3u"])
+        assert 'extension plpython3u' in dbmap
 
 
 class ExtensionToSqlTestCase(InputMapToSqlTestCase):
@@ -68,14 +68,14 @@ class ExtensionToSqlTestCase(InputMapToSqlTestCase):
     def test_create_extension_simple(self):
         "Create a extension that didn't exist"
         inmap = self.std_map()
-        inmap.update({'extension pg_trgm': {'schema': 'public'}})
+        inmap.update({'extension pg_trgm': {'schema': 'sd'}})
         sql = self.to_sql(inmap)
-        assert sql == [CREATE_STMT]
+        assert fix_indent(sql[0]) == CREATE_STMT + " SCHEMA sd"
 
     def test_bad_extension_map(self):
         "Error creating a extension with a bad map"
         inmap = self.std_map()
-        inmap.update({'pg_trgm': {'schema': 'public'}})
+        inmap.update({'pg_trgm': {'schema': 'sd'}})
         with pytest.raises(KeyError):
             self.to_sql(inmap)
 
@@ -100,20 +100,20 @@ class ExtensionToSqlTestCase(InputMapToSqlTestCase):
         inmap.update({'extension plperl': {'schema': 'pg_catalog',
                                            'description':
                                            "PL/Perl procedural language"}})
-        inmap['schema public'].update({'function f1()': {
+        inmap['schema sd'].update({'function f1()': {
             'language': 'plperl', 'returns': 'text',
             'source': "return \"dummy\";"}})
         sql = self.to_sql(inmap)
         assert fix_indent(sql[0]) == "CREATE EXTENSION plperl"
         # skip over COMMENT statement
-        assert fix_indent(sql[2]) == "CREATE FUNCTION f1() RETURNS text " \
+        assert fix_indent(sql[2]) == "CREATE FUNCTION sd.f1() RETURNS text " \
             "LANGUAGE plperl AS $_$return \"dummy\";$_$"
 
     def test_comment_extension(self):
         "Change the comment for an existing extension"
         inmap = self.std_map()
         inmap.update({'extension pg_trgm': {
-            'schema': 'public', 'description': "Trigram extension"}})
+            'schema': 'sd', 'description': "Trigram extension"}})
         sql = self.to_sql(inmap, [CREATE_STMT], superuser=True)
         assert sql == ["COMMENT ON EXTENSION pg_trgm IS 'Trigram extension'"]
 
@@ -125,7 +125,7 @@ class ExtensionToSqlTestCase(InputMapToSqlTestCase):
         # create a new owner that is different from self.db.user
         new_owner = 'new_%s' % self.db.user
         inmap = self.std_map()
-        inmap.update({'extension pg_trgm': {'schema': 'public',
+        inmap.update({'extension pg_trgm': {'schema': 'sd',
                                             'owner': new_owner}})
         sql = self.to_sql(inmap, [CREATE_STMT], superuser=True)
         assert 'ALTER EXTENSION pg_trgm OWNER TO %s' % new_owner not in sql

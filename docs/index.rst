@@ -22,13 +22,13 @@ Features
 Requirements
 ------------
 
-- `PostgreSQL <https://www.postgresql.org/>`_ 9.3 or higher
+- `PostgreSQL <https://www.postgresql.org/>`_ 9.4 or higher
 
-- `Python <http://www.python.org/>`_ 2.7 or higher
+- `Python <http://www.python.org/>`_ 2.7, 3.4 or higher
 
-- `Psycopg2 <http://initd.org/psycopg>`_ 2.5 or higher
+- `Psycopg2 <http://initd.org/psycopg>`_ 2.7 or higher
 
-- `PyYAML <http://pyyaml.org/>`_ 3.10 or higher
+- `PyYAML <http://pyyaml.org/>`_ 3.13 or higher
 
 Contents
 --------

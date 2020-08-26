@@ -9,7 +9,7 @@ from pyrseas.testutils import InputMapToSqlTestCase, fix_indent
 CREATE_FDW_STMT = "CREATE FOREIGN DATA WRAPPER fdw1"
 CREATE_FS_STMT = "CREATE SERVER fs1 FOREIGN DATA WRAPPER fdw1"
 CREATE_UM_STMT = "CREATE USER MAPPING FOR PUBLIC SERVER fs1"
-CREATE_FT_STMT = "CREATE FOREIGN TABLE ft1 (c1 integer, c2 text) SERVER fs1"
+CREATE_FT_STMT = "CREATE FOREIGN TABLE sd.ft1 (c1 integer, c2 text) SERVER fs1"
 DROP_FDW_STMT = "DROP FOREIGN DATA WRAPPER IF EXISTS fdw1"
 DROP_FS_STMT = "DROP SERVER IF EXISTS fs1"
 DROP_UM_STMT = "DROP USER MAPPING IF EXISTS FOR PUBLIC SERVER fs1"
@@ -304,7 +304,7 @@ class ForeignTableToMapTestCase(DatabaseToMapTestCase):
         dbmap = self.to_map(stmts)
         expmap = {'columns': [{'c1': {'type': 'integer'}},
                               {'c2': {'type': 'text'}}], 'server': 'fs1'}
-        assert dbmap['schema public']['foreign table ft1'] == expmap
+        assert dbmap['schema sd']['foreign table ft1'] == expmap
 
     def test_map_foreign_table_options(self):
         "Map a foreign table with options"
@@ -314,7 +314,7 @@ class ForeignTableToMapTestCase(DatabaseToMapTestCase):
         expmap = {'columns': [{'c1': {'type': 'integer'}},
                               {'c2': {'type': 'text'}}], 'server': 'fs1',
                   'options': ['user=jack']}
-        assert dbmap['schema public']['foreign table ft1'] == expmap
+        assert dbmap['schema sd']['foreign table ft1'] == expmap
 
 
 class ForeignTableToSqlTestCase(InputMapToSqlTestCase):
@@ -326,7 +326,7 @@ class ForeignTableToSqlTestCase(InputMapToSqlTestCase):
         "Create a foreign table that didn't exist"
         inmap = self.std_map()
         inmap.update({'foreign data wrapper fdw1': {'server fs1': {}}})
-        inmap['schema public'].update({'foreign table ft1': {
+        inmap['schema sd'].update({'foreign table ft1': {
             'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}],
             'server': 'fs1'}})
         sql = self.to_sql(inmap, [CREATE_FDW_STMT, CREATE_FS_STMT])
@@ -336,7 +336,7 @@ class ForeignTableToSqlTestCase(InputMapToSqlTestCase):
         "Create a foreign table with options"
         inmap = self.std_map()
         inmap.update({'foreign data wrapper fdw1': {'server fs1': {}}})
-        inmap['schema public'].update({'foreign table ft1': {
+        inmap['schema sd'].update({'foreign table ft1': {
             'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}],
             'server': 'fs1', 'options': ['user=jack']}})
         sql = self.to_sql(inmap, [CREATE_FDW_STMT, CREATE_FS_STMT])
@@ -346,7 +346,7 @@ class ForeignTableToSqlTestCase(InputMapToSqlTestCase):
         "Error creating a foreign table with a bad map"
         inmap = self.std_map()
         inmap.update({'foreign data wrapper fdw1': {'server fs1': {}}})
-        inmap['schema public'].update({'ft1': {
+        inmap['schema sd'].update({'ft1': {
             'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}],
             'server': 'fs1'}})
         with pytest.raises(KeyError):
@@ -358,7 +358,7 @@ class ForeignTableToSqlTestCase(InputMapToSqlTestCase):
         inmap = self.std_map()
         inmap.update({'foreign data wrapper fdw1': {'server fs1': {}}})
         sql = self.to_sql(inmap, stmts)
-        assert sql[0] == "DROP FOREIGN TABLE ft1"
+        assert sql[0] == "DROP FOREIGN TABLE sd.ft1"
 
     def test_drop_foreign_table_server(self):
         "Drop a foreign table and associated server"
@@ -366,7 +366,7 @@ class ForeignTableToSqlTestCase(InputMapToSqlTestCase):
         inmap = self.std_map()
         inmap.update({'foreign data wrapper fdw1': {}})
         sql = self.to_sql(inmap, stmts)
-        assert sql[0] == "DROP FOREIGN TABLE ft1"
+        assert sql[0] == "DROP FOREIGN TABLE sd.ft1"
         assert sql[1] == "DROP SERVER fs1"
 
     def test_alter_foreign_table_options(self):
@@ -375,7 +375,7 @@ class ForeignTableToSqlTestCase(InputMapToSqlTestCase):
                  " OPTIONS (opt1 'valA', opt2 'valB')"]
         inmap = self.std_map()
         inmap.update({'foreign data wrapper fdw1': {'server fs1': {}}})
-        inmap['schema public'].update({'foreign table ft1': {
+        inmap['schema sd'].update({'foreign table ft1': {
             'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}],
             'server': 'fs1', 'options': ['opt1=valX', 'opt2=valY']}})
         sql = self.to_sql(inmap, stmts)
@@ -387,9 +387,9 @@ class ForeignTableToSqlTestCase(InputMapToSqlTestCase):
         stmts = [CREATE_FDW_STMT, CREATE_FS_STMT, CREATE_FT_STMT]
         inmap = self.std_map()
         inmap.update({'foreign data wrapper fdw1': {'server fs1': {}}})
-        inmap['schema public'].update({'foreign table ft1': {
+        inmap['schema sd'].update({'foreign table ft1': {
             'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}},
                         {'c3': {'type': 'date'}}], 'server': 'fs1'}})
         sql = self.to_sql(inmap, stmts)
         assert fix_indent(sql[0]) == \
-            "ALTER FOREIGN TABLE ft1 ADD COLUMN c3 date"
+            "ALTER FOREIGN TABLE sd.ft1 ADD COLUMN c3 date"

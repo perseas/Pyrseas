@@ -13,7 +13,7 @@ import string
 from functools import wraps
 
 from pyrseas.lib.pycompat import PY2, strtypes
-from pyrseas.yamlutil import MultiLineStr, yamldump
+from pyrseas.yamlutil import yamldump
 from .privileges import privileges_to_map, add_grant, diff_privs
 from .privileges import privileges_from_map
 
@@ -36,7 +36,7 @@ def fetch_reserved_words(db):
     if len(RESERVED_WORDS) == 0:
         RESERVED_WORDS = [word[0] for word in
                           db.fetchall("""SELECT word FROM pg_get_keywords()
-                                         WHERE catcode = 'R'""")]
+                                         WHERE catcode != 'U'""")]
 
 
 def quote_id(name):
@@ -62,12 +62,17 @@ def split_schema_obj(obj, sch=None):
     """Return a (schema, object) tuple given a possibly schema-qualified name
 
     :param obj: object name or schema.object
-    :param sch: schema name (defaults to 'public')
+    :param sch: schema name (defaults to 'pg_catalog')
     :return: tuple
     """
+    def undelim(ident):
+        if ident[0] == '"' and ident[-1] == '"':
+            ident = ident[1:-1]
+        return ident
+
     qualsch = sch
     if sch is None:
-        qualsch = 'public'
+        qualsch = 'pg_catalog'
     if obj[0] == '"' and obj[-1] == '"':
         if '"."' in obj:
             (qualsch, obj) = obj.split('"."')
@@ -81,7 +86,7 @@ def split_schema_obj(obj, sch=None):
             (qualsch, obj) = obj.split('.')
     if sch != qualsch:
         sch = qualsch
-    return (sch, obj)
+    return (undelim(sch), undelim(obj))
 
 
 def split_func_args(obj):
@@ -173,26 +178,10 @@ class DbObject(object):
         """
         self.name = name
         self.description = description
-        self._init_own_privs(attrs.pop('owner', None),
-                             attrs.pop('privileges', []))
         self.depends_on = []
+        self.owner = None
+        self.privileges = []
         self._objtype = None
-
-        for key, val in list(attrs.items()):
-            if val or key in self.keylist:
-                if key in ['definition', 'source'] and \
-                        isinstance(val, strtypes) and '\n' in val:
-                    newval = []
-                    for line in val.split('\n'):
-                        if line and line[-1] in (' ', '\t'):
-                            line = line.rstrip()
-                        newval.append(line)
-                    strval = '\n'.join(newval)
-                    if PY2:
-                        val = strval.encode('utf_8').decode('utf_8')
-                    else:
-                        val = MultiLineStr(strval)
-                setattr(self, key, val)
 
     def _init_own_privs(self, owner=None, privileges=[]):
         """Initialize owner and privileges attributes
@@ -337,7 +326,7 @@ class DbObject(object):
         """
         return quote_id(self.__dict__[self.keylist[0]])
 
-    def to_map(self, db, no_owner=False, no_privs=False):
+    def to_map(self, db, no_owner=False, no_privs=False, deepcopy=True):
         """Convert an object to a YAML-suitable format
 
         :param db: db used to tie the objects together
@@ -348,7 +337,11 @@ class DbObject(object):
         The return value, a Python dictionary, is equivalent to a YAML
         or JSON object.
         """
-        dct = self.__dict__.copy()
+        import copy
+        if deepcopy:
+            dct = copy.deepcopy(self.__dict__)
+        else:
+            dct = self.__dict__.copy()
         for key in self.keylist:
             del dct[key]
         if self.description is None:
@@ -555,24 +548,31 @@ class DbSchemaObject(DbObject):
 
         :return: string
         """
-        return self.qualname()
+        return "%s.%s" % (quote_id(self.schema), quote_id(self.name))
 
-    def qualname(self, objname=None):
+    def qualname(self, schema=None, objname=None):
         """Return the schema-qualified name of self or a related object
 
         :return: string
-
-        No qualification is used if the schema is 'public'.
         """
+        if self.schema == schema and self.name == objname:
+            return self.identifier()
         if objname is None:
             objname = self.name
-        return self.schema == 'public' and quote_id(objname) \
-            or "%s.%s" % (quote_id(self.schema), quote_id(objname))
+        return "%s.%s" % (quote_id(schema or self.schema), quote_id(objname))
 
-    def unqualify(self):
-        """Adjust the schema and table name if the latter is qualified"""
-        if hasattr(self, 'table') and '.' in self.table:
-            (sch, self.table) = split_schema_obj(self.table, self.schema)
+    def unqualify(self, objname):
+        """Adjust the object name if it is qualified
+
+        :param objname: object name
+        :return: unqualified object name
+        """
+        if '.' in objname:
+            (sch, objname) = split_schema_obj(objname, self.schema)
+            assert sch == self.schema
+            return objname
+        else:
+            return objname
 
     def extern_filename(self, ext='yaml'):
         """Return a filename to be used to output external files

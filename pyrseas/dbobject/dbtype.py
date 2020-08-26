@@ -70,8 +70,8 @@ class BaseType(DbType):
         """
         super(BaseType, self).__init__(name, schema, description, owner,
                                        privileges)
-        self.input = input
-        self.output = output
+        self.input = self.unqualify(input)
+        self.output = self.unqualify(output)
         self.receive = receive if receive != '-' else None
         self.send = send if send != '-' else None
         self.typmod_in = typmod_in if typmod_in != '-' else None
@@ -206,7 +206,7 @@ class BaseType(DbType):
             f = getattr(self, attr, None)
             if not f:
                 continue
-            fschema, fname = split_schema_obj(f)
+            fschema, fname = split_schema_obj(f, self.schema)
             rv.append(dbfuncs[fschema, fname, arg])
         return rv
 
@@ -564,7 +564,7 @@ class Range(DbType):
         :param subtype: type of range elements (from rngsubtype)
         """
         super(Range, self).__init__(name, schema, description, owner,
-                                   privileges)
+                                    privileges)
         self.subtype = subtype
         self.canonical = canonical if canonical != '-' else None
         self.subtype_diff = subtype_diff if subtype_diff != '-' else None

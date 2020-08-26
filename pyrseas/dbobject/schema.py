@@ -302,8 +302,7 @@ class SchemaDict(DbObjectDict):
             dbtype = targ[keys]
             if isinstance(dbtype, Domain):
                 link_one(targ, 'types', keys, 'domains')
-            elif isinstance(dbtype, Enum) or isinstance(dbtype, Composite) \
-                 or isinstance(dbtype, BaseType) or isinstance(dbtype, Range):
+            elif isinstance(dbtype, (Enum, Composite, BaseType, Range)):
                 link_one(targ, 'types', keys)
         targ = db.tables
         for keys in targ:
@@ -329,7 +328,10 @@ class SchemaDict(DbObjectDict):
         for key in datacopy:
             if not key.startswith('schema '):
                 raise KeyError("Unrecognized object type: %s" % key)
-            schema = self[key[7:]]
+            sch = key[7:]
+            if sch not in self:
+                continue
+            schema = self[sch]
             if not hasattr(schema, 'datacopy'):
                 schema.datacopy = []
             for tbl in datacopy[key]:

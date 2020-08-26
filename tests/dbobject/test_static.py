@@ -23,13 +23,13 @@ class StaticTableToMapTestCase(DatabaseToMapTestCase):
         self.db.execute(CREATE_STMT)
         for row in TABLE_DATA:
             self.db.execute("INSERT INTO t1 VALUES (%s, %s)", row)
-        cfg = {'datacopy': {'schema public': ['t1']}}
+        cfg = {'datacopy': {'schema sd': ['t1']}}
         dbmap = self.to_map([], config=cfg)
-        assert dbmap['schema public']['table t1'] == {
+        assert dbmap['schema sd']['table t1'] == {
             'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}]}
         recs = []
         with open(os.path.join(self.cfg['files']['data_path'],
-                               "schema.public", FILE_PATH)) as f:
+                               "schema.sd", FILE_PATH)) as f:
             for line in f:
                 (c1, c2) = line.split(',')
                 recs.append((int(c1), c2.rstrip()))
@@ -41,16 +41,16 @@ class StaticTableToMapTestCase(DatabaseToMapTestCase):
                         "PRIMARY KEY (c2, c1))")
         for row in TABLE_DATA2:
             self.db.execute("INSERT INTO t1 VALUES (%s, %s, %s)", row)
-        cfg = {'datacopy': {'schema public': ['t1']}}
+        cfg = {'datacopy': {'schema sd': ['t1']}}
         dbmap = self.to_map([], config=cfg)
-        assert dbmap['schema public']['table t1'] == {
+        assert dbmap['schema sd']['table t1'] == {
             'columns': [{'c1': {'type': 'integer', 'not_null': True}},
                         {'c2': {'type': 'character(3)', 'not_null': True}},
                         {'c3': {'type': 'text'}}],
             'primary_key': {'t1_pkey': {'columns': ['c2', 'c1']}}}
         recs = []
         with open(os.path.join(self.cfg['files']['data_path'],
-                               "schema.public", FILE_PATH)) as f:
+                               "schema.sd", FILE_PATH)) as f:
             for line in f:
                 (c1, c2, c3) = line.split(',')
                 recs.append((int(c1), c2, c3.rstrip()))
@@ -63,15 +63,15 @@ class StaticTableToSqlTestCase(InputMapToSqlTestCase):
     def test_load_static_table(self):
         "Truncate and load a two-column table"
         inmap = self.std_map()
-        inmap['schema public'].update({'table t1': {
+        inmap['schema sd'].update({'table t1': {
             'columns': [{'c1': {'type': 'integer'}},
                         {'c2': {'type': 'text'}}]}})
-        cfg = {'datacopy': {'schema public': ['t1']}}
+        cfg = {'datacopy': {'schema sd': ['t1']}}
         sql = self.to_sql(inmap, [CREATE_STMT], config=cfg)
-        copy_stmt = ("\\copy ", 't1', " from '",
+        copy_stmt = ("\\copy ", 'sd.t1', " from '",
                      os.path.join(self.cfg['files']['data_path'],
-                                  "schema.public", FILE_PATH), "' csv")
-        assert sql[0] == "TRUNCATE ONLY t1"
+                                  "schema.sd", FILE_PATH), "' csv")
+        assert sql[0] == "TRUNCATE ONLY sd.t1"
         assert sql[1] == copy_stmt
 
     def test_load_static_table_fk(self):
@@ -80,7 +80,7 @@ class StaticTableToSqlTestCase(InputMapToSqlTestCase):
                  "CREATE TABLE t2 (c1 integer, c2 integer REFERENCES t1, "
                  "c3 text)"]
         inmap = self.std_map()
-        inmap['schema public'].update({'table t1': {
+        inmap['schema sd'].update({'table t1': {
             'columns': [{'pc1': {'type': 'integer', 'not_null': True}},
                         {'pc2': {'type': 'text'}}],
             'primary_key': {'t1_pkey': {'columns': ['pc1']}}}, 'table t2': {
@@ -89,15 +89,15 @@ class StaticTableToSqlTestCase(InputMapToSqlTestCase):
                             {'c3': {'type': 'text'}}],
                 'foreign_keys': {'t2_c2_fkey': {
                     'columns': ['c2'],
-                    'references': {'schema': 'public', 'table': 't1',
+                    'references': {'schema': 'sd', 'table': 't1',
                                    'columns': ['pc1']}}}}})
-        cfg = {'datacopy': {'schema public': ['t1']}}
+        cfg = {'datacopy': {'schema sd': ['t1']}}
         sql = self.to_sql(inmap, stmts, config=cfg)
-        copy_stmt = ("\\copy ", 't1', " from '",
+        copy_stmt = ("\\copy ", 'sd.t1', " from '",
                      os.path.join(self.cfg['files']['data_path'],
-                                  "schema.public", FILE_PATH), "' csv")
-        assert sql[0] == "ALTER TABLE t2 DROP CONSTRAINT t2_c2_fkey"
-        assert sql[1] == "TRUNCATE ONLY t1"
+                                  "schema.sd", FILE_PATH), "' csv")
+        assert sql[0] == "ALTER TABLE sd.t2 DROP CONSTRAINT t2_c2_fkey"
+        assert sql[1] == "TRUNCATE ONLY sd.t1"
         assert sql[2] == copy_stmt
-        assert sql[3] == "ALTER TABLE t2 ADD CONSTRAINT t2_c2_fkey " \
-            "FOREIGN KEY (c2) REFERENCES t1 (pc1)"
+        assert sql[3] == "ALTER TABLE sd.t2 ADD CONSTRAINT t2_c2_fkey " \
+            "FOREIGN KEY (c2) REFERENCES sd.t1 (pc1)"

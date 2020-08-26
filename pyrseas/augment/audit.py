@@ -30,8 +30,7 @@ class CfgAuditColumn(DbAugment):
                 augdb.triggers[trg].apply(table)
                 for newtrg in table.triggers:
                     fncsig = table.triggers[newtrg].procedure
-                    fnc = fncsig[:fncsig.find('(')]
-                    (sch, fnc) = split_schema_obj(fnc)
+                    (sch, fnc) = split_schema_obj(fncsig, table.schema)
                     if (sch, fncsig) not in currdb.functions:
                         newfunc = augdb.functions[fnc].apply(
                             sch, augdb.columns.col_trans_tbl, augdb)

@@ -19,15 +19,16 @@ Requirements
 
 Pyrseas provides tools for `Postgres <https://www.postgresql.org>`_,
 so obviously you need **Postgres** to start with.  Pyrseas has been
-tested with PG 9.3, 9.4, 9.5, 9.6 and 10, and we'll certainly keep up
+tested with PG 9.4, 9.5, 9.6, 10 and 11, and we'll certainly keep up
 with future releases.  Please refer to the `Postgres download page
 <https://www.postgresql.org/download>`_ to find a distribution for the
 various Linux, Unix and Windows platforms supported.
 
 You will also need **Python**.  Pyrseas was originally developed using
 Python 2 and been tested with `Python <http://www.python.org>`_ 2.7,
-but may also work under 2.6.  It has been ported to Python 3 and
-tested against versions from 3.2 through 3.6.  Python 3 is the
+but that version will no longer be supported effective 1 Jan 2020.  It
+has been ported to Python 3 and
+tested against versions from 3.2 through 3.7.  Python 3 is the
 preferred usage and development environment.  On Linux or \*BSD,
 Python may already be part of your distribution or may be available as
 a package.  For Windows and Mac OS please refer to the `Python
@@ -72,7 +73,7 @@ PGXN provides a ZIP archive which you can download or you can download
 *and* install using the PGXN client (see `PGXN Client`_ below).
 
 The GitHub repository holds the Pyrseas source code, tagged according
-to the various releases, e.g., v0.8.2, and including unreleased
+to the various releases, e.g., v0.9.0, and including unreleased
 modifications.  To access it, you need `Git <https://git-scm.com/>`_
 which is available as a package in most OS distributions or can be
 downloaded from the `Git download page

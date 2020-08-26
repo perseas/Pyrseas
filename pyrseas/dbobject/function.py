@@ -7,11 +7,39 @@
     DbSchemaObject, Function and Aggregate derived from Proc, and
     FunctionDict derived from DbObjectDict.
 """
+from pyrseas.lib.pycompat import PY2
+from pyrseas.yamlutil import MultiLineStr
 from . import DbObjectDict, DbSchemaObject
 from . import commentable, ownable, grantable, split_schema_obj
 
 VOLATILITY_TYPES = {'i': 'immutable', 's': 'stable', 'v': 'volatile'}
 PARALLEL_SAFETY = {'r': 'restricted', 's': 'safe', 'u': 'unsafe'}
+
+
+def split_schema_func(schema, func):
+    """Split a function related to an object from its schema
+
+    :param schema: schema to which the main object belongs
+    :param func: possibly qualified function name
+    :returns: a schema, function tuple, or just the unqualified function name
+    """
+    (sch, fnc) = split_schema_obj(func, schema)
+    if sch != schema:
+        return (sch, fnc)
+    else:
+        return fnc
+
+
+def join_schema_func(func):
+    """Join the schema and function, if needed, to form a qualified name
+
+    :param func: a schema, function tuple, or just an unqualified function name
+    :returns: a possibly-qualified schema.function string
+    """
+    if isinstance(func, tuple):
+        return "%s.%s" % func
+    else:
+        return func
 
 
 class Proc(DbSchemaObject):
@@ -102,9 +130,21 @@ class Function(Proc):
         super(Function, self).__init__(
             name, schema, description, owner, privileges, arguments)
         self.language = language
-        self.source = source
         self.returns = returns
-        self.source = source
+        if source and '\n' in source:
+            newsrc = []
+            for line in source.split('\n'):
+                if line and line[-1] in (' ', '\t'):
+                    line = line.rstrip()
+                newsrc.append(line)
+            source = '\n'.join(newsrc)
+        if PY2:
+            if source is not None:
+                self.source = source.encode('utf_8').decode('utf_8')
+            else:
+                self.source = None
+        else:
+            self.source = MultiLineStr(source)
         self.obj_file = obj_file
         self.configuration = configuration
         self.allargs = allargs
@@ -224,7 +264,7 @@ class Function(Proc):
     @commentable
     @grantable
     @ownable
-    def create(self, dbversion=None, newsrc=None, basetype=False):
+    def create(self, dbversion=None, newsrc=None, basetype=False, returns=None):
         """Return SQL statements to CREATE or REPLACE the function
 
         :param newsrc: new source for a changed function
@@ -278,7 +318,7 @@ class Function(Proc):
         stmts.append("CREATE%s FUNCTION %s(%s) RETURNS %s\n    LANGUAGE %s"
                      "%s%s%s%s%s%s%s\n    AS %s" % (
                          newsrc and " OR REPLACE" or '', self.qualname(),
-                         args, self.returns, self.language, volat, leakproof,
+                         args, returns or self.returns, self.language, volat, leakproof,
                          strict, secdef, cost, rows, config, src))
         return stmts
 
@@ -294,7 +334,11 @@ class Function(Proc):
         """
         stmts = []
         if self.source != infunction.source and infunction.source is not None:
-            stmts.append(self.create(dbversion, infunction.source))
+            stmts.append(self.create(
+                dbversion=dbversion,
+                returns=infunction.returns,
+                newsrc=infunction.source,
+            ))
         if self.leakproof is True:
             if infunction.leakproof is True:
                 stmts.append("ALTER FUNCTION %s LEAKPROOF" % self.identifier())
@@ -333,6 +377,10 @@ class Function(Proc):
             if isinstance(dep, DbType):
                 for attr in ('input', 'output', 'send', 'receive'):
                     fname = getattr(dep, attr, None)
+                    if isinstance(fname, tuple):
+                        fname = "%s.%s" % fname
+                    else:
+                        fname = "%s.%s" % (self.schema, fname)
                     if fname and fname == self.qualname():
                         deps.remove(dep)
                         self._defining = dep    # we may need a shell for this
@@ -392,18 +440,33 @@ class Aggregate(Proc):
         """
         super(Aggregate, self).__init__(
             name, schema, description, owner, privileges, arguments)
-        self.sfunc = sfunc
-        self.stype = stype
+        self.sfunc = split_schema_obj(sfunc, self.schema)
+        self.stype = self.unqualify(stype)
         self.sspace = sspace
-        self.finalfunc = finalfunc if finalfunc != '-' else None
+        if finalfunc is not None and finalfunc != '-':
+            self.finalfunc = split_schema_obj(finalfunc, self.schema)
+        else:
+            self.finalfunc = None
         self.finalfunc_extra = finalfunc_extra
         self.initcond = initcond
         self.sortop = sortop if sortop != '0' else None
-        self.msfunc = msfunc if msfunc != '-' else None
-        self.minvfunc = minvfunc if minvfunc != '-' else None
-        self.mstype = mstype if mstype != '-' else None
+        if msfunc is not None and msfunc != '-':
+            self.msfunc = split_schema_obj(msfunc, self.schema)
+        else:
+            self.msfunc = None
+        if minvfunc is not None and minvfunc != '-':
+            self.minvfunc = split_schema_obj(minvfunc, self.schema)
+        else:
+            self.minvfunc = None
+        if mstype is not None and mstype != '-':
+            self.mstype = self.unqualify(mstype)
+        else:
+            self.mstype = None
         self.msspace = msspace
-        self.mfinalfunc = mfinalfunc if mfinalfunc != '-' else None
+        if mfinalfunc is not None and mfinalfunc != '-':
+            self.mfinalfunc = split_schema_obj(mfinalfunc, self.schema)
+        else:
+            self.mfinalfunc = None
         self.mfinalfunc_extra = mfinalfunc_extra
         self.minitcond = minitcond
         if kind is None:
@@ -504,8 +567,14 @@ class Aggregate(Proc):
         :return: dictionary
         """
         dct = super(Aggregate, self).to_map(db, no_owner, no_privs)
-        for attr in ('initcond', 'finalfunc', 'sortop', 'minitcond',
-                     'mfinalfunc', 'mstype', 'msfunc', 'minvfunc',
+        dct['sfunc'] = self.unqualify(join_schema_func(self.sfunc))
+        for attr in ('finalfunc', 'msfunc', 'minvfunc', 'mfinalfunc'):
+            if getattr(self, attr) is None:
+                dct.pop(attr)
+            else:
+                dct[attr] = self.unqualify(
+                    join_schema_func(getattr(self, attr)))
+        for attr in ('initcond', 'sortop', 'minitcond', 'mstype',
                      'combinefunc', 'serialfunc', 'deserialfunc'):
             if getattr(self, attr) is None:
                 dct.pop(attr)
@@ -532,7 +601,8 @@ class Aggregate(Proc):
         """
         opt_clauses = []
         if self.finalfunc is not None:
-            opt_clauses.append("FINALFUNC = %s" % self.finalfunc)
+            opt_clauses.append("FINALFUNC = %s" %
+                               join_schema_func(self.finalfunc))
         if self.initcond is not None:
             opt_clauses.append("INITCOND = '%s'" % self.initcond)
         if dbversion >= 90600:
@@ -548,15 +618,18 @@ class Aggregate(Proc):
             if self.finalfunc_extra:
                 opt_clauses.append("FINALFUNC_EXTRA")
             if self.msfunc is not None:
-                opt_clauses.append("MSFUNC = %s" % self.msfunc)
+                opt_clauses.append("MSFUNC = %s" %
+                                   join_schema_func(self.msfunc))
             if self.minvfunc is not None:
-                opt_clauses.append("MINVFUNC = %s" % self.minvfunc)
+                opt_clauses.append("MINVFUNC = %s" %
+                                   join_schema_func(self.minvfunc))
             if self.mstype is not None:
                 opt_clauses.append("MSTYPE = %s" % self.mstype)
             if self.msspace > 0:
                 opt_clauses.append("MSSPACE = %d" % self.msspace)
             if self.mfinalfunc is not None:
-                opt_clauses.append("MFINALFUNC = %s" % self.mfinalfunc)
+                opt_clauses.append("MFINALFUNC = %s" %
+                                   join_schema_func(self.mfinalfunc))
             if self.mfinalfunc_extra:
                 opt_clauses.append("MFINALFUNC_EXTRA")
             if self.minitcond is not None:
@@ -573,7 +646,8 @@ class Aggregate(Proc):
                 opt_clauses.append("PARALLEL = %s" % self.parallel.upper())
         return ["CREATE AGGREGATE %s(%s) (\n    SFUNC = %s,"
                 "\n    STYPE = %s%s%s)" % (
-                    self.qualname(), self.arguments, self.sfunc, self.stype,
+                    self.qualname(), self.arguments,
+                    join_schema_func(self.sfunc), self.stype,
                     opt_clauses and ',\n    ' or '',
                     ',\n    '.join(opt_clauses))]
 
@@ -581,7 +655,10 @@ class Aggregate(Proc):
         # List the previous dependencies
         deps = super(Aggregate, self).get_implied_deps(db)
 
-        sch, fnc = split_schema_obj(self.sfunc)
+        if isinstance(self.sfunc, tuple):
+            sch, fnc = self.sfunc
+        else:
+            sch, fnc = self.schema, self.sfunc
         if 'ORDER BY' in self.arguments:
             args = self.arguments.replace(' ORDER BY', ',')
         else:
@@ -590,12 +667,20 @@ class Aggregate(Proc):
             deps.add(db.functions[sch, fnc, args])
         for fn in ('finalfunc', 'mfinalfunc'):
             if getattr(self, fn) is not None:
-                sch, fnc = split_schema_obj(getattr(self, fn))
+                func = getattr(self, fn)
+                if isinstance(func, tuple):
+                    sch, fnc = func
+                else:
+                    sch, fnc = self.schema, func
                 deps.add(db.functions[sch, fnc, self.mstype
                                       if fn[0] == 'm' else self.stype])
         for fn in ('msfunc', 'minvfunc'):
             if getattr(self, fn) is not None:
-                sch, fnc = split_schema_obj(getattr(self, fn))
+                func = getattr(self, fn)
+                if isinstance(func, tuple):
+                    sch, fnc = func
+                else:
+                    sch, fnc = self.schema, func
                 args = self.mstype + ", " + self.arguments
                 deps.add(db.functions[sch, fnc, args])
 
@@ -649,26 +734,13 @@ class ProcDict(DbObjectDict):
         args = ', '.join(args)
         return self.get((schema, name, args))
 
-    def link_refs(self, dbtypes, dbeventtrigs):
+    def link_refs(self, dbtypes):
         """Connect the functions to other objects
 
-        - Connect event triggers to the functions executed
         - Connect defining functions to the type they define
 
         :param dbtypes: dictionary of types
-        :param dbeventtrigs: dictionary of event triggers
-
-        Fills in the `event_triggers` list for each function by
-        traversing the `dbeventtrigs` dictionary.
         """
-        for key in dbeventtrigs:
-            evttrg = dbeventtrigs[key]
-            (sch, fnc) = split_schema_obj(evttrg.procedure)
-            func = self[(sch, fnc[:-2], '')]
-            if not hasattr(func, 'event_triggers'):
-                func.event_triggers = []
-            func.event_triggers.append(evttrg.name)
-
         # TODO: this link is needed from map, not from sql.
         # is this a pattern? I was assuming link_refs would have disappeared
         # but I'm actually still maintaining them. Verify if they are always

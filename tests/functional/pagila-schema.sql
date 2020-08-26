@@ -17,6 +17,8 @@ SET escape_string_warning = off;
 
 -- ALTER PROCEDURAL LANGUAGE plpgsql OWNER TO postgres;
 
+CREATE SCHEMA IF NOT EXISTS public AUTHORIZATION postgres;
+
 SET search_path = public, pg_catalog;
 
 --

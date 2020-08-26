@@ -74,8 +74,7 @@ class Index(DbSchemaObject):
         :param defn: index definition (from pg_get_indexdef)
         """
         super(Index, self).__init__(name, schema, description)
-        self.table = table
-        self.unqualify()
+        self.table = self.unqualify(table)
         self.unique = unique
         self.access_method = access_method
         if defn is not None:
@@ -258,11 +257,11 @@ class Index(DbSchemaObject):
             pred = '\n    WHERE %s' % self.predicate
         stmts.append("CREATE %sINDEX %s ON %s %s(%s)%s%s" % (
             'UNIQUE ' if self.unique else '', quote_id(self.name),
-            self.qualname(self.table), acc, self.key_expressions(), tblspc,
-            pred))
+            self.qualname(self.schema, self.table), acc,
+            self.key_expressions(), tblspc, pred))
         if self.cluster:
             stmts.append("CLUSTER %s USING %s" % (
-                self.qualname(self.table), quote_id(self.name)))
+                self.qualname(self.schema, self.table), quote_id(self.name)))
         return stmts
 
     def alter(self, inindex):
@@ -301,10 +300,11 @@ class Index(DbSchemaObject):
         if inindex.cluster:
             if not self.cluster:
                 stmts.append("CLUSTER %s USING %s" % (
-                    self.qualname(self.table), quote_id(self.name)))
+                    self.qualname(self.schema, self.table),
+                    quote_id(self.name)))
         elif self.cluster:
             stmts.append("ALTER TABLE %s\n    SET WITHOUT CLUSTER" %
-                         self.qualname(self.table))
+                         self.qualname(self.schema, self.table))
         stmts.append(super(Index, self).alter(inindex))
         return stmts
 

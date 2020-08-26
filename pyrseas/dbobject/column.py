@@ -78,7 +78,7 @@ class Column(DbSchemaObject):
                  LEFT JOIN pg_attrdef ON (attrelid = pg_attrdef.adrelid
                       AND attnum = pg_attrdef.adnum)
                  LEFT JOIN pg_collation l ON (attcollation = l.oid)
-            WHERE relkind in ('c', 'r', 'f', 'p')
+            WHERE relkind in ('c', 'r', 'f', 'p', 'v', 'm')
               AND (nspname != 'pg_catalog' AND nspname != 'information_schema')
               AND attnum > 0
            ORDER BY nspname, relname, attnum"""
@@ -121,7 +121,7 @@ class Column(DbSchemaObject):
         """
         if self.dropped:
             return None
-        dct = super(Column, self).to_map(db, False, no_privs)
+        dct = super(Column, self).to_map(db, False, no_privs, deepcopy=False)
         del dct['number'], dct['name'], dct['dropped']
         if not self.not_null:
             dct.pop('not_null')

@@ -7,7 +7,8 @@
     DbObject, and EventTriggerDict derived from DbObjectDict.
 """
 from . import DbObjectDict, DbObject
-from . import quote_id, commentable, split_schema_obj
+from . import quote_id, commentable
+from .function import split_schema_func, join_schema_func
 
 EXEC_PROC = 'EXECUTE PROCEDURE '
 
@@ -36,7 +37,9 @@ class EventTrigger(DbObject):
         super(EventTrigger, self).__init__(name, description)
         self._init_own_privs(owner, [])
         self.event = event
-        self.procedure = procedure
+        if procedure[-2:] == '()':
+            procedure = procedure[:-2]
+        self.procedure = split_schema_func(None, procedure)
         if enabled is False or enabled is True:
             self.enabled = enabled
         elif len(enabled) == 1:
@@ -85,6 +88,7 @@ class EventTrigger(DbObject):
         :return: dictionary
         """
         dct = super(EventTrigger, self).to_map(db, no_owner)
+        dct['procedure'] = join_schema_func(self.procedure) + "()"
         if self.tags is None:
             dct.pop('tags')
         return dct
@@ -99,14 +103,14 @@ class EventTrigger(DbObject):
         if self.tags is not None:
             filter = "\n    WHEN tag IN (%s)" % ", ".join(
                 ["'%s'" % tag for tag in self.tags])
-        return ["CREATE %s %s\n    ON %s%s\n    EXECUTE PROCEDURE %s" % (
+        return ["CREATE %s %s\n    ON %s%s\n    EXECUTE PROCEDURE %s()" % (
                 self.objtype, quote_id(self.name), self.event, filter,
-                self.procedure)]
+                join_schema_func(self.procedure))]
 
     def get_implied_deps(self, db):
         deps = super(EventTrigger, self).get_implied_deps(db)
-        sch, fnc = split_schema_obj(self.procedure)
-        deps.add(db.functions[(sch, fnc[:-2], '')])
+        sch, fnc = self.procedure
+        deps.add(db.functions[(sch, fnc, '')])
         return deps
 
 

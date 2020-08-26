@@ -8,7 +8,7 @@ from pyrseas.testutils import InputMapToSqlTestCase, fix_indent
 
 CREATE_TABLE_STMT = "CREATE TABLE t1 (c1 integer, c2 text)"
 CREATE_STMT = "CREATE INDEX t1_idx ON t1 (c1)"
-COMMENT_STMT = "COMMENT ON INDEX t1_idx IS 'Test index t1_idx'"
+COMMENT_STMT = "COMMENT ON INDEX sd.t1_idx IS 'Test index t1_idx'"
 
 
 class IndexToMapTestCase(DatabaseToMapTestCase):
@@ -20,7 +20,7 @@ class IndexToMapTestCase(DatabaseToMapTestCase):
         expmap = {'columns': [{'c1': {'type': 'integer'}},
                               {'c2': {'type': 'text'}}],
                   'indexes': {'t1_idx': {'keys': ['c1']}}}
-        assert dbmap['schema public']['table t1'] == expmap
+        assert dbmap['schema sd']['table t1'] == expmap
 
     def test_index_2(self):
         "Map a two-column index"
@@ -32,7 +32,7 @@ class IndexToMapTestCase(DatabaseToMapTestCase):
                               {'c3': {'type': 'text'}}],
                   'indexes': {'t1_idx': {'keys': ['c1', 'c2'],
                                          'unique': True}}}
-        assert dbmap['schema public']['table t1'] == expmap
+        assert dbmap['schema sd']['table t1'] == expmap
 
     def test_index_3(self):
         "Map a table with a unique index and a non-unique GIN index"
@@ -47,7 +47,7 @@ class IndexToMapTestCase(DatabaseToMapTestCase):
                                            'unique': True},
                               't1_idx_2': {'keys': ['c3'],
                                            'access_method': 'gin'}}}
-        assert dbmap['schema public']['table t1'] == expmap
+        assert dbmap['schema sd']['table t1'] == expmap
 
     def test_map_index_partial(self):
         "Map a table with a partial index"
@@ -57,7 +57,7 @@ class IndexToMapTestCase(DatabaseToMapTestCase):
                               {'c2': {'type': 'text'}}],
                   'indexes': {'t1_idx': {'keys': ['c2'],
                                          'predicate': '(c1 > 42)'}}}
-        assert dbmap['schema public']['table t1'] == expmap
+        assert dbmap['schema sd']['table t1'] == expmap
 
     def test_index_function_simple(self):
         "Map an index using a function -- issue #98"
@@ -67,7 +67,7 @@ class IndexToMapTestCase(DatabaseToMapTestCase):
                               {'c2': {'type': 'text'}}],
                   'indexes': {'t1_idx': {'keys': [
                       {'lower(c2)': {'type': 'expression'}}]}}}
-        assert dbmap['schema public']['table t1'] == expmap
+        assert dbmap['schema sd']['table t1'] == expmap
 
     def test_index_function_complex(self):
         "Map indexes using nested functions and complex arguments"
@@ -91,7 +91,7 @@ class IndexToMapTestCase(DatabaseToMapTestCase):
                                 'type': 'expression'}},
                                {"date_part('day'::text, c3)": {
                                 'type': 'expression'}}]}}}
-        assert dbmap['schema public']['table t1'] == expmap
+        assert dbmap['schema sd']['table t1'] == expmap
 
     def test_index_col_opts(self):
         "Map an index with various column options"
@@ -104,7 +104,7 @@ class IndexToMapTestCase(DatabaseToMapTestCase):
                   'indexes': {'t1_idx': {'keys': [
                       {'c1': {'opclass': 'cidr_ops', 'nulls': 'first'}},
                       {'c2': {'order': 'desc'}}]}}}
-        assert dbmap['schema public']['table t1'] == expmap
+        assert dbmap['schema sd']['table t1'] == expmap
 
     def test_index_mixed(self):
         "Map indexes using functions, a regular column and expressions"
@@ -127,7 +127,7 @@ class IndexToMapTestCase(DatabaseToMapTestCase):
                                 'type': 'expression'}},
                                {"(((c3 || ' '::text) || c2))": {
                                 'type': 'expression'}}]}}}
-        assert dbmap['schema public']['table t1'] == expmap
+        assert dbmap['schema sd']['table t1'] == expmap
 
     def test_map_index_cluster(self):
         "Map a table with an index and cluster on it"
@@ -136,12 +136,12 @@ class IndexToMapTestCase(DatabaseToMapTestCase):
         expmap = {'columns': [{'c1': {'type': 'integer'}},
                               {'c2': {'type': 'text'}}],
                   'indexes': {'t1_idx': {'keys': ['c1'], 'cluster': True}}}
-        assert dbmap['schema public']['table t1'] == expmap
+        assert dbmap['schema sd']['table t1'] == expmap
 
     def test_map_index_comment(self):
         "Map an index comment"
         dbmap = self.to_map([CREATE_TABLE_STMT, CREATE_STMT, COMMENT_STMT])
-        assert dbmap['schema public']['table t1']['indexes']['t1_idx'][
+        assert dbmap['schema sd']['table t1']['indexes']['t1_idx'][
             'description'] == 'Test index t1_idx'
 
     def test_map_multicol_index_with_exprs(self):
@@ -156,7 +156,7 @@ class IndexToMapTestCase(DatabaseToMapTestCase):
         fmt = "(\nCASE\n    %s\n    %s\nEND)"
         if self.db.version < 90300:
             fmt = "(CASE %s %s END)"
-        assert dbmap['schema public']['table holiday']['indexes'][
+        assert dbmap['schema sd']['table holiday']['indexes'][
             'unique_date'] == {
                 'keys': [
                     {fmt % ("WHEN recurring THEN (0)::double precision",
@@ -173,29 +173,29 @@ class IndexToSqlTestCase(InputMapToSqlTestCase):
     def test_create_table_with_index(self):
         "Create new table with a single column index"
         inmap = self.std_map()
-        inmap['schema public'].update({'table t1': {
+        inmap['schema sd'].update({'table t1': {
             'columns': [{'c1': {'type': 'integer'}},
                         {'c2': {'type': 'text'}}],
             'indexes': {'t1_idx': {'keys': ['c1']}}}})
         sql = self.to_sql(inmap)
-        assert fix_indent(sql[0]) == "CREATE TABLE t1 (c1 integer, c2 text)"
-        assert sql[1] == "CREATE INDEX t1_idx ON t1 (c1)"
+        assert fix_indent(sql[0]) == "CREATE TABLE sd.t1 (c1 integer, c2 text)"
+        assert sql[1] == "CREATE INDEX t1_idx ON sd.t1 (c1)"
 
     def test_add_index(self):
         "Add a two-column unique index to an existing table"
         stmts = ["CREATE TABLE t1 (c1 INTEGER NOT NULL, "
                  "c2 INTEGER NOT NULL, c3 TEXT)"]
         inmap = self.std_map()
-        inmap['schema public'].update({'table t1': {
+        inmap['schema sd'].update({'table t1': {
             'columns': [{'c1': {'type': 'integer', 'not_null': True}},
                         {'c2': {'type': 'integer', 'not_null': True}},
                         {'c3': {'type': 'text'}}],
             'indexes': {'t1_idx': {'keys': ['c2', 'c1'], 'unique': True}}}})
         sql = self.to_sql(inmap, stmts)
-        assert sql == ["CREATE UNIQUE INDEX t1_idx ON t1 (c2, c1)"]
+        assert sql == ["CREATE UNIQUE INDEX t1_idx ON sd.t1 (c2, c1)"]
 
     def test_add_index_schema(self):
-        "Add an index to an existing table in a non-public schema"
+        "Add an index to an existing table in a non-default schema"
         stmts = ["CREATE SCHEMA s1",
                  "CREATE TABLE s1.t1 (c1 INTEGER NOT NULL, "
                  "c2 INTEGER NOT NULL, c3 TEXT)"]
@@ -213,19 +213,19 @@ class IndexToSqlTestCase(InputMapToSqlTestCase):
         stmts = ["CREATE TABLE t1 (c1 INTEGER NOT NULL, "
                  "c2 INTEGER NOT NULL, c3 TEXT)"]
         inmap = self.std_map()
-        inmap['schema public'].update({'table t1': {
+        inmap['schema sd'].update({'table t1': {
             'columns': [{'c1': {'type': 'integer', 'not_null': True}},
                         {'c2': {'type': 'integer', 'not_null': True}},
                         {'c3': {'type': 'text'}}],
             'indexes': {'t1_idx': {'columns': ['c2', 'c1'], 'unique': True,
                                    'access_method': 'btree'}}}})
         sql = self.to_sql(inmap, stmts)
-        assert sql == ["CREATE UNIQUE INDEX t1_idx ON t1 (c2, c1)"]
+        assert sql == ["CREATE UNIQUE INDEX t1_idx ON sd.t1 (c2, c1)"]
 
     def test_bad_index(self):
         "Fail on creating an index without columns or expression"
         inmap = self.std_map()
-        inmap['schema public'].update({'table t1': {
+        inmap['schema sd'].update({'table t1': {
             'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}],
             'indexes': {'t1_idx': {'access_method': 'btree'}}}})
         with pytest.raises(KeyError):
@@ -234,41 +234,41 @@ class IndexToSqlTestCase(InputMapToSqlTestCase):
     def test_create_partial(self):
         "Create a partial index"
         inmap = self.std_map()
-        inmap['schema public'].update({'table t1': {
+        inmap['schema sd'].update({'table t1': {
             'columns': [{'c1': {'type': 'integer'}},
                         {'c2': {'type': 'text'}}],
             'indexes': {'t1_idx': {'keys': ['c2'],
                                    'predicate': '(c1 > 42)'}}}})
         sql = self.to_sql(inmap, [CREATE_TABLE_STMT])
         assert fix_indent(sql[0]) == \
-            "CREATE INDEX t1_idx ON t1 (c2) WHERE (c1 > 42)"
+            "CREATE INDEX t1_idx ON sd.t1 (c2) WHERE (c1 > 42)"
 
     def test_create_index_function(self):
         "Create an index which uses a function"
         inmap = self.std_map()
-        inmap['schema public'].update({'table t1': {
+        inmap['schema sd'].update({'table t1': {
             'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}],
             'indexes': {'t1_idx': {'keys': [{
                 'lower(c2)': {'type': 'expression'}}]}}}})
         sql = self.to_sql(inmap)
-        assert sql[1] == "CREATE INDEX t1_idx ON t1 (lower(c2))"
+        assert sql[1] == "CREATE INDEX t1_idx ON sd.t1 (lower(c2))"
 
     def test_create_index_col_opts(self):
         "Create table and an index with column options"
         inmap = self.std_map()
-        inmap['schema public'].update({'table t1': {
+        inmap['schema sd'].update({'table t1': {
             'columns': [{'c1': {'type': 'cidr'}}, {'c2': {'type': 'text'}}],
             'indexes': {'t1_idx': {'keys': [{'c1': {
                 'opclass': 'cidr_ops', 'nulls': 'first'}}, 'c2']}}}})
         sql = self.to_sql(inmap)
-        assert sql[1] == "CREATE INDEX t1_idx ON t1 " \
+        assert sql[1] == "CREATE INDEX t1_idx ON sd.t1 " \
             "(c1 cidr_ops NULLS FIRST, c2)"
 
     def test_create_index_mixed(self):
         "Create indexes using functions, a regular column and expressions"
         stmts = ["CREATE TABLE t1 (c1 integer, c2 text, c3 text)"]
         inmap = self.std_map()
-        inmap['schema public'].update({'table t1': {
+        inmap['schema sd'].update({'table t1': {
             'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}},
                         {'c3': {'type': 'text'}}],
             'indexes': {'t1_idx': {'keys': [
@@ -280,46 +280,46 @@ class IndexToSqlTestCase(InputMapToSqlTestCase):
                     {"(((c3 || ' '::text) || c2))": {
                         'type': 'expression'}}]}}}})
         sql = sorted(self.to_sql(inmap, stmts))
-        assert sql[0] == "CREATE INDEX t1_idx ON t1 (" \
+        assert sql[0] == "CREATE INDEX t1_idx ON sd.t1 (" \
             "btrim(c3, 'x'::text) NULLS FIRST, c1, lower(c2) DESC)"
-        assert sql[1] == "CREATE INDEX t1_idx2 ON t1 (" \
+        assert sql[1] == "CREATE INDEX t1_idx2 ON sd.t1 (" \
             "(((c2 || ', '::text) || c3)), (((c3 || ' '::text) || c2)))"
 
     def test_create_table_with_index_clustered(self):
         "Create new table clustered on a single column index"
         inmap = self.std_map()
-        inmap['schema public'].update({'table t1': {
+        inmap['schema sd'].update({'table t1': {
             'columns': [{'c1': {'type': 'integer'}},
                         {'c2': {'type': 'text'}}],
             'indexes': {'t1_idx': {'keys': ['c1'], 'cluster': True}}}})
         sql = self.to_sql(inmap)
-        assert sql[2] == "CLUSTER t1 USING t1_idx"
+        assert sql[2] == "CLUSTER sd.t1 USING t1_idx"
 
     def test_cluster_table_with_index(self):
         "Change a table with an index to cluster on it"
         stmts = [CREATE_TABLE_STMT, CREATE_STMT]
         inmap = self.std_map()
-        inmap['schema public'].update({'table t1': {
+        inmap['schema sd'].update({'table t1': {
             'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}],
             'indexes': {'t1_idx': {'keys': ['c1'], 'cluster': True}}}})
         sql = self.to_sql(inmap, stmts)
-        assert sql[0] == "CLUSTER t1 USING t1_idx"
+        assert sql[0] == "CLUSTER sd.t1 USING t1_idx"
 
     def test_uncluster_table_with_index(self):
         "Change a table clustered on an index to remove cluster"
         stmts = [CREATE_TABLE_STMT, CREATE_STMT, "CLUSTER t1 USING t1_idx"]
         inmap = self.std_map()
-        inmap['schema public'].update({'table t1': {
+        inmap['schema sd'].update({'table t1': {
             'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}],
             'indexes': {'t1_idx': {'keys': ['c1']}}}})
         sql = self.to_sql(inmap, stmts)
-        assert fix_indent(sql[0]) == "ALTER TABLE t1 SET WITHOUT CLUSTER"
+        assert fix_indent(sql[0]) == "ALTER TABLE sd.t1 SET WITHOUT CLUSTER"
 
     def test_comment_on_index(self):
         "Create a comment for an existing index"
         stmts = [CREATE_TABLE_STMT, CREATE_STMT]
         inmap = self.std_map()
-        inmap['schema public'].update({'table t1': {
+        inmap['schema sd'].update({'table t1': {
             'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}],
             'indexes': {'t1_idx': {'keys': ['c1'],
                                    'description': 'Test index t1_idx'}}}})
@@ -330,41 +330,41 @@ class IndexToSqlTestCase(InputMapToSqlTestCase):
         "Drop the comment on an existing index"
         stmts = [CREATE_TABLE_STMT, CREATE_STMT, COMMENT_STMT]
         inmap = self.std_map()
-        inmap['schema public'].update({'table t1': {
+        inmap['schema sd'].update({'table t1': {
             'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}],
             'indexes': {'t1_idx': {'keys': ['c1']}}}})
         sql = self.to_sql(inmap, stmts)
-        assert sql == ["COMMENT ON INDEX t1_idx IS NULL"]
+        assert sql == ["COMMENT ON INDEX sd.t1_idx IS NULL"]
 
     def test_change_index_comment(self):
         "Change existing comment on an index"
         stmts = [CREATE_TABLE_STMT, CREATE_STMT, COMMENT_STMT]
         inmap = self.std_map()
-        inmap['schema public'].update({'table t1': {
+        inmap['schema sd'].update({'table t1': {
             'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}],
             'indexes': {'t1_idx': {'keys': ['c1'],
                                    'description': 'Changed index t1_idx'}}}})
         sql = self.to_sql(inmap, stmts)
-        assert sql == ["COMMENT ON INDEX t1_idx IS 'Changed index t1_idx'"]
+        assert sql == ["COMMENT ON INDEX sd.t1_idx IS 'Changed index t1_idx'"]
 
     def test_change_index_keys(self):
         "Change keys of an existing index"
         stmts = [CREATE_TABLE_STMT, CREATE_STMT]
         inmap = self.std_map()
-        inmap['schema public'].update({'table t1': {
+        inmap['schema sd'].update({'table t1': {
             'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}],
             'indexes': {'t1_idx': {'keys': ['btrim(c1)']}}}})
         sql = self.to_sql(inmap, stmts)
-        assert sql == ["DROP INDEX t1_idx",
-                       "CREATE INDEX t1_idx ON t1 (btrim(c1))"]
+        assert sql == ["DROP INDEX sd.t1_idx",
+                       "CREATE INDEX t1_idx ON sd.t1 (btrim(c1))"]
 
     def test_change_order_index_keys(self):
         "Change keys order of an existing index"
         stmts = [CREATE_TABLE_STMT, "CREATE INDEX t1_idx ON t1 (c1, c2)"]
         inmap = self.std_map()
-        inmap['schema public'].update({'table t1': {
+        inmap['schema sd'].update({'table t1': {
             'columns': [{'c1': {'type': 'integer'}}, {'c2': {'type': 'text'}}],
             'indexes': {'t1_idx': {'keys': ['c2', 'c1']}}}})
         sql = self.to_sql(inmap, stmts)
-        assert sql == ["DROP INDEX t1_idx",
-                       "CREATE INDEX t1_idx ON t1 (c2, c1)"]
+        assert sql == ["DROP INDEX sd.t1_idx",
+                       "CREATE INDEX t1_idx ON sd.t1 (c2, c1)"]

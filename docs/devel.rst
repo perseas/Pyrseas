@@ -59,8 +59,8 @@ Programming Language
 
 To contribute to Pyrseas, you need at least one version of `Python
 <https://www.python.org>`_.  You can develop using Python 3, but since
-we will continue supporting Python 2 until its end-of-life, you'll
-want to install Python 2.7 in addition to Python 3.6 or 3.5.
+we will continue supporting Python 2 until its end-of-life, you can
+also install Python 2.7 in addition to Python 3.7 or 3.6.
 
 If Python is not already available on your machine, either `download
 and install one or both <https://www.python.org/downloads/>`_ of the
@@ -74,7 +74,7 @@ Database Installation
 
 To participate in Pyrseas development, you'll also need one or more
 installations of `Postgres <https://www.postgresql.org>`_, versions
-10, 9.6, 9.5, 9.4 or 9.3.  If you only have limited space, it is
+11, 10, 9.6, 9.5 or 9.4.  If you only have limited space, it is
 preferable to install one of the latest two versions.
 
 The versions can be obtained as binary packages or installers from the
@@ -100,6 +100,6 @@ Windows 64-bit, please read the note under :ref:`installer`.
 
 To easily run the Pyrseas tests against various Python/Postgres
 version combinations, you will need `pytest
-<https://docs.pytest.org/en/latest/>`_ and `Tox
+<https://pytest.readthedocs.io/en/latest/>`_ and `Tox
 <https://tox.readthedocs.io/en/latest/>`_.  Please refer to
 :ref:`testing` for more information.

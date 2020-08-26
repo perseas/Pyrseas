@@ -147,7 +147,9 @@ The map returned by :meth:`to_map` and expected as argument by
 :meth:`ClassDict.from_map` has a structure similar to the following::
 
   {'view v1':
-      {'definition': " SELECT ...;",
+      {'columns': [{'c1': {'type': 'integer'}},
+                   {'c2': {'type': 'date'}}],
+       'definition': " SELECT ...;",
        'description': "this is the comment for view v1"
       }
   }
