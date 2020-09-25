@@ -236,7 +236,7 @@ class Trigger(DbSchemaObject):
         # has always none (they are accessed through `tg_argv`).
         if isinstance(self.procedure, tuple):
             fschema, fname = self.procedure
-            deps.add(db.functions[fschema, fname, self.arguments or ''])
+            deps.add(db.functions[fschema, fname, ''])
 
         return deps
 
