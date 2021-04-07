@@ -522,7 +522,7 @@ class Database(object):
             fetch_reserved_words(self.dbconn)
 
         langs = [lang[0] for lang in self.dbconn.fetchall(
-            "SELECT tmplname FROM pg_pltemplate")]
+            "SELECT name FROM pg_available_extensions() INNER JOIN pg_language ON name = lanname;")]
         self.from_map(input_map, langs)
         if opts.revert:
             (self.db, self.ndb) = (self.ndb, self.db)
