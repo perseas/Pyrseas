@@ -121,7 +121,7 @@ or::
 
   yamltodb --update mymovies moviesdb.yaml
 
-To generate the statements directly from the ouput of
+To generate the statements directly from the output of
 :program:`dbtoyaml` (against a different database), with statements
 enclosed in a single transaction, and save the statements in a file
 named ``mymovies.sql``::
