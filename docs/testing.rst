@@ -35,7 +35,7 @@ defaults described above:
  - PYRSEAS_TEST_DB
  - PYRSEAS_TEST_USER
  - PYRSEAS_TEST_HOST
- - PYRSEAS_TEST_USER
+ - PYRSEAS_TEST_PORT
 
 Restrictions
 ------------
