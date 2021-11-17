@@ -99,6 +99,9 @@ class Sequence(DbClass):
                  JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
             WHERE relkind = 'S'
               AND nspname != 'pg_catalog' AND nspname != 'information_schema'
+              AND c.oid NOT IN (
+                  SELECT objid FROM pg_depend WHERE deptype = 'e'
+                  AND classid = 'pg_class'::regclass)
             ORDER BY nspname, relname"""
 
     @staticmethod
@@ -407,6 +410,9 @@ class Table(DbClass):
                  LEFT JOIN pg_tablespace t ON (reltablespace = t.oid)%s
             WHERE relkind %s AND relpersistence != 't'
               AND nspname != 'pg_catalog' AND nspname != 'information_schema'
+              AND c.oid NOT IN (
+                  SELECT objid FROM pg_depend WHERE deptype = 'e'
+                  AND classid = 'pg_class'::regclass)
             ORDER BY nspname, relname"""
         if dbversion < 100000:
             return qry % ("NULL", "NULL", "NULL", "NULL", "", "= 'r'")

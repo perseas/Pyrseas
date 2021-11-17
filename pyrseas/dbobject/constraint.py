@@ -146,8 +146,7 @@ class CheckConstraint(Constraint):
                   AND nspname NOT LIKE 'pg_toast_temp\_%'
               AND contype = 'c'
               AND contypid NOT IN (SELECT objid FROM pg_depend
-                                   WHERE deptype = 'e'
-                                     AND classid = 'pg_type'::regclass)
+                  WHERE deptype = 'e' AND classid = 'pg_type'::regclass)
             ORDER BY schema, "table", name"""
 
     @staticmethod
@@ -279,8 +278,9 @@ class PrimaryKey(Constraint):
                   AND nspname NOT LIKE 'pg_toast_temp\_%'
               AND contype = 'p'
               AND contypid NOT IN (SELECT objid FROM pg_depend
-                                   WHERE deptype = 'e'
-                                     AND classid = 'pg_type'::regclass)
+                  WHERE deptype = 'e' AND classid = 'pg_type'::regclass)
+              AND conrelid NOT IN (SELECT objid FROM pg_depend
+                  WHERE deptype = 'e' AND classid = 'pg_class'::regclass)
             ORDER BY schema, "table", name"""
 
     @staticmethod
@@ -429,8 +429,9 @@ class ForeignKey(Constraint):
                   AND nspname NOT LIKE 'pg_toast_temp\_%'
               AND contype = 'f'
               AND contypid NOT IN (SELECT objid FROM pg_depend
-                                   WHERE deptype = 'e'
-                                     AND classid = 'pg_type'::regclass)
+                  WHERE deptype = 'e' AND classid = 'pg_type'::regclass)
+              AND conrelid NOT IN (SELECT objid FROM pg_depend
+                  WHERE deptype = 'e' AND classid = 'pg_class'::regclass)
             ORDER BY schema, "table", name"""
 
     @staticmethod
@@ -643,8 +644,9 @@ class UniqueConstraint(Constraint):
                   AND nspname NOT LIKE 'pg_toast_temp\_%'
               AND contype = 'u'
               AND contypid NOT IN (SELECT objid FROM pg_depend
-                                   WHERE deptype = 'e'
-                                     AND classid = 'pg_type'::regclass)
+                  WHERE deptype = 'e' AND classid = 'pg_type'::regclass)
+              AND conrelid NOT IN (SELECT objid FROM pg_depend
+                  WHERE deptype = 'e' AND classid = 'pg_class'::regclass)
             ORDER BY schema, "table", name"""
 
     @staticmethod
