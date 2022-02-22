@@ -22,7 +22,9 @@ class ExtensionToMapTestCase(DatabaseToMapTestCase):
             return '1.1'
         elif self.db.version < 110000:
             return '1.3'
-        return '1.4'
+        elif self.db.version < 130000:
+            return '1.4'
+        return '1.5'
 
     def test_map_extension(self):
         "Map an existing extension"

@@ -33,6 +33,8 @@ class LanguageToMapTestCase(DatabaseToMapTestCase):
 
     def test_map_language_bug_103(self):
         "Test a function created with language other than plpgsql/plperl"
+        if self.db.version >= 130000:
+            self.skipTest('Only available before PG 13')
         try:
             self.to_map(["CREATE OR REPLACE LANGUAGE plpython3u"])
         except psycopg2.OperationalError as e:

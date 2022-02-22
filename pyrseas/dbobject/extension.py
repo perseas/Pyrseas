@@ -98,6 +98,15 @@ class Extension(DbObject):
         """
         return super(Extension, self).alter(inobj, no_owner=no_owner)
 
+KNOWN_LANGS = [
+    "plpgsql",
+    "pltcl",
+    "pltclu",
+    "plperl",
+    "plperlu",
+    "plpythonu",
+    "plpython2u",
+    "plpython3u"]
 
 class ExtensionDict(DbObjectDict):
     "The collection of extensions in a database"
@@ -110,11 +119,10 @@ class ExtensionDict(DbObjectDict):
             self[obj.key()] = obj
             self.by_oid[obj.oid] = obj
 
-    def from_map(self, inexts, langtempls, newdb):
+    def from_map(self, inexts, newdb):
         """Initalize the dictionary of extensions by converting the input map
 
         :param inexts: YAML map defining the extensions
-        :param langtempls: list of language templates
         :param newdb: dictionary of input database
         """
         for key in inexts:
@@ -123,7 +131,7 @@ class ExtensionDict(DbObjectDict):
             name = key[10:]
             inobj = inexts[key]
             self[name] = Extension.from_map(name, inobj)
-            if self[name].name in langtempls:
+            if self[name].name in KNOWN_LANGS:
                 lang = {'language %s' % self[name].name: {
                     '_ext': 'e', 'owner': self[name].owner}}
                 newdb.languages.from_map(lang)
