@@ -6,7 +6,7 @@ Name
 
 dbtoyaml -- extract the schema of a Postgres database in YAML format
 
-Synopsys
+Synopsis
 --------
 
 ::

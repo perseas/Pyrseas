@@ -38,7 +38,7 @@ class AugClassDict(DbAugmentDict):
     cls = AugDbClass
 
     def from_map(self, schema, inobjs, augdb):
-        """Initalize the dictionary of tables by converting the input map
+        """Initialize the dictionary of tables by converting the input map
 
         :param schema: schema owning the tables
         :param inobjs: YAML map defining the schema objects

@@ -560,7 +560,7 @@ class Aggregate(Proc):
         return obj
 
     def to_map(self, db, no_owner, no_privs):
-        """Convert an agggregate to a YAML-suitable format
+        """Convert an aggregate to a YAML-suitable format
 
         :param no_owner: exclude aggregate owner information
         :param no_privs: exclude privilege information
@@ -700,7 +700,7 @@ class ProcDict(DbObjectDict):
                 self.by_oid[obj.oid] = obj
 
     def from_map(self, schema, infuncs):
-        """Initalize the dictionary of functions by converting the input map
+        """Initialize the dictionary of functions by converting the input map
 
         :param schema: schema owning the functions
         :param infuncs: YAML map defining the functions

@@ -7,7 +7,7 @@ Name
 yamltodb -- generate SQL statements to update a Postgres database to
 match the schema specified in a YAML file
 
-Synopsys
+Synopsis
 --------
 
 ::

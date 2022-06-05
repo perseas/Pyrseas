@@ -120,7 +120,7 @@ class ExtensionDict(DbObjectDict):
             self.by_oid[obj.oid] = obj
 
     def from_map(self, inexts, newdb):
-        """Initalize the dictionary of extensions by converting the input map
+        """Initialize the dictionary of extensions by converting the input map
 
         :param inexts: YAML map defining the extensions
         :param newdb: dictionary of input database

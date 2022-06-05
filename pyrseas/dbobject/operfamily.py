@@ -99,7 +99,7 @@ class OperatorFamilyDict(DbObjectDict):
     cls = OperatorFamily
 
     def from_map(self, schema, inopfams):
-        """Initalize the dict of operator families by converting the input map
+        """Initialize the dict of operator families by converting the input map
 
         :param schema: schema owning the operators
         :param inopfams: YAML map defining the operator families

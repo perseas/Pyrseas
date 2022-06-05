@@ -246,7 +246,7 @@ class TriggerDict(DbObjectDict):
     cls = Trigger
 
     def from_map(self, table, intriggers):
-        """Initalize the dictionary of triggers by converting the input map
+        """Initialize the dictionary of triggers by converting the input map
 
         :param table: table owning the triggers
         :param intriggers: YAML map defining the triggers

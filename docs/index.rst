@@ -13,7 +13,7 @@ Features
   and other objects (metadata), suitable for storing in a version
   control repository
 
-- Generates SQL statements to modify a database so that it willl match
+- Generates SQL statements to modify a database so that it will match
   an input YAML/JSON specification
 
 - Generates an augmented YAML description of a PostgreSQL database
