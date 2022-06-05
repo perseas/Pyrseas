@@ -2,7 +2,7 @@ Known Issues
 ============
 
 The following summarizes notable deficiencies in the current release
-of the Pyrseas utiltities.  For further details please refer to the
+of the Pyrseas utilities.  For further details please refer to the
 discussions in the `Pyrseas issue tracker
 <https://github.com/perseas/Pyrseas/issues>`_.  Suggestions or patches
 to deal with these issues are welcome.
@@ -110,8 +110,8 @@ additional arrays for collation information, operator classes and
 index options such as ``ASC`` or ``DESC``.  Although the
 ``pg_get_indexdef`` system catalog function can be used to obtain a
 full ``CREATE INDEX`` statement, Pyrseas has chosen to specify each
-column or expresssion separately in the YAML definitions.  This has
+column or expression separately in the YAML definitions.  This has
 not been satisfactory in complex cases (see for example issue `170
 <https://github.com/perseas/Pyrseas/issues/170>`_) and is an area
 requiring further attention.  A similar situation exists for table
-partitioning using expresssions.
+partitioning using expressions.

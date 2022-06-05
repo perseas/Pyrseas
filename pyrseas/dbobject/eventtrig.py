@@ -126,7 +126,7 @@ class EventTriggerDict(DbObjectDict):
         super(EventTriggerDict, self)._from_catalog()
 
     def from_map(self, intriggers, newdb):
-        """Initalize the dictionary of triggers by converting the input map
+        """Initialize the dictionary of triggers by converting the input map
 
         :param intriggers: YAML map defining the event triggers
         :param newdb: dictionary of input database

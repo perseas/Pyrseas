@@ -212,7 +212,7 @@ class OperatorDict(DbObjectDict):
         return self.get((schema, name) + tuple(args))
 
     def from_map(self, schema, inopers):
-        """Initalize the dictionary of operators by converting the input map
+        """Initialize the dictionary of operators by converting the input map
 
         :param schema: schema owning the operators
         :param inopers: YAML map defining the operators

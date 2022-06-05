@@ -666,7 +666,7 @@ class TypeDict(DbObjectDict):
                 self.by_oid[obj.oid] = obj
 
     def from_map(self, schema, inobjs, newdb):
-        """Initalize the dictionary of types by converting the input map
+        """Initialize the dictionary of types by converting the input map
 
         :param schema: schema owning the types
         :param inobjs: YAML map defining the schema objects
@@ -706,7 +706,7 @@ class TypeDict(DbObjectDict):
     def find(self, obj):
         """Find a type given its name.
 
-        The name can contain modifiers such as arrays '[]' and attibutes '(3)'
+        The name can contain modifiers such as arrays '[]' and attributes '(3)'
 
         Return None if not found.
         """

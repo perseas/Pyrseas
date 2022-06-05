@@ -321,7 +321,7 @@ class DbObject(object):
         This is used by :meth:`comment`, :meth:`alter_owner` and
         :meth:`drop` to generate SQL syntax referring to the object.
         It does not include the object type, but it may include (in
-        overriden methods) other elements, e.g., the arguments to a
+        overridden methods) other elements, e.g., the arguments to a
         function.
         """
         return quote_id(self.__dict__[self.keylist[0]])
@@ -635,7 +635,7 @@ class DbObjectDict(dict):
     def _from_catalog(self):
         """Initialize the dictionary by querying the catalogs
 
-        This is may be overriden by derived classes as needed.
+        This is may be overridden by derived classes as needed.
         """
         for obj in self.fetch():
             if hasattr(obj, 'options'):

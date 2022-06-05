@@ -224,7 +224,7 @@ class OperatorClassDict(DbObjectDict):
             opcls.functions.update({supp: func})
 
     def from_map(self, schema, inopcls):
-        """Initalize the dictionary of operator classes from the input map
+        """Initialize the dictionary of operator classes from the input map
 
         :param schema: schema owning the operator classes
         :param inopcls: YAML map defining the operator classes

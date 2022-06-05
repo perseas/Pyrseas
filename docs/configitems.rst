@@ -10,7 +10,7 @@ Augmenter
 This section is used by the :program:`dbaugment` utility (see
 :doc:`dbaugment`).  Most of these are specified in the system
 configuration file delivered with Pyrseas, but can also be included or
-overriden in user or repository configuration files.
+overridden in user or repository configuration files.
 
 - audit_columns: This section defines combinations of columns and
   triggers to be added to tables.  Both columns and triggers are

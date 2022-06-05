@@ -6,7 +6,7 @@ Name
 
 dbaugment -- Augment a Postgres database in predefined ways
 
-Synopsys
+Synopsis
 --------
 
 ::

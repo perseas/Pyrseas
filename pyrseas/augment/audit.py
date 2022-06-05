@@ -49,7 +49,7 @@ class CfgAuditColumnDict(DbAugmentDict):
             self[aud] = CfgAuditColumn(name=aud, **config[aud])
 
     def from_map(self, inaudcols):
-        """Initalize the dictionary of functions by converting the input map
+        """Initialize the dictionary of functions by converting the input map
 
         :param inaudcols: YAML map defining the audit column configuration
         """

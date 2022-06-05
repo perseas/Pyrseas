@@ -156,7 +156,7 @@ class CastDict(DbObjectDict):
     cls = Cast
 
     def from_map(self, incasts, newdb):
-        """Initalize the dictionary of casts by converting the input map
+        """Initialize the dictionary of casts by converting the input map
 
         :param incasts: YAML map defining the casts
         :param newdb: collection of dictionaries defining the database

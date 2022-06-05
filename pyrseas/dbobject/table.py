@@ -851,7 +851,7 @@ class ClassDict(DbObjectDict):
             self.by_oid[obj.oid] = obj
 
     def from_map(self, schema, inobjs, newdb):
-        """Initalize the dictionary of tables by converting the input map
+        """Initialize the dictionary of tables by converting the input map
 
         :param schema: schema owning the tables
         :param inobjs: YAML map defining the schema objects
