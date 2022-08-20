@@ -33,7 +33,7 @@ The following four environment variables can be used to change the
 defaults described above:
 
  - PYRSEAS_TEST_DB
- - PYRSEAS_TEST_USER
+ - PYRSEAS_TEST_PORT
  - PYRSEAS_TEST_HOST
  - PYRSEAS_TEST_USER
 
