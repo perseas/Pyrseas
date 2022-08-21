@@ -110,6 +110,9 @@ class Trigger(DbSchemaObject):
                  LEFT JOIN pg_constraint cn ON (tgconstraint = cn.oid)
             WHERE NOT tgisinternal
               AND (nspname != 'pg_catalog' AND nspname != 'information_schema')
+              AND t.tgfoid NOT IN (
+                  SELECT objid FROM pg_depend WHERE deptype = 'e'
+                               AND classid = 'pg_proc'::regclass)
             ORDER BY schema, "table", name"""
 
     @staticmethod

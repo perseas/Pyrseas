@@ -22,7 +22,7 @@ class ExtensionToMapTestCase(DatabaseToMapTestCase):
             return '1.1'
         elif self.db.version < 110000:
             return '1.3'
-        elif self.db.version < 130000:
+        elif self.db.version < 120000:
             return '1.4'
         return '1.5'
 
