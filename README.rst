@@ -3,7 +3,7 @@ Pyrseas
 =======
 
 .. image:: https://api.travis-ci.org/perseas/Pyrseas.png?branch=master
-           :target: https://travis-ci.org/perseas/Pyrseas
+           :target: https://travis-ci.com/perseas/Pyrseas
 
 Pyrseas provides utilities to describe a PostgreSQL database schema as
 YAML, to verify the schema against the same or a different database
@@ -26,7 +26,7 @@ Features
 Requirements
 ------------
 
-- PostgreSQL 9.4 or higher
+- PostgreSQL 9.6 or higher
 
 - Python 2.7, 3.4 or higher
 
