@@ -116,8 +116,6 @@ the operating system or Postgres level.
    (https://pypi.org/project/PyYAML/) or
    http://pyyaml.org/download/pyyaml/.
 
- - Install PgDbConn from PyPI (https://pypi.org/project/pgdbconn/).
-
  - Install pytest, using package manager, or from PyPI
    (https://pypi.org/project/pytest/).
 

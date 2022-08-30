@@ -30,8 +30,6 @@ Requirements
 
 - `PyYAML <http://pyyaml.org/>`_ 3.13 or higher
 
-- `PgDbConn <https://github.com/perseas/pgdbconn>`_ 0.8 or higher
-
 Contents
 --------
 
