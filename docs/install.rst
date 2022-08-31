@@ -19,17 +19,14 @@ Requirements
 
 Pyrseas provides tools for `Postgres <https://www.postgresql.org>`_,
 so obviously you need **Postgres** to start with.  Pyrseas has been
-tested with PG 9.4, 9.5, 9.6, 10 and 11, and we'll certainly keep up
+tested with PG 10, 11, 12 and 13 and we'll certainly keep up
 with future releases.  Please refer to the `Postgres download page
 <https://www.postgresql.org/download>`_ to find a distribution for the
 various Linux, Unix and Windows platforms supported.
 
 You will also need **Python**.  Pyrseas was originally developed using
-Python 2 and been tested with `Python <http://www.python.org>`_ 2.7,
-but that version will no longer be supported effective 1 Jan 2020.  It
-has been ported to Python 3 and
-tested against versions from 3.2 through 3.7.  Python 3 is the
-preferred usage and development environment.  On Linux or \*BSD,
+`Python <http://www.python.org>` 2 and then ported to Python 3 and
+tested against versions from 3.7 through 3.9.  On Linux or \*BSD,
 Python may already be part of your distribution or may be available as
 a package.  For Windows and Mac OS please refer to the `Python
 download page <http://www.python.org/downloads/>`_ for installers and
@@ -37,7 +34,7 @@ instructions.
 
 Pyrseas talks to the Postgres DBMS via the **Psycopg2 adapter**.
 Pyrseas has been tested with `psycopg2 <http://initd.org/psycopg/>`_
-2.5 through 2.7.  Psycopg2 is available as a package on most Linux or
+2.7.  Psycopg2 is available as a package on most Linux or
 \*BSD distributions and can also be downloaded or installed from PyPI.
 Please refer to the `Psycopg download page
 <http://initd.org/psycopg/download/>`_ for more details.
@@ -78,11 +75,7 @@ modifications.  To access it, you need `Git <https://git-scm.com/>`_
 which is available as a package in most OS distributions or can be
 downloaded from the `Git download page
 <https://git-scm.com/download>`_.  You can fetch the Pyrseas sources by
-issuing one of the following commands::
-
- git clone git://github.com/perseas/Pyrseas.git
-
-or::
+issuing the following command::
 
  git clone https://github.com/perseas/Pyrseas.git
 
@@ -143,7 +136,7 @@ use::
 That will install the Pyrseas utilities in the ``Scripts`` folder of
 your Python installation.  The source and bytecode files will go in
 the ``site-packages`` folder, e.g.,
-``C:\Python36\Lib\site-packages\pyrseas``.
+``C:\Python37\Lib\site-packages\pyrseas``.
 
 .. _installer:
 

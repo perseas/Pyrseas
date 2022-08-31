@@ -3,17 +3,8 @@
 
 from yaml import add_representer, dump
 
-from pyrseas.lib.pycompat import PY2
-
-
-if PY2:
-    from yaml import safe_dump as dump
-
-    class MultiLineStr(unicode):
-        """ Marker for multiline strings"""
-else:
-    class MultiLineStr(str):
-        """ Marker for multiline strings"""
+class MultiLineStr(str):
+    """ Marker for multiline strings"""
 
 
 def MultiLineStr_presenter(dumper, data):

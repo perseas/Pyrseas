@@ -89,9 +89,6 @@ YAML notation, the same string is represented as follows::
        AND store_id = $2
        AND NOT inventory_in_stock(inventory_id);
 
-However, due to Python 2.x issues with Unicode, the more readable
-format is *only* available if using Python 3.x.
-
 Note also that if your function source code has trailing spaces at the
 end of lines, they would normally be represented in the original
 default format.  However, in the interest of readability,

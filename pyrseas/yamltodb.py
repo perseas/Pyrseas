@@ -12,7 +12,6 @@ import yaml
 from pyrseas import __version__
 from pyrseas.database import Database
 from pyrseas.cmdargs import cmd_parser, parse_args
-from pyrseas.lib.pycompat import PY2
 
 
 def main():
@@ -57,8 +56,6 @@ def main():
                 outstmt = "".join(stmt) + '\n'
             else:
                 outstmt = "%s;\n" % stmt
-            if PY2:
-                outstmt = outstmt.encode('utf-8')
             print(outstmt, file=fd)
         if options.onetrans or options.update:
             print("COMMIT;", file=fd)

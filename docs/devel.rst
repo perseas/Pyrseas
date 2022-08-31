@@ -22,8 +22,6 @@ Requirements
 
 - PyYAML
 
-- PgDbConn
-
 - Tox
 
 Version Control
@@ -46,10 +44,6 @@ from a Linux/Unix background.
 Once Git is installed, change to a suitable directory and clone the
 master repository::
 
- git clone git://github.com/perseas/Pyrseas.git
-
-or::
-
  git clone https://github.com/perseas/Pyrseas.git
 
 To be able to create a fork on GitHub, open an issue or participate in
@@ -59,10 +53,8 @@ Pyrseas development, you'll first have to `create a GitHub account
 Programming Language
 --------------------
 
-To contribute to Pyrseas, you need at least one version of `Python
-<https://www.python.org>`_.  You can develop using Python 3, but since
-we will continue supporting Python 2 until its end-of-life, you can
-also install Python 2.7 in addition to Python 3.7 or 3.6.
+To contribute to Pyrseas, you need a version of `Python
+<https://www.python.org>`_.  You can develop using Python 3.7 or higher.
 
 If Python is not already available on your machine, either `download
 and install one or both <https://www.python.org/downloads/>`_ of the
@@ -76,7 +68,7 @@ Database Installation
 
 To participate in Pyrseas development, you'll also need one or more
 installations of `Postgres <https://www.postgresql.org>`_, versions
-11, 10, 9.6, 9.5 or 9.4.  If you only have limited space, it is
+13, 12, 11 or 10.  If you only have limited space, it is
 preferable to install one of the latest two versions.
 
 The versions can be obtained as binary packages or installers from the
@@ -85,12 +77,10 @@ site also includes instructions for installing from package management
 systems or building it from source.
 
 To access Postgres from Python, you have to install the `Psycopg
-<http://initd.org/psycopg/>`_ adapter. You can either follow the
+<https://www.psycopg.org/>`_ version 2 adapter. You can either follow the
 instructions in `Psycopg's site
-<http://initd.org/psycopg/docs/install.html>`_, or install it from
-your package management system.  Note that if you install both Python
-2 and 3, you will have to install two packages, e.g.,
-``python-psycopg2`` and ``python3-psycopg2``.
+<https://www.psycopg.org/docs/install.html>`_, or install it from
+your package management system.
 
 Other Libraries and Tools
 -------------------------

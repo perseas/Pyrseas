@@ -22,9 +22,9 @@ Features
 Requirements
 ------------
 
-- `PostgreSQL <https://www.postgresql.org/>`_ 9.4 or higher
+- `PostgreSQL <https://www.postgresql.org/>`_ 10 or higher
 
-- `Python <http://www.python.org/>`_ 2.7, 3.4 or higher
+- `Python <http://www.python.org/>`_ 3.7 or higher
 
 - `Psycopg2 <http://initd.org/psycopg>`_ 2.7 or higher
 

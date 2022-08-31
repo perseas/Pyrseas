@@ -2,7 +2,7 @@
 # Pyrseas Makefile
 #
 
-PYTHON = python
+PYTHON = python3
 
 .PHONY: all build docs install installcheck check clean
 

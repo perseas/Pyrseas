@@ -12,7 +12,6 @@ import re
 import os
 import sys
 
-from pyrseas.lib.pycompat import PY2
 from . import DbObjectDict, DbSchemaObject, split_schema_obj
 from . import quote_id, commentable, ownable, grantable
 from .constraint import CheckConstraint, PrimaryKey
@@ -214,16 +213,10 @@ class Sequence(DbClass):
             elif key == 'privileges':
                 dct[key] = val
             else:
-                if PY2:
-                    if isinstance(val, (int, long)) and val <= sys.maxsize:
-                        dct[key] = int(val)
-                    else:
-                        dct[key] = str(val)
+                if isinstance(val, int):
+                    dct[key] = int(val)
                 else:
-                    if isinstance(val, int):
-                        dct[key] = int(val)
-                    else:
-                        dct[key] = str(val)
+                    dct[key] = str(val)
 
         return dct
 

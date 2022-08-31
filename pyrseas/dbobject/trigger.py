@@ -6,7 +6,6 @@
     This module defines two classes: Trigger derived from
     DbSchemaObject, and TriggerDict derived from DbObjectDict.
 """
-from pyrseas.lib.pycompat import strtypes
 from . import DbObjectDict, DbSchemaObject
 from . import quote_id, commentable, split_schema_obj
 from .function import split_schema_func, join_schema_func
@@ -126,7 +125,7 @@ class Trigger(DbSchemaObject):
         """
         proc = inobj.pop("procedure")
         args = ""
-        if isinstance(proc, strtypes):
+        if isinstance(proc, str):
             if proc[-2:] == "()":
                 proc = proc[:-2]
             elif proc[-1:] == ')':

@@ -10,11 +10,11 @@ command line by most users, e.g.,
 
 ::
 
-   py.test tests/dbobject/test_table.py
-   py.test tests/dbobject/test_trigger.py -k test_create_trigger
-   py.test tests/functional
+   pytest-3 tests/dbobject/test_table.py
+   pytest-3 tests/dbobject/test_trigger.py -k test_create_trigger
+   pytest-3 tests/functional
 
-The first ``python`` command above runs all tests related to tables,
+The first ``pytest-3`` command above runs all tests related to tables,
 mapping, creating, dropping, etc.  The second one executes a single
 test to generate SQL to create a trigger.  The third runs all the
 functional tests.  Please review the `pytest documentation
@@ -33,7 +33,7 @@ The following four environment variables can be used to change the
 defaults described above:
 
  - PYRSEAS_TEST_DB
- - PYRSEAS_TEST_PORT
+ - PYRSEAS_TEST_USER
  - PYRSEAS_TEST_HOST
  - PYRSEAS_TEST_PORT
 
@@ -86,20 +86,19 @@ the operating system or Postgres level.
 
  - ``git clone git://github.com/perseas/Pyrseas.git``
 
- - Install Python 3.7 (or 3.6) and 2.7, using package manager or from
+ - Install Python 3.7 or higher, using package manager or from
    installers at https://www.python.org/downloads/.
 
- - Install Postgres 11, 10, 9.6, 9.5 and 9.4, using package manager or
+ - Install Postgres 13, 12, 11 or 10, using package manager or
    binary installers at https://www.postgresql.org/download/
 
    .. note:: On Linux, make sure you install the contrib and plperl
-             packages, e.g., on Debian, postgresql-contrib-n.n and
-             postgresql-plperl-n.n (where `n.n` is the Postgres
-             version number--or simply `n` from Postgres 10 onward)
+             packages, e.g., on Debian, postgresql-contrib-n and
+             postgresql-plperl-n (where `n` is the Postgres
+             version number)
 
  - Install Psycopg2, using package manager, or from PyPI
-   (https://pypi.org/project/psycopg2/) or
-   http://initd.org/psycopg/download/.
+   (https://pypi.org/project/psycopg2/).
 
    .. note:: On Windows, you may first want to install a version of
              Microsoft Visual Studio from `here`_.  An alternative
@@ -122,10 +121,6 @@ the operating system or Postgres level.
  - Install Tox, using package manager, or from PyPI
    (https://pypi.org/project/tox/)
 
-   .. note:: Psycopg2, PyYAML, pytest and Tox all have to be installed
-             twice, i.e., once under Python 3.7 (or 3.6) and another
-             under 2.7.
-
  - On Windows, install Perl (see discussion above under
    "Restrictions"). On Linux, usually Perl is already available.
 
@@ -137,8 +132,8 @@ the operating system or Postgres level.
  - Create a Postgres password file, e.g., on Linux: ``~/.pgpass``, on
    Windows: ``%APPDATA%\postgresql\pgpass.conf``.
 
- - Create directories to hold tablespaces, e.g., ``/extra/pg/11.0/ts1``
-   on Linux, ``C:\\extra\\pg\\11.0\\ts1`` on Windows.  The directories
+ - Create directories to hold tablespaces, e.g., ``/extra/pg/13.0/ts1``
+   on Linux, ``C:\\extra\\pg\\13.0\\ts1`` on Windows.  The directories
    need to be owned by the **postgres** user. This may be tricky on
    older Windows versions, but the command ``cacls <dir> /E /G
    postgres:F`` should suffice.  Using ``psql``, create tablespaces
@@ -166,12 +161,12 @@ the operating system or Postgres level.
      directory, e.g., on Linux, ``export PYTHONPATH=$PWD``, on
      Windows, ``set PYTHONPATH=%USERPROFILE%\somedir\Pyrseas``.
 
-   - Define the environment variables ``PG94_PORT``, ``PG95_PORT``,
-     ``PG96_PORT``, ``PG100_PORT`` and ``PG110_PORT`` to point to the
+   - Define the environment variables ``PG100_PORT``, ``PG110_PORT``,
+     ``PG120_PORT`` and ``PG130_PORT`` to point to the
      corresponding Postgres connection ports.
 
- - Invoke ``tox``. This will create two virtualenvs in a ``.tox``
-   subdirectory--one for Python 3.7 or 3.6 and another for 2.7,
+ - Invoke ``tox``. This will create virtualenvs in a ``.tox``
+   subdirectory,
    install Pyrseas and its prerequisites (Psycopg2 and PyYAML) into
    each virtualenv and run the unit tests for each combination of
    Postgres and Python.

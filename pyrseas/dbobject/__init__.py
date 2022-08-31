@@ -12,7 +12,6 @@ import re
 import string
 from functools import wraps
 
-from pyrseas.lib.pycompat import PY2, strtypes
 from pyrseas.yamlutil import yamldump
 from .privileges import privileges_to_map, add_grant, diff_privs
 from .privileges import privileges_from_map
@@ -194,7 +193,7 @@ class DbObject(object):
         those attributes.  This method allows separate initialization.
         """
         self.owner = owner
-        if isinstance(privileges, strtypes):
+        if isinstance(privileges, str):
             privileges = privileges.split(',')
         self.privileges = privileges or []
 
@@ -278,13 +277,9 @@ class DbObject(object):
             :return: filename string
             """
             if objid:
-                if PY2:
-                    objid = objid.decode('utf_8')
                 filename = '%s.%.*s.%s' % (
                     objtype, max_len, re.sub(NON_FILENAME_CHARS, '_', objid),
                     ext)
-                if PY2:
-                    filename = filename.encode('utf_8')
             else:
                 filename = '%s.%s' % (objtype.replace(' ', '_'), ext)
             return filename.lower()
@@ -519,7 +514,7 @@ class DbObject(object):
 
         # The explicit dependencies
         for dep in self.depends_on:
-            if isinstance(dep, strtypes):
+            if isinstance(dep, str):
                 dep = db._get_by_extkey(dep)
             deps.add(dep)
 

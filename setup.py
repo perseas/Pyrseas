@@ -35,9 +35,8 @@ setup(
             'dbaugment = pyrseas.dbaugment:main']},
 
     install_requires=[
-        'psycopg2 >= 2.5',
-        'pgdbconn >= 0.8.0',
-        'PyYAML >= 3.10'],
+        'psycopg2 >= 2.7',
+        'PyYAML >= 3.13'],
 
     tests_require=['pytest'],
     cmdclass={'test': PyTest},
@@ -57,12 +56,7 @@ setup(
         'Natural Language :: English',
         'Operating System :: OS Independent',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.4',
-        'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: SQL',
         'Topic :: Database :: Front-Ends',
