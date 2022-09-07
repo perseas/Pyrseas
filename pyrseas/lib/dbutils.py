@@ -6,18 +6,20 @@ to depend on the application-level DbConnection.
 """
 import os
 
-from psycopg2 import connect
-from psycopg2.extras import DictConnection
-from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+from psycopg import connect
+from psycopg.rows import dict_row
+# FIXME: temporarily commenting out psycopg2 feature
+#        See also pgexecute_auto below
+#from psycopg.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
 
 def pgconnect(dbname, user=None, host=None, port=None):
-    "Connect to a Postgres database using psycopg2"
+    "Connect to a Postgres database using psycopg"
     user = '' if user is None else " user=%s" % user
     host = '' if host is None else "host=%s " % host
     port = '' if port is None else "port=%d " % port
     return connect("%s%sdbname=%s%s" % (host, port, dbname, user),
-                   connection_factory=DictConnection)
+                   row_factory=dict_row)
 
 
 def pgexecute(dbconn, oper, args=None):
@@ -35,9 +37,9 @@ def pgexecute(dbconn, oper, args=None):
 def pgexecute_auto(dbconn, oper):
     "Execute an operation using a cursor with autocommit enabled"
     isolation_level = dbconn.isolation_level
-    dbconn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+    #dbconn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
     curs = pgexecute(dbconn, oper)
-    dbconn.set_isolation_level(isolation_level)
+    #dbconn.set_isolation_level(isolation_level)
     return curs
 
 
@@ -80,7 +82,8 @@ class PostgresDb(object):
             conn.close()
             self.conn = pgconnect(self.name, self.user, self.host, self.port)
             curs = pgexecute(self.conn, "SHOW server_version_num")
-            self._version = int(curs.fetchone()[0])
+            vers = curs.fetchone()
+            self._version = int(vers["server_version_num"])
 
     def close(self):
         "Close the connection if still open"
@@ -94,16 +97,18 @@ class PostgresDb(object):
 
     def create(self):
         "Drop the database if it exists and re-create it"
-        conn = pgconnect(ADMIN_DB, self.user, self.host, self.port)
-        curs = pgexecute_auto(conn, "DROP DATABASE IF EXISTS %s" % self.name)
-        curs = pgexecute_auto(conn, CREATE_DDL % self.name)
+        conn = pgconnect(ADMIN_DB, self.user, self.host, self.port,
+                         autocommit=True)
+        curs = pgexecute(conn, "DROP DATABASE IF EXISTS %s" % self.name)
+        curs = pgexecute(conn, CREATE_DDL % self.name)
         curs.close()
         conn.close()
 
     def drop(self):
         "Drop the database"
-        conn = pgconnect(ADMIN_DB, self.user, self.host, self.port)
-        curs = pgexecute_auto(conn, "DROP DATABASE %s" % self.name)
+        conn = pgconnect(ADMIN_DB, self.user, self.host, self.port,
+                         autocommit=True)
+        curs = pgexecute(conn, "DROP DATABASE %s" % self.name)
         curs.close()
         conn.close()
 

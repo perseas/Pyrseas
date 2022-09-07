@@ -32,21 +32,21 @@ a package.  For Windows and Mac OS please refer to the `Python
 download page <http://www.python.org/downloads/>`_ for installers and
 instructions.
 
-Pyrseas talks to the Postgres DBMS via the **Psycopg2 adapter**.
-Pyrseas has been tested with `psycopg2 <http://initd.org/psycopg/>`_
-2.7.  Psycopg2 is available as a package on most Linux or
+Pyrseas talks to the Postgres DBMS via the **Psycopg adapter**.
+Pyrseas has been tested with `psycopg <https://www.psycopg.org/psycopg3/>`_
+3.1.  Psycopg may be available as a package on most Linux or
 \*BSD distributions and can also be downloaded or installed from PyPI.
 Please refer to the `Psycopg download page
-<http://initd.org/psycopg/download/>`_ for more details.
+<http://www.psycopg.org/psycopg3/docs/basic/install.html>`_ for more details.
 
 .. note:: If you install Pyrseas using ``pip`` (see below) and you
-   have not already installed Psycopg2, e.g., when installing into a
+   have not already installed Psycopg, e.g., when installing into a
    ``virtualenv`` environment created with ``--no-site-packages``, you
    may need to have installed the Postgres and Python development
    packages, and a C compiler, as ``pip`` may download and attempt to
-   build and install psycopg2 before installing Pyrseas.
+   build and install psycopg before installing Pyrseas.
 
-The Pyrseas utilities rely on **PyYAML**, a `YAML <http://yaml.org>`_
+The Pyrseas utilities rely on **PyYAML**, a `YAML <https://yaml.org>`_
 library.  This may be available as a package for your operating system
 or it can be downloaded from the `Python Package Index (PyPI)
 <https://pypi.org/project/PyYAML/>`_.

@@ -33,7 +33,7 @@ def fetch_reserved_words(db):
     global RESERVED_WORDS
 
     if len(RESERVED_WORDS) == 0:
-        RESERVED_WORDS = [word[0] for word in
+        RESERVED_WORDS = [word["word"] for word in
                           db.fetchall("""SELECT word FROM pg_get_keywords()
                                          WHERE catcode != 'U'""")]
 

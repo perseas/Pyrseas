@@ -62,13 +62,13 @@ class CatDbConnection(DbConnection):
         """Connect to the database"""
         super(CatDbConnection, self).connect()
         schs = self.fetchall("SELECT current_schemas(false)")
-        addschs = [sch for sch in schs[0][0] if sch != 'public']
+        addschs = [sch for sch in schs[0]["current_schemas"] if sch != "public"]
         srch_path = "pg_catalog"
         if addschs:
             srch_path += ", " + ", ".join(addschs)
         self.execute("set search_path to %s" % srch_path)
         self.commit()
-        self._version = self.conn.server_version
+        self._version = self.conn.info.server_version
 
     @property
     def version(self):
@@ -211,7 +211,7 @@ class Database(object):
         """Link related objects"""
         langs = []
         if self.dbconn.version >= 90100:
-            langs = [lang[0] for lang in self.dbconn.fetchall(
+            langs = [lang["lanname"] for lang in self.dbconn.fetchall(
                 """SELECT lanname FROM pg_language l
                      JOIN pg_depend p ON (l.oid = p.objid)
                     WHERE deptype = 'e' """)]

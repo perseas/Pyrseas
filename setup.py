@@ -24,7 +24,7 @@ class PyTest(TestCommand):
 
 setup(
     name='Pyrseas',
-    version='0.9.1',
+    version='0.10.0alpha',
     packages=['pyrseas', 'pyrseas.dbobject', 'pyrseas.lib', 'pyrseas.augment',
              ],
     package_data={'pyrseas': ['config.yaml']},
@@ -35,7 +35,7 @@ setup(
             'dbaugment = pyrseas.dbaugment:main']},
 
     install_requires=[
-        'psycopg2 >= 2.7',
+        'psycopg >= 3.1',
         'PyYAML >= 3.13'],
 
     tests_require=['pytest'],

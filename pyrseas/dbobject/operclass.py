@@ -214,12 +214,22 @@ class OperatorClassDict(DbObjectDict):
             self[opclass.key()] = opclass
         opers = self.dbconn.fetchall(self.cls.opquery())
         self.dbconn.rollback()
-        for (sch, opc, idx, strat, oper) in opers:
+        for opdata in opers:
+            sch = opdata["schema"]
+            opc = opdata["name"]
+            idx = opdata["index_method"]
+            strat = opdata["strategy"]
+            oper =  opdata["operator"]
             opcls = self[(sch, opc, idx)]
             opcls.operators.update({strat: oper})
         funcs = self.dbconn.fetchall(self.cls.prquery())
         self.dbconn.rollback()
-        for (sch, opc, idx, supp, func) in funcs:
+        for oprdata in funcs:
+            sch = oprdata["schema"]
+            opc = oprdata["name"]
+            idx = oprdata["index_method"]
+            supp = oprdata["support"]
+            func =  oprdata["function"]
             opcls = self[(sch, opc, idx)]
             opcls.functions.update({supp: func})
 

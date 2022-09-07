@@ -97,8 +97,8 @@ the operating system or Postgres level.
              postgresql-plperl-n (where `n` is the Postgres
              version number)
 
- - Install Psycopg2, using package manager, or from PyPI
-   (https://pypi.org/project/psycopg2/).
+ - Install Psycopg, using package manager, or from PyPI
+   (https://pypi.org/project/psycopg/).
 
    .. note:: On Windows, you may first want to install a version of
              Microsoft Visual Studio from `here`_.  An alternative
@@ -167,7 +167,7 @@ the operating system or Postgres level.
 
  - Invoke ``tox``. This will create virtualenvs in a ``.tox``
    subdirectory,
-   install Pyrseas and its prerequisites (Psycopg2 and PyYAML) into
+   install Pyrseas and its prerequisites (Psycopg and PyYAML) into
    each virtualenv and run the unit tests for each combination of
    Postgres and Python.
 

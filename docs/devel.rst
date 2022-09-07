@@ -18,7 +18,7 @@ Requirements
 
 - Postgres
 
-- Psycopg2
+- Psycopg3
 
 - PyYAML
 
@@ -77,9 +77,9 @@ site also includes instructions for installing from package management
 systems or building it from source.
 
 To access Postgres from Python, you have to install the `Psycopg
-<https://www.psycopg.org/>`_ version 2 adapter. You can either follow the
+<https://www.psycopg.org/>`_ version 3 adapter. You can either follow the
 instructions in `Psycopg's site
-<https://www.psycopg.org/docs/install.html>`_, or install it from
+<https://www.psycopg.org/psycopg3/docs/basic/install.html>`_, or install it from
 your package management system.
 
 Other Libraries and Tools

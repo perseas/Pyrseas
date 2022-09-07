@@ -24,11 +24,11 @@ Requirements
 
 - `PostgreSQL <https://www.postgresql.org/>`_ 10 or higher
 
-- `Python <http://www.python.org/>`_ 3.7 or higher
+- `Python <https://www.python.org/>`_ 3.7 or higher
 
-- `Psycopg2 <http://initd.org/psycopg>`_ 2.7 or higher
+- `Psycopg3 <https://www.psycopg.org/psycopg3/>`_ 3.1 or higher
 
-- `PyYAML <http://pyyaml.org/>`_ 3.13 or higher
+- `PyYAML <https://pyyaml.org/>`_ 5.3 or higher
 
 Contents
 --------

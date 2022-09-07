@@ -67,7 +67,7 @@ class PgTestDb(PostgresDb):
         curs.close()
         self.conn.rollback()
         for obj in objs:
-                self.execute(STD_DROP % ('SCHEMA', obj[0]))
+                self.execute(STD_DROP % ('SCHEMA', obj["nspname"]))
         self.conn.commit()
 
         # Extensions
@@ -81,7 +81,7 @@ class PgTestDb(PostgresDb):
         curs.close()
         self.conn.rollback()
         for ext in exts:
-            self.execute(STD_DROP % ('EXTENSION', ext[0]))
+            self.execute(STD_DROP % ('EXTENSION', ext["extname"]))
         self.conn.commit()
 
         # User mappings
@@ -96,7 +96,7 @@ class PgTestDb(PostgresDb):
         self.conn.rollback()
         for ump in umaps:
             self.execute('DROP USER MAPPING IF EXISTS FOR "%s" SERVER "%s"' % (
-                ump[0], ump[1]))
+                ump["username"], ump["srvname"]))
         self.conn.commit()
 
         # Servers
@@ -105,7 +105,7 @@ class PgTestDb(PostgresDb):
         curs.close()
         self.conn.rollback()
         for srv in servs:
-            self.execute(STD_DROP % ('SERVER', srv[0]))
+            self.execute(STD_DROP % ('SERVER', srv["srvname"]))
         self.conn.commit()
 
         # Foreign data wrappers
@@ -115,7 +115,7 @@ class PgTestDb(PostgresDb):
         curs.close()
         self.conn.rollback()
         for fdw in fdws:
-            self.execute(STD_DROP % ('FOREIGN DATA WRAPPER', fdw[0]))
+            self.execute(STD_DROP % ('FOREIGN DATA WRAPPER', fdw["fdwname"]))
         self.conn.commit()
 
         # Create default schema

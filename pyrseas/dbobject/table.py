@@ -174,8 +174,8 @@ class Sequence(DbClass):
                WHERE objid = '%s'::regclass
                  AND refclassid = 'pg_class'::regclass""" % self.identifier())
         if data:
-            self.owner_table = split_table(data[0], self.schema)
-            self.owner_column = data[1]
+            self.owner_table = split_table(data["refobjid"], self.schema)
+            self.owner_column = data["refobjsubid"]
             return
         data = dbconn.fetchone(
             """SELECT adrelid::regclass
@@ -824,7 +824,10 @@ class ClassDict(DbObjectDict):
             self.by_oid[obj.oid] = obj
         inhtbls = self.dbconn.fetchall(Table.inhquery())
         self.dbconn.rollback()
-        for (tbl, partbl, num) in inhtbls:
+        for tdata in inhtbls:
+            tbl = tdata["sub"]
+            partbl = tdata["parent"]
+            num = tdata["inhseqno"]
             (sch, tbl) = split_schema_obj(tbl)
             table = self[(sch, tbl)]
             (sch, tbl) = split_schema_obj(partbl)

@@ -8,8 +8,8 @@
 """
 import sys
 
-from psycopg2 import connect
-from psycopg2.extras import DictConnection
+from psycopg import connect
+from psycopg.rows import dict_row
 
 
 class DbConnection(object):
@@ -36,7 +36,7 @@ class DbConnection(object):
         try:
             self.conn = connect("%s%sdbname=%s%s%s" % (
                 self.host, self.port, self.dbname, self.user, self.pswd),
-                connection_factory=DictConnection)
+                                row_factory=dict_row)
         except Exception as exc:
             if str(exc)[:6] == 'FATAL:':
                 sys.exit("Database connection error: %s" % str(exc)[8:])
@@ -80,7 +80,7 @@ class DbConnection(object):
 
         :param query: a SELECT query to be executed
         :param args: arguments to query
-        :return: a psycopg2 DictRow
+        :return: a psycopg DictRow
 
         The cursor is closed.
         """
@@ -94,7 +94,7 @@ class DbConnection(object):
 
         :param query: a SELECT query to be executed
         :param args: arguments to query
-        :return: a list of psycopg2 DictRow's
+        :return: a list of psycopg DictRow's
 
         The cursor is closed.
         """

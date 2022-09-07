@@ -2,7 +2,7 @@
 """Test languages"""
 
 import pytest
-import psycopg2
+import psycopg
 
 from pyrseas.testutils import DatabaseToMapTestCase
 from pyrseas.testutils import InputMapToSqlTestCase
@@ -37,7 +37,7 @@ class LanguageToMapTestCase(DatabaseToMapTestCase):
             self.skipTest('Only available before PG 13')
         try:
             self.to_map(["CREATE OR REPLACE LANGUAGE plpython3u"])
-        except psycopg2.OperationalError as e:
+        except psycopg.OperationalError as e:
             self.skipTest("plpython3 installation failed: %s" % e)
         m = self.to_map(["CREATE FUNCTION test103() RETURNS int AS "
                          "'return 1' LANGUAGE plpython3u"])

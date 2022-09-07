@@ -1,2 +1,2 @@
-PyYAML>=3.13
-psycopg2>=2.7
+PyYAML>=5.3
+psycopg>=3.1
