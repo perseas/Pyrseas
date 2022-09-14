@@ -103,23 +103,6 @@ class DbConnection(object):
         curs.close()
         return rows
 
-    def copy_to(self, path, table, sep=','):
-        """Execute a COPY command to a file
-
-        :param path: file name/path to copy into
-        :param table: possibly schema qualified table name
-        :param sep: separator between columns
-        """
-        if self.conn is None or self.conn.closed:
-            self.connect()
-        with open(path, 'w') as f:
-            curs = self.conn.cursor()
-            try:
-                curs.copy_to(f, table, sep)
-            except:
-                curs.close()
-                raise
-
     def sql_copy_to(self, sql, path):
         """Execute an SQL COPY command to a file
 
@@ -128,13 +111,11 @@ class DbConnection(object):
         """
         if self.conn is None or self.conn.closed:
             self.connect()
-        with open(path, 'w') as f:
-            curs = self.conn.cursor()
-            try:
-                curs.copy_expert(sql, f)
-            except:
-                curs.close()
-                raise
+        curs = self.conn.cursor()
+        with curs.copy(sql) as copy:
+            with open(path, "wb") as f:
+                for data in copy:
+                    f.write(bytes(data))
 
     def copy_from(self, path, table, sep=','):
         """Execute a COPY command from a file

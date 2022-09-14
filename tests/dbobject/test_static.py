@@ -31,7 +31,7 @@ class StaticTableToMapTestCase(DatabaseToMapTestCase):
         with open(os.path.join(self.cfg['files']['data_path'],
                                "schema.sd", FILE_PATH)) as f:
             for line in f:
-                (c1, c2) = line.split(',')
+                (c1, c2) = line.split('\t')
                 recs.append((int(c1), c2.rstrip()))
         assert recs == TABLE_DATA
 
@@ -52,7 +52,7 @@ class StaticTableToMapTestCase(DatabaseToMapTestCase):
         with open(os.path.join(self.cfg['files']['data_path'],
                                "schema.sd", FILE_PATH)) as f:
             for line in f:
-                (c1, c2, c3) = line.split(',')
+                (c1, c2, c3) = line.split('\t')
                 recs.append((int(c1), c2, c3.rstrip()))
         assert recs == sorted(TABLE_DATA2)
 
