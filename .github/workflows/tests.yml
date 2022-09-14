@@ -6,7 +6,7 @@ jobs:
   linux:
     strategy:
       matrix:
-        python-version: [3.9, 3.10]
+        python-version: [3.9.x, 3.10.x]
         platform: [ubuntu-latest]
     runs-on: ${{matrix.platform}}
     steps:
