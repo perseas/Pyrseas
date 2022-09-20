@@ -264,7 +264,7 @@ class Database(object):
         # The dependencies across views is not in pg_depend. We have to
         # parse the rewrite rule.  "ev_class >= 16384" is to exclude
         # system views.
-        query = """SELECT DISTINCT 'pg_class' AS class_name, ev_class,
+        query = r"""SELECT DISTINCT 'pg_class' AS class_name, ev_class,
                           CASE WHEN depid[1] = 'relid' THEN 'pg_class'
                                WHEN depid[1] = 'funcid' THEN 'pg_proc'
                                END AS refclass, depid[2]::oid AS refobjid

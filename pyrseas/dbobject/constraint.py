@@ -130,7 +130,7 @@ class CheckConstraint(Constraint):
 
     @staticmethod
     def query(dbversion=None):
-        return """
+        return r"""
             SELECT conname AS name, nspname AS schema,
                    CASE WHEN contypid = 0 THEN conrelid::regclass::text
                         ELSE contypid::regtype::text END AS table,
@@ -259,7 +259,7 @@ class PrimaryKey(Constraint):
 
     @staticmethod
     def query(dbversion=None):
-        return """
+        return r"""
             SELECT conname AS name, nspname AS schema,
                    conrelid::regclass AS table, conkey AS columns,
                    condeferrable AS deferrable, condeferred AS deferred,
@@ -405,7 +405,7 @@ class ForeignKey(Constraint):
 
     @staticmethod
     def query(dbversion=None):
-        return """
+        return r"""
             SELECT conname AS name, nspname AS schema,
                    conrelid::regclass AS table, conkey AS columns,
                    condeferrable AS deferrable, condeferred AS deferred,
@@ -623,7 +623,7 @@ class UniqueConstraint(Constraint):
 
     @staticmethod
     def query(dbversion=None):
-        return """
+        return r"""
             SELECT conname AS name, nspname AS schema,
                    conrelid::regclass AS table, conkey AS columns,
                    condeferrable AS deferrable, condeferred AS deferred,

@@ -352,8 +352,7 @@ class DbMigrateTestCase(TestCase):
             pg_dumpver = 'pg_dump'
         else:
             v = self.srcdb._version
-            pg_dumpver = "pg_dump%d%d" % (v // 10000,
-                                          (v - v // 10000 * 10000) // 100)
+            pg_dumpver = "pg_dump"
             if sys.platform == 'win32':
                 pg_dumpver += '.bat'
         dbname = self.srcdb.name if srcdb else self.db.name
