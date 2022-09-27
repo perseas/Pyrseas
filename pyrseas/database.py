@@ -388,7 +388,7 @@ class Database(object):
                 input_evttrigs.update({key: input_map[key]})
             else:
                 raise KeyError("Expected typed object, found '%s'" % key)
-        self.ndb.extensions.from_map(input_extens, langs, self.ndb)
+        self.ndb.extensions.from_map(input_extens, self.ndb)
         self.ndb.languages.from_map(input_langs)
         self.ndb.schemas.from_map(input_schemas, self.ndb)
         self.ndb.casts.from_map(input_casts, self.ndb)
@@ -521,9 +521,7 @@ class Database(object):
         if quote_reserved:
             fetch_reserved_words(self.dbconn)
 
-        langs = [lang[0] for lang in self.dbconn.fetchall(
-            "SELECT name FROM pg_available_extensions() INNER JOIN pg_language ON name = lanname;")]
-        self.from_map(input_map, langs)
+        self.from_map(input_map)
         if opts.revert:
             (self.db, self.ndb) = (self.ndb, self.db)
             del self.ndb.schemas['pg_catalog']
