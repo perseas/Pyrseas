@@ -62,11 +62,10 @@ class StaticTableToMapTestCase(DatabaseToMapTestCase):
 
 
 class StaticTableToSqlTestCase(InputMapToSqlTestCase):
-    """Test SQL generation of table load statements"""
+    """Test SQL generation of data import statements"""
 
-    @pytest.mark.skip(reason="CSV not supported under psycopg3")
     def test_load_static_table(self):
-        "Truncate and load a two-column table"
+        "Truncate and import a two-column table"
         inmap = self.std_map()
         inmap['schema sd'].update({'table t1': {
             'columns': [{'c1': {'type': 'integer'}},
@@ -75,13 +74,12 @@ class StaticTableToSqlTestCase(InputMapToSqlTestCase):
         sql = self.to_sql(inmap, [CREATE_STMT], config=cfg)
         copy_stmt = ("\\copy ", 'sd.t1', " from '",
                      os.path.join(self.cfg['files']['data_path'],
-                                  "schema.sd", FILE_PATH), "'")
+                                  "schema.sd", FILE_PATH), "' csv")
         assert sql[0] == "TRUNCATE ONLY sd.t1"
         assert sql[1] == copy_stmt
 
-    @pytest.mark.skip(reason="CSV not supported under psycopg3")
     def test_load_static_table_fk(self):
-        "Truncate and load a table which has a foreign key dependency"
+        "Truncate and import a table which has a foreign key dependency"
         stmts = ["CREATE TABLE t1 (pc1 integer PRIMARY KEY, pc2 text)",
                  "CREATE TABLE t2 (c1 integer, c2 integer REFERENCES t1, "
                  "c3 text)"]
@@ -101,7 +99,7 @@ class StaticTableToSqlTestCase(InputMapToSqlTestCase):
         sql = self.to_sql(inmap, stmts, config=cfg)
         copy_stmt = ("\\copy ", 'sd.t1', " from '",
                      os.path.join(self.cfg['files']['data_path'],
-                                  "schema.sd", FILE_PATH), "'")
+                                  "schema.sd", FILE_PATH), "' csv")
         assert sql[0] == "ALTER TABLE sd.t2 DROP CONSTRAINT t2_c2_fkey"
         assert sql[1] == "TRUNCATE ONLY sd.t1"
         assert sql[2] == copy_stmt
