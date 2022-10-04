@@ -2,8 +2,6 @@
 """Test loading of data from and into static tables"""
 import os
 
-import pytest
-
 from pyrseas.testutils import DatabaseToMapTestCase
 from pyrseas.testutils import InputMapToSqlTestCase
 
@@ -20,7 +18,6 @@ class StaticTableToMapTestCase(DatabaseToMapTestCase):
     def tearDown(self):
         self.remove_tempfiles()
 
-    @pytest.mark.skip(reason="CSV not supported under psycopg3")
     def test_copy_static_table(self):
         "Copy a two-column table to a file"
         self.db.execute(CREATE_STMT)
@@ -34,11 +31,10 @@ class StaticTableToMapTestCase(DatabaseToMapTestCase):
         with open(os.path.join(self.cfg['files']['data_path'],
                                "schema.sd", FILE_PATH)) as f:
             for line in f:
-                (c1, c2) = line.split('\t')
+                (c1, c2) = line.split(',')
                 recs.append((int(c1), c2.rstrip()))
         assert recs == TABLE_DATA
 
-    @pytest.mark.skip(reason="CSV not supported under psycopg3")
     def test_copy_static_table_pk(self):
         "Copy a table that has a primary key"
         self.db.execute("CREATE TABLE t1 (c1 integer, c2 char(3), c3 text,"
@@ -56,7 +52,7 @@ class StaticTableToMapTestCase(DatabaseToMapTestCase):
         with open(os.path.join(self.cfg['files']['data_path'],
                                "schema.sd", FILE_PATH)) as f:
             for line in f:
-                (c1, c2, c3) = line.split('\t')
+                (c1, c2, c3) = line.split(',')
                 recs.append((int(c1), c2, c3.rstrip()))
         assert recs == sorted(TABLE_DATA2)
 

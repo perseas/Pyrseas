@@ -152,6 +152,7 @@ class Schema(DbObject):
                 os.mkdir(dir)
             for tbl in self.datacopy:
                 self.tables[tbl].data_export(dbschemas.dbconn, dir)
+            dbschemas.dbconn.commit()
 
         if opts.multiple_files:
             dir = self.extern_dir(opts.metadata_dir)

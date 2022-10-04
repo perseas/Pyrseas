@@ -8,9 +8,6 @@ import os
 
 from psycopg import connect
 from psycopg.rows import dict_row
-# FIXME: temporarily commenting out psycopg2 feature
-#        See also pgexecute_auto below
-#from psycopg.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
 
 def pgconnect(dbname, user=None, host=None, port=None):
@@ -31,15 +28,6 @@ def pgexecute(dbconn, oper, args=None):
         curs.close()
         dbconn.rollback()
         raise
-    return curs
-
-
-def pgexecute_auto(dbconn, oper):
-    "Execute an operation using a cursor with autocommit enabled"
-    isolation_level = dbconn.isolation_level
-    #dbconn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
-    curs = pgexecute(dbconn, oper)
-    #dbconn.set_isolation_level(isolation_level)
     return curs
 
 
@@ -77,7 +65,9 @@ class PostgresDb(object):
             row = curs.fetchone()
             if not row:
                 curs.close()
-                curs = pgexecute_auto(conn, CREATE_DDL % self.name)
+                conn2 = pgconnect(ADMIN_DB, self.user, self.host, self.port,
+                                  autocommit=True)
+                curs = pgexecute(conn2, CREATE_DDL % self.name)
                 curs.close()
             conn.close()
             self.conn = pgconnect(self.name, self.user, self.host, self.port)
