@@ -117,19 +117,20 @@ class DbConnection(object):
                 for data in copy:
                     f.write(bytes(data))
 
-    def copy_from(self, path, table, sep=','):
-        """Execute a COPY command from a file
+    def copy_from(self, path, table):
+        """Execute a COPY command from a file in CSV format
 
         :param path: file name/path to copy from
         :param table: possibly schema qualified table name
-        :param sep: separator between columns
         """
         if self.conn is None or self.conn.closed:
             self.connect()
+        curs = self.conn.cursor()
         with open(path, 'r') as f:
-            curs = self.conn.cursor()
             try:
-                curs.copy_from(f, table, sep)
+                with curs.copy("COPY %s FROM STDIN WITH CSV" % table) as copy:
+                    while data := f.read():
+                        copy.write(data)
             except:
-                curs.close()
                 raise
+        curs.close()
