@@ -178,12 +178,12 @@ class Sequence(DbClass):
             self.owner_column = data["refobjsubid"]
             return
         data = dbconn.fetchone(
-            """SELECT adrelid::regclass
+            """SELECT adrelid::regclass AS regclass
                FROM pg_attrdef a JOIN pg_depend ON (a.oid = objid)
                WHERE refobjid = '%s'::regclass
                AND classid = 'pg_attrdef'::regclass""" % self.qualname())
         if data:
-            self.dependent_table = split_table(data[0], self.schema)
+            self.dependent_table = split_table(data["regclass"], self.schema)
 
     def to_map(self, db, opts):
         """Convert a sequence definition to a YAML-suitable format
