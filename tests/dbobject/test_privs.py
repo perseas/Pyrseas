@@ -113,18 +113,6 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
                                  {'user1': ['execute']}]}
         assert dbmap['schema sd']['function f1()'] == expmap
 
-    def test_map_language(self):
-        "Map a  language but REVOKE default privilege"
-        if self.db.version >= 90100:
-            self.skipTest('Only available before PG 9.1')
-        stmts = ["DROP LANGUAGE IF EXISTS plperl CASCADE",
-                 "CREATE LANGUAGE plperl",
-                 "REVOKE USAGE ON LANGUAGE plperl FROM PUBLIC"]
-        dbmap = self.to_map(stmts, no_privs=False)
-        self.db.execute_commit("DROP LANGUAGE plperl")
-        expmap = {'trusted': True, 'privileges': [{self.db.user: ['usage']}]}
-        assert dbmap['language plperl'] == expmap
-
     def test_map_fd_wrapper(self):
         "Map a foreign data wrapper with a GRANT"
         stmts = [CREATE_FDW,
@@ -146,8 +134,6 @@ class PrivilegeToMapTestCase(DatabaseToMapTestCase):
 
     def test_map_foreign_table(self):
         "Map a foreign table with various GRANTs"
-        if self.db.version < 90100:
-            self.skipTest('Only available on PG 9.1')
         stmts = [CREATE_FDW, CREATE_FS,
                  "CREATE FOREIGN TABLE ft1 (c1 integer, c2 text) SERVER fs1",
                  "GRANT SELECT ON ft1 TO PUBLIC",
@@ -426,8 +412,6 @@ class PrivilegeToSqlTestCase(InputMapToSqlTestCase):
 
     def test_create_foreign_table(self):
         "Create a foreign table with some privileges"
-        if self.db.version < 90100:
-            self.skipTest('Only available on PG 9.1')
         inmap = self.std_map()
         inmap.update({'foreign data wrapper fdw1': {'server fs1': {}}})
         inmap['schema sd'].update({'foreign table ft1': {
@@ -445,8 +429,6 @@ class PrivilegeToSqlTestCase(InputMapToSqlTestCase):
 
     def test_foreign_table_new_grant(self):
         "Grant privileges on an existing foreign table"
-        if self.db.version < 90100:
-            self.skipTest('Only available on PG 9.1')
         inmap = self.std_map()
         inmap.update({'foreign data wrapper fdw1': {'server fs1': {}}})
         inmap['schema sd'].update({'foreign table ft1': {

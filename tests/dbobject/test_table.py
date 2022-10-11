@@ -83,8 +83,6 @@ class TableToMapTestCase(DatabaseToMapTestCase):
 
     def test_map_unlogged_table(self):
         "Map an unlogged table"
-        if self.db.version < 90100:
-            self.skipTest('Only available on PG 9.1')
         dbmap = self.to_map(["CREATE UNLOGGED TABLE t1 (c1 integer, c2 text)"])
         expmap = {'columns': [{'c1': {'type': 'integer'}},
                               {'c2': {'type': 'text'}}],
@@ -140,8 +138,6 @@ class TableToMapTestCase(DatabaseToMapTestCase):
 
     def test_map_partition_range(self):
         "Map a partitioned table with two partitions by range"
-        if self.db.version < 100000:
-            self.skipTest('Only available on PG 10 and later')
         spec1 = "FROM ('2015-01-01', MINVALUE) TO ('2016-12-31', 5)"
         stmts = ["CREATE TABLE t1 (c1 date, c2 integer, c3 text) "
                  "PARTITION BY RANGE (c1, c2)",
@@ -159,8 +155,6 @@ class TableToMapTestCase(DatabaseToMapTestCase):
 
     def test_map_partition_list(self):
         "Map a partitioned table with two partitions by list"
-        if self.db.version < 100000:
-            self.skipTest('Only available on PG 10 and later')
         spec1 = "IN (1, 3, 5, 7)"
         stmts = ["CREATE TABLE t1 (c1 integer, c2 text) "
                  "PARTITION BY LIST (c1)",

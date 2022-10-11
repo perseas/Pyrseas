@@ -19,7 +19,6 @@ else:
 CREATE_FDW = "CREATE FOREIGN DATA WRAPPER "
 SOURCE1 = "SELECT 'dummy'::text"
 SOURCE2 = "SELECT $1::text"
-DROP_LANG = "DROP LANGUAGE IF EXISTS plperl CASCADE"
 DROP_TSC = "DROP TEXT SEARCH CONFIGURATION IF EXISTS tsc1, tsc2"
 DROP_TSP = "DROP TEXT SEARCH PARSER IF EXISTS tsp1 CASCADE"
 
@@ -76,15 +75,6 @@ class ExternalFilenameMapTestCase(DatabaseToMapTestCase):
         expmap = {'foreign data wrapper fdw1': {},
                   'foreign data wrapper fdw2': {'options': ['debug=true']}}
         assert self.yaml_load('foreign_data_wrapper.yaml') == expmap
-
-    def test_map_language(self):
-        "Map languages"
-        if self.db.version >= 90100:
-            self.skipTest('Only available before PG 9.1')
-        self.to_map([DROP_LANG, "CREATE LANGUAGE plperl"], multiple_files=True)
-        assert self.yaml_load('language.yaml')['language plperl'] == {
-            'trusted': True}
-        self.db.execute_commit(DROP_LANG)
 
     def test_collations(self):
         "Map collations"

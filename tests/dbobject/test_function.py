@@ -388,8 +388,6 @@ class AggregateToMapTestCase(DatabaseToMapTestCase):
 
     def test_map_moving_aggregate(self):
         "Map a moving-aggregate mode function"
-        if self.db.version < 90400:
-            self.skipTest('Only available on PG 9.4 and later')
         stmts = [CREATE_STMT4, CREATE_STMT5,
                  "CREATE AGGREGATE a1 (integer) (sfunc = fadd, "
                  "stype = integer, initcond = '0', msfunc = fadd, "
@@ -402,8 +400,6 @@ class AggregateToMapTestCase(DatabaseToMapTestCase):
 
     def test_map_ordered_set_aggregate(self):
         "Map an ordered-set aggregate"
-        if self.db.version < 90400:
-            self.skipTest('Only available on PG 9.4 and later')
         stmts = [CREATE_STMT2, "CREATE AGGREGATE a1 (integer ORDER BY "
                  "integer) (sfunc = f1, stype = integer)"]
         dbmap = self.to_map(stmts)
@@ -413,8 +409,6 @@ class AggregateToMapTestCase(DatabaseToMapTestCase):
 
     def test_map_aggregate_restricted(self):
         "Map an aggregate with restricted parallel safety"
-        if self.db.version < 90600:
-            self.skipTest('Only available on PG 9.6 and later')
         stmts = [CREATE_STMT2, "CREATE AGGREGATE a1 (integer) ("
                  "SFUNC = f1, STYPE = integer, PARALLEL = RESTRICTED)"]
         dbmap = self.to_map(stmts)
@@ -482,8 +476,6 @@ class AggregateToSqlTestCase(InputMapToSqlTestCase):
 
     def test_create_moving_aggregate(self):
         "Create a moving-aggregate mode function"
-        if self.db.version < 90400:
-            self.skipTest('Only available on PG 9.4 and later')
         inmap = self.std_map()
         inmap['schema sd'].update(
             {'function fadd(integer, integer)': {
@@ -504,8 +496,6 @@ class AggregateToSqlTestCase(InputMapToSqlTestCase):
 
     def test_create_hypothetical_set_aggregate(self):
         "Create a hypothetical-set aggregate"
-        if self.db.version < 90400:
-            self.skipTest('Only available on PG 9.4 and later')
         inmap = self.std_map()
         inmap['schema sd'].update({
             'function f1(integer, integer)': {
@@ -519,8 +509,6 @@ class AggregateToSqlTestCase(InputMapToSqlTestCase):
 
     def test_create_aggregate_parallel_safe(self):
         "Create an aggregate with parallel safety"
-        if self.db.version < 90600:
-            self.skipTest('Only available on PG 9.6 and later')
         inmap = self.std_map()
         inmap['schema sd'].update({
             'function f1(integer, integer)': {

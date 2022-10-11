@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 """Test enums and other types"""
 
-import pytest
-
 from pyrseas.testutils import DatabaseToMapTestCase
 from pyrseas.testutils import InputMapToSqlTestCase, fix_indent
 
@@ -32,8 +30,6 @@ class CompositeToMapTestCase(DatabaseToMapTestCase):
 
     def test_dropped_attribute(self):
         "Map a composite type which has a dropped attribute"
-        if self.db.version < 90100:
-            self.skipTest('Only available on PG 9.1')
         stmts = [CREATE_COMPOSITE_STMT, "ALTER TYPE t1 DROP ATTRIBUTE y"]
         dbmap = self.to_map(stmts)
         assert dbmap['schema sd']['type t1'] == {
@@ -72,8 +68,6 @@ class CompositeToSqlTestCase(InputMapToSqlTestCase):
 
     def test_add_attribute(self):
         "Add an attribute to a composite type"
-        if self.db.version < 90100:
-            self.skipTest('Only available on PG 9.1')
         inmap = self.std_map()
         inmap['schema sd'].update({'type t1': {
             'attributes': [{'x': {'type': 'integer'}},
@@ -93,8 +87,6 @@ class CompositeToSqlTestCase(InputMapToSqlTestCase):
 
     def test_drop_attribute_schema(self):
         "Drop an attribute from a composite type within a non-default schema"
-        if self.db.version < 90100:
-            self.skipTest('Only available on PG 9.1')
         inmap = self.std_map()
         inmap.update({'schema s1': {'type t1': {
             'attributes': [{'x': {'type': 'integer'}},
@@ -106,8 +98,6 @@ class CompositeToSqlTestCase(InputMapToSqlTestCase):
 
     def test_rename_attribute(self):
         "Rename an attribute of a composite type"
-        if self.db.version < 90100:
-            self.skipTest('Only available on PG 9.1')
         inmap = self.std_map()
         inmap['schema sd'].update({'type t1': {
             'attributes': [{'x': {'type': 'integer'}},

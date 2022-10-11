@@ -132,17 +132,11 @@ class Sequence(DbClass):
 
         :param dbconn: a DbConnection object
         """
-        if dbconn.version < 100000:
-            query = """SELECT start_value, increment_by, max_value, min_value,
-                              cache_value, 'bigint' AS data_type
-                       FROM %s.%s""" % (
-                           quote_id(self.schema), quote_id(self.name))
-        else:
-            query = """SELECT start_value, increment_by, max_value, min_value,
-                              cache_size AS cache_value, data_type
-                       FROM pg_sequences
-                       WHERE schemaname = '%s'
-                       AND sequencename = '%s'""" % (self.schema, self.name)
+        query = """SELECT start_value, increment_by, max_value, min_value,
+                          cache_size AS cache_value, data_type
+                   FROM pg_sequences
+                   WHERE schemaname = '%s'
+                   AND sequencename = '%s'""" % (self.schema, self.name)
         data = dbconn.fetchone(query)
 
         for key, val in list(data.items()):
@@ -237,12 +231,11 @@ class Sequence(DbClass):
         :return: SQL statements
         """
         mod = ""
-        if dbversion >= 100000:
-            if self.data_type != 'bigint':
-                mod = "\n    AS %s" % self.data_type
-            if hasattr(self, '_owner_col'):
-                if self._owner_col.identity is not None:
-                    return []
+        if self.data_type != 'bigint':
+            mod = "\n    AS %s" % self.data_type
+        if hasattr(self, '_owner_col'):
+            if self._owner_col.identity is not None:
+                return []
         return ["CREATE SEQUENCE %s%s%s" % (self.qualname(), mod,
                                             self._common_create_spec())]
 
@@ -390,31 +383,25 @@ class Table(DbClass):
 
     @staticmethod
     def query(dbversion=None):
-        qry = """
+        return """
             SELECT nspname AS schema, relname AS name, reloptions AS options,
                    spcname AS tablespace, relpersistence = 'u' AS unlogged,
                    rolname AS owner,
                    array_to_string(relacl, ',') AS privileges,
-                   %s AS partition_bound_spec, %s AS partition_by,
-                   %s AS partition_cols, %s AS partition_exprs,
+                   pg_get_expr(relpartbound, c.oid) AS partition_bound_spec,
+                   partstrat AS partition_by, partattrs AS partition_cols,
+                   pg_get_expr(partexprs, pt.partrelid) AS partition_exprs,
                    obj_description(c.oid, 'pg_class') AS description, c.oid
             FROM pg_class c JOIN pg_roles r ON (r.oid = relowner)
                  JOIN pg_namespace ON (relnamespace = pg_namespace.oid)
-                 LEFT JOIN pg_tablespace t ON (reltablespace = t.oid)%s
-            WHERE relkind %s AND relpersistence != 't'
+                 LEFT JOIN pg_tablespace t ON (reltablespace = t.oid)
+                 LEFT JOIN pg_partitioned_table pt ON c.oid = pt.partrelid
+            WHERE relkind IN ('r', 'p') AND relpersistence != 't'
               AND nspname != 'pg_catalog' AND nspname != 'information_schema'
               AND c.oid NOT IN (
                   SELECT objid FROM pg_depend WHERE deptype = 'e'
                   AND classid = 'pg_class'::regclass)
             ORDER BY nspname, relname"""
-        if dbversion < 100000:
-            return qry % ("NULL", "NULL", "NULL", "NULL", "", "= 'r'")
-        else:
-            return qry % (
-                "pg_get_expr(relpartbound, c.oid)", "partstrat", "partattrs",
-                "pg_get_expr(partexprs, pt.partrelid)",
-                " LEFT JOIN pg_partitioned_table pt ON c.oid = pt.partrelid",
-                "IN ('r', 'p')")
 
     @staticmethod
     def inhquery():
@@ -845,8 +832,6 @@ class ClassDict(DbObjectDict):
         for obj in self.fetch():
             self[obj.key()] = obj
             self.by_oid[obj.oid] = obj
-        if self.dbconn.version < 90300:
-            return
         self.cls = MaterializedView
         for obj in self.fetch():
             self[obj.key()] = obj

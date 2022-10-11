@@ -159,8 +159,6 @@ class ColumnToMapTestCase(DatabaseToMapTestCase):
 
     def test_map_identity(self):
         "Map a table with an IDENTITY column"
-        if self.db.version < 100000:
-            self.skipTest('Only available on PG 10 and later')
         stmts = ["CREATE TABLE t1 (c1 integer GENERATED ALWAYS AS IDENTITY, "
                  "c2 text)"]
         dbmap = self.to_map(stmts)
@@ -203,8 +201,6 @@ class ColumnToSqlTestCase(InputMapToSqlTestCase):
 
     def test_create_column_identity(self):
         "Create a table with a column GENERATED AS IDENTITY"
-        if self.db.version < 100000:
-            self.skipTest('Only available on PG 10 and later')
         inmap = self.std_map()
         inmap['schema sd'].update({'table t1': {
             'columns': [{'c1': {'type': 'integer', 'not_null': True,

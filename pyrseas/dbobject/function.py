@@ -489,42 +489,36 @@ class Aggregate(Proc):
                    rolname AS owner,
                    array_to_string(proacl, ',') AS privileges,
                    aggtransfn::regproc AS sfunc,
-                   aggtranstype::regtype AS stype, %s AS sspace,
-                   aggfinalfn::regproc AS finalfunc, %s AS finalfunc_extra,
-                   agginitval AS initcond, aggsortop::regoper AS sortop, %s,
-                   obj_description(p.oid, 'pg_proc') AS description, p.oid
-            FROM pg_proc p JOIN pg_roles r ON (r.oid = proowner)
-                 JOIN pg_namespace n ON (pronamespace = n.oid)
-                 LEFT JOIN pg_aggregate a ON (p.oid = aggfnoid)
-            WHERE (nspname != 'pg_catalog' AND nspname != 'information_schema')
-              AND %s
-              AND p.oid NOT IN (
-                  SELECT objid FROM pg_depend WHERE deptype = 'e'
-                               AND classid = 'pg_proc'::regclass)
-            ORDER BY nspname, proname"""
-        V94_COLS = """aggmtransfn::regproc AS msfunc,
+                   aggtranstype::regtype AS stype, aggtransspace AS sspace,
+                   aggfinalfn::regproc AS finalfunc,
+                   aggfinalextra AS finalfunc_extra,
+                   agginitval AS initcond, aggsortop::regoper AS sortop,
+                   aggmtransfn::regproc AS msfunc,
                    aggminvtransfn::regproc AS minvfunc,
                    aggmtranstype::regtype AS mstype,
                    aggmtransspace AS msspace,
                    aggmfinalfn::regproc AS mfinalfunc,
                    aggmfinalextra AS mfinalfunc_extra,
-                   aggminitval AS minitcond, aggkind AS kind"""
-        V96_COLS = V94_COLS + """,aggcombinefn AS combinefunc,
+                   aggminitval AS minitcond, aggkind AS kind,
+                   aggcombinefn AS combinefunc,
                    aggserialfn AS serialfunc, aggdeserialfn AS deserialfunc,
-                   proparallel AS parallel"""
-        cols = ('aggtransspace', 'aggfinalextra')
-        if dbversion < 90400:
-            cols = ('0', 'false',
-                    """'-' AS msfunc, '-' AS minvfunc, NULL AS mstype,
-                    0 AS msspace, '-' AS mfinalfunc, false AS mfinalfunc_extra,
-                    NULL AS minitcond""", "proisagg")
-        elif dbversion < 90600:
-            cols += (V94_COLS, "proisagg")
-        elif dbversion < 110000:
-            cols += (V96_COLS, "proisagg")
+                   proparallel AS parallel,%s
+                   obj_description(p.oid, 'pg_proc') AS description, p.oid
+            FROM pg_proc p JOIN pg_roles r ON (r.oid = proowner)
+                 JOIN pg_namespace n ON (pronamespace = n.oid)
+                 LEFT JOIN pg_aggregate a ON (p.oid = aggfnoid)
+            WHERE (nspname != 'pg_catalog' AND nspname != 'information_schema')
+              %s
+              AND p.oid NOT IN (
+                  SELECT objid FROM pg_depend WHERE deptype = 'e'
+                               AND classid = 'pg_proc'::regclass)
+            ORDER BY nspname, proname"""
+        extra = ("", "")
+        if dbversion < 110000:
+            extra = (" proisagg,", "")
         else:
-            cols += (V96_COLS, "prokind = 'a'")
-        return query % cols
+            extra = ("", "AND prokind = 'a'")
+        return query % extra
 
     @staticmethod
     def from_map(name, schema, arguments, inobj):
@@ -598,35 +592,31 @@ class Aggregate(Proc):
                                join_schema_func(self.finalfunc))
         if self.initcond is not None:
             opt_clauses.append("INITCOND = '%s'" % self.initcond)
-        if dbversion >= 90600:
-            if self.combinefunc is not None:
-                opt_clauses.append("COMBINEFUNC = %s" % self.combinefunc)
-            if self.serialfunc is not None:
-                opt_clauses.append("SERIALFUNC = %s" % self.serialfunc)
-            if self.deserialfunc is not None:
-                opt_clauses.append("DESERIALFUNC = %s" % self.deserialfunc)
-        if dbversion >= 90400:
-            if self.sspace > 0:
-                opt_clauses.append("SSPACE = %d" % self.sspace)
-            if self.finalfunc_extra:
-                opt_clauses.append("FINALFUNC_EXTRA")
-            if self.msfunc is not None:
-                opt_clauses.append("MSFUNC = %s" %
-                                   join_schema_func(self.msfunc))
-            if self.minvfunc is not None:
-                opt_clauses.append("MINVFUNC = %s" %
-                                   join_schema_func(self.minvfunc))
-            if self.mstype is not None:
-                opt_clauses.append("MSTYPE = %s" % self.mstype)
-            if self.msspace > 0:
-                opt_clauses.append("MSSPACE = %d" % self.msspace)
-            if self.mfinalfunc is not None:
-                opt_clauses.append("MFINALFUNC = %s" %
-                                   join_schema_func(self.mfinalfunc))
-            if self.mfinalfunc_extra:
-                opt_clauses.append("MFINALFUNC_EXTRA")
-            if self.minitcond is not None:
-                opt_clauses.append("MINITCOND = '%s'" % self.minitcond)
+        if self.combinefunc is not None:
+            opt_clauses.append("COMBINEFUNC = %s" % self.combinefunc)
+        if self.serialfunc is not None:
+            opt_clauses.append("SERIALFUNC = %s" % self.serialfunc)
+        if self.deserialfunc is not None:
+            opt_clauses.append("DESERIALFUNC = %s" % self.deserialfunc)
+        if self.sspace > 0:
+            opt_clauses.append("SSPACE = %d" % self.sspace)
+        if self.finalfunc_extra:
+            opt_clauses.append("FINALFUNC_EXTRA")
+        if self.msfunc is not None:
+            opt_clauses.append("MSFUNC = %s" % join_schema_func(self.msfunc))
+        if self.minvfunc is not None:
+            opt_clauses.append("MINVFUNC = %s" % join_schema_func(self.minvfunc))
+        if self.mstype is not None:
+            opt_clauses.append("MSTYPE = %s" % self.mstype)
+        if self.msspace > 0:
+            opt_clauses.append("MSSPACE = %d" % self.msspace)
+        if self.mfinalfunc is not None:
+            opt_clauses.append("MFINALFUNC = %s" %
+                               join_schema_func(self.mfinalfunc))
+        if self.mfinalfunc_extra:
+            opt_clauses.append("MFINALFUNC_EXTRA")
+        if self.minitcond is not None:
+            opt_clauses.append("MINITCOND = '%s'" % self.minitcond)
         if self.kind == 'hypothetical':
             opt_clauses.append("HYPOTHETICAL")
         if self.sortop is not None:
@@ -634,9 +624,8 @@ class Aggregate(Proc):
             if not clause.startswith('OPERATOR'):
                 clause = "OPERATOR(%s)" % clause
             opt_clauses.append("SORTOP = %s" % clause)
-        if dbversion >= 90600:
-            if self.parallel != 'unsafe':
-                opt_clauses.append("PARALLEL = %s" % self.parallel.upper())
+        if self.parallel != 'unsafe':
+            opt_clauses.append("PARALLEL = %s" % self.parallel.upper())
         return ["CREATE AGGREGATE %s(%s) (\n    SFUNC = %s,"
                 "\n    STYPE = %s%s%s)" % (
                     self.qualname(), self.arguments,

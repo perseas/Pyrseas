@@ -64,12 +64,12 @@ class Column(DbSchemaObject):
 
     @staticmethod
     def query(dbversion=None):
-        qry = """
+        return """
             SELECT nspname AS schema, relname AS table, attname AS name,
                    attnum AS number, format_type(atttypid, atttypmod) AS type,
                    attnotnull AS not_null, attinhcount > 0 AS inherited,
-                   pg_get_expr(adbin, adrelid) AS default, %s AS identity,
-                   attstattarget AS statistics,
+                   pg_get_expr(adbin, adrelid) AS default,
+                   attidentity AS identity, attstattarget AS statistics,
                    collname AS collation, attisdropped AS dropped,
                    array_to_string(attacl, ',') AS privileges,
                    col_description(c.oid, attnum) AS description
@@ -82,10 +82,6 @@ class Column(DbSchemaObject):
               AND (nspname != 'pg_catalog' AND nspname != 'information_schema')
               AND attnum > 0
            ORDER BY nspname, relname, attnum"""
-        if dbversion < 100000:
-            return qry % ("NULL")
-        else:
-            return qry % ("attidentity")
 
     @staticmethod
     def from_map(name, table, num, inobj):

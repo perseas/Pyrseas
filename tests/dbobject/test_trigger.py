@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 """Test triggers"""
 
-import pytest
-
 from pyrseas.testutils import DatabaseToMapTestCase
 from pyrseas.testutils import InputMapToSqlTestCase, fix_indent
 
