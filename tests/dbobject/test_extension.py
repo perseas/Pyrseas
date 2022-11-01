@@ -16,15 +16,13 @@ class ExtensionToMapTestCase(DatabaseToMapTestCase):
 
     superuser = True
     def base_version(self):
-        if self.db.version < 90300:
-            return '1.0'
-        elif self.db.version < 90600:
-            return '1.1'
-        elif self.db.version < 110000:
+        if self.db.version < 110000:
             return '1.3'
         elif self.db.version < 120000:
             return '1.4'
-        return '1.5'
+        elif self.db.version < 150000:
+            return  '1.5'
+        return '1.6'
 
     def test_map_extension(self):
         "Map an existing extension"

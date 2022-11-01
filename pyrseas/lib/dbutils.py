@@ -10,13 +10,13 @@ from psycopg import connect
 from psycopg.rows import dict_row
 
 
-def pgconnect(dbname, user=None, host=None, port=None):
+def pgconnect(dbname, user=None, host=None, port=None, autocommit=False):
     "Connect to a Postgres database using psycopg"
     user = '' if user is None else " user=%s" % user
     host = '' if host is None else "host=%s " % host
     port = '' if port is None else "port=%d " % port
     return connect("%s%sdbname=%s%s" % (host, port, dbname, user),
-                   row_factory=dict_row)
+                   row_factory=dict_row, autocommit=autocommit)
 
 
 def pgexecute(dbconn, oper, args=None):
