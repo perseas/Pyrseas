@@ -17,12 +17,6 @@ COMMENT_STMT = "COMMENT ON EVENT TRIGGER et1 IS 'Test event trigger et1'"
 class EventTriggerToMapTestCase(DatabaseToMapTestCase):
     """Test mapping of existing event triggers"""
 
-    def setUp(self):
-        super(self.__class__, self).setUp()
-        if self.db.version < 90000:
-            if not self.db.is_plpgsql_installed():
-                self.db.execute_commit("CREATE LANGUAGE plpgsql")
-
     def test_map_event_trigger_simple(self):
         "Map a simple event trigger"
         stmts = [CREATE_FUNC_STMT, CREATE_STMT % '']
@@ -50,12 +44,6 @@ class EventTriggerToMapTestCase(DatabaseToMapTestCase):
 
 class EventTriggerToSqlTestCase(InputMapToSqlTestCase):
     """Test SQL generation from input triggers"""
-
-    def setUp(self):
-        super(self.__class__, self).setUp()
-        if self.db.version < 90000:
-            if not self.db.is_plpgsql_installed():
-                self.db.execute_commit("CREATE LANGUAGE plpgsql")
 
     def test_create_event_trigger_simple(self):
         "Create a simple event trigger"

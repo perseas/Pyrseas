@@ -39,7 +39,7 @@ class SequenceToSqlTestCase(InputMapToSqlTestCase):
             'start_value': 1, 'increment_by': 1, 'max_value': None,
             'min_value': None, 'cache_value': 1, 'data_type': 'integer'}})
         sql = self.to_sql(inmap)
-        mod = 'AS integer ' if self.db.version >= 100000 else ''
+        mod = 'AS integer '
         assert fix_indent(sql[0]) == CREATE_STMT_FULL % mod
 
     def test_create_sequence_in_schema(self):

@@ -29,8 +29,6 @@ class DomainToMapTestCase(DatabaseToMapTestCase):
         "Map a domain with a DEFAULT"
         dbmap = self.to_map(["CREATE DOMAIN d1 AS date DEFAULT CURRENT_DATE"])
         expmap = {'type': 'date', 'default': 'CURRENT_DATE'}
-        if self.db.version < 100000:
-            expmap['default'] = "('now'::text)::date"
         assert dbmap['schema sd']['domain d1'] == expmap
 
     def test_domain_check(self):

@@ -33,7 +33,7 @@ class RuleToMapTestCase(DatabaseToMapTestCase):
                  "CREATE RULE r1 AS ON DELETE TO t1 WHERE OLD.c1 < 1000 "
                  "DO INSERT INTO t1 VALUES (OLD.c1 + 1000, OLD.c2)"]
         dbmap = self.to_map(stmts)
-        fmt = "%s%s" if (self.db.version < 90300) else " %s\n %s"
+        fmt = " %s\n %s"
         action = fmt % ("INSERT INTO sd.t1 (c1, c2)",
                         " VALUES ((old.c1 + 1000), old.c2)")
         expmap = {'r1': {'event': 'delete', 'condition': "(old.c1 < 1000)",
@@ -47,10 +47,7 @@ class RuleToMapTestCase(DatabaseToMapTestCase):
             "INSERT INTO t1 (c1) VALUES (old.c1 + 200))")]
         dbmap = self.to_map(stmts)
         ins = "INSERT INTO sd.t1 (c1)"
-        if (self.db.version < 90300):
-            fmt = "(%s%s %s%s )"
-        else:
-            fmt = "( %s\n %s\n %s\n %s\n)"
+        fmt = "( %s\n %s\n %s\n %s\n)"
         actions = fmt % (ins, " VALUES ((old.c1 + 100));",
                          ins, " VALUES ((old.c1 + 200));")
         expmap = {'r1': {'event': 'update', 'actions': actions}}

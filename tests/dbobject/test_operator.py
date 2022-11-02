@@ -22,10 +22,7 @@ class OperatorToMapTestCase(DatabaseToMapTestCase):
         "Map a unitary operator with a right argument"
         stmts = ["CREATE OPERATOR + (PROCEDURE = upper, RIGHTARG = text)"]
         dbmap = self.to_map(stmts)
-        if self.db.version < 90200:
-            expmap = {'procedure': 'upper'}
-        else:
-            expmap = {'procedure': 'pg_catalog.upper'}
+        expmap = {'procedure': 'pg_catalog.upper'}
         assert dbmap['schema sd']['operator +(NONE, text)'] == expmap
 
     def test_map_operator_commutator(self):

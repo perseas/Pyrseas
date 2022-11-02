@@ -78,19 +78,27 @@ class IndexToMapTestCase(DatabaseToMapTestCase):
                  "CREATE INDEX t1_idx2 ON t1 (extract(month from c3), "
                  "extract(day from c3))"]
         dbmap = self.to_map(stmts)
+        expr_type = {'type': 'expression'}
+        key1 = [{"SUBSTRING(c2 FROM POSITION(('_begin'::text) IN (c2)))":
+                 expr_type},
+                {"SUBSTRING(c2 FROM POSITION(('_end'::text) IN (c2)))":
+                 expr_type}]
+        key2 = [{"EXTRACT(month FROM c3)": expr_type},
+                 {"EXTRACT(day FROM c3)": expr_type}]
+        if self.db.version < 150000:
+            key1 = [{'"substring"(c2, "position"(c2, \'_begin\''
+                                '::text))': expr_type},
+                               {'"substring"(c2, "position"(c2, \'_end\''
+                                '::text))': expr_type}]
+            key2 = [{"date_part('month'::text, c3)": {
+                                'type': 'expression'}},
+                               {"date_part('day'::text, c3)": {
+                                'type': 'expression'}}]
         expmap = {'columns': [{'c1': {'type': 'integer'}},
                               {'c2': {'type': 'text'}},
                               {'c3': {'type': 'date'}}],
-                  'indexes': {'t1_idx1': {
-                      'keys': [{'"substring"(c2, "position"(c2, \'_begin\''
-                                '::text))': {'type': 'expression'}},
-                               {'"substring"(c2, "position"(c2, \'_end\''
-                                '::text))': {'type': 'expression'}}]},
-                              't1_idx2': {
-                      'keys': [{"date_part('month'::text, c3)": {
-                                'type': 'expression'}},
-                               {"date_part('day'::text, c3)": {
-                                'type': 'expression'}}]}}}
+                  'indexes': {'t1_idx1': {'keys': key1},
+                              't1_idx2': {'keys': key2}}}
         assert dbmap['schema sd']['table t1'] == expmap
 
     def test_index_col_opts(self):
@@ -154,8 +162,6 @@ class IndexToMapTestCase(DatabaseToMapTestCase):
                              "date_part('month'::text, date), "
                              "date_part('day'::text, date))"])
         fmt = "(\nCASE\n    %s\n    %s\nEND)"
-        if self.db.version < 90300:
-            fmt = "(CASE %s %s END)"
         assert dbmap['schema sd']['table holiday']['indexes'][
             'unique_date'] == {
                 'keys': [

@@ -1060,9 +1060,6 @@ class UniqueConstraintToMapTestCase(DatabaseToMapTestCase):
         stmts = ["CREATE TABLE t1 (c1 INTEGER, c2 CHAR(5), c3 TEXT, "
                  "UNIQUE (c1, c2))"]
         dbmap = self.to_map(stmts)
-        if self.db.version < 90000:
-            self.map_unique2.update({'unique_constraints': {
-                't1_c1_key': {'columns': ['c1', 'c2']}}})
         assert dbmap['schema sd']['table t1'] == self.map_unique2
 
     def test_unique_4(self):

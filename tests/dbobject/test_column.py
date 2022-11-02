@@ -88,7 +88,8 @@ TYPELIST = [
     ('tsquery', 'tsquery'),
     ('UUID', 'uuid'),
     ('XML', 'xml'),
-    ('JSON', 'json')]
+    ('JSON', 'json'),
+    ('JSONB', 'jsonb')]
 
 CREATE_STMT1 = "CREATE TABLE t1 (c1 integer, c2 text)"
 CREATE_STMT2 = "CREATE TABLE t1 (c1 integer, c2 text, c3 date)"
@@ -103,8 +104,6 @@ class ColumnToMapTestCase(DatabaseToMapTestCase):
         "Map a table with columns for (almost) each native PostgreSQL type"
         colstab = []
         colsmap = []
-        if self.db.version >= 90400:
-            TYPELIST.append(('JSONB', 'jsonb'))
         for colnum, (coltype, maptype) in enumerate(TYPELIST):
             col = "c%d" % (colnum + 1)
             colstab.append("%s %s" % (col, coltype))
@@ -144,9 +143,6 @@ class ColumnToMapTestCase(DatabaseToMapTestCase):
             {'c6': {'type': 'timestamp with time zone', 'default':
                     "CURRENT_TIMESTAMP"}},
             {'c7': {'type': 'boolean', 'default': 'false'}}]}
-        if self.db.version < 100000:
-            expmap['columns'][4]['c5']['default'] = "('now'::text)::date"
-            expmap['columns'][5]['c6']['default'] = 'now()'
         assert dbmap['schema sd']['table t1'] == expmap
 
     def test_statistics(self):
