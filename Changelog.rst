@@ -1,4 +1,20 @@
-0.9.1 (14-apr-2020)
+0.10.0 (7-Nov-2022)
+
+Convert Pyrseas to use Psycopg version 3.  Remove support for Python
+2.x and Postgres versions prior to PG 10.
+
+Reinstate code for interfacing with psycopg, removing the dependency
+on pgdbconn.
+
+Fixed various issues, including:
+
+  * Partial fix for database objects owned by extensions. (#236)
+
+  * Deal with pg_pltemplate catalog being removed in PG 13. (#226, #227)
+
+  * Problem with trigger procedures with arguments. (#219)
+
+0.9.1 (14-Apr-2020)
 
 Expanded the number of keywords that are quoted if they are present in
 generated SQL statements. (#212)
