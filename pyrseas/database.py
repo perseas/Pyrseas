@@ -434,9 +434,10 @@ class Database(object):
 
         return inmap
 
-    def to_map(self):
+    def to_map(self, quote_reserved=True):
         """Convert the db maps to a single hierarchy suitable for YAML
 
+        :param quote_reserved: fetch reserved words
         :return: a YAML-suitable dictionary (without any Python objects)
         """
         if not self.db:
@@ -475,6 +476,8 @@ class Database(object):
                         filepath = os.path.join(opts.metadata_dir, val)
                         if (os.path.exists(filepath)):
                             os.remove(filepath)
+                        if quote_reserved:
+                            fetch_reserved_words(self.dbconn)
 
         dbmap = self.db.extensions.to_map(self.db, opts)
         dbmap.update(self.db.languages.to_map(self.db, opts))

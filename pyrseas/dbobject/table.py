@@ -737,7 +737,7 @@ class Table(DbClass):
         """
         filepath = os.path.join(dirpath, self.extern_filename('data'))
         if self.primary_key is not None:
-            order_by = [self.columns[col - 1].name
+            order_by = [quote_id(self.columns[col - 1].name)
                         for col in self.primary_key.columns]
         else:
             order_by = ['%d' % (n + 1) for n in range(len(self.columns))]
