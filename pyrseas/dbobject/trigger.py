@@ -21,8 +21,9 @@ class Trigger(DbSchemaObject):
 
     def __init__(self, name, schema, table, description, procedure, timing,
                  level, events, constraint=False, deferrable=False,
-                 initially_deferred=False,
-                 columns=[], condition=None, arguments='',
+                 initially_deferred=False, referencing_new=None,
+                 referencing_old=None, columns=[], condition=None,
+                 arguments='',
                  oid=None):
         """Initialize the trigger
 
@@ -37,6 +38,8 @@ class Trigger(DbSchemaObject):
         :param constraint: is it a constraint trigger? (from contype)
         :param deferrable: is it deferrable? (from tgdeferrrable)
         :param initially_deferred: initially deferred? (from tginitdeferred)
+        :param referencing_new: NEW transition relation name
+        :param referencing_old: OLD transition relation name
         :param columns: array of column numbers (from tgattr)
         :param condition: WHEN condition
         :param arguments: arguments to pass to trigger (from tgargs)
@@ -77,6 +80,8 @@ class Trigger(DbSchemaObject):
         self.constraint = constraint
         self.deferrable = deferrable
         self.initially_deferred = initially_deferred
+        self.referencing_new = referencing_new
+        self.referencing_old = referencing_old
         self.columns = columns
         self.condition = condition
         if condition is not None and condition.startswith('CREATE '):
@@ -102,7 +107,10 @@ class Trigger(DbSchemaObject):
                    tginitdeferred AS initially_deferred, tgattr AS columns,
                    encode(tgargs, 'escape') AS arguments,
                    pg_get_triggerdef(t.oid) AS condition,
-                   obj_description(t.oid, 'pg_trigger') AS description, t.oid
+                   obj_description(t.oid, 'pg_trigger') AS description,
+                   tgnewtable AS referencing_new,
+                   tgoldtable AS referencing_old,
+                   t.oid
             FROM pg_trigger t JOIN pg_class c ON (t.tgrelid = c.oid)
                  JOIN pg_namespace n ON (c.relnamespace = n.oid)
                  JOIN pg_roles ON (n.nspowner = pg_roles.oid)
@@ -138,8 +146,10 @@ class Trigger(DbSchemaObject):
             proc, inobj.pop('timing', None), inobj.pop('level', 'statement'),
             inobj.pop('events', []), inobj.pop('constraint', False),
             inobj.pop('deferrable', False),
-            inobj.pop('initially_deferred', False), inobj.pop('columns', []),
-            inobj.pop('condition', None), args)
+            inobj.pop('initially_deferred', False),
+            inobj.pop('referencing_new', None),
+            inobj.pop('referencing_old', None),
+            inobj.pop('columns', []), inobj.pop('condition', None), args)
         obj.set_oldname(inobj)
         return obj
 
@@ -172,6 +182,10 @@ class Trigger(DbSchemaObject):
             del dct['columns']
         if self.condition is None:
             del dct['condition']
+        if self.referencing_new is None:
+            del dct['referencing_new']
+        if self.referencing_old is None:
+            del dct['referencing_old']
         return {self.name: dct}
 
     @commentable
@@ -204,10 +218,17 @@ class Trigger(DbSchemaObject):
             args = ""
         else:
             args = self.arguments
-        return ["CREATE %sTRIGGER %s\n    %s %s ON %s%s\n    FOR EACH %s"
+        referencing = ''
+        if self.referencing_new or self.referencing_old:
+            referencing = "\n    REFERENCING"
+            if self.referencing_new:
+                referencing += " NEW TABLE AS %s" % self.referencing_new
+            if self.referencing_old:
+                referencing += " OLD TABLE AS %s" % self.referencing_old
+        return ["CREATE %sTRIGGER %s\n    %s %s ON %s%s%s\n    FOR EACH %s"
                 "%s\n    EXECUTE PROCEDURE %s(%s)" % (
                     constr, quote_id(self.name), self.timing.upper(), evts,
-                    self._table.qualname(), defer,
+                    self._table.qualname(), defer, referencing,
                     self.level.upper(), cond, procname, args)]
 
     def alter(self, inobj):
@@ -219,7 +240,9 @@ class Trigger(DbSchemaObject):
         stmts = []
         if self.procedure != inobj.procedure or \
            self.arguments != inobj.arguments or self.events != inobj.events \
-           or self.level != inobj.level or self.timing != inobj.timing:
+           or self.level != inobj.level or self.timing != inobj.timing \
+               or self.referencing_new != inobj.referencing_new \
+               or self.referencing_old != inobj.referencing_old:
             stmts.append(self.drop())
             stmts.append(inobj.create())
         stmts.append(self.diff_description(inobj))

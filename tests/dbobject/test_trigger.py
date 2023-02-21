@@ -7,10 +7,14 @@ from pyrseas.testutils import InputMapToSqlTestCase, fix_indent
 FUNC_SRC = "BEGIN NEW.c3 := CURRENT_DATE; RETURN NEW; END"
 FUNC_INSTEAD_SRC = "BEGIN INSERT INTO t1 VALUES (NEW.c1, NEW.c2, now()); " \
     "RETURN NULL; END"
+FUNC_REF_NEW_SRC = "BEGIN SELECT SUM(c2) FROM ins; RETURN NULL; END"
+FUNC_REF_NEW_OLD_SRC = "BEGIN SELECT SUM(c2) FROM del; " \
+    "SELECT SUM(c2) FROM ins; RETURN NULL; END"
 CREATE_TABLE_STMT = "CREATE TABLE sd.t1 (c1 integer, c2 text, " \
     "c3 date)"
 CREATE_TABLE_STMT2 = "CREATE TABLE t1 (c1 integer, c2 text, " \
     "c3 text, tsidx tsvector)"
+CREATE_TABLE_STMT3 = "CREATE TABLE sd.t1 (c1 integer, c2 money)"
 CREATE_FUNC_STMT = "CREATE FUNCTION sd.f1() RETURNS trigger LANGUAGE plpgsql" \
     " AS $_$%s$_$" % FUNC_SRC
 CREATE_STMT = "CREATE TRIGGER tr1 BEFORE INSERT OR UPDATE ON sd.t1 " \
@@ -101,6 +105,34 @@ class TriggerToMapTestCase(DatabaseToMapTestCase):
         assert dbmap['schema s1']['table t1']['triggers'] == {
             'tr1': {'timing': 'before', 'events': ['insert', 'update'],
                     'level': 'row', 'procedure': 's2.f1'}}
+
+    def test_map_trigger_referencing_new(self):
+        "Map a trigger that uses REFERENCING NEW TABLE"
+        stmts = [CREATE_TABLE_STMT3,
+                 "CREATE FUNCTION f1() RETURNS trigger LANGUAGE plpgsql AS "
+                 "$_$%s$_$" % FUNC_REF_NEW_SRC,
+                 "CREATE TRIGGER tr1 AFTER INSERT ON t1 "
+                 "REFERENCING NEW TABLE AS ins "
+                 "FOR EACH STATEMENT EXECUTE FUNCTION f1()"]
+        dbmap = self.to_map(stmts)
+        assert dbmap['schema sd']['table t1']['triggers'] == {
+            'tr1': {'timing': 'after', 'events': ['insert'],
+                    'level': 'statement', 'procedure': 'sd.f1',
+                    'referencing_new': 'ins'}}
+
+    def test_map_trigger_referencing_new_old(self):
+        "Map a trigger that uses REFERENCING NEW and OLD TABLE"
+        stmts = [CREATE_TABLE_STMT3,
+                 "CREATE FUNCTION f1() RETURNS trigger LANGUAGE plpgsql AS "
+                 "$_$%s$_$" % FUNC_REF_NEW_OLD_SRC,
+                 "CREATE TRIGGER tr1 AFTER UPDATE ON t1 "
+                 "REFERENCING NEW TABLE AS ins OLD TABLE AS del "
+                 "FOR EACH ROW EXECUTE FUNCTION f1()"]
+        dbmap = self.to_map(stmts)
+        assert dbmap['schema sd']['table t1']['triggers'] == {
+            'tr1': {'timing': 'after', 'events': ['update'],
+                    'level': 'row', 'procedure': 'sd.f1',
+                    'referencing_new': 'ins', 'referencing_old': 'del'}}
 
     def test_map_trigger_comment(self):
         "Map a trigger comment"
@@ -298,6 +330,27 @@ class TriggerToSqlTestCase(InputMapToSqlTestCase):
         sql = self.to_sql(inmap, ["CREATE SCHEMA s1", "CREATE SCHEMA s2"])
         assert fix_indent(sql[2]) == "CREATE TRIGGER tr1 BEFORE INSERT OR " \
             "UPDATE ON s1.t1 FOR EACH ROW EXECUTE PROCEDURE s2.f1()"
+
+    def test_create_trigger_referencing(self):
+        "Create a trigger that uses REFERENCING OLD and NEW"
+        inmap = self.std_map(plpgsql_installed=True)
+        inmap['schema sd'].update({'function f1()': {
+            'language': 'plpgsql', 'returns': 'trigger',
+            'source': FUNC_REF_NEW_OLD_SRC}})
+        inmap['schema sd'].update({'table t1': {
+            'columns': [{'c1': {'type': 'integer'}},
+                        {'c2': {'type': 'money'}}],
+            'triggers': {'tr1': {'timing': 'after', 'events': ['update'],
+                                 'level': 'row', 'referencing_new': 'ins',
+                                 'referencing_old': 'del',
+                                 'procedure': 'sd.f1'}}}})
+        sql = self.to_sql(inmap)
+        assert fix_indent(sql[0]) == CREATE_TABLE_STMT3
+        assert fix_indent(sql[1]) == "CREATE FUNCTION sd.f1() RETURNS " \
+            "trigger LANGUAGE plpgsql AS $_$%s$_$" % FUNC_REF_NEW_OLD_SRC
+        assert fix_indent(sql[2]) == "CREATE TRIGGER tr1 AFTER UPDATE " \
+            "ON sd.t1 REFERENCING NEW TABLE AS ins OLD TABLE AS del " \
+            "FOR EACH ROW EXECUTE PROCEDURE sd.f1()"
 
     def test_drop_trigger(self):
         "Drop an existing trigger"
