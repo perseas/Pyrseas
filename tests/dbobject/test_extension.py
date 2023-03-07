@@ -9,6 +9,7 @@ from pyrseas.testutils import InputMapToSqlTestCase, fix_indent
 CREATE_STMT = "CREATE EXTENSION pg_trgm"
 TRGM_COMMENT = "text similarity measurement and index searching based on " \
     "trigrams"
+PLR_DESCR = "load R interpreter and execute R script from within a database"
 
 
 class ExtensionToMapTestCase(DatabaseToMapTestCase):
@@ -45,6 +46,17 @@ class ExtensionToMapTestCase(DatabaseToMapTestCase):
             'schema': 'pg_catalog', 'version': '1.0',
             'description': "PL/Perl procedural language"}
         assert 'language plperl' not in dbmap
+
+    def test_map_extern_lang_extension(self):
+        "Map an externally maintained procedural language"
+        if self.db.version < 150000:
+            self.skipTest('Only available since PG 15')
+        dbmap = self.to_map(["CREATE EXTENSION plr"])
+        assert dbmap['extension plr'] == {
+            'schema': 'sd', 'version': '8.4.5', 'description': PLR_DESCR}
+        assert dbmap['language plr'] == {'trusted': False}
+        # Ensure we don't map core-maintained language
+        assert 'language plpgsql' not in dbmap
 
     def test_map_extension_schema(self):
         "Map an existing extension"
@@ -108,6 +120,21 @@ class ExtensionToSqlTestCase(InputMapToSqlTestCase):
         # skip over COMMENT statement
         assert fix_indent(sql[2]) == "CREATE FUNCTION sd.f1() RETURNS text " \
             "LANGUAGE plperl AS $_$return \"dummy\";$_$"
+
+    def test_create_extern_lang_extension(self):
+        "Create an externally maintained language together with a function"
+        inmap = self.std_map()
+        inmap.update({'extension plr': {'schema': 'sd',
+                                        'description': PLR_DESCR}})
+        inmap.update({'language plr': { 'trusted': 'false'}})
+        inmap['schema sd'].update({'function f1()': {
+            'language': 'plr', 'returns': 'text',
+            'source': "return \"dummy\";"}})
+        sql = self.to_sql(inmap)
+        assert fix_indent(sql[0]) == "CREATE EXTENSION plr SCHEMA sd"
+        # skip over COMMENT statement
+        assert fix_indent(sql[2]) == "CREATE FUNCTION sd.f1() RETURNS text " \
+            "LANGUAGE plr AS $_$return \"dummy\";$_$"
 
     def test_comment_extension(self):
         "Change the comment for an existing extension"

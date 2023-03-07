@@ -51,7 +51,7 @@ Most tests do not require installation of supporting Postgres
 packages.  However, a few tests rely on the availability of Postgres
 ``contrib`` modules such as the `spi module
 <https://www.postgresql.org/docs/current/static/contrib-spi.html>`_ or
-procedural languages such as ``plperl`` or ``plpython3u``.
+procedural languages such as ``plperl``, ``plpython3u`` or ``plr``.
 
 On Windows, it is necessary to install Perl in order to run some of
 the tests (most Linux or Unix variants already include it as part of
@@ -161,8 +161,8 @@ the operating system or Postgres level.
      directory, e.g., on Linux, ``export PYTHONPATH=$PWD``, on
      Windows, ``set PYTHONPATH=%USERPROFILE%\somedir\Pyrseas``.
 
-   - Define the environment variables ``PG100_PORT``, ``PG110_PORT``,
-     ``PG120_PORT`` and ``PG130_PORT`` to point to the
+   - Define the ``PG1N0_PORT`` environment variables (where ``1N``
+     represents the major Posgres version, e.g., 15, 11) to point to the
      corresponding Postgres connection ports.
 
  - Invoke ``tox``. This will create virtualenvs in a ``.tox``

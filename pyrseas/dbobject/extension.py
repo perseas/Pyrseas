@@ -98,7 +98,7 @@ class Extension(DbObject):
         """
         return super(Extension, self).alter(inobj, no_owner=no_owner)
 
-KNOWN_LANGS = [
+CORE_LANGS = [
     "plpgsql",
     "pltcl",
     "pltclu",
@@ -131,7 +131,7 @@ class ExtensionDict(DbObjectDict):
             name = key[10:]
             inobj = inexts[key]
             self[name] = Extension.from_map(name, inobj)
-            if self[name].name in KNOWN_LANGS:
+            if self[name].name in CORE_LANGS:
                 lang = {'language %s' % self[name].name: {
                     '_ext': 'e', 'owner': self[name].owner}}
                 newdb.languages.from_map(lang)

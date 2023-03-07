@@ -12,6 +12,7 @@
 """
 from . import DbObjectDict, DbObject, quote_id
 from .function import Function
+from .extension import CORE_LANGS
 
 
 class Language(DbObject):
@@ -45,9 +46,6 @@ class Language(DbObject):
                    obj_description(l.oid, 'pg_language') AS description, l.oid
             FROM pg_language l JOIN pg_roles r ON (r.oid = lanowner)
             WHERE lanispl
-              AND l.oid NOT IN (
-                  SELECT objid FROM pg_depend WHERE deptype = 'e'
-                               AND classid = 'pg_language'::regclass)
             ORDER BY lanname"""
 
     @staticmethod
@@ -75,6 +73,8 @@ class Language(DbObject):
         """
         if hasattr(self, '_ext'):
             return None
+        if self.name in CORE_LANGS:
+            return None
         dct = super(Language, self).to_map(db, no_owner, no_privs)
         if 'functions' in dct:
             del dct['functions']
@@ -83,25 +83,19 @@ class Language(DbObject):
     def create(self, dbversion=None):
         """Return SQL statements to CREATE the language
 
-        :return: SQL statements
+        :return: empty, because PL's should all be extensions
         """
-        stmts = []
-        if not hasattr(self, '_ext'):
-            stmts.append("CREATE LANGUAGE %s" % quote_id(self.name))
-            if self.owner is not None:
-                stmts.append(self.alter_owner())
-            if self.description is not None:
-                stmts.append(self.comment())
-        return stmts
+        return []
+
+    def alter(self, inobj):
+        if self.name in CORE_LANGS:
+            return []
+        return super(Language, self).alter(inobj)
 
     def drop(self):
-        # TODO: this should not be special-cased
-        # remove it after merging with the master, where plpgsql should be
-        # treated normally
-        if self.name != 'plpgsql':
-            return super(Language, self).drop()
-        else:
+        if self.name in CORE_LANGS:
             return []
+        return super(Language, self).drop()
 
 
 class LanguageDict(DbObjectDict):
