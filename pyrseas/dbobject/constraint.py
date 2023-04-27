@@ -11,6 +11,8 @@
     TODO: UniqueConstraint and PrimaryKey are nearly identical.
           Perhaps the latter should inherit from the former.
 """
+import copy
+
 from . import DbObjectDict, DbSchemaObject
 from . import quote_id, split_schema_obj, commentable
 from .index import Index
@@ -176,7 +178,7 @@ class CheckConstraint(Constraint):
         :param dbcols: dictionary of dbobject columns
         :return: dictionary
         """
-        dct = super(CheckConstraint, self).to_map(db)
+        dct = super(CheckConstraint, self).to_map(db, deepcopy=False)
         dct.pop('is_domain_check')
         if not self.inherited:
             dct.pop('inherited')
@@ -184,7 +186,7 @@ class CheckConstraint(Constraint):
             dct['columns'] = [dbcols[k - 1] for k in self.columns]
         else:
             dct.pop('columns')
-        return {self.name: dct}
+        return {self.name: copy.deepcopy(dct)}
 
     @commentable
     def add(self):
@@ -308,7 +310,7 @@ class PrimaryKey(Constraint):
         :param dbcols: dictionary of dbobject columns
         :return: dictionary
         """
-        dct = super(PrimaryKey, self).to_map(db)
+        dct = super(PrimaryKey, self).to_map(db, deepcopy=False)
         if self.access_method == 'btree':
             dct.pop('access_method')
         for attr in ('inherited', 'deferrable', 'deferred', 'cluster'):
@@ -319,7 +321,7 @@ class PrimaryKey(Constraint):
         if '_table' in dct:
             del dct['_table']
         dct['columns'] = [dbcols[k - 1] for k in self.columns]
-        return {self.name: dct}
+        return {self.name: copy.deepcopy(dct)}
 
     def alter(self, inpk):
         """Generate SQL to transform an existing primary key
@@ -486,7 +488,7 @@ class ForeignKey(Constraint):
         :return: dictionary
         """
         self._normalize_columns()
-        dct = super(ForeignKey, self).to_map(db)
+        dct = super(ForeignKey, self).to_map(db, deepcopy=False)
         if '_table' in dct:
             del dct['_table']
         if self.access_method == 'btree':
@@ -507,7 +509,7 @@ class ForeignKey(Constraint):
         dct.pop('ref_table')
         dct.pop('ref_cols')
 
-        return {self.name: dct}
+        return {self.name: copy.deepcopy(dct)}
 
     @commentable
     def add(self):
@@ -673,7 +675,7 @@ class UniqueConstraint(Constraint):
         :return: dictionary
         """
         self._normalize_columns()
-        dct = super(UniqueConstraint, self).to_map(db)
+        dct = super(UniqueConstraint, self).to_map(db, deepcopy=False)
         if self.access_method == 'btree':
             dct.pop('access_method')
         for attr in ('inherited', 'deferrable', 'deferred', 'cluster'):
@@ -681,7 +683,7 @@ class UniqueConstraint(Constraint):
                 dct.pop(attr)
         if self.tablespace is None:
             dct.pop('tablespace')
-        return {self.name: dct}
+        return {self.name: copy.deepcopy(dct)}
 
     def alter(self, inuc):
         """Generate SQL to transform an existing unique constraint

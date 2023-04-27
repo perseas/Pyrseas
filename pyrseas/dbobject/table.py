@@ -8,6 +8,7 @@
     ClassDict derived from DbObjectDict.
 """
 
+import copy
 import re
 import os
 import sys
@@ -460,7 +461,8 @@ class Table(DbClass):
                 and self.name in opts.excl_tables or len(self.columns) == 0:
             return None
 
-        dct = super(Table, self).to_map(db, opts.no_owner, opts.no_privs)
+        dct = super(Table, self).to_map(db, opts.no_owner, opts.no_privs,
+                                        deepcopy=False)
 
         for attr in ('tablespace', 'options', 'partition_bound_spec'):
             if dct[attr] is None:
@@ -493,6 +495,7 @@ class Table(DbClass):
         dct.pop('partition_exprs')
 
         if len(self.check_constraints) > 0:
+            dct['check_constraints'] = copy.copy(dct['check_constraints'])
             for k in list(self.check_constraints.values()):
                 dct['check_constraints'].update(
                     self.check_constraints[k.name].to_map(
@@ -505,6 +508,7 @@ class Table(DbClass):
         else:
             dct.pop('primary_key')
         if len(self.foreign_keys) > 0:
+            dct['foreign_keys'] = copy.copy(dct['foreign_keys'])
             for k in list(self.foreign_keys.values()):
                 tbls = dbschemas[k.ref_schema].tables
                 ktable = self.foreign_keys[k.name]
@@ -514,6 +518,7 @@ class Table(DbClass):
         else:
             dct.pop('foreign_keys')
         if len(self.unique_constraints) > 0:
+            dct['unique_constraints'] = copy.copy(dct['unique_constraints'])
             for k in list(self.unique_constraints.values()):
                 dct['unique_constraints'].update(
                     self.unique_constraints[k.name].to_map(
@@ -533,17 +538,19 @@ class Table(DbClass):
         else:
             dct.pop('indexes')
         if len(self.rules) > 0:
+            dct['rules'] = copy.copy(dct['rules'])
             for k in list(self.rules.values()):
                 dct['rules'].update(self.rules[k.name].to_map(db))
         else:
             dct.pop('rules')
         if len(self.triggers) > 0:
+            dct['triggers'] = copy.copy(dct['triggers'])
             for k in list(self.triggers.values()):
                 dct['triggers'].update(self.triggers[k.name].to_map(db))
         else:
             dct.pop('triggers')
 
-        return dct
+        return copy.deepcopy(dct)
 
     def create(self, dbversion=None):
         """Return SQL statements to CREATE the table
