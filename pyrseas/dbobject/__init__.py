@@ -332,9 +332,9 @@ class DbObject(object):
         The return value, a Python dictionary, is equivalent to a YAML
         or JSON object.
         """
-        import copy
+        import pickle
         if deepcopy:
-            dct = copy.deepcopy(self.__dict__)
+            dct = pickle.loads(pickle.dumps(self.__dict__, -1))
         else:
             dct = self.__dict__.copy()
         for key in self.keylist:
