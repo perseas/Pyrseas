@@ -148,6 +148,8 @@ class CheckConstraint(Constraint):
               AND contype = 'c'
               AND contypid NOT IN (SELECT objid FROM pg_depend
                   WHERE deptype = 'e' AND classid = 'pg_type'::regclass)
+              AND conrelid NOT IN (SELECT objid FROM pg_depend
+                  WHERE deptype = 'e' AND classid = 'pg_class'::regclass)
             ORDER BY schema, "table", name"""
 
     @staticmethod
