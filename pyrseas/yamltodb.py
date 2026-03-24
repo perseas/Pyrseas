@@ -23,6 +23,11 @@ def main():
                         help='input from multiple files (metadata directory)')
     parser.add_argument('spec', nargs='?', type=FileType('r'),
                         default=sys.stdin, help='YAML specification')
+    parser.add_argument('-O', '--no-owner', action='store_true',
+                        help='exclude commands to set object ownership')
+    parser.add_argument('-x', '--no-privileges', action='store_true',
+                        dest='no_privs',
+                        help='exclude privilege (GRANT/REVOKE) commands')
     parser.add_argument('-1', '--single-transaction', action='store_true',
                         dest='onetrans', help="wrap commands in BEGIN/COMMIT")
     parser.add_argument('-u', '--update', action='store_true',

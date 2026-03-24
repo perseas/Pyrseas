@@ -525,6 +525,26 @@ class Database(object):
             fetch_reserved_words(self.dbconn)
 
         self.from_map(input_map)
+
+        if getattr(opts, 'no_owner', False):
+            for _, d in self.ndb.all_dicts():
+                for obj in d.values():
+                    obj.owner = None
+
+        if getattr(opts, 'no_privs', False):
+            for _, d in self.ndb.all_dicts():
+                for obj in d.values():
+                    obj.privileges = []
+            for _, d in self.db.all_dicts():
+                for obj in d.values():
+                    obj.privileges = []
+            for col_list in self.ndb.columns.values():
+                for col in col_list:
+                    col.privileges = []
+            for col_list in self.db.columns.values():
+                for col in col_list:
+                    col.privileges = []
+
         if opts.revert:
             (self.db, self.ndb) = (self.ndb, self.db)
             del self.ndb.schemas['pg_catalog']
