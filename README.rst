@@ -2,13 +2,13 @@
 Pyrseas
 =======
 
-.. image:: https://api.travis-ci.org/perseas/Pyrseas.png?branch=master
-           :target: https://travis-ci.com/perseas/Pyrseas
-
 Pyrseas provides utilities to describe a PostgreSQL database schema as
 YAML, to verify the schema against the same or a different database
 and to generate SQL that will modify the schema to match the YAML
 description.
+
+Pyrseas is in the process of being re-implemented as C++23 modules as
+part of the `Perseid project <https://codeberg.org/perseas/perseid>`_.
 
 Features
 --------
